@@ -10,6 +10,8 @@ import type { Nav } from '../nav';
  * Create or edit a trend: type or paste "year, value" pairs, or pull a series
  * from an Our World in Data chart (demography, economics, technology…).
  */
+const EVERY_COUNTRY = '__every_country__';
+
 export function SeriesEditor({ id, nav }: { id: string | null; nav: Nav }) {
   const { doc, update } = useDoc();
   const existing = id ? doc.series.find((s) => s.id === id) : undefined;
@@ -22,12 +24,19 @@ export function SeriesEditor({ id, nav }: { id: string | null; nav: Nav }) {
   const [owid, setOwid] = useState<{ table: OwidTable; url: string; entity: string; indicator: string } | null>(null);
   const [owidError, setOwidError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const territoryIds = new Set(doc.territories.map((t) => t.id));
+  // Typed values can belong to one of your territories, which then gets a sized circle on the map.
+  const [place, setPlace] = useState(() => Object.keys(existing?.regions ?? {}).find((k) => territoryIds.has(k)) ?? '');
   const set = <K extends keyof Series>(k: K, v: Series[K]) => setD((x) => ({ ...x, [k]: v }));
 
   const parsed = parsePointsText(text);
-  const candidate: Series = { ...d, title: d.title.trim(), points: parsed.points };
-  const problems = text.trim() ? [...parsed.errors, ...validateSeries(candidate, new Set(doc.categories.map((c) => c.id)))] : [];
-  const canSave = !!candidate.title && parsed.errors.length === 0 && problems.length === 0 && parsed.points.length >= 2;
+  const countryRegions = Object.fromEntries(Object.entries(d.regions ?? {}).filter(([k]) => !territoryIds.has(k)));
+  const regions = place ? { ...countryRegions, [place]: parsed.points } : countryRegions;
+  const hasRegions = Object.keys(regions).length > 0;
+  const candidate: Series = { ...d, title: d.title.trim(), points: parsed.points, regions: hasRegions ? regions : undefined };
+  const problems = text.trim() || hasRegions ? [...parsed.errors, ...validateSeries(candidate, new Set(doc.categories.map((c) => c.id)))] : [];
+  const canSave = !!candidate.title && parsed.errors.length === 0 && problems.length === 0 && (parsed.points.length >= 2 || hasRegions);
+  const countryCount = Object.keys(countryRegions).length;
   const notes = existing ? notesFor(doc, existing.id) : [];
 
   const fetchOwid = async () => {
@@ -49,6 +58,13 @@ export function SeriesEditor({ id, nav }: { id: string | null; nav: Nav }) {
 
   const useOwid = () => {
     if (!owid) return;
+    if (owid.entity === EVERY_COUNTRY) {
+      const world = owid.table.entities.includes('World') ? owid.table.pointsFor('World', owid.indicator) : [];
+      setText(pointsToText(world));
+      setD((x) => ({ ...x, title: x.title || owid.indicator, regions: owid.table.countriesFor(owid.indicator), source: { name: 'Our World in Data', url: owid.url } }));
+      setOwid(null);
+      return;
+    }
     const pts = owid.table.pointsFor(owid.entity, owid.indicator);
     setText(pointsToText(pts));
     setD((x) => ({
@@ -95,6 +111,7 @@ export function SeriesEditor({ id, nav }: { id: string | null; nav: Nav }) {
           <div className="row">
             <Field label="Country or region">
               <select value={owid.entity} onChange={(e) => setOwid({ ...owid, entity: e.target.value })}>
+                <option value={EVERY_COUNTRY}>Every country (colors the map)</option>
                 {owid.table.entities.map((e) => <option key={e}>{e}</option>)}
               </select>
             </Field>
@@ -106,12 +123,30 @@ export function SeriesEditor({ id, nav }: { id: string | null; nav: Nav }) {
               </Field>
             )}
           </div>
-          <button type="button" className="btn small primary" onClick={useOwid}>Use {owid.table.pointsFor(owid.entity, owid.indicator).length} data points</button>
+          <button type="button" className="btn small primary" onClick={useOwid}>
+            {owid.entity === EVERY_COUNTRY
+              ? `Use data for ${Object.keys(owid.table.countriesFor(owid.indicator)).length} countries`
+              : `Use ${owid.table.pointsFor(owid.entity, owid.indicator).length} data points`}
+          </button>
         </div>
       )}
 
       <h3>Data</h3>
-      <Field label="One “year, value” per line" hint={parsed.points.length ? `${parsed.points.length} points read` : 'Years can be BCE: “500 BCE, 100”'} hintTone={parsed.points.length >= 2 ? 'ok' : undefined}>
+      {countryCount > 0 && (
+        <div className="notice" data-testid="country-data">
+          Values for {countryCount} countries color the map.{' '}
+          <button type="button" className="btn small quiet" onClick={() => set('regions', undefined)}>Remove country values</button>
+        </div>
+      )}
+      {doc.territories.length > 0 && (
+        <Field label="These values are for" hint={place ? 'Drawn as a circle on that territory, sized by the value.' : undefined}>
+          <select value={place} onChange={(e) => setPlace(e.target.value)}>
+            <option value="">{countryCount ? 'The whole world (the strip)' : 'No particular place'}</option>
+            {doc.territories.map((t) => <option key={t.id} value={t.id}>{t.title}</option>)}
+          </select>
+        </Field>
+      )}
+      <Field label="One “year, value” per line" hint={parsed.points.length ? `${parsed.points.length} points read` : countryCount ? 'Optional: a world total to draw as a strip' : 'Years can be BCE: “500 BCE, 100”'} hintTone={parsed.points.length >= 2 ? 'ok' : undefined}>
         <textarea value={text} onChange={(e) => setText(e.target.value)} rows={8} style={{ fontFamily: 'var(--font-ui)', fontSize: 13 }} placeholder={'1800, 990000000\n1900, 1650000000\n1950, 2500000000'} />
       </Field>
       {problems.length > 0 && <div className="notice bad">{problems.slice(0, 4).map((p) => <div key={p}>{p}</div>)}</div>}

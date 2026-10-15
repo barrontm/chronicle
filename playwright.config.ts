@@ -8,6 +8,8 @@ import { defineConfig, devices } from '@playwright/test';
  * point at a preinstalled Chromium. CI leaves it unset.
  */
 const executablePath = process.env.PW_CHROMIUM_PATH || undefined;
+// The map needs WebGL; SwiftShader provides it in headless runs without a GPU.
+const args = ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'];
 
 export default defineConfig({
   testDir: './e2e',
@@ -18,11 +20,11 @@ export default defineConfig({
   use: {
     baseURL: 'http://localhost:4173',
     trace: 'retain-on-failure',
-    launchOptions: { executablePath },
+    launchOptions: { executablePath, args },
   },
   projects: [
-    { name: 'desktop', use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 }, launchOptions: { executablePath } } },
-    { name: 'phone', use: { ...devices['Pixel 7'], launchOptions: { executablePath } }, grep: /@phone/ },
+    { name: 'desktop', use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 }, launchOptions: { executablePath, args } } },
+    { name: 'phone', use: { ...devices['Pixel 7'], launchOptions: { executablePath, args } }, grep: /@phone/ },
   ],
   webServer: {
     command: 'npm run build && npm run preview',

@@ -67,6 +67,11 @@ export interface OwidTable {
   indicators: string[];
   /** Points for one entity and indicator. */
   pointsFor(entity: string, indicator: string): SeriesPoint[];
+  /**
+   * Points for every country, keyed by ISO 3166-1 alpha-3 code, for coloring
+   * the map. OWID's own aggregates ("OWID_WRL", continents, income groups) are left out.
+   */
+  countriesFor(indicator: string): Record<string, SeriesPoint[]>;
 }
 
 /**
@@ -80,14 +85,26 @@ export function parseOwidCsv(text: string): OwidTable {
   const ei = header.indexOf('Entity');
   const yi = header.findIndex((h) => h === 'Year' || h === 'Day');
   if (ei < 0 || yi < 0) throw new Error('This doesn’t look like an Our World in Data CSV (no Entity and Year columns).');
-  const skip = new Set([ei, yi, header.indexOf('Code')]);
+  const ci = header.indexOf('Code');
+  const skip = new Set([ei, yi, ci]);
   const indicatorCols = header.map((h, i) => ({ h, i })).filter(({ i }) => !skip.has(i));
   if (!indicatorCols.length) throw new Error('The file has no indicator columns.');
   const data = rows.slice(1);
   const entities = [...new Set(data.map((r) => r[ei]))].sort();
-  return {
+  const table: OwidTable = {
     entities,
     indicators: indicatorCols.map((c) => c.h),
+    countriesFor(indicator) {
+      if (ci < 0) return {};
+      const out: Record<string, SeriesPoint[]> = {};
+      const codes = new Map<string, string>();
+      for (const r of data) if (/^[A-Z]{3}$/.test(r[ci] ?? '')) codes.set(r[ei], r[ci]);
+      for (const [entity, code] of codes) {
+        const pts = table.pointsFor(entity, indicator);
+        if (pts.length) out[code] = pts;
+      }
+      return out;
+    },
     pointsFor(entity, indicator) {
       const col = indicatorCols.find((c) => c.h === indicator);
       if (!col) return [];
@@ -99,6 +116,7 @@ export function parseOwidCsv(text: string): OwidTable {
         .sort((a, b) => a.x - b.x);
     },
   };
+  return table;
 }
 
 /** Accept a chart page URL and return its CSV URL (append ".csv"). */

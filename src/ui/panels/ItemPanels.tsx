@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { describeRelation, newId, notesFor, relationsFor, remove, upsert, RELATION_TYPES } from '../../model/doc';
-import { compareHistDate, formatRange, formatHistDate } from '../../model/dates';
+import { compareHistDate, formatRange, formatHistDate, toDecimalYear } from '../../model/dates';
 import type { ItemDraft } from '../../media/wikipedia';
 import type { Citation, HistDate, ItemKind, MediaRef, Place, Relation, RelationType, Source, TimelineItem } from '../../model/types';
 import { useDoc } from '../DocContext';
@@ -58,6 +58,7 @@ export function ItemView({ id, nav }: { id: string; nav: Nav }) {
   const { outgoing, incoming } = relationsFor(doc, id);
   const sources = new Map(doc.sources.map((s) => [s.id, s]));
   const years = item.end ? Math.round(compareHistDate(item.end, item.start)) : null;
+  const territories = doc.territories.filter((t) => t.itemId === id);
 
   return (
     <article data-testid="item-view">
@@ -72,6 +73,14 @@ export function ItemView({ id, nav }: { id: string; nav: Nav }) {
       {item.description && <p className="prose">{item.description}</p>}
       {item.places && item.places.length > 0 && <p className="meta" data-testid="item-places">{item.places.map(placeLabel).join(' · ')}</p>}
       {item.excerpt && <Excerpt excerpt={item.excerpt} source={sources.get(item.excerpt.sourceId)} />}
+      {territories.length > 0 && (
+        <>
+          <h3>On the map</h3>
+          <ul className="linklist">
+            {territories.map((t) => <li key={t.id}><button onClick={() => nav.open({ type: 'territory', id: t.id })}><strong>{t.title}</strong><small>Territory, {t.snapshots.length} {t.snapshots.length === 1 ? 'map' : 'maps'}</small></button></li>)}
+          </ul>
+        </>
+      )}
 
       <h3>Notes</h3>
       <ul className="linklist">
@@ -110,6 +119,7 @@ export function ItemView({ id, nav }: { id: string; nav: Nav }) {
 
       <div className="actions">
         <button className="btn primary" onClick={() => nav.replace({ type: 'item', id, edit: true })}>Edit</button>
+        {(item.places?.length || territories.length > 0) && <button className="btn" onClick={() => nav.showOnMap(toDecimalYear(item.start))}>Show on map</button>}
         <button
           className="btn danger"
           onClick={() => {

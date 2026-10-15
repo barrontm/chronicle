@@ -45,6 +45,23 @@ describe('Our World in Data', () => {
       { x: 1800, v: 984000000 },
     ]);
   });
+  it('collects every country by ISO code for the map, leaving out OWID aggregates', () => {
+    const t = parseOwidCsv([
+      'Entity,Code,Year,GDP per capita',
+      'France,FRA,1820,1809',
+      'France,FRA,1900,4500',
+      'Germany,DEU,1900,4200',
+      'Europe,,1900,4000',
+      'World,OWID_WRL,1900,2200',
+      'Nowhere,NOW,1900,',
+    ].join('\n'));
+    expect(t.countriesFor('GDP per capita')).toEqual({
+      FRA: [{ x: 1820, v: 1809 }, { x: 1900, v: 4500 }],
+      DEU: [{ x: 1900, v: 4200 }],
+    });
+    expect(parseOwidCsv('Entity,Year,x\nWorld,1900,1').countriesFor('x')).toEqual({});
+  });
+
   it('rejects other CSVs clearly', () => {
     expect(() => parseOwidCsv('a,b\n1,2')).toThrow(/Our World in Data/);
   });

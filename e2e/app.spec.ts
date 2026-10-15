@@ -306,3 +306,147 @@ test('adding from Wikipedia says a connection is needed when offline', async ({ 
   await panel.getByRole('button', { name: 'Search' }).click();
   await expect(panel.getByRole('alert')).toHaveText(/You’re offline\. Adding from Wikipedia needs a connection/);
 });
+
+// ---------- Map ----------
+
+async function openMap(page: Page, view: 'Map' | 'Both' = 'Map') {
+  await page.getByRole('button', { name: view, exact: true }).click();
+  await expect(page.locator('[data-testid=map][data-ready]')).toBeAttached({ timeout: 20_000 });
+}
+
+async function goToYear(page: Page, year: string) {
+  const input = page.getByTestId('yearbar').getByLabel('Year', { exact: true });
+  await input.click();
+  await input.fill(year);
+  await input.press('Enter');
+  await expect(input).toHaveValue(year);
+}
+
+const territoryLabel = (page: Page, name: string) => page.locator('.map-label.territory', { hasText: name });
+
+test('the map shows borders and entries for the chosen year @phone', async ({ page }) => {
+  await open(page);
+  await importFixture(page);
+  await openMap(page);
+  await goToYear(page, '300 BCE');
+  await expect(territoryLabel(page, 'Fixture Republic')).toBeVisible();
+  await goToYear(page, '500');
+  await expect(territoryLabel(page, 'Fixture Republic')).toHaveCount(0);
+  await goToYear(page, '1215');
+  await expect(page.locator('.map-label.pin', { hasText: 'Magna Carta sealed' })).toBeVisible();
+});
+
+test('the timeline playhead and the map share one year', async ({ page }) => {
+  await open(page);
+  await importFixture(page);
+  await openMap(page, 'Both');
+  await goToYear(page, '1914');
+  await expect(page.locator('.vis-custom-time-marker')).toHaveText('1914');
+  await page.getByRole('button', { name: 'Play through time' }).click();
+  await expect(page.getByRole('button', { name: 'Pause' })).toBeVisible();
+  await expect.poll(async () => Number(await page.getByTestId('yearbar').getByLabel('Year', { exact: true }).inputValue())).toBeGreaterThan(1914);
+  await page.getByRole('button', { name: 'Pause' }).click();
+});
+
+test('“Show on map” jumps to an entry’s year with the map open', async ({ page }) => {
+  await open(page);
+  await importFixture(page);
+  await page.locator('.vis-item', { hasText: 'Magna Carta sealed' }).click();
+  await page.getByTestId('item-view').getByRole('button', { name: 'Show on map' }).click();
+  await expect(page.locator('[data-testid=map][data-ready]')).toBeAttached({ timeout: 20_000 });
+  await expect(page.getByTestId('yearbar').getByLabel('Year', { exact: true })).toHaveValue('1215');
+  await expect(page.locator('.map-label.pin', { hasText: 'Magna Carta sealed' })).toBeVisible();
+});
+
+test('color the map by a trend with values per country', async ({ page }) => {
+  await open(page);
+  await importFixture(page);
+  await openMap(page);
+  await goToYear(page, '1900');
+  await page.getByRole('button', { name: 'Layers' }).click();
+  await page.getByLabel('Color the map by').selectOption({ label: 'Regional index (test data)' });
+  const legend = page.getByTestId('map-legend');
+  await expect(legend).toContainText('Regional index (test data)');
+  await expect(legend).toContainText('3 countries with data in 1900');
+  await goToYear(page, '1700');
+  await expect(legend).toContainText('No data for 1700');
+});
+
+test.describe('historical maps', () => {
+  // The service worker caches historical maps, which would hide the requests from page.route.
+  test.use({ serviceWorkers: 'block' });
+
+  const square = (x: number, y: number, s: number) => ({ type: 'Polygon', coordinates: [[[x, y], [x + s, y], [x + s, y + s], [x, y + s], [x, y]]] });
+  async function mockBasemaps(page: Page) {
+    await page.route('https://raw.githubusercontent.com/aourednik/historical-basemaps/**', (route) => {
+      const file = route.request().url().split('/').pop()!;
+      // Rome grows between 300 and 100 BCE and appears on no other maps.
+      const rome = { 'world_bc300.geojson': 3, 'world_bc200.geojson': 6, 'world_bc100.geojson': 9 }[file];
+      const features = [
+        { type: 'Feature', properties: { NAME: 'Carthage' }, geometry: square(5, 32, 4) },
+        ...(rome ? [{ type: 'Feature', properties: { NAME: 'Rome' }, geometry: square(10, 38, rome) }] : []),
+      ];
+      return route.fulfill({ headers: { 'Access-Control-Allow-Origin': '*' }, json: { type: 'FeatureCollection', features } });
+    });
+  }
+
+  test('import a polity’s borders across several maps', async ({ page }) => {
+    await mockBasemaps(page);
+    await open(page);
+    await openMap(page);
+    await goToYear(page, '200 BCE');
+    await page.getByRole('button', { name: 'Add a territory' }).click();
+    const panel = page.getByTestId('territory-import');
+    await expect(panel.getByLabel('Map year')).toHaveValue('world_bc200.geojson');
+    await panel.getByRole('button', { name: 'Show its polities' }).click();
+    await panel.getByLabel('Search polities').fill('ro');
+    await panel.getByTestId('polities').getByRole('button', { name: 'Rome' }).click();
+    await panel.getByRole('button', { name: /Look through 9 maps/ }).click();
+    await expect(panel.getByText('Found on 3 maps: 300 BCE, 200 BCE, 100 BCE.')).toBeVisible();
+    await panel.getByLabel('Name').fill('Roman Republic');
+    await panel.getByRole('button', { name: 'Add to map' }).click();
+
+    const view = page.getByTestId('territory-view');
+    await expect(view.getByRole('heading', { name: 'Roman Republic' })).toBeVisible();
+    await expect(view.getByRole('link', { name: /historical-basemaps/ })).toBeVisible();
+    await expect(territoryLabel(page, 'Roman Republic')).toBeVisible();
+    await goToYear(page, '500');
+    await expect(territoryLabel(page, 'Roman Republic')).toHaveCount(0);
+  });
+
+  test('reference borders say when they need a connection', async ({ page, context }) => {
+    await open(page);
+    await openMap(page);
+    await context.setOffline(true);
+    await page.getByRole('button', { name: 'Layers' }).click();
+    await page.getByLabel('Show reference borders').check();
+    await expect(page.getByRole('alert')).toContainText('You’re offline. Reference borders for');
+  });
+});
+
+test('import a trend for every country from Our World in Data and color the map with it', async ({ page }) => {
+  await page.route('https://ourworldindata.org/grapher/**', (route) =>
+    route.fulfill({
+      headers: { 'Access-Control-Allow-Origin': '*' },
+      contentType: 'text/csv',
+      body: ['Entity,Code,Year,Literacy rate', 'France,FRA,1820,38', 'France,FRA,1900,83', 'India,IND,1900,5', 'World,OWID_WRL,1820,12', 'World,OWID_WRL,1900,21'].join('\n'),
+    }),
+  );
+  await open(page);
+  await page.getByRole('button', { name: 'Add a trend' }).click();
+  const editor = page.getByTestId('series-editor');
+  await editor.getByLabel('Our World in Data chart link').fill('https://ourworldindata.org/grapher/literacy-rate');
+  await editor.getByRole('button', { name: 'Fetch' }).click();
+  await editor.getByLabel('Country or region').selectOption({ label: 'Every country (colors the map)' });
+  await editor.getByRole('button', { name: 'Use data for 2 countries' }).click();
+  await expect(editor.getByTestId('country-data')).toContainText('Values for 2 countries color the map.');
+  await editor.getByLabel('Unit').fill('%');
+  await editor.getByRole('button', { name: 'Add trend' }).click();
+  await expect(page.locator('.strip', { hasText: 'Literacy rate' })).toBeVisible(); // the World curve
+
+  await openMap(page);
+  await goToYear(page, '1900');
+  await page.getByRole('button', { name: 'Layers' }).click();
+  await page.getByLabel('Color the map by').selectOption({ label: 'Literacy rate' });
+  await expect(page.getByTestId('map-legend')).toContainText('2 countries with data in 1900');
+});

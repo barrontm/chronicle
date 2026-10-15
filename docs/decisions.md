@@ -2,6 +2,11 @@
 
 A log of choices that shouldn't be re-litigated every session. Newest first. To change a decision, add a new entry that supersedes the old one.
 
+## 2026-10-15 — Map: MapLibre behind an adapter, no tiles, borders Bob chooses
+The map (MapLibre GL 6, pinned) follows the vis-timeline rule: only `src/ui/MapView.tsx` imports it, and the logic that decides what is on the map in a year lives in pure modules (`model/atYear.ts`, `ui/mapData.ts`). There is no tile server: a simplified Natural Earth basemap (countries, lakes, rivers, about 1 MB) is bundled in `public/geo` and precached, so the map works offline. Labels are HTML markers, because symbol text needs a glyph server.
+Borders come from historical-basemaps (GPL-3.0, credited on each territory). Bob imports the polities he studies; each import is simplified (Douglas–Peucker, 0.05°) so backups stay small, and it can extend an existing territory (Roman Republic → Roman Empire). The full world maps appear only as an opt-in "reference borders" backdrop, which is fetched, cached by the service worker, and never written to the doc, so the app still ships no history.
+Trends gain `regions` (ISO-3 codes or territory ids). Countries are shaded on today's borders, as Our World in Data does, and the legend says so; territory values are circles. The color scale is fixed over all years so change over time is visible. "Tech spread" is the map with past entries kept and one category shown; a separate tech tree stays in M5.
+
 ## 2026-10-15 — Add from Wikipedia: facts, a citation and a quote, never a note
 "Add → From Wikipedia" prefills the normal entry editor and saves nothing until Bob confirms. Kind and dates come from Wikidata (precision kept, BCE converted in `dates.ts`), not from parsing article prose. The picture comes from Wikidata's P18 via Commons so credit and license are real; the page's own lead image may be non-free and is not used. The page becomes a `web` source with the date read. The intro is stored as an `excerpt` and shown as a quotation, so reference text never passes for Bob's own understanding. SEP was considered and dropped: it has no API and blocks cross-site requests.
 

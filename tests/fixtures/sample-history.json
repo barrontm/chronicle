@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "id": "doc_fixture",
   "title": "Test fixture",
   "updatedAt": 1760000000000,
@@ -42,9 +42,29 @@
       "id": "sr_transistors", "title": "Transistors per microprocessor", "unit": "transistors", "categoryId": "technology", "scale": "log",
       "points": [{ "x": 1971, "v": 2300 }, { "x": 1978, "v": 29000 }, { "x": 1985, "v": 275000 }, { "x": 1993, "v": 3100000 }, { "x": 2000, "v": 42000000 }, { "x": 2006, "v": 291000000 }, { "x": 2020, "v": 16000000000 }],
       "source": { "name": "Approximate figures (test data)" }, "updatedAt": 1760000000000
+    },
+    {
+      "id": "sr_regional", "title": "Regional index (test data)", "unit": "index", "categoryId": "society", "scale": "linear",
+      "points": [],
+      "regions": {
+        "FRA": [{ "x": 1800, "v": 10 }, { "x": 1900, "v": 40 }, { "x": 2000, "v": 90 }],
+        "GBR": [{ "x": 1800, "v": 20 }, { "x": 1900, "v": 60 }, { "x": 2000, "v": 95 }],
+        "ITA": [{ "x": 1800, "v": 5 }, { "x": 1900, "v": 25 }, { "x": 2000, "v": 85 }],
+        "t_fixture": [{ "x": -400, "v": 1 }, { "x": 0, "v": 5 }]
+      },
+      "source": { "name": "Made-up values for tests" }, "updatedAt": 1760000000000
     }
   ],
-  "territories": [],
+  "territories": [
+    {
+      "id": "t_fixture", "title": "Fixture Republic", "categoryId": "politics", "itemId": "i_pelop",
+      "snapshots": [
+        { "from": { "y": -499 }, "to": { "y": -199 }, "areaKm2": 40000, "geometry": { "type": "Polygon", "coordinates": [[[11, 41], [14, 41], [14, 43], [11, 43], [11, 41]]] } },
+        { "from": { "y": -199 }, "to": { "y": 100 }, "areaKm2": 300000, "geometry": { "type": "MultiPolygon", "coordinates": [[[[7, 38], [18, 38], [18, 46], [7, 46], [7, 38]]]] } }
+      ],
+      "source": { "name": "Hand-drawn boxes (test data)" }, "updatedAt": 1760000000000
+    }
+  ],
   "notes": [
     { "id": "n_teachers", "title": "Socrates → Plato → Aristotle", "body": "Three generations of teacher and student.\n\nAristotle studied at Plato's Academy for about twenty years.", "linkedIds": ["i_socrates", "i_plato", "i_aristotle"], "citations": [{ "sourceId": "s_barnes", "locator": "pp. 1–10" }], "updatedAt": 1760000000000 }
   ],

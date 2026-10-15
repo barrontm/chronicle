@@ -1,3 +1,4 @@
+import { isArea } from '../data/geo';
 import { isValidHistDate, compareHistDate } from './dates';
 import {
   SCHEMA_VERSION,
@@ -7,6 +8,7 @@ import {
   type Relation,
   type RelationType,
   type Series,
+  type SeriesPoint,
   type Source,
   type Territory,
   type TimelineDoc,
@@ -80,13 +82,39 @@ export function validateItem(item: TimelineItem, categoryIds: Set<string>): stri
   return p;
 }
 
+function checkPoints(label: string, pts: SeriesPoint[], scale: Series['scale']): string[] {
+  if (pts.some((pt) => !Number.isFinite(pt.x) || !Number.isFinite(pt.v))) return [`${label} has non-numeric points`];
+  if (scale === 'log' && pts.some((pt) => pt.v <= 0)) return [`${label} is log-scale but has values ≤ 0`];
+  return [];
+}
+
 export function validateSeries(s: Series, categoryIds: Set<string>): string[] {
   const p: string[] = [];
+  const name = `series "${s.title}"`;
   if (!s.id || !s.title) p.push('a series is missing its id or title');
-  if (!categoryIds.has(s.categoryId)) p.push(`series "${s.title}" uses unknown category "${s.categoryId}"`);
-  if (!Array.isArray(s.points) || s.points.length < 2) p.push(`series "${s.title}" needs at least two points`);
-  else if (s.points.some((pt) => !Number.isFinite(pt.x) || !Number.isFinite(pt.v))) p.push(`series "${s.title}" has non-numeric points`);
-  else if (s.scale === 'log' && s.points.some((pt) => pt.v <= 0)) p.push(`series "${s.title}" is log-scale but has values ≤ 0`);
+  if (!categoryIds.has(s.categoryId)) p.push(`${name} uses unknown category "${s.categoryId}"`);
+  const regions = Object.entries(s.regions ?? {});
+  if (!Array.isArray(s.points)) p.push(`${name} has malformed points`);
+  // A map-only series (values per country, no world curve) is fine; otherwise a curve needs two points.
+  else if (s.points.length < 2 && !regions.length) p.push(`${name} needs at least two points`);
+  else p.push(...checkPoints(name, s.points, s.scale));
+  for (const [key, pts] of regions) {
+    if (!Array.isArray(pts)) p.push(`${name} has malformed values for "${key}"`);
+    else p.push(...checkPoints(`${name} (${key})`, pts, s.scale));
+  }
+  return p;
+}
+
+export function validateTerritory(t: Territory, categoryIds: Set<string>): string[] {
+  const p: string[] = [];
+  const name = t.title ? `territory "${t.title}"` : `territory ${t.id}`;
+  if (!t.id || !t.title?.trim()) p.push('a territory is missing its id or title');
+  if (!categoryIds.has(t.categoryId)) p.push(`${name} uses unknown category "${t.categoryId}"`);
+  if (!Array.isArray(t.snapshots)) return [...p, `${name} has malformed snapshots`];
+  for (const s of t.snapshots) {
+    if (!s.from || !isValidHistDate(s.from) || (s.to && !isValidHistDate(s.to))) p.push(`${name} has a snapshot with an invalid date`);
+    if (s.geometry !== undefined && !isArea(s.geometry)) p.push(`${name} has a snapshot that isn't a polygon`);
+  }
   return p;
 }
 
@@ -106,7 +134,10 @@ export function validateDoc(doc: TimelineDoc): string[] {
     checkUnique(s.id);
     p.push(...validateSeries(s, catIds));
   }
-  for (const t of doc.territories) checkUnique(t.id);
+  for (const t of doc.territories) {
+    checkUnique(t.id);
+    p.push(...validateTerritory(t, catIds));
+  }
   const sourceIds = new Set(doc.sources.map((s) => s.id));
   for (const s of doc.sources) {
     checkUnique(s.id);
@@ -153,6 +184,7 @@ export function parseDoc(json: string): TimelineDoc {
     throw new DocValidationError([`the file was made by a newer version of the app (schema ${r.schemaVersion}); update the app first`]);
   }
   if (r.schemaVersion === 1) r = migrate1to2(r);
+  if (r.schemaVersion === 2) r = migrate2to3(r);
   const doc: TimelineDoc = {
     schemaVersion: SCHEMA_VERSION,
     id: r.id ?? newId('doc'),
@@ -178,6 +210,22 @@ export function parseDoc(json: string): TimelineDoc {
  */
 function migrate1to2(r: Partial<TimelineDoc>): Partial<TimelineDoc> {
   return { ...r, schemaVersion: 2 };
+}
+
+/**
+ * v3 types territory geometry and adds optional territory itemId/wikidataId
+ * and series regions. v2 territories were never drawn, so any geometry that
+ * isn't a polygon is dropped rather than failing the import.
+ */
+function migrate2to3(r: Partial<TimelineDoc>): Partial<TimelineDoc> {
+  return {
+    ...r,
+    schemaVersion: 3,
+    territories: (r.territories ?? []).map((t) => ({
+      ...t,
+      snapshots: (t.snapshots ?? []).map((s) => (s.geometry === undefined || isArea(s.geometry) ? s : { ...s, geometry: undefined })),
+    })),
+  };
 }
 
 export function serializeDoc(doc: TimelineDoc): string {
@@ -225,6 +273,21 @@ export function remove(doc: TimelineDoc, collection: Collection, id: string, now
       relations: next.relations.filter((r) => r.fromId !== id && r.toId !== id),
       notes: next.notes.map((n) => (n.linkedIds.includes(id) ? { ...n, linkedIds: n.linkedIds.filter((x) => x !== id), updatedAt: now } : n)),
     };
+  }
+  if (collection === 'items') {
+    next = { ...next, territories: next.territories.map((t) => (t.itemId === id ? { ...t, itemId: undefined, updatedAt: now } : t)) };
+  }
+  if (collection === 'territories') {
+    // Values recorded for the territory go with it; the rest of the trend stays,
+    // unless nothing is left of it.
+    const series: Series[] = [];
+    for (const s of next.series) {
+      if (!s.regions || !(id in s.regions)) { series.push(s); continue; }
+      const { [id]: _gone, ...regions } = s.regions;
+      if (s.points.length < 2 && !Object.keys(regions).length) deleted[s.id] = now;
+      else series.push({ ...s, regions, updatedAt: now });
+    }
+    next = { ...next, series };
   }
   if (collection === 'sources') {
     const strip = <T extends { citations?: Citation[]; updatedAt: number }>(r: T): T =>

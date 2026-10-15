@@ -24,7 +24,9 @@ export default defineConfig({
         icons: [{ src: 'icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' }],
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,svg,woff2}'],
+        // geo/*.json is the bundled basemap, so the map works offline.
+        globPatterns: ['**/*.{js,mjs,css,html,svg,woff2}', 'geo/*.json'],
+        maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
         // Pictures from Wikimedia stay viewable offline once seen.
         runtimeCaching: [
           {
@@ -35,6 +37,16 @@ export default defineConfig({
             options: {
               cacheName: 'wikimedia-images',
               expiration: { maxEntries: 2000, maxAgeSeconds: 60 * 60 * 24 * 365 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+          {
+            // Historical borders: fetched for the reference backdrop or a territory import, kept for offline use.
+            urlPattern: ({ url }) => url.hostname === 'raw.githubusercontent.com' && url.pathname.startsWith('/aourednik/historical-basemaps/'),
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'historical-basemaps',
+              expiration: { maxEntries: 60, maxAgeSeconds: 60 * 60 * 24 * 365 },
               cacheableResponse: { statuses: [0, 200] },
             },
           },

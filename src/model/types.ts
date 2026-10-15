@@ -1,3 +1,5 @@
+import type { MultiPolygon, Polygon } from 'geojson';
+
 /**
  * Core data model. See docs/data-model.md for the reasoning behind each shape.
  *
@@ -164,21 +166,28 @@ export interface Series {
   unit: string;
   categoryId: string;
   scale: 'linear' | 'log';
+  /** The headline curve drawn as a trend strip (e.g. World). May be empty if only regions are known. */
   points: SeriesPoint[];
+  /**
+   * Values per place, for the map. Keys are ISO 3166-1 alpha-3 country codes
+   * ("FRA") or territory ids ("t_…"). Countries color the map; territories get
+   * a proportional circle.
+   */
+  regions?: Record<string, SeriesPoint[]>;
   source?: { name: string; url?: string };
   note?: string;
   updatedAt: number;
 }
 
 /**
- * A polity's extent over time, as a sequence of map snapshots.
- * Stored now so the schema is stable; rendering arrives in the "Maps" milestone.
+ * A polity's extent over time, as a sequence of map snapshots. A snapshot
+ * applies from `from` up to (not including) `to`; no `to` means "and after".
  */
 export interface TerritorySnapshot {
   from: HistDate;
   to?: HistDate;
-  /** GeoJSON geometry (Polygon/MultiPolygon). Typed loosely until the map renderer lands. */
-  geometry?: unknown;
+  /** GeoJSON [lon, lat] geometry, simplified on import. */
+  geometry?: Polygon | MultiPolygon;
   areaKm2?: number;
 }
 
@@ -187,11 +196,14 @@ export interface Territory {
   title: string;
   categoryId: string;
   snapshots: TerritorySnapshot[];
+  /** The timeline entry for this polity (usually a period), if any. */
+  itemId?: string;
+  wikidataId?: string;
   source?: { name: string; url?: string };
   updatedAt: number;
 }
 
-export const SCHEMA_VERSION = 2;
+export const SCHEMA_VERSION = 3;
 
 export interface TimelineDoc {
   schemaVersion: number;

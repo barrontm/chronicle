@@ -12,7 +12,8 @@ Read `docs/decisions.md` before proposing architecture changes, and `ROADMAP.md`
 - **Connections** (`Relation`): directed links between entries, such as influenced, caused, part-of, responded-to and related.
 - **Trends** (`Series`): quantities over time (population, literacy, transistor counts), drawn as strips that share the timeline's time axis. They can be typed in, pasted, or imported from an Our World in Data chart.
 - **Pictures** (`MediaRef`) on entries: Wikimedia Commons search (credit and license saved), an image link, or an upload stored in IndexedDB.
-- **Territories**: in the schema, not rendered yet (see ROADMAP "Maps").
+- **Add from Wikipedia**: search, then a prefilled entry (Wikidata dates, places, picture, intro as a quoted `excerpt`, page cited as a source).
+- **Map** (Timeline | Map | Both) with one shared current year (year bar, timeline playhead, Play). Shows **territories** (`Territory`: borders per snapshot, imported from historical-basemaps), entries with `places` as pins, connections as lines, and trends with per-country `regions` as a choropleth. An opt-in reference backdrop of world borders is fetched, never saved.
 - Offline-first PWA. Data lives in IndexedDB. Export/import JSON, where import can **merge**; that is the cross-device sync until real sync lands.
 
 ## Commands
@@ -31,11 +32,13 @@ In the Claude cloud sandbox Playwright can't download browsers. Run e2e with the
 ## Layout
 
 ```
-src/model/      types.ts (schema), dates.ts (ALL date logic), doc.ts (pure mutations, validation, merge)
+src/model/      types.ts (schema), dates.ts (ALL date logic), doc.ts (pure mutations, validation, merge), atYear.ts (what's on the map in a year)
 src/store/      DocStore interface, IndexedDB + in-memory implementations
-src/data/       parsing pasted series data and Our World in Data CSVs
-src/media/      Wikimedia Commons search, image shrinking
-src/ui/         React. TimelineView is the ONLY file that imports vis-timeline
+src/data/       parsing pasted series data and Our World in Data CSVs; geo.ts (simplify, area); basemaps.ts (historical-basemaps)
+src/media/      Wikimedia Commons search, image shrinking, Wikipedia/Wikidata import
+src/ui/         React. TimelineView is the ONLY file that imports vis-timeline; MapView the ONLY one that imports maplibre-gl
+                mapData.ts turns the doc into GeoJSON for a year (pure, tested); MapPane lazy-loads MapView
+public/geo/     bundled Natural Earth basemap (built by scripts/build-geo.ts; committed)
 src/ui/panels/  drawer contents: entry, note, source and trend views/editors, library
 tests/fixtures/ sample-history.json (TEST DATA ONLY; never ship it as app content)
 e2e/            Playwright specs
@@ -59,3 +62,6 @@ docs/           decisions.md, data-model.md, design.md
 - React bubbles synthetic events through portals. Forms inside `ImagePicker` call `stopPropagation()` so they don't submit the entry form behind them.
 - vis-timeline label callbacks receive moment objects even though the types say `Date`. The timeline runs in UTC via the `moment` option.
 - `Field` ties a label to its control by id. Pass the bare `<input>`/`<select>`/`<textarea>` as its child.
+- MapLibre can't read CSS variables: MapView resolves `var(--…)` colors and re-applies them when the system theme changes. Map text labels are HTML markers (symbol text would need a glyph server). Don't replace a marker element's `className`; MapLibre positions it with its own classes.
+- The service worker serves Wikimedia images and historical-basemaps files CacheFirst, so `page.route` can't see those requests. E2e tests that mock them use `test.use({ serviceWorkers: 'block' })`.
+- E2e and `npm run shots` launch Chromium with SwiftShader so the map has WebGL.

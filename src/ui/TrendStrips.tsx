@@ -24,7 +24,8 @@ interface Props {
 
 export function TrendStrips({ series, categories, window: win, onOpen, onAdd }: Props) {
   const colorOf = useMemo(() => new Map(categories.map((c) => [c.id, c.color])), [categories]);
-  const visible = series.filter((s) => colorOf.has(s.categoryId));
+  // Map-only trends (values per country, no overall curve) have nothing to draw here.
+  const visible = series.filter((s) => colorOf.has(s.categoryId) && s.points.length >= 2);
 
   return (
     <section className="strips" aria-label="Trends over time" style={win ? ({ '--strip-cols': `${Math.max(0, win.left - 8)}px ${win.width}px` } as React.CSSProperties) : undefined}>

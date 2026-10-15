@@ -16,6 +16,7 @@ import { SCHEMA_VERSION, type TimelineItem } from './types';
 const fixtureJson = readFileSync(new URL('../../tests/fixtures/sample-history.json', import.meta.url), 'utf8');
 const fixture = () => parseDoc(fixtureJson);
 const fixtureV1Json = readFileSync(new URL('../../tests/fixtures/sample-history-v1.json', import.meta.url), 'utf8');
+const fixtureV2Json = readFileSync(new URL('../../tests/fixtures/sample-history-v2.json', import.meta.url), 'utf8');
 
 describe('parseDoc', () => {
   it('accepts the fixture and round-trips it', () => {
@@ -55,6 +56,26 @@ describe('parseDoc', () => {
     expect(JSON.parse(fixtureV1Json).schemaVersion).toBe(1);
     expect(doc.schemaVersion).toBe(SCHEMA_VERSION);
     expect(doc.items.length).toBeGreaterThan(10);
+  });
+
+  it('still imports a schema 2 backup, dropping territory geometry that was never a polygon', () => {
+    const v2 = JSON.parse(fixtureV2Json);
+    expect(v2.schemaVersion).toBe(2);
+    v2.territories = [{ id: 't_old', title: 'Old', categoryId: 'politics', snapshots: [{ from: { y: 100 }, geometry: { type: 'Point', coordinates: [0, 0] } }], updatedAt: 1 }];
+    const doc = parseDoc(JSON.stringify(v2));
+    expect(doc.schemaVersion).toBe(SCHEMA_VERSION);
+    expect(doc.territories[0].snapshots[0].geometry).toBeUndefined();
+  });
+
+  it('accepts a map-only trend but rejects bad regional values and territories', () => {
+    expect(fixture().series[2].points).toEqual([]);
+    const badSeries = JSON.parse(fixtureJson);
+    badSeries.series[2].regions.FRA = [{ x: 1800, v: 'lots' }];
+    expect(() => parseDoc(JSON.stringify(badSeries))).toThrow(/\(FRA\) has non-numeric points/);
+    const badTerritory = JSON.parse(fixtureJson);
+    badTerritory.territories[0].snapshots[0].from = { y: 1.5 };
+    badTerritory.territories[0].snapshots[1].geometry = { type: 'Point', coordinates: [0, 0] };
+    expect(() => parseDoc(JSON.stringify(badTerritory))).toThrow(/invalid date[\s\S]*isn't a polygon/);
   });
 
   it('rejects places with impossible coordinates', () => {
@@ -97,6 +118,23 @@ describe('mutations', () => {
     expect(doc.items.find((i) => i.id === 'i_aristotle')?.citations).toEqual([]);
     expect(doc.notes[0].citations).toEqual([]);
     expect(() => parseDoc(serializeDoc(doc))).not.toThrow();
+  });
+
+  it('removing an entry unlinks territories; removing a territory drops its values', () => {
+    let doc = remove(fixture(), 'items', 'i_pelop', 7);
+    expect(doc.territories[0].itemId).toBeUndefined();
+    doc = remove(doc, 'territories', 't_fixture', 8);
+    const regional = doc.series.find((s) => s.id === 'sr_regional')!;
+    expect(Object.keys(regional.regions!)).toEqual(['FRA', 'GBR', 'ITA']);
+    expect(() => parseDoc(serializeDoc(doc))).not.toThrow();
+  });
+
+  it('removing a territory deletes a trend that only had values for it', () => {
+    const base = fixture();
+    const only = { ...base.series[2], id: 'sr_only', regions: { t_fixture: base.series[2].regions!.t_fixture } };
+    const doc = remove(upsert(base, 'series', only, 5), 'territories', 't_fixture', 9);
+    expect(doc.series.some((s) => s.id === 'sr_only')).toBe(false);
+    expect(doc.deleted.sr_only).toBe(9);
   });
 
   it('removing a source drops excerpts quoted from it', () => {

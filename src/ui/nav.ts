@@ -11,7 +11,9 @@ export type Panel =
   | { type: 'source'; id: string; edit?: boolean }
   | { type: 'new-source' }
   | { type: 'series'; id: string | null }
-  | { type: 'library'; tab: 'notes' | 'sources' | 'trends' };
+  | { type: 'territory'; id: string; edit?: boolean }
+  | { type: 'territory-import'; year: number }
+  | { type: 'library'; tab: 'notes' | 'sources' | 'trends' | 'territories' };
 
 export interface Nav {
   /** Open a panel on top of the current one. */
@@ -21,4 +23,6 @@ export interface Nav {
   back: () => void;
   close: () => void;
   canGoBack: boolean;
+  /** Show the map at a year (e.g. "Show on map" from an entry or territory). */
+  showOnMap: (year: number) => void;
 }

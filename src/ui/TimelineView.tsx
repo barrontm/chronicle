@@ -2,7 +2,7 @@ import moment from 'moment';
 import { useEffect, useRef } from 'react';
 import { DataSet } from 'vis-data/peer';
 import { Timeline, type TimelineOptions } from 'vis-timeline/peer';
-import { formatAxisYear, formatYear, jsDateToDecimalYear, toJsDate } from '../model/dates';
+import { decimalYearToJsDate, formatAxisYear, formatYear, jsDateToDecimalYear, toJsDate } from '../model/dates';
 import type { Category, MediaRef, TimelineItem } from '../model/types';
 import { escapeHtml } from './util';
 
@@ -30,6 +30,9 @@ interface Props {
   onWindow: (w: VisibleWindow) => void;
   /** Bumped by the parent to request "fit everything in view". */
   fitSignal: number;
+  /** The map's current year as a draggable playhead. Omit when the map is hidden. */
+  year?: number;
+  onYear?: (year: number) => void;
 }
 
 const YEAR_MS = 365.25 * 24 * 3600 * 1000;
@@ -85,14 +88,19 @@ function toVisItem(item: TimelineItem, color: string, thumbFor: Props['thumbFor'
   return { ...base, end, type: 'range' as const };
 }
 
-export function TimelineView({ items, categories, selectedId, thumbFor, onSelect, onAddAt, onWindow, fitSignal }: Props) {
+const PLAYHEAD = 'year';
+/** setCustomTimeMarker exists at runtime but is missing from the Timeline class typings. */
+type WithMarker = Timeline & { setCustomTimeMarker(title: string, id?: string, editable?: boolean): void };
+
+export function TimelineView({ items, categories, selectedId, thumbFor, onSelect, onAddAt, onWindow, fitSignal, year, onYear }: Props) {
   const host = useRef<HTMLDivElement>(null);
   const tl = useRef<Timeline | null>(null);
   const itemSet = useRef(new DataSet<ReturnType<typeof toVisItem>>());
   const groupSet = useRef(new DataSet<{ id: string; content: string; style: string }>());
   // Keep latest callbacks without re-creating the timeline.
-  const cb = useRef({ onSelect, onAddAt, onWindow });
-  cb.current = { onSelect, onAddAt, onWindow };
+  const cb = useRef({ onSelect, onAddAt, onWindow, onYear });
+  cb.current = { onSelect, onAddAt, onWindow, onYear };
+  const hasPlayhead = useRef(false);
 
   useEffect(() => {
     if (!host.current) return;
@@ -145,6 +153,13 @@ export function TimelineView({ items, categories, selectedId, thumbFor, onSelect
     t.on('rangechange', report);
     t.on('changed', report);
     t.on('select', (p: { items: string[] }) => cb.current.onSelect(p.items[0]));
+    // Drag the playhead, or click empty space, to move the map through time.
+    t.on('timechange', (p: { id: string; time: Date }) => {
+      if (p.id === PLAYHEAD) cb.current.onYear?.(jsDateToDecimalYear(p.time));
+    });
+    t.on('click', (p: { item: string | null; time: Date; what: string | null }) => {
+      if (hasPlayhead.current && !p.item && p.what === 'background') cb.current.onYear?.(Math.round(jsDateToDecimalYear(p.time)));
+    });
     t.on('doubleClick', (p: { item: string | null; time: Date; group: string | null; what: string }) => {
       if (p.item || p.what === 'axis') return;
       cb.current.onAddAt(Math.round(jsDateToDecimalYear(p.time)), p.group ?? undefined);
@@ -175,6 +190,24 @@ export function TimelineView({ items, categories, selectedId, thumbFor, onSelect
       if (s < w.start || s > w.end) tl.current?.moveTo(s, { animation: false });
     }
   }, [selectedId]);
+
+  useEffect(() => {
+    const t = tl.current;
+    if (!t) return;
+    if (year === undefined) {
+      if (hasPlayhead.current) t.removeCustomTime(PLAYHEAD);
+      hasPlayhead.current = false;
+      return;
+    }
+    const at = decimalYearToJsDate(year);
+    if (!hasPlayhead.current) {
+      t.addCustomTime(at, PLAYHEAD);
+      hasPlayhead.current = true;
+    } else {
+      t.setCustomTime(at, PLAYHEAD);
+    }
+    (t as WithMarker).setCustomTimeMarker(formatYear(Math.floor(year)), PLAYHEAD, false);
+  }, [year]);
 
   useEffect(() => {
     if (fitSignal && tl.current && itemSet.current.length) tl.current.fit({ animation: false });
