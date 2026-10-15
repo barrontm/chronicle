@@ -4,13 +4,13 @@ import type { Category, Relation, Series, Territory, TimelineItem } from '../mod
 import type { Area } from '../data/geo';
 import { addPoint, canFinish, closePart, EMPTY_DRAFT, toGeometry, undo, type Draft } from './drawing';
 import { choroplethAt, mapKindOf } from './mapData';
-import type { BackdropStatus, MapOptions } from './MapView';
+import type { BackdropStatus, MapCamera, MapOptions } from './MapView';
 import { formatValue } from './util';
 
 // MapLibre is large; load it only when the map is first shown.
 const MapView = lazy(() => import('./MapView'));
 
-export type { MapOptions };
+export type { MapCamera, MapOptions };
 
 interface Props {
   year: number;
@@ -28,6 +28,8 @@ interface Props {
   onOpenItem: (id: string) => void;
   onOpenTerritory: (id: string) => void;
   onAddTerritory: () => void;
+  camera: MapCamera;
+  onCamera: (c: MapCamera) => void;
   /** Set while Bob is drawing a border on the map. */
   drawing?: { onDone: (g: Area) => void; onCancel: () => void };
 }
@@ -59,6 +61,8 @@ export function MapPane(p: Props) {
           onOpenItem={p.onOpenItem}
           onOpenTerritory={p.onOpenTerritory}
           onBackdropStatus={setBackdrop}
+          camera={p.camera}
+          onCamera={p.onCamera}
           draft={p.drawing ? draft : undefined}
           onDrawPoint={p.drawing ? (pt, nearFirst) => setDraft((d) => (nearFirst ? closePart(d) : addPoint(d, pt))) : undefined}
         />

@@ -35,6 +35,13 @@ Folder notes load automatically: `src/ui/CLAUDE.md`, `src/model/CLAUDE.md`, `e2e
 6. **Copy:** plain, sentence-case, Bob's point of view (see `docs/design.md`).
 7. **Verify visually** with screenshots of only the views you changed (desktop, phone, dark), as one sheet.
 8. **Tests with features:** unit tests for logic, one e2e test for the main flow, network mocked.
+9. **Manual:** every user-visible change updates `docs/manual.md` (shown in the app under Help) in the same commit, in Bob's words. `check:quiet` fails otherwise; "Manual: none" in a commit message is only for changes Bob can't see.
+
+## Releases: Bob's stable app
+- `main` is Bob's stable app on GitHub Pages; pushing `main` deploys it (only after the full check passes in CI).
+- Work each ticket on its own branch from `main` (`ticket/<slug>`). Never commit tickets to `main`.
+- Done = `check:quiet` passes, manual updated, committed on the branch. Then ask Bob; merge to `main` and push only when he says to release.
+- Saved data must open in every later version: schema changes follow `src/model/CLAUDE.md`, including its upgrade test.
 
 ## Working efficiently
 - One roadmap ticket per session. Start fresh, finish with a commit.

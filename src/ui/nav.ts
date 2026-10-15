@@ -14,6 +14,7 @@ export type Panel =
   | { type: 'series'; id: string | null }
   | { type: 'territory'; id: string; edit?: boolean }
   | { type: 'territory-import'; year: number }
+  | { type: 'help'; section?: string }
   | { type: 'library'; tab: 'notes' | 'sources' | 'trends' | 'territories' };
 
 export interface Nav {

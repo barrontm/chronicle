@@ -1,17 +1,26 @@
 /// <reference types="vitest/config" />
 import react from '@vitejs/plugin-react';
+import { execSync } from 'node:child_process';
 import { defineConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 
 // BASE_PATH is set by the GitHub Pages workflow to "/<repo-name>/". Locally it's "/".
 const base = process.env.BASE_PATH ?? '/';
 
+// Which build this is, shown in Help so Bob can tell the stable app from the one in progress.
+function appVersion(): string {
+  let commit = 'dev';
+  try { commit = execSync('git rev-parse --short HEAD', { stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim(); } catch { /* not a git checkout */ }
+  return `${commit}, built ${new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`;
+}
+
 export default defineConfig({
   base,
+  define: { __APP_VERSION__: JSON.stringify(appVersion()) },
   plugins: [
     react(),
     VitePWA({
-      registerType: 'autoUpdate',
+      registerType: 'prompt',
       includeAssets: ['icon.svg'],
       manifest: {
         name: 'Chronicle',
@@ -56,7 +65,7 @@ export default defineConfig({
   ],
   build: { chunkSizeWarningLimit: 1200 },
   test: {
-    include: ['src/**/*.test.ts'],
+    include: ['src/**/*.test.ts', 'scripts/**/*.test.ts'],
     environment: 'node',
   },
 });

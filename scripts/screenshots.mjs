@@ -121,6 +121,16 @@ if (any('desktop-draw')) await drawBorder(await page('desktop-draw', desktop), '
 if (any('dark-draw')) await drawBorder(await page('dark-draw', { ...desktop, colorScheme: 'dark' }), 'dark');
 if (any('phone-draw')) await drawBorder(await page('phone-draw', { viewport: { width: 412, height: 860 }, isMobile: true, hasTouch: true }), 'phone');
 
+// The manual.
+async function help(p, prefix) {
+  await p.getByRole('button', { name: 'Help' }).click();
+  await p.getByTestId('help').waitFor();
+  await shot(p, `${prefix}-help`);
+}
+if (any('desktop-help')) await help(await page('desktop-help', desktop), 'desktop');
+if (any('dark-help')) await help(await page('dark-help', { ...desktop, colorScheme: 'dark' }), 'dark');
+if (any('phone-help')) await help(await page('phone-help', { viewport: { width: 412, height: 860 }, isMobile: true, hasTouch: true }), 'phone');
+
 if (argv.includes('--sheet') && taken.length) {
   // Tile the shots at half size into one page and capture it: one image to review instead of many.
   const imgs = taken.map((n) => `<figure class="${n.startsWith('phone') ? 'phone' : ''}"><img src="data:image/png;base64,${readFileSync(`${OUT}${n}.png`).toString('base64')}"><figcaption>${n}</figcaption></figure>`).join('');

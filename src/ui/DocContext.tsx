@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { createEmptyDoc } from '../model/doc';
+import { createEmptyDoc, openStoredDoc } from '../model/doc';
 import type { MediaRef, TimelineDoc } from '../model/types';
-import type { DocStore } from '../store/store';
+import { NewerDataError, type DocStore } from '../store/store';
 
 type SaveState = 'loading' | 'saved' | 'saving' | 'error';
 
@@ -17,7 +17,13 @@ interface DocContextValue {
   mediaUrl: (m: MediaRef, thumb?: boolean) => string | undefined;
   /** Store an uploaded image and return its local id. */
   putMedia: (blob: Blob) => Promise<string>;
+  /** Set when changes can't be saved safely (data from a newer version); edits are ignored. */
+  readOnly: string | null;
+  /** Save any pending change now (before a reload). */
+  flush: () => Promise<void>;
 }
+
+const NEWER = 'This data was saved by a newer version of Chronicle, so this copy won’t change it. Reload to update.';
 
 const Ctx = createContext<DocContextValue | null>(null);
 
@@ -33,6 +39,9 @@ export function DocProvider({ store, children }: { store: DocStore; children: (r
   const [doc, setDoc] = useState<TimelineDoc | null>(null);
   const [saveState, setSaveState] = useState<SaveState>('loading');
   const [localUrls, setLocalUrls] = useState<Record<string, string>>({});
+  const [readOnly, setReadOnly] = useState<string | null>(null);
+  const readOnlyRef = useRef<string | null>(null);
+  const lock = useCallback((message: string) => { readOnlyRef.current = message; setReadOnly(message); }, []);
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const latest = useRef<TimelineDoc | null>(null);
 
@@ -40,8 +49,23 @@ export function DocProvider({ store, children }: { store: DocStore; children: (r
     let cancelled = false;
     store.load().then(async (loaded) => {
       if (cancelled) return;
-      const d = loaded ?? createEmptyDoc();
+      let d = loaded ?? createEmptyDoc();
       if (!loaded) await store.save(d);
+      else {
+        try {
+          const opened = openStoredDoc(loaded);
+          d = opened.doc;
+          if (opened.status === 'newer') lock(NEWER);
+          if (opened.status === 'upgraded') {
+            // Keep the data exactly as it was before upgrading it, then save the upgraded doc.
+            await store.keepCopy(loaded, `Before upgrading from schema ${loaded.schemaVersion}`);
+            await store.save(d);
+          }
+        } catch (e) {
+          lock(`Chronicle couldn’t upgrade your saved data, so it’s left untouched: ${(e as Error).message}`);
+        }
+      }
+      if (cancelled) return;
       setDoc(d);
       latest.current = d;
       setSaveState('saved');
@@ -49,25 +73,34 @@ export function DocProvider({ store, children }: { store: DocStore; children: (r
       navigator.storage?.persist?.().catch(() => undefined);
     }, () => setSaveState('error'));
     return () => { cancelled = true; };
-  }, [store]);
+  }, [store, lock]);
+
+  const write = useCallback((d: TimelineDoc) => store.save(d).then(
+    () => setSaveState('saved'),
+    (e) => { setSaveState('error'); if (e instanceof NewerDataError) lock(NEWER); },
+  ), [store, lock]);
 
   const scheduleSave = useCallback((d: TimelineDoc) => {
     latest.current = d;
     setSaveState('saving');
     clearTimeout(timer.current);
-    timer.current = setTimeout(() => {
-      store.save(latest.current!).then(() => setSaveState('saved'), () => setSaveState('error'));
-    }, SAVE_DELAY_MS);
-  }, [store]);
+    timer.current = setTimeout(() => void write(latest.current!), SAVE_DELAY_MS);
+  }, [write]);
+
+  const flush = useCallback(async () => {
+    clearTimeout(timer.current);
+    if (latest.current && !readOnlyRef.current) await write(latest.current);
+  }, [write]);
 
   // Flush a pending save if the tab is closed mid-debounce.
   useEffect(() => {
-    const flush = () => { if (latest.current) void store.save(latest.current); };
-    window.addEventListener('pagehide', flush);
-    return () => window.removeEventListener('pagehide', flush);
+    const onHide = () => { if (latest.current && !readOnlyRef.current) void store.save(latest.current); };
+    window.addEventListener('pagehide', onHide);
+    return () => window.removeEventListener('pagehide', onHide);
   }, [store]);
 
   const update = useCallback((change: (d: TimelineDoc) => TimelineDoc) => {
+    if (readOnlyRef.current) return;
     setDoc((prev) => {
       if (!prev) return prev;
       const next = change(prev);
@@ -77,6 +110,7 @@ export function DocProvider({ store, children }: { store: DocStore; children: (r
   }, [scheduleSave]);
 
   const replace = useCallback((d: TimelineDoc) => {
+    if (readOnlyRef.current) return;
     setDoc(d);
     scheduleSave(d);
   }, [scheduleSave]);
@@ -107,8 +141,8 @@ export function DocProvider({ store, children }: { store: DocStore; children: (r
   }, [localUrls]);
 
   const value = useMemo(
-    () => (doc ? { doc, update, replace, saveState, store, mediaUrl, putMedia } : null),
-    [doc, update, replace, saveState, store, mediaUrl, putMedia],
+    () => (doc ? { doc, update, replace, saveState, store, mediaUrl, putMedia, readOnly, flush } : null),
+    [doc, update, replace, saveState, store, mediaUrl, putMedia, readOnly, flush],
   );
 
   if (!value) {

@@ -205,6 +205,19 @@ export function parseDoc(json: string): TimelineDoc {
 }
 
 /**
+ * A doc saved on this device, possibly by an older or newer version of the
+ * app. Older docs go through the same migrations as imported files; a newer
+ * one is returned untouched so the caller can open it read-only and never
+ * write an older shape over it.
+ */
+export function openStoredDoc(raw: unknown): { doc: TimelineDoc; status: 'current' | 'upgraded' | 'newer' } {
+  const v = (raw as { schemaVersion?: unknown } | null)?.schemaVersion;
+  if (typeof v === 'number' && v > SCHEMA_VERSION) return { doc: raw as TimelineDoc, status: 'newer' };
+  if (v === SCHEMA_VERSION) return { doc: raw as TimelineDoc, status: 'current' };
+  return { doc: parseDoc(JSON.stringify(raw)), status: 'upgraded' };
+}
+
+/**
  * v2 adds optional fields only (item places, excerpt and wikidataId; source
  * accessed date), so a v1 doc is already a valid v2 doc.
  */

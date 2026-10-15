@@ -20,7 +20,12 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npm test
+      - run: npx playwright install --with-deps chromium
+      # The full check (types, unit, build, e2e) must pass, so a broken build never replaces the stable app.
+      - run: npm run check
+        env:
+          CI: true
+      # Rebuild for the Pages path (the check built for "/").
       - run: npm run build
         env:
           BASE_PATH: /${{ github.event.repository.name }}/

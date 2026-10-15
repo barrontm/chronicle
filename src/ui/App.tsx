@@ -8,12 +8,14 @@ import type { DocStore } from '../store/store';
 import { DocProvider, useDoc } from './DocContext';
 import type { Nav, Panel } from './nav';
 import { ItemEditor, ItemView } from './panels/ItemPanels';
+import { Help } from './panels/Help';
 import { Library } from './panels/Library';
 import { WikiImport } from './panels/WikiImport';
 import { NoteEditor, NoteView } from './panels/NotePanels';
 import { SeriesEditor } from './panels/SeriesEditor';
 import { SourceEditor, SourceView } from './panels/SourcePanels';
-import { MapPane, YearBar, type MapOptions } from './MapPane';
+import { MapPane, YearBar, type MapCamera, type MapOptions } from './MapPane';
+import { applyUpdate, useUpdateReady } from './updates';
 import { TerritoryEditor, TerritoryImport, TerritoryView } from './panels/TerritoryPanels';
 import { TimelineView, type VisibleWindow } from './TimelineView';
 import { TrendStrips } from './TrendStrips';
@@ -59,7 +61,8 @@ function useMedia(query: string): boolean {
 const SAVE_LABEL = { loading: 'Opening…', saving: 'Saving…', saved: 'Saved on this device', error: 'Couldn’t save. Export a backup now.' } as const;
 
 function Workspace() {
-  const { doc, update, replace, saveState, mediaUrl } = useDoc();
+  const { doc, update, replace, saveState, mediaUrl, readOnly, flush } = useDoc();
+  const updateReady = useUpdateReady();
   const [stack, setStack] = useState<Panel[]>([]);
   const [hidden, setHidden] = useState<Set<string>>(new Set());
   const [win, setWin] = useState<VisibleWindow | null>(null);
@@ -90,6 +93,7 @@ function Workspace() {
   const [playing, setPlaying] = useState(false);
   const [speed, setSpeed] = useStored<number>('chronicle.speed', () => 25);
   const [mapOptions, setMapOptions] = useStored<MapOptions>('chronicle.mapOptions', () => ({ backdrop: false, keepPast: false, connections: false }));
+  const [mapCamera, setMapCamera] = useStored<MapCamera>('chronicle.mapView', () => ({ center: [20, 35], zoom: 1.6 }));
   const [dataSeriesId, setDataSeriesId] = useStored<string | null>('chronicle.mapData', () => null);
   const setYear = useCallback((y: number) => setYearState(y), []);
   const [drawing, setDrawing] = useState<{ onDone: (g: Area, year: number) => void } | null>(null);
@@ -201,7 +205,7 @@ function Workspace() {
           value={doc.title}
           onChange={(e) => update((d) => ({ ...d, title: e.target.value, updatedAt: Date.now() }))}
         />
-        <span className="save-state" role="status" data-testid="save-state">{SAVE_LABEL[saveState]}</span>
+        <span className="save-state" role="status" data-testid="save-state">{readOnly ? 'Read-only' : SAVE_LABEL[saveState]}</span>
         <span className="spacer" />
         <div className="segmented view-switch" role="group" aria-label="View">
           <button aria-pressed={shownView === 'timeline'} onClick={() => setView('timeline')}>Timeline</button>
@@ -225,6 +229,7 @@ function Workspace() {
           )}
         </div>
         <button className="btn" onClick={() => { setMenu(null); setStack([{ type: 'library', tab: 'notes' }]); }}>Library</button>
+        <button className="btn quiet" onClick={() => { setMenu(null); setStack([{ type: 'help' }]); }}>Help</button>
         <div className="menu">
           <button className="btn quiet" aria-expanded={menu === 'file'} onClick={() => setMenu(menu === 'file' ? null : 'file')}>More</button>
           {menu === 'file' && (
@@ -257,6 +262,13 @@ function Workspace() {
               </button>
             ))}
           </div>
+          {readOnly && <div className="notice bad" role="alert" data-testid="read-only" style={{ margin: '0 16px 8px' }}>{readOnly}</div>}
+          {updateReady && (
+            <div className="notice update-ready" role="status" data-testid="update-ready" style={{ margin: '0 16px 8px' }}>
+              <span>A new version of Chronicle is ready. Your work is saved first.</span>
+              <button className="btn small primary" onClick={() => void flush().then(applyUpdate)}>Reload</button>
+            </div>
+          )}
           {importError && <div className="notice bad" role="alert" style={{ margin: '0 16px 8px' }}>{importError}</div>}
           {showMap && (
             <>
@@ -276,6 +288,8 @@ function Workspace() {
                 onOpenItem={(id) => setStack([{ type: 'item', id }])}
                 onOpenTerritory={(id) => setStack([{ type: 'territory', id }])}
                 onAddTerritory={() => startNew({ type: 'territory-import', year: Math.round(year) })}
+                camera={mapCamera}
+                onCamera={setMapCamera}
                 drawing={drawing ? { onDone: (g) => { drawing.onDone(g, Math.round(year)); setDrawing(null); }, onCancel: () => setDrawing(null) } : undefined}
               />
               <YearBar year={year} range={range} onYear={(y) => { setPlaying(false); setYear(y); }} playing={playing} onPlaying={setPlaying} speed={speed} onSpeed={setSpeed} />
@@ -354,6 +368,7 @@ function PanelBody({ panel, nav }: { panel: Panel; nav: Nav }) {
     case 'series': return <SeriesEditor key={panel.id ?? 'new-series'} id={panel.id} nav={nav} />;
     case 'territory': return panel.edit ? <TerritoryEditor key={`e-${panel.id}`} id={panel.id} nav={nav} /> : <TerritoryView key={panel.id} id={panel.id} nav={nav} />;
     case 'territory-import': return <TerritoryImport key={`ti-${panel.year}`} year={panel.year} nav={nav} />;
+    case 'help': return <Help key={panel.section ?? 'help'} section={panel.section} />;
     case 'library': return <Library tab={panel.tab} nav={nav} />;
   }
 }

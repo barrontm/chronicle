@@ -2,6 +2,11 @@
 
 A log of choices that shouldn't be re-litigated every session. Newest first. To change a decision, add a new entry that supersedes the old one.
 
+## 2026-10-15 — A stable app, a manual in it, and data that carries forward
+`main` is Bob's stable app on GitHub Pages and deploys only after the full check (including e2e) passes; tickets live on branches and are released when Bob says so. The dev server runs on localhost, a different origin, so its IndexedDB test data never touches his real timeline.
+Saved docs used to load without migration (only imports ran `parseDoc`'s migrations). Now `openStoredDoc` upgrades them on open, after keeping an untouched copy in a `backups` store (last 5). A doc from a newer schema opens read-only, and `IdbStore.save` refuses to write over one, so a stale tab can't drop fields it doesn't know. The service worker uses `prompt`, not `autoUpdate`: a banner offers **Reload** (after flushing the save) instead of reloading mid-edit.
+The manual is `docs/manual.md`, bundled with `?raw` and rendered by a small Markdown subset (`ui/markdown.ts`, no HTML strings, web and anchor links only) in a Help panel that works offline. `scripts/check-manual.mjs` fails `check` on a branch that changes `src/` (app code) without it; "Manual: none" in a commit message is the escape hatch. Help shows the build's commit and date (`__APP_VERSION__`).
+
 ## 2026-10-15 — Borders Bob draws or brings: city-states without a dataset
 There is no open dataset of Greek city-state borders over time, and historical-basemaps has only three maps for Classical Greece (500, 400 and 323 BCE), at a resolution where poleis vanish. So Bob can draw a territory on the map (click points; extra parts for islands; drawing logic in the pure `ui/drawing.ts`) or bring areas from a GeoJSON file (geojson.io, QGIS, a paper's data). Both work offline and need no schema change: a drawn shape is just a `TerritorySnapshot` with dates he types. User files are simplified at a fine level (0.001°, 4 decimals) so small poleis and islands survive; historical-basemaps imports keep 0.05°. Snapshot dates are now editable, so borders can change at any year, not only at dataset years. The app still ships no borders of its own.
 

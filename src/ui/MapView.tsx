@@ -31,6 +31,9 @@ export interface MapOptions {
   connections: boolean;
 }
 
+/** Where the map is looking; remembered per device. */
+export interface MapCamera { center: [number, number]; zoom: number }
+
 export type BackdropStatus = { state: 'off' } | { state: 'loading'; year: number } | { state: 'ready'; year: number } | { state: 'error'; message: string };
 
 interface Props {
@@ -47,6 +50,9 @@ interface Props {
   onOpenItem: (id: string) => void;
   onOpenTerritory: (id: string) => void;
   onBackdropStatus: (s: BackdropStatus) => void;
+  /** Where to open the map, and a callback when Bob pans or zooms. */
+  camera?: MapCamera;
+  onCamera?: (c: MapCamera) => void;
   /** While drawing a border: the shape so far, and where a click lands (and whether it's on the first point). */
   draft?: Draft;
   onDrawPoint?: (p: [number, number], nearFirst: boolean) => void;
@@ -212,8 +218,8 @@ export default function MapView(props: Props) {
     const map = new maplibregl.Map({
       container: host.current,
       style: buildStyle(readColors()),
-      center: [20, 35],
-      zoom: 1.6,
+      center: cb.current.camera?.center ?? [20, 35],
+      zoom: cb.current.camera?.zoom ?? 1.6,
       minZoom: 0.5,
       maxZoom: 10,
       attributionControl: { compact: true },
@@ -226,6 +232,10 @@ export default function MapView(props: Props) {
     const popup = new maplibregl.Popup({ closeButton: false, closeOnClick: false, className: 'map-popup', offset: 10 });
 
     map.on('load', () => setReady(true));
+    map.on('moveend', () => {
+      const c = map.getCenter();
+      cb.current.onCamera?.({ center: [Math.round(c.lng * 1e4) / 1e4, Math.round(c.lat * 1e4) / 1e4], zoom: Math.round(map.getZoom() * 100) / 100 });
+    });
     const pointer = (layer: string) => {
       map.on('mouseenter', layer, () => { if (!cb.current.onDrawPoint) map.getCanvas().style.cursor = 'pointer'; });
       map.on('mouseleave', layer, () => { if (!cb.current.onDrawPoint) map.getCanvas().style.cursor = ''; });

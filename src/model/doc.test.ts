@@ -5,6 +5,7 @@ import {
   DocValidationError,
   mergeDocs,
   notesFor,
+  openStoredDoc,
   parseDoc,
   relationsFor,
   remove,
@@ -190,5 +191,31 @@ describe('mergeDocs', () => {
     const ba = mergeDocs(b, a);
     expect(ab.items).toEqual(expect.arrayContaining(ba.items));
     expect(ab.sources).toEqual(ba.sources);
+  });
+});
+
+describe('openStoredDoc', () => {
+  it('upgrades docs saved by older versions, keeping their records', () => {
+    for (const json of [fixtureV1Json, fixtureV2Json]) {
+      const raw = JSON.parse(json);
+      const { doc, status } = openStoredDoc(raw);
+      expect(status).toBe('upgraded');
+      expect(doc.schemaVersion).toBe(SCHEMA_VERSION);
+      expect(doc.items.length).toBe(raw.items.length);
+      expect(doc.id).toBe(raw.id);
+    }
+  });
+
+  it('leaves a current doc untouched', () => {
+    const d = fixture();
+    expect(openStoredDoc(d)).toEqual({ doc: d, status: 'current' });
+    expect(openStoredDoc(d).doc).toBe(d);
+  });
+
+  it('reports a doc from a newer version without changing it', () => {
+    const newer = { ...fixture(), schemaVersion: 99, alliances: [] };
+    const opened = openStoredDoc(newer);
+    expect(opened.status).toBe('newer');
+    expect(opened.doc).toBe(newer);
   });
 });

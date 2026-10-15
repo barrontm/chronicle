@@ -11,8 +11,10 @@ import { createRoot } from 'react-dom/client';
 import { registerSW } from 'virtual:pwa-register';
 import { App } from './ui/App';
 import { IdbStore } from './store/idbStore';
+import { onUpdateReady } from './ui/updates';
 
-registerSW({ immediate: true });
+// Never reload on its own: a new version waits until Bob chooses to reload (see ui/updates.ts).
+const updateSW = registerSW({ immediate: true, onNeedRefresh: () => onUpdateReady(() => updateSW(true)) });
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

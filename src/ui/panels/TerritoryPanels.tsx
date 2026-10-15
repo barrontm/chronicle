@@ -222,7 +222,7 @@ function OwnBorders({ year, nav }: { year: number; nav: Nav }) {
     return (
       <section data-testid="own-borders">
         <h3>Your own borders</h3>
-        <p className="lede">Draw a city-state or any border the maps don’t have, or bring a GeoJSON file. Works offline.</p>
+        <p className="lede">Draw a city-state or any border the maps don’t have, or bring a GeoJSON file. Works offline. <button type="button" className="btn small quiet" onClick={() => nav.open({ type: 'help', section: 'territories' })}>How drawing works</button></p>
         <div className="actions">
           <button type="button" className="btn primary" onClick={() => nav.draw((geometry) => setShape({ geometry, source: 'Drawn by me' }))}>Draw on the map</button>
         </div>

@@ -10,8 +10,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "check": "npm run typecheck && npm test && npm run build && npm run test:e2e",
-    "check:quiet": "tsc --noEmit --pretty false && vitest run --reporter=dot --silent && vite build --logLevel warn && playwright test --reporter=dot --quiet",
+    "check:manual": "node scripts/check-manual.mjs",
+    "check": "npm run check:manual && npm run typecheck && npm test && npm run build && npm run test:e2e",
+    "check:quiet": "node scripts/check-manual.mjs && tsc --noEmit --pretty false && vitest run --reporter=dot --silent && vite build --logLevel warn && playwright test --reporter=dot --quiet",
     "shots": "node scripts/screenshots.mjs"
   },
   "license": "UNLICENSED",

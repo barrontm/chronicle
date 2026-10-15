@@ -11,3 +11,4 @@ Years are astronomical (1 BCE = 0, 431 BCE = -430). Only `dates.ts` converts, in
 2. Add a `migrateNtoN+1` step in `parseDoc`.
 3. Save the previous fixture as `tests/fixtures/sample-history-vN.json` and test that it imports.
 4. Update `tests/fixtures/sample-history.json` and `docs/data-model.md` (including its version history).
+5. Saved docs upgrade on open through `openStoredDoc` (the old doc is kept in the `backups` store first). Extend the e2e "a timeline saved by an older version opens upgraded" to seed the previous version.

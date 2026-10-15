@@ -3,7 +3,7 @@
 Milestones are ordered and each one ships something usable. Tick items as they land, and record decisions in `docs/decisions.md`.
 
 ## Next tickets
-One ticket per session: start fresh, finish with a commit, tick it below. Ordered by value to learning and curiosity per effort. Size: S ≈ one sitting, M ≈ a longer one. Model: what to run it on (`/model …`).
+One ticket per session, on its own branch: start fresh, finish with a commit, tick it below. Each ticket says which manual section changes (`docs/manual.md`). Ordered by value to learning and curiosity per effort. Size: S ≈ one sitting, M ≈ a longer one. Model: what to run it on (`/model …`).
 
 Tickets marked 🏛 make the map good for Ancient Greece and its wars (city-state borders, alliances, campaigns). They come first because Bob is studying that now.
 
@@ -59,6 +59,8 @@ Tickets marked 🏛 make the map good for Ancient Greece and its wars (city-stat
 - [ ] Markdown in notes, with `[[Entry name]]` links that resolve to entries
 - [ ] Tags and a filter by tag
 - [ ] Reminder to export a backup if none has been made in 14 days
+- [x] User manual in the app (Help), updated with every change
+- [x] Saved data upgrades on open (old copy kept); an older app never overwrites newer data; updates wait for Reload
 
 ## M2.5 — Quick capture
 - [x] Add from Wikipedia: search, then a prefilled entry (kind, dates and places from Wikidata, picture with credit, intro as a quoted excerpt, page cited as a source); duplicates detected by Wikidata id

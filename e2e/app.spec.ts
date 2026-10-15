@@ -307,6 +307,91 @@ test('adding from Wikipedia says a connection is needed when offline', async ({ 
   await expect(panel.getByRole('alert')).toHaveText(/You’re offline\. Adding from Wikipedia needs a connection/);
 });
 
+// ---------- Help ----------
+
+test('the manual opens offline, shows the version and jumps to a section @phone', async ({ page, context }) => {
+  await open(page);
+  await context.setOffline(true);
+  await page.getByRole('button', { name: 'Help' }).click();
+  const help = page.getByTestId('help');
+  await expect(help.getByRole('heading', { name: 'Getting started' })).toBeVisible();
+  await expect(help).toContainText(/Version \w+, built/);
+  await help.getByRole('navigation', { name: 'Manual contents' }).getByRole('link', { name: 'Territories' }).click();
+  await expect(help.getByRole('heading', { name: 'Territories', exact: true })).toBeInViewport();
+});
+
+test('“How drawing works” opens the manual at territories', async ({ page }) => {
+  await open(page);
+  await page.getByRole('button', { name: 'Add', exact: true }).click();
+  await page.getByRole('menuitem', { name: 'Territory on the map…' }).click();
+  await page.getByTestId('own-borders').getByRole('button', { name: 'How drawing works' }).click();
+  await expect(page.getByTestId('help').getByRole('heading', { name: 'Draw your own' })).toBeInViewport();
+});
+
+// ---------- Carrying data into later versions ----------
+
+const FIXTURE_V2 = fileURLToPath(new URL('../tests/fixtures/sample-history-v2.json', import.meta.url));
+
+/** Replace the saved doc in IndexedDB, as an older or newer version of the app would have left it. */
+async function seedSavedDoc(page: Page, doc: Record<string, unknown>) {
+  await page.evaluate((d) => new Promise<void>((resolve, reject) => {
+    const req = indexedDB.open('chronicle');
+    req.onsuccess = () => {
+      const tx = req.result.transaction(['docs', 'meta'], 'readwrite');
+      tx.objectStore('docs').put(d);
+      tx.objectStore('meta').put(d.id, 'activeDocId');
+      tx.oncomplete = () => { req.result.close(); resolve(); };
+      tx.onerror = () => reject(tx.error);
+    };
+  }), doc);
+}
+
+async function savedState(page: Page) {
+  return page.evaluate(() => new Promise<{ schemaVersion: number; title: string; backups: number }>((resolve) => {
+    const req = indexedDB.open('chronicle');
+    req.onsuccess = () => {
+      const tx = req.result.transaction(['docs', 'meta', 'backups']);
+      const id = tx.objectStore('meta').get('activeDocId');
+      const count = tx.objectStore('backups').count();
+      id.onsuccess = () => {
+        const doc = tx.objectStore('docs').get(id.result);
+        tx.oncomplete = () => { req.result.close(); resolve({ schemaVersion: doc.result.schemaVersion, title: doc.result.title, backups: count.result }); };
+      };
+    };
+  }));
+}
+
+test('a timeline saved by an older version opens upgraded, with a copy kept', async ({ page }) => {
+  await open(page);
+  const { readFileSync } = await import('node:fs');
+  await seedSavedDoc(page, JSON.parse(readFileSync(FIXTURE_V2, 'utf8')));
+  await page.reload();
+  await expect(page.getByTestId('save-state')).toHaveText('Saved on this device');
+  await expect(page.locator('.vis-item', { hasText: 'Aristotle' })).toBeVisible();
+  await expect.poll(() => savedState(page)).toMatchObject({ schemaVersion: 3, backups: 1 });
+});
+
+test('an older copy of the app never overwrites data from a newer one', async ({ page }) => {
+  await open(page);
+  await seedSavedDoc(page, { schemaVersion: 99, id: 'doc_newer', title: 'From the future', categories: [], items: [], series: [], territories: [], notes: [], sources: [], relations: [], deleted: {}, updatedAt: 1 });
+  await page.reload();
+  await expect(page.getByTestId('read-only')).toContainText('saved by a newer version of Chronicle');
+  await expect(page.getByTestId('save-state')).toHaveText('Read-only');
+  await page.getByLabel('Timeline name').fill('Changed by an old tab');
+  await page.waitForTimeout(500);
+  expect(await savedState(page)).toMatchObject({ schemaVersion: 99, title: 'From the future' });
+});
+
+test('a new version waits for Bob to reload', async ({ page }) => {
+  await open(page);
+  await page.evaluate(() => window.dispatchEvent(new Event('chronicle:update-ready')));
+  const banner = page.getByTestId('update-ready');
+  await expect(banner).toContainText('A new version of Chronicle is ready.');
+  await banner.getByRole('button', { name: 'Reload' }).click();
+  await expect(page.getByTestId('save-state')).toHaveText('Saved on this device');
+  await expect(banner).toHaveCount(0);
+});
+
 // ---------- Map ----------
 
 async function openMap(page: Page, view: 'Map' | 'Both' = 'Map') {
@@ -406,6 +491,12 @@ test('draw a city-state’s borders and date them @phone', async ({ page }) => {
   await page.getByRole('button', { name: 'Close panel' }).click();
   await goToYear(page, '600 BCE');
   await expect(territoryLabel(page, 'Athens')).toHaveCount(0);
+
+  // What's drawn on the map is saved: it's still there after reopening the app.
+  await page.reload();
+  await openMap(page);
+  await goToYear(page, '450 BCE');
+  await expect(territoryLabel(page, 'Athens')).toBeVisible();
 });
 
 test('bring city-state borders from a GeoJSON file and date them in the editor', async ({ page }) => {
