@@ -1,0 +1,505 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Building Chronicle with Claude Code</title>
+<style>
+  @page { size: Letter; margin: 0.8in 0.8in 0.9in; }
+  :root { --ink: #1d2b3a; --ink2: #4d5b66; --rule: #cfd4cc; --soft: #eef0ec; --lapis: #2f5da8; --cinnabar: #c23b22; --verdigris: #2e8b74; --ochre: #b8860b; }
+  * { box-sizing: border-box; }
+  body { font-family: Georgia, 'Times New Roman', serif; color: var(--ink); font-size: 11pt; line-height: 1.5; margin: 0; }
+  h1, h2, h3, .ui, table, .box-title, code, kbd { font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif; }
+  h1 { font-size: 30pt; line-height: 1.1; margin: 0 0 10pt; }
+  h2 { font-size: 17pt; margin: 0 0 8pt; padding-top: 4pt; border-top: 3px solid var(--ink); break-after: avoid; }
+  h3 { font-size: 12pt; margin: 16pt 0 4pt; break-after: avoid; }
+  p { margin: 0 0 8pt; }
+  ul, ol { margin: 0 0 8pt; padding-left: 20pt; }
+  li { margin-bottom: 3pt; }
+  section { break-before: page; }
+  .cover { height: 9in; display: flex; flex-direction: column; justify-content: center; }
+  .cover .sub { font-size: 14pt; color: var(--ink2); max-width: 5in; }
+  .cover .meta { margin-top: 40pt; font-family: Arial, sans-serif; font-size: 9pt; color: var(--ink2); }
+  .stripe { display: flex; gap: 6pt; margin-bottom: 24pt; }
+  .stripe span { width: 40pt; height: 8pt; border-radius: 2pt; }
+  code { font-size: 9.5pt; background: var(--soft); padding: 0 3pt; border-radius: 3pt; }
+  pre { font-family: Menlo, Consolas, monospace; font-size: 9pt; background: var(--soft); border-left: 3px solid var(--rule); padding: 8pt 10pt; white-space: pre-wrap; margin: 0 0 10pt; break-inside: avoid; }
+  kbd { font-size: 8.5pt; border: 1px solid var(--rule); border-bottom-width: 2px; border-radius: 3pt; padding: 0 4pt; background: #fff; }
+  table { width: 100%; border-collapse: collapse; font-size: 9.5pt; margin: 0 0 12pt; break-inside: avoid; }
+  th, td { text-align: left; vertical-align: top; padding: 5pt 6pt; border-bottom: 1px solid var(--rule); }
+  th { background: var(--soft); }
+  .box { border: 1px solid var(--rule); border-left: 4px solid var(--lapis); border-radius: 4pt; padding: 8pt 12pt; margin: 0 0 12pt; break-inside: avoid; }
+  .box.tip { border-left-color: var(--verdigris); }
+  .box.warn { border-left-color: var(--cinnabar); }
+  .box.try { border-left-color: var(--ochre); }
+  .box-title { font-weight: 700; font-size: 9.5pt; text-transform: uppercase; letter-spacing: .05em; margin-bottom: 3pt; }
+  .box p:last-child, .box ul:last-child, .box pre:last-child { margin-bottom: 0; }
+  .step { display: grid; grid-template-columns: 26pt 1fr; gap: 8pt; margin-bottom: 10pt; break-inside: avoid; }
+  .num { font-family: Arial, sans-serif; font-weight: 700; color: #fff; background: var(--ink); border-radius: 50%; width: 22pt; height: 22pt; display: grid; place-items: center; font-size: 11pt; }
+  .say { font-family: -apple-system, Arial, sans-serif; background: #fff; border: 1px dashed var(--ink2); border-radius: 6pt; padding: 6pt 10pt; margin: 4pt 0 8pt; font-size: 10pt; break-inside: avoid; }
+  .say::before { content: 'You type: '; font-weight: 700; color: var(--ink2); }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 12pt; }
+  .bad { border-left-color: var(--cinnabar); }
+  .good { border-left-color: var(--verdigris); }
+  .toc li { margin-bottom: 2pt; }
+  .small { font-size: 9pt; color: var(--ink2); }
+  .cheat td:first-child { width: 38%; font-weight: 600; }
+</style>
+</head>
+<body>
+
+<div class="cover">
+  <div class="stripe"><span style="background:#2f5da8"></span><span style="background:#c23b22"></span><span style="background:#7a5a3a"></span><span style="background:#2e8b74"></span><span style="background:#b8860b"></span><span style="background:#a33b6b"></span></div>
+  <h1>Building Chronicle<br>with Claude Code</h1>
+  <p class="sub">A beginner’s guide to designing and building your history app in VS Code, one small, affordable step at a time.</p>
+  <p class="meta">For Bob · Chronicle project · October 2026<br>Covers: VS Code basics, the ticket workflow, choosing models, keeping costs down, turning ideas into features, and fixing things when they go wrong.</p>
+</div>
+
+<section>
+  <h2>Contents</h2>
+  <ol class="toc">
+    <li>The big idea: why some conversations cost more than others</li>
+    <li>Your toolkit: VS Code, Claude Code and the project files</li>
+    <li>Getting comfortable with VS Code and Claude Code</li>
+    <li>The ticket workflow, step by step</li>
+    <li>Choosing a model</li>
+    <li>Plan mode: thinking before building</li>
+    <li>Writing good requests</li>
+    <li>Checking the work yourself</li>
+    <li>Keeping a conversation lean</li>
+    <li>Designing the app: from idea to ticket</li>
+    <li>Saving your work with Git</li>
+    <li>When things go wrong</li>
+    <li>Cheat sheet</li>
+  </ol>
+
+  <h3>How to read this guide</h3>
+  <p>Read sections 1 to 4 once, slowly. They are the whole system. The rest is reference: come back to it when you need it. Keep the cheat sheet (the last page) open next to VS Code for your first few sessions.</p>
+  <p>Anything in a dashed box marked <strong>You type</strong> is something you can copy word for word into Claude.</p>
+</section>
+
+<section>
+  <h2>1. The big idea</h2>
+  <p>Claude works in <strong>tokens</strong>, small pieces of text (roughly ¾ of a word each). Everything Claude reads or writes is counted in tokens: your messages, its replies, every file it opens, every test result it sees.</p>
+  <p>Here is the part that matters most: <strong>each time you send a message, Claude re-reads the whole conversation so far.</strong> It has no memory between messages other than the conversation itself.</p>
+
+  <div class="box">
+    <div class="box-title">An analogy</div>
+    <p>Imagine a research assistant who, before answering each new question, re-reads the entire notebook of everything you’ve discussed today. On page 2 that’s quick. On page 200 it takes ages, even if your new question is tiny. That’s what a long Claude conversation is like.</p>
+  </div>
+
+  <p>So costs grow in two ways:</p>
+  <ul>
+    <li><strong>Long conversations.</strong> Message 50 costs far more than message 5, because Claude carries everything from messages 1 to 49.</li>
+    <li><strong>Noise.</strong> Giant test logs, whole files read “just in case”, a dozen screenshots: all of it stays in the conversation and gets re-read every turn.</li>
+  </ul>
+
+  <p>The efficiency system you now have is built on three habits:</p>
+  <ol>
+    <li><strong>Small, well-defined jobs</strong> (“tickets”), one per conversation.</li>
+    <li><strong>The right model</strong> for each job: cheap for simple work, powerful for design.</li>
+    <li><strong>Quiet tools</strong>, so the conversation fills with decisions, not noise.</li>
+  </ol>
+  <p>None of this lowers quality. A short, focused conversation usually produces <em>better</em> work, because Claude isn’t distracted by stale information.</p>
+
+  <div class="box tip">
+    <div class="box-title">The one rule to remember</div>
+    <p>One ticket, one conversation. When it’s done and committed, start a fresh conversation for the next thing.</p>
+  </div>
+</section>
+
+<section>
+  <h2>2. Your toolkit</h2>
+  <h3>The programs</h3>
+  <table>
+    <tr><th>Tool</th><th>What it is</th></tr>
+    <tr><td>VS Code</td><td>The editor where your project’s files live. You can read code here, but you mostly won’t need to.</td></tr>
+    <tr><td>Claude Code</td><td>Claude inside VS Code. It can read and edit files, run commands and test the app, with your permission.</td></tr>
+    <tr><td>Terminal</td><td>A text window inside VS Code for running commands such as <code>npm run dev</code>. Open it with <kbd>Ctrl</kbd>+<kbd>`</kbd> (the key above Tab).</td></tr>
+    <tr><td>Git</td><td>Saves snapshots (“commits”) of the project so nothing is ever lost. Claude makes the commits for you.</td></tr>
+  </table>
+
+  <h3>The project files that run the system</h3>
+  <p>These were set up for you. You don’t need to edit most of them, but it helps to know what each does.</p>
+  <table>
+    <tr><th>File</th><th>What it does</th><th>Do you edit it?</th></tr>
+    <tr><td><code>ROADMAP.md</code></td><td>The to-do list. The <strong>Next tickets</strong> section at the top holds ready-to-run jobs.</td><td>Yes, to add ideas.</td></tr>
+    <tr><td><code>CLAUDE.md</code></td><td>The project briefing Claude reads at the start of every conversation: what Chronicle is, the rules, the commands. Kept short on purpose, because it’s read every single turn.</td><td>Rarely.</td></tr>
+    <tr><td><code>src/ui/CLAUDE.md</code><br><code>src/model/CLAUDE.md</code><br><code>e2e/CLAUDE.md</code></td><td>Specialist notes that only load when Claude works in that folder (screens, data, tests). They keep the main briefing small.</td><td>No.</td></tr>
+    <tr><td><code>docs/decisions.md</code></td><td>Why things were built the way they were, so you don’t re-argue settled questions.</td><td>Claude adds to it.</td></tr>
+    <tr><td><code>docs/design.md</code></td><td>Colors, fonts and wording style.</td><td>When you change taste.</td></tr>
+    <tr><td><code>.claude/settings.json</code></td><td>Permissions: what Claude may run without asking, and huge files it must never read.</td><td>No.</td></tr>
+    <tr><td>Claude’s memory</td><td>Notes Claude keeps about your preferences (for example, “one ticket per session”) so you don’t repeat yourself.</td><td>Ask Claude to “remember …”.</td></tr>
+  </table>
+</section>
+
+<section>
+  <h2>3. Getting comfortable with VS Code and Claude Code</h2>
+
+  <h3>Opening the project</h3>
+  <ol>
+    <li>Open VS Code.</li>
+    <li>Choose <span class="ui">File → Open Folder…</span> and pick <code>Documents/code/chronicle</code>.</li>
+    <li>The file list appears on the left. <code>ROADMAP.md</code> is near the bottom.</li>
+  </ol>
+
+  <h3>Opening Claude</h3>
+  <ul>
+    <li>Click the Claude (spark) icon at the top right of the editor, or press <kbd>Cmd</kbd>+<kbd>Esc</kbd>.</li>
+    <li>A Claude panel opens with a message box at the bottom. Type there and press <kbd>Enter</kbd> to send.</li>
+    <li>To start a <strong>new conversation</strong>, use the new-conversation button at the top of the Claude panel, or type <code>/clear</code>.</li>
+  </ul>
+
+  <h3>Slash commands</h3>
+  <p>Messages that start with <code>/</code> are commands for Claude Code itself, not requests to Claude. Type <code>/</code> to see a list. The ones you’ll use:</p>
+  <table>
+    <tr><th>Command</th><th>What it does</th></tr>
+    <tr><td><code>/clear</code></td><td>Starts over with an empty conversation.</td></tr>
+    <tr><td><code>/model</code></td><td>Switches model, e.g. <code>/model sonnet</code>.</td></tr>
+    <tr><td><code>/context</code></td><td>Shows how full the conversation is and what’s filling it.</td></tr>
+    <tr><td><code>/compact</code></td><td>Squeezes the conversation into a summary to make room.</td></tr>
+    <tr><td><code>/cost</code></td><td>Shows what this session has used. (On a subscription plan, <code>/usage</code> shows your limits.)</td></tr>
+  </table>
+  <p class="small">If a command doesn’t appear in the panel, open VS Code’s terminal and type <code>claude</code>: the terminal version has every command.</p>
+
+  <h3>Pointing at files</h3>
+  <p>Type <code>@</code> in the message box and start typing a file name, e.g. <code>@ROADMAP.md</code>. This tells Claude exactly which file you mean, which is cheaper than letting it search. If you highlight lines in the editor, Claude can see your selection too.</p>
+
+  <h3>Permission prompts</h3>
+  <p>Before Claude edits a file or runs a command it hasn’t been pre-approved for, it asks. You’ll see what it wants to do, with options to allow or deny.</p>
+  <ul>
+    <li><strong>Allow</strong> edits to project files and the usual commands (<code>npm run …</code>, <code>git …</code>).</li>
+    <li><strong>Pause and ask</strong> if it wants to delete things outside the project, install unfamiliar software, or push to the internet. Just reply “why do you need that?”</li>
+  </ul>
+
+  <h3>Seeing changes</h3>
+  <p>When Claude edits a file, VS Code can show a <strong>diff</strong>: removed lines in red, added lines in green. You don’t need to understand the code, but skimming a diff tells you how big a change was.</p>
+
+  <div class="box try">
+    <div class="box-title">Try it now (2 minutes)</div>
+    <p>Open Claude, start a new conversation, then:</p>
+    <div class="say">/model haiku</div>
+    <div class="say">In one paragraph, what are the next tickets in @ROADMAP.md?</div>
+    <p>That’s a full, cheap round trip. You’ve used a slash command, a cheap model and an @-mention.</p>
+  </div>
+</section>
+
+<section>
+  <h2>4. The ticket workflow, step by step</h2>
+  <p>A <strong>ticket</strong> is one small job with a clear finish line. Each one in <code>ROADMAP.md</code> looks like this:</p>
+<pre>1. **Place picker** · S · sonnet. Set an entry's places by hand …
+   Files: src/ui/panels/ItemPanels.tsx, src/media/wikipedia.ts
+   Done when: add, edit and remove places in the editor; an e2e test
+   adds a place and sees the pin label on the map.</pre>
+  <p>The labels mean: <strong>S/M</strong> is size (S is one sitting, M a longer one). <strong>sonnet</strong> is the model to use. <strong>Files</strong> is where Claude should start, which saves it from searching. <strong>Done when</strong> is how you both know it’s finished.</p>
+
+  <div class="step"><div class="num">1</div><div>
+    <strong>Start fresh.</strong> Open a new conversation (button, or <code>/clear</code>). Never carry a finished ticket’s conversation into the next one.
+  </div></div>
+
+  <div class="step"><div class="num">2</div><div>
+    <strong>Set the model the ticket names.</strong>
+    <div class="say">/model sonnet</div>
+  </div></div>
+
+  <div class="step"><div class="num">3</div><div>
+    <strong>For size M only, turn on plan mode</strong> (see section 6): press <kbd>Shift</kbd>+<kbd>Tab</kbd> until the mode shows “plan”, or pick it from the mode menu under the message box.
+  </div></div>
+
+  <div class="step"><div class="num">4</div><div>
+    <strong>Ask for the ticket.</strong>
+    <div class="say">Do ticket 1 from ROADMAP.</div>
+    Add anything you care about: <em>“…and keep the place list short on phones.”</em>
+  </div></div>
+
+  <div class="step"><div class="num">5</div><div>
+    <strong>Answer questions, approve the plan.</strong> Claude may ask one or two questions or (in plan mode) show a plan. Read it like a builder’s quote: does it do what you wanted? Say “yes” or change it.
+  </div></div>
+
+  <div class="step"><div class="num">6</div><div>
+    <strong>Let it work.</strong> Claude edits files, writes tests, runs <code>npm run check:quiet</code> and, for screen changes, takes one screenshot sheet. Approve permission prompts as they come.
+  </div></div>
+
+  <div class="step"><div class="num">7</div><div>
+    <strong>Look at it yourself</strong> (section 8): run the app and try the feature for a minute.
+  </div></div>
+
+  <div class="step"><div class="num">8</div><div>
+    <strong>Commit and close.</strong>
+    <div class="say">Looks good. Tick the ticket and commit.</div>
+    Then start a fresh conversation for whatever’s next.
+  </div></div>
+
+  <div class="box tip">
+    <div class="box-title">Why this works</div>
+    <p>Each conversation stays small, so every message stays cheap. The ticket carries the context Claude would otherwise spend tokens discovering. And the commit means the next conversation can start from scratch without losing anything.</p>
+  </div>
+</section>
+
+<section>
+  <h2>5. Choosing a model</h2>
+  <p>Claude comes in sizes. Bigger models think harder and cost more. Use the smallest one that can do the job well.</p>
+  <table>
+    <tr><th>Model</th><th>Cost</th><th>Use it for</th><th>Chronicle examples</th></tr>
+    <tr><td><strong>Haiku</strong><br><code>/model haiku</code></td><td>Lowest</td><td>Small, clear, mechanical jobs. Questions about the project.</td><td>Reword a button. Update docs. The backup reminder. “What does ticket 3 involve?”</td></tr>
+    <tr><td><strong>Sonnet</strong><br><code>/model sonnet</code></td><td>Middle</td><td>Normal features where the approach is clear.</td><td>Place picker, search, tech tree.</td></tr>
+    <tr><td><strong>Opusplan</strong><br><code>/model opusplan</code></td><td>Middle to high</td><td>Features that need design thinking. Uses Opus while planning, Sonnet while building.</td><td>Meanwhile, Review mode.</td></tr>
+    <tr><td><strong>Opus</strong><br><code>/model opus</code></td><td>Highest</td><td>Big decisions and stubborn problems.</td><td>“Should sync use GitHub or a server?” A bug that two attempts didn’t fix.</td></tr>
+  </table>
+  <div class="box">
+    <div class="box-title">When unsure</div>
+    <p>Use <code>opusplan</code>. It’s the best all-rounder: good thinking where it matters, cheaper hands for the typing.</p>
+  </div>
+  <div class="box warn">
+    <div class="box-title">Signs you picked too small a model</div>
+    <ul>
+      <li>It misunderstands the same thing twice.</li>
+      <li>A fix breaks something else, then the next fix breaks something else again.</li>
+    </ul>
+    <p>Stop, then <code>/model opus</code> and say: “Step back. Here’s what we tried and what went wrong. What’s the real problem?”</p>
+  </div>
+</section>
+
+<section>
+  <h2>6. Plan mode: thinking before building</h2>
+  <p>In plan mode, Claude reads and thinks but <strong>changes nothing</strong>. It ends with a written plan for you to approve. Nothing happens until you say yes.</p>
+  <h3>When to use it</h3>
+  <ul>
+    <li><strong>Yes:</strong> M-sized tickets, anything that changes how data is saved, and new screens or views.</li>
+    <li><strong>No:</strong> small tickets, wording changes, bug fixes with an obvious cause.</li>
+  </ul>
+  <h3>How to use it</h3>
+  <ol>
+    <li>Turn it on: <kbd>Shift</kbd>+<kbd>Tab</kbd> (cycles modes) or the mode menu under the message box.</li>
+    <li>Ask for the ticket as usual.</li>
+    <li>Claude may ask you questions with clickable options. Pick one, or choose “Other” and type your own.</li>
+    <li>Read the plan. Check three things: <em>does it do what I want</em>, <em>is anything missing</em>, <em>is anything there I didn’t ask for</em>.</li>
+    <li>Approve, or reply with changes: “Drop the settings page; just put the toggle in the Layers menu.”</li>
+  </ol>
+  <div class="box tip">
+    <div class="box-title">Why plan mode saves tokens</div>
+    <p>Changing a plan costs a sentence. Changing finished code costs a rebuild. Five minutes reading a plan can save an hour of corrections.</p>
+  </div>
+</section>
+
+<section>
+  <h2>7. Writing good requests</h2>
+  <p>A good request answers three questions: <strong>what</strong>, <strong>where</strong>, and <strong>how will we know it’s done</strong>. The more of that you supply, the less Claude spends working it out.</p>
+
+  <div class="two">
+    <div class="box bad"><div class="box-title">Costs more</div><p>“The map feels off, can you look at it?”</p><p class="small">Claude has to explore the map code, guess what “off” means, and maybe ask anyway.</p></div>
+    <div class="box good"><div class="box-title">Costs less</div><p>“On the map at 300 BCE, territory names overlap pin names. Pins should win. Done when both are readable in the map screenshot.”</p></div>
+  </div>
+  <div class="two">
+    <div class="box bad"><div class="box-title">Costs more</div><p>Three separate messages: “make Play bigger” … “also the year font” … “oh and the speed menu”.</p></div>
+    <div class="box good"><div class="box-title">Costs less</div><p>One message: “In the year bar: bigger Play button, larger year text, and default speed 10 years/s.”</p></div>
+  </div>
+
+  <h3>A template you can reuse</h3>
+<pre>Goal: &lt;what you want, in plain words&gt;
+Where: &lt;screen or @file, if you know it&gt;
+Done when: &lt;what you'll see or be able to do&gt;
+Keep in mind: &lt;anything important to you&gt;</pre>
+
+  <h3>Useful phrases</h3>
+  <ul>
+    <li><strong>“Ask me before you start if anything is unclear.”</strong> Cheap questions beat expensive guesses.</li>
+    <li><strong>“Just tell me, don’t change anything.”</strong> For questions about how something works.</li>
+    <li><strong>“Smallest change that works.”</strong> Stops gold-plating.</li>
+    <li><strong>“Turn this idea into a ticket.”</strong> See section 10.</li>
+  </ul>
+  <div class="box warn">
+    <div class="box-title">Avoid</div>
+    <ul>
+      <li>Pasting long logs or whole files. Paste the one or two lines that matter; Claude can rerun things itself.</li>
+      <li>“Review everything thoroughly.” Name what worries you instead.</li>
+      <li>“While you’re at it…” halfway through a ticket. Write it down as a new ticket.</li>
+    </ul>
+  </div>
+</section>
+
+<section>
+  <h2>8. Checking the work yourself</h2>
+  <p>Claude runs automated tests, but you’re the one who knows whether a feature feels right for learning and exploring.</p>
+
+  <h3>Run the app</h3>
+  <ol>
+    <li>Open the terminal: <kbd>Ctrl</kbd>+<kbd>`</kbd>.</li>
+    <li>Type <code>npm run dev</code> and press Enter.</li>
+    <li>Open the address it prints (usually <code>http://localhost:5173</code>) in your browser.</li>
+    <li>Try the new feature for a minute. Stop the app later with <kbd>Ctrl</kbd>+<kbd>C</kbd> in the terminal.</li>
+  </ol>
+  <p class="small">Your browser keeps your own timeline. To try things with sample data, use <span class="ui">More → Import a file…</span> and pick <code>tests/fixtures/sample-history.json</code>. Export a backup of your real timeline first.</p>
+
+  <h3>What to look for</h3>
+  <ul>
+    <li><strong>Learning:</strong> does it help me remember or connect something?</li>
+    <li><strong>Notes:</strong> is my writing easy to find from here?</li>
+    <li><strong>Curiosity:</strong> does it make me want to look something up?</li>
+    <li>The basics: readable on a phone-sized window, readable in dark mode, sensible wording.</li>
+  </ul>
+
+  <h3>The checks Claude runs</h3>
+  <table>
+    <tr><th>Command</th><th>What it checks</th><th>Output</th></tr>
+    <tr><td><code>npm run check:quiet</code></td><td>Code types, unit tests, the build, and browser tests of the main flows.</td><td>A few lines when everything passes; only failures otherwise.</td></tr>
+    <tr><td><code>npm run check</code></td><td>The same, in full detail.</td><td>Only for digging into a failure.</td></tr>
+    <tr><td><code>npm run shots -- --only map --sheet</code></td><td>Takes the screenshots whose names match, tiled into one image.</td><td><code>screenshots/sheet.png</code></td></tr>
+  </table>
+  <p>Screenshot names include <code>desktop-timeline</code>, <code>desktop-entry</code>, <code>desktop-map</code>, <code>desktop-split</code>, <code>desktop-dark</code>, <code>phone-timeline</code> and <code>phone-map</code>. A fragment like <code>map</code> matches every name containing it.</p>
+</section>
+
+<section>
+  <h2>9. Keeping a conversation lean</h2>
+  <p>Even with one ticket per conversation, some tickets run long. Here’s how to keep them in check.</p>
+  <table>
+    <tr><th>Situation</th><th>Do this</th></tr>
+    <tr><td>The ticket is done</td><td>Commit, then <code>/clear</code> or open a new conversation.</td></tr>
+    <tr><td>Mid-ticket, the conversation feels long or slow</td><td><code>/context</code> to see how full it is. If it’s over about half, compact (next row).</td></tr>
+    <tr><td>You need to keep going but trim the history</td><td><code>/compact keep the plan, the files changed and the failing test</code></td></tr>
+    <tr><td>You went down a dead end</td><td>Ask: “Summarize what we learned in three bullets.” Copy them, <code>/clear</code>, paste them into the fresh conversation.</td></tr>
+    <tr><td>Curious what a session used</td><td><code>/cost</code> (or <code>/usage</code> on a subscription).</td></tr>
+  </table>
+  <div class="box">
+    <div class="box-title">Compact vs clear</div>
+    <p><strong>/compact</strong> is like replacing a long meeting transcript with good minutes: you keep going, with less to carry. <strong>/clear</strong> is like starting a new meeting: cheapest, but you only keep what’s in the files, the roadmap and the commits. That’s why tickets end with a commit.</p>
+  </div>
+
+  <h3>Helpers working in the background</h3>
+  <ul>
+    <li><strong>Folder notes</strong> load only when Claude works in that part of the project.</li>
+    <li><strong>Blocked files.</strong> Huge files (map data, build output, the package lockfile, minified libraries) can’t be read. They’re never useful to read and would waste thousands of tokens.</li>
+    <li><strong>A silent type checker</strong> runs after every edit and only speaks up, with the first error, when something breaks.</li>
+    <li><strong>Memory</strong> holds your preferences across conversations.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>10. Designing the app: from idea to ticket</h2>
+  <p>Good design here means every feature serves at least one of Chronicle’s three purposes, and is small enough to build in one sitting.</p>
+
+  <h3>The three questions</h3>
+  <table>
+    <tr><th>Purpose</th><th>Ask</th><th>Example features</th></tr>
+    <tr><td><strong>Learning</strong></td><td>Will this help me remember, understand or test myself?</td><td>Review mode, study sheets, “Meanwhile”.</td></tr>
+    <tr><td><strong>Notes</strong></td><td>Will this make my writing easier to capture, link or find?</td><td>Search, <code>[[links]]</code> in notes, tags.</td></tr>
+    <tr><td><strong>Curiosity and fun</strong></td><td>Will this make me want to explore or look something up?</td><td>The map’s Play button, tech tree, connection graph.</td></tr>
+  </table>
+  <p>If an idea hits none of these, it can probably wait.</p>
+
+  <h3>Step 1: capture the idea (free)</h3>
+  <p>Open <code>ROADMAP.md</code> and jot it at the bottom of “Next tickets” in one sentence. No need to ask Claude yet.</p>
+<pre>- Idea: show books I've read as their own lane on the timeline.</pre>
+
+  <h3>Step 2: shape it into a ticket (cheap)</h3>
+  <p>Start a fresh conversation on Haiku or Sonnet:</p>
+  <div class="say">Turn the "books I've read" idea in @ROADMAP.md into a ticket like the others: size, model, files, done-when. If it's bigger than M, split it. Don't build anything.</div>
+  <p>You’ll get something like:</p>
+<pre>7. **Reading lane** · M · opusplan. Sources with a "read on" date
+   appear in their own lane on the timeline.
+   Files: src/model/types.ts (schema bump), src/ui/TimelineView.tsx,
+   src/ui/panels/SourcePanels.tsx
+   Done when: a source with a read date shows in the lane and opens
+   on click; old backups still import.</pre>
+
+  <h3>Step 3: order the list</h3>
+  <p>Put first whatever gives the most learning, note-finding or fun for the least size. Quick wins (S) that unlock other things, like the place picker, go early.</p>
+
+  <h3>Step 4: build it with the ticket workflow</h3>
+  <p>Section 4, from the top.</p>
+
+  <h3>Sizing rules of thumb</h3>
+  <ul>
+    <li><strong>S:</strong> one screen, no change to how data is saved.</li>
+    <li><strong>M:</strong> a new panel or view, or a change to saved data.</li>
+    <li><strong>Bigger than M:</strong> split it. “Review mode” could become (a) ordering quiz, then (b) spaced repetition.</li>
+  </ul>
+
+  <h3>Exploring without building</h3>
+  <p>Sometimes you want to think out loud about direction (“what would make the map more like Civ?”). That’s fine. Do it in its own conversation on <code>opusplan</code>, ask for a short list of ideas, and save the good ones as one-line ideas in the roadmap. Then <code>/clear</code>. Brainstorms and builds don’t mix well in one conversation.</p>
+
+  <div class="box">
+    <div class="box-title">Your app’s house rules (Claude follows these automatically)</div>
+    <ul>
+      <li>The app ships empty: you add the history yourself.</li>
+      <li>Real pictures only (no AI images), always with credit.</li>
+      <li>Everything works offline. Internet features say so when you’re offline.</li>
+      <li>Old backups always import, even after changes to how data is saved.</li>
+    </ul>
+  </div>
+</section>
+
+<section>
+  <h2>11. Saving your work with Git</h2>
+  <p>Git keeps snapshots of your project called <strong>commits</strong>. Each ticket ends with one, so you can always go back.</p>
+  <table>
+    <tr><th>You want to…</th><th>Say to Claude</th></tr>
+    <tr><td>Save the finished ticket</td><td>“Commit this.”</td></tr>
+    <tr><td>See recent history</td><td>“Show the last 5 commits in one line each.”</td></tr>
+    <tr><td>Undo the last ticket</td><td>“Revert the last commit.” (This adds an undo commit; nothing is lost.)</td></tr>
+    <tr><td>Throw away unfinished, uncommitted changes</td><td>“Discard my uncommitted changes.” Claude will confirm first.</td></tr>
+    <tr><td>Try something risky</td><td>“Make a branch called experiment-x first.”</td></tr>
+  </table>
+  <p>Right now your work is on a branch called <code>wikipedia-and-maps</code>. When you’re happy with it, ask: “Merge wikipedia-and-maps into main.”</p>
+  <div class="box tip">
+    <div class="box-title">Your data is separate</div>
+    <p>Your actual timeline (entries, notes, sources) lives in your browser, not in Git. Back it up with <span class="ui">More → Export a backup</span> now and then, especially before importing test files.</p>
+  </div>
+</section>
+
+<section>
+  <h2>12. When things go wrong</h2>
+  <table>
+    <tr><th>Problem</th><th>What to do</th></tr>
+    <tr><td>A check fails and Claude’s fixes keep missing</td><td>After two attempts: <code>/model opus</code>, then “Step back: what is the actual cause?”</td></tr>
+    <tr><td>The conversation has wandered off</td><td>“Summarize where we are in three bullets,” then <code>/clear</code> and paste the bullets.</td></tr>
+    <tr><td>Claude changed things you didn’t ask for</td><td>“Undo the changes to X; keep only Y.” Next time use plan mode.</td></tr>
+    <tr><td>The app won’t start (<code>npm run dev</code> errors)</td><td>Paste the first error line and say “npm run dev fails with this.”</td></tr>
+    <tr><td>The map is blank</td><td>Refresh the page. If it’s still blank: “The map is blank in the browser,” plus what you see.</td></tr>
+    <tr><td>A permission prompt looks odd</td><td>Deny it and ask “why do you need that?”</td></tr>
+    <tr><td>Claude seems to have forgotten the setup</td><td>“Read @CLAUDE.md and follow it.”</td></tr>
+    <tr><td>You hit a usage limit</td><td>Wait for it to reset, or switch to <code>/model haiku</code> for small jobs. Long conversations use limits fastest.</td></tr>
+  </table>
+
+  <h3>Frequently asked</h3>
+  <p><strong>Can I just chat about history with Claude here?</strong> You can, but every message also carries the project briefing. For pure history questions, a regular Claude chat is cheaper. Bring what you learn back as entries.</p>
+  <p><strong>Do I need to understand the code?</strong> No. Understand the tickets, the plans and the app itself. Skimming diffs helps you sense change size, nothing more.</p>
+  <p><strong>Should I ever edit code myself?</strong> You can, but tell Claude afterwards (“I changed X in @file”) so it doesn’t undo it.</p>
+</section>
+
+<section>
+  <h2>13. Cheat sheet</h2>
+  <table class="cheat">
+    <tr><th colspan="2">Every ticket</th></tr>
+    <tr><td>1. Fresh start</td><td>New conversation, or <code>/clear</code></td></tr>
+    <tr><td>2. Model</td><td><code>/model</code> haiku · sonnet · opusplan · opus (as the ticket says)</td></tr>
+    <tr><td>3. Plan mode (M tickets)</td><td><kbd>Shift</kbd>+<kbd>Tab</kbd></td></tr>
+    <tr><td>4. Ask</td><td>“Do ticket N from ROADMAP.”</td></tr>
+    <tr><td>5. Try it</td><td>Terminal: <code>npm run dev</code> → localhost:5173</td></tr>
+    <tr><td>6. Finish</td><td>“Tick the ticket and commit.” Then a fresh conversation.</td></tr>
+  </table>
+  <table class="cheat">
+    <tr><th colspan="2">Commands</th></tr>
+    <tr><td><code>/clear</code></td><td>Empty conversation</td></tr>
+    <tr><td><code>/context</code></td><td>How full is it?</td></tr>
+    <tr><td><code>/compact keep …</code></td><td>Summarize to make room</td></tr>
+    <tr><td><code>/cost</code> or <code>/usage</code></td><td>What’s been used</td></tr>
+    <tr><td><code>@file</code></td><td>Point at a file exactly</td></tr>
+    <tr><td><kbd>Ctrl</kbd>+<kbd>`</kbd></td><td>Open the terminal</td></tr>
+    <tr><td><kbd>Cmd</kbd>+<kbd>Esc</kbd></td><td>Open Claude</td></tr>
+  </table>
+  <table class="cheat">
+    <tr><th colspan="2">Good request</th></tr>
+    <tr><td>Goal · Where · Done when</td><td>“On the map, pins should sit above territory names. Done when both are readable at 300 BCE.”</td></tr>
+    <tr><td>Batch it</td><td>Several small changes in one message.</td></tr>
+    <tr><td>New idea mid-ticket?</td><td>Write it in ROADMAP. Don’t build it now.</td></tr>
+  </table>
+  <table class="cheat">
+    <tr><th colspan="2">Feature check</th></tr>
+    <tr><td>Learning?</td><td>Helps me remember or understand</td></tr>
+    <tr><td>Notes?</td><td>Helps me capture or find my writing</td></tr>
+    <tr><td>Curiosity?</td><td>Makes me want to explore</td></tr>
+  </table>
+</section>
+
+</body>
+</html>
