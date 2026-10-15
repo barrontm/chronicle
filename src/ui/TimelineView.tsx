@@ -109,7 +109,8 @@ export function TimelineView({ items, categories, selectedId, thumbFor, onSelect
       selectable: true,
       xss: { disabled: true }, // every string we inject goes through escapeHtml
       format: { minorLabels: minorLabel, majorLabels: majorLabel },
-      groupTemplate: (g: { content: string; style: string }) => {
+      groupTemplate: (g?: { content: string; style: string } | null) => {
+        if (!g) return '';
         const el = document.createElement('div');
         el.className = 'lane-label';
         el.setAttribute('style', g.style);
