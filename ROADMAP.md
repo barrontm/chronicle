@@ -2,6 +2,28 @@
 
 Milestones are ordered and each one ships something usable. Tick items as they land, and record decisions in `docs/decisions.md`.
 
+## Next tickets
+One ticket per session: start fresh, finish with a commit, tick it below. Ordered by value to learning and curiosity per effort. Size: S ≈ one sitting, M ≈ a longer one. Model: what to run it on (`/model …`).
+
+1. **Place picker** · S · sonnet. Set an entry's places by hand (name plus coordinates; "Look up" via Wikidata search is a bonus), so hand-made entries get map pins.
+   Files: `src/ui/panels/ItemPanels.tsx` (places section in `ItemEditor`), `src/media/wikipedia.ts` (coordinate lookup).
+   Done when: add, edit and remove places in the editor; an e2e test adds a place and sees the pin label on the map.
+2. **Meanwhile** · M · opusplan. On an entry, show "Meanwhile…": other entries overlapping its dates, grouped by category, plus territories in force.
+   Files: new query in `src/model/atYear.ts` (unit-tested), `ItemView` in `src/ui/panels/ItemPanels.tsx`.
+   Done when: it lists overlapping entries, links open them, and an empty state invites adding one.
+3. **Review mode** · M · opusplan. Quiz yourself from your own entries: put three in order, guess a year, name a connection. Plain spaced repetition stored per entry.
+   Files: new `src/model/review.ts` (pure, tested), new panel `src/ui/panels/Review.tsx`, plus a schema bump if review state is saved in the doc (see `src/model/CLAUDE.md`).
+   Done when: a session of 10 questions runs offline from the fixture, and answers change what comes next.
+4. **Search** · S · sonnet. Top-bar search across entries, notes and sources that jumps to the result.
+   Files: `src/ui/App.tsx`, reuse the matching in `src/ui/panels/Library.tsx`.
+   Done when: typing finds all three kinds and Enter opens the first; covered by an e2e test.
+5. **Tech tree** · M · sonnet. Chains of "led to" connections among technology entries, drawn as an era-columned tree in plain SVG.
+   Files: new `src/ui/TechTree.tsx`, layout logic in a pure, tested module.
+   Done when: the fixture's technology chain renders, and clicking a node opens it.
+6. **Backup reminder** · S · haiku. Remind after 14 days without an export.
+   Files: `src/ui/App.tsx` (store the last export date with `useStored`).
+   Done when: the reminder shows once, and exporting or dismissing hides it.
+
 ## M1 — Foundation ✅ (2026-10-15)
 - [x] Entries (event / period / person) with BCE-aware dates and approximate dates
 - [x] Category lanes with show/hide

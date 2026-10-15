@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "cd \"$CLAUDE_PROJECT_DIR\" && npx tsc --noEmit > /tmp/chronicle-typecheck.log 2>&1 || { echo 'Typecheck failed after this edit:' >&2; tail -20 /tmp/chronicle-typecheck.log >&2; exit 2; }",
+            "command": "cd \"$CLAUDE_PROJECT_DIR\" && npx tsc --noEmit > /tmp/chronicle-typecheck.log 2>&1 || { echo 'Typecheck failed after this edit:' >&2; head -15 /tmp/chronicle-typecheck.log >&2; exit 2; }",
             "timeout": 60
           }
         ]
@@ -24,6 +24,12 @@
       "Bash(git status*)",
       "Bash(git diff*)",
       "Bash(git log*)"
+    ],
+    "deny": [
+      "Read(public/geo/**)",
+      "Read(package-lock.json)",
+      "Read(dist/**)",
+      "Read(node_modules/**/dist/*.mjs)"
     ]
   }
 }

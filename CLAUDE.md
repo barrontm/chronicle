@@ -1,67 +1,45 @@
 # Chronicle — project briefing for Claude
 
-Chronicle is Bob's personal history timeline. It is a **learning tool**: he builds it himself, entry by entry, as he reads and studies history. It is not a reference database and it ships with no content. Every design decision should make it easier to record what he learned, connect it to what he already knows, and find it again.
+Bob's personal history timeline: a **learning tool** he fills in himself as he studies, a home for his notes, and something fun that sparks curiosity. Ships with no content. Every change should make it easier to record what he learned, connect it, and find it again.
 
-Read `docs/decisions.md` before proposing architecture changes, and `ROADMAP.md` before starting new work.
+Start from the ticket in `ROADMAP.md`. Read `docs/decisions.md` only when a ticket changes architecture.
 
 ## What exists
-
-- **Entries** (`TimelineItem`) of three kinds: `event` (a moment), `span` (a war, reign or movement), `person` (a lifespan). Topics such as war or science are **categories**, never kinds.
-- **Notes**: Bob's own write-ups, each linked to any number of entries or trends.
-- **Sources**: bibliography entries, cited from entries and notes with an optional locator (pages, chapter, timestamp).
-- **Connections** (`Relation`): directed links between entries, such as influenced, caused, part-of, responded-to and related.
-- **Trends** (`Series`): quantities over time (population, literacy, transistor counts), drawn as strips that share the timeline's time axis. They can be typed in, pasted, or imported from an Our World in Data chart.
-- **Pictures** (`MediaRef`) on entries: Wikimedia Commons search (credit and license saved), an image link, or an upload stored in IndexedDB.
-- **Add from Wikipedia**: search, then a prefilled entry (Wikidata dates, places, picture, intro as a quoted `excerpt`, page cited as a source).
-- **Map** (Timeline | Map | Both) with one shared current year (year bar, timeline playhead, Play). Shows **territories** (`Territory`: borders per snapshot, imported from historical-basemaps), entries with `places` as pins, connections as lines, and trends with per-country `regions` as a choropleth. An opt-in reference backdrop of world borders is fetched, never saved.
-- Offline-first PWA. Data lives in IndexedDB. Export/import JSON, where import can **merge**; that is the cross-device sync until real sync lands.
+Entries (`event` / `span` / `person`; topics are **categories**, never kinds) · notes linked to anything · sources with citations · connections · trends (`Series`, incl. per-country `regions`) · pictures (Commons, link, upload) · add from Wikipedia · map with territories, pins, choropleth and one shared year · offline PWA (IndexedDB, export/import with merge).
 
 ## Commands
-
 ```bash
-npm run dev          # local dev server
-npm run typecheck    # tsc --noEmit
-npm test             # Vitest unit tests (model, dates, parsing, store)
-npm run test:e2e     # Playwright against the production build (vite preview)
-npm run check        # all of the above plus build: run before every commit
+npm run dev           # dev server
+npm run check:quiet   # typecheck + unit + build + e2e, failures only: run before every commit
+npm run check         # same, full output: only when debugging a failure
+npm run shots -- --only map --sheet   # screenshots of the views you touched, tiled into one image
 ```
-
-In the Claude cloud sandbox Playwright can't download browsers. Run e2e with the preinstalled Chromium:
-`PW_CHROMIUM_PATH=/opt/pw-browsers/chromium-1194/chrome-linux/chrome npm run test:e2e`
 
 ## Layout
-
 ```
-src/model/      types.ts (schema), dates.ts (ALL date logic), doc.ts (pure mutations, validation, merge), atYear.ts (what's on the map in a year)
-src/store/      DocStore interface, IndexedDB + in-memory implementations
-src/data/       parsing pasted series data and Our World in Data CSVs; geo.ts (simplify, area); basemaps.ts (historical-basemaps)
-src/media/      Wikimedia Commons search, image shrinking, Wikipedia/Wikidata import
-src/ui/         React. TimelineView is the ONLY file that imports vis-timeline; MapView the ONLY one that imports maplibre-gl
-                mapData.ts turns the doc into GeoJSON for a year (pure, tested); MapPane lazy-loads MapView
-public/geo/     bundled Natural Earth basemap (built by scripts/build-geo.ts; committed)
-src/ui/panels/  drawer contents: entry, note, source and trend views/editors, library
-tests/fixtures/ sample-history.json (TEST DATA ONLY; never ship it as app content)
-e2e/            Playwright specs
-docs/           decisions.md, data-model.md, design.md
+src/model/   types.ts (schema), dates.ts (ALL date logic), doc.ts (pure mutations, merge), atYear.ts
+src/data/    series/OWID parsing, geo.ts, basemaps.ts
+src/media/   Commons, Wikipedia/Wikidata
+src/ui/      React; TimelineView = only vis-timeline importer, MapView = only maplibre-gl importer
+e2e/         Playwright specs        tests/fixtures/  TEST DATA ONLY
+docs/        decisions.md, data-model.md, design.md
 ```
+Folder notes load automatically: `src/ui/CLAUDE.md`, `src/model/CLAUDE.md`, `e2e/CLAUDE.md`.
 
 ## Rules
+1. **Dates** only via `src/model/dates.ts` (astronomical years; 431 BCE = -430). Never `new Date(y, …)`.
+2. **Mutations** only through `upsert` / `remove` (via `update()` from `useDoc()`).
+3. **Schema changes** follow the checklist in `src/model/CLAUDE.md`. Old backups must always import.
+4. **No content** in the app, and **no AI-generated imagery**.
+5. **Offline first.** Network features say clearly when offline.
+6. **Copy:** plain, sentence-case, Bob's point of view (see `docs/design.md`).
+7. **Verify visually** with screenshots of only the views you changed (desktop, phone, dark), as one sheet.
+8. **Tests with features:** unit tests for logic, one e2e test for the main flow, network mocked.
 
-1. **Dates.** Years are stored astronomically (431 BCE = -430). Only `src/model/dates.ts` converts. Never use `new Date(y, …)` for historical years; use `toJsDate`. Any date change needs unit tests, including BCE, year 0–99, and leap days.
-2. **Mutations are pure.** Change the doc only through `upsert` / `remove` in `src/model/doc.ts`, via `update()` from `useDoc()`. They stamp `updatedAt` and record tombstones, which merge depends on. `remove` cascades: it drops connections and unlinks notes, but never deletes Bob's notes.
-3. **Schema changes.** Bump `SCHEMA_VERSION`, add a migration in `parseDoc`, update `docs/data-model.md` and the fixture, and add a test that an old file still imports. Old backups must always import.
-4. **No content in the app.** Never seed the app with history. The fixture is for tests and screenshots.
-5. **No AI-generated imagery.** Pictures are real artifacts, monuments, portraits and artworks with credit and license. Non-AI visualizations (trends, maps, connections) are the way to show change over time.
-6. **Offline.** Every feature must work offline, except features that fetch from the network (Commons search, OWID import). Those must say so clearly when offline instead of failing silently.
-7. **Copy.** Use plain, sentence-case labels from Bob's point of view ("Write a note", "Add to timeline"). Errors say what happened and how to fix it. See `docs/design.md`.
-8. **Verify visually.** For UI changes, build, take screenshots with Playwright (desktop 1440×900, phone 412×860, dark mode) and look at them before calling the work done.
-9. **Tests with features.** A new feature gets unit tests for its logic and at least one e2e test for the main flow. Network calls in e2e are mocked with `page.route` (remember CORS headers).
+## Working efficiently
+- One roadmap ticket per session. Start fresh, finish with a commit.
+- Read line ranges, not whole files. Never read `public/geo`, `dist`, lockfiles or minified libraries; use `.d.ts` files or a narrow `grep -o`.
+- Pipe noisy commands through `tail` / `grep`. Subagents only for wide searches.
 
-## Gotchas
-
-- React bubbles synthetic events through portals. Forms inside `ImagePicker` call `stopPropagation()` so they don't submit the entry form behind them.
-- vis-timeline label callbacks receive moment objects even though the types say `Date`. The timeline runs in UTC via the `moment` option.
-- `Field` ties a label to its control by id. Pass the bare `<input>`/`<select>`/`<textarea>` as its child.
-- MapLibre can't read CSS variables: MapView resolves `var(--…)` colors and re-applies them when the system theme changes. Map text labels are HTML markers (symbol text would need a glyph server). Don't replace a marker element's `className`; MapLibre positions it with its own classes.
-- The service worker serves Wikimedia images and historical-basemaps files CacheFirst, so `page.route` can't see those requests. E2e tests that mock them use `test.use({ serviceWorkers: 'block' })`.
-- E2e and `npm run shots` launch Chromium with SwiftShader so the map has WebGL.
+## Compact instructions
+When compacting, keep: the current ticket, decisions made, files touched, failing test names and errors still open. Drop: tool output, screenshots, resolved errors, file contents.
