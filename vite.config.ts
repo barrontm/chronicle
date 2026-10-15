@@ -1,0 +1,48 @@
+/// <reference types="vitest/config" />
+import react from '@vitejs/plugin-react';
+import { defineConfig } from 'vite';
+import { VitePWA } from 'vite-plugin-pwa';
+
+// BASE_PATH is set by the GitHub Pages workflow to "/<repo-name>/". Locally it's "/".
+const base = process.env.BASE_PATH ?? '/';
+
+export default defineConfig({
+  base,
+  plugins: [
+    react(),
+    VitePWA({
+      registerType: 'autoUpdate',
+      includeAssets: ['icon.svg'],
+      manifest: {
+        name: 'Chronicle',
+        short_name: 'Chronicle',
+        description: 'A history timeline you build as you learn.',
+        theme_color: '#1d2b3a',
+        background_color: '#eef0ec',
+        display: 'standalone',
+        start_url: base,
+        icons: [{ src: 'icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' }],
+      },
+      workbox: {
+        globPatterns: ['**/*.{js,css,html,svg,woff2}'],
+        // Pictures from Wikimedia stay viewable offline once seen.
+        runtimeCaching: [
+          {
+            urlPattern: ({ url }) => url.hostname === 'upload.wikimedia.org' || url.hostname === 'commons.wikimedia.org',
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'wikimedia-images',
+              expiration: { maxEntries: 2000, maxAgeSeconds: 60 * 60 * 24 * 365 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+        ],
+      },
+    }),
+  ],
+  build: { chunkSizeWarningLimit: 1200 },
+  test: {
+    include: ['src/**/*.test.ts'],
+    environment: 'node',
+  },
+});
