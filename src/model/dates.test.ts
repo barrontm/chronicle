@@ -5,6 +5,7 @@ import {
   formatHistDate,
   formatRange,
   fromJsDate,
+  fromWikidataTime,
   isValidHistDate,
   jsDateToDecimalYear,
   decimalYearToJsDate,
@@ -96,5 +97,39 @@ describe('validity and ordering', () => {
   it('orders BCE before CE', () => {
     expect(compareHistDate({ y: -430 }, { y: 476 })).toBeLessThan(0);
     expect(compareHistDate({ y: 1914, m: 7 }, { y: 1914, m: 1 })).toBeGreaterThan(0);
+  });
+});
+
+describe('fromWikidataTime', () => {
+  it('reads day, month and year precision', () => {
+    expect(fromWikidataTime('+1815-12-10T00:00:00Z', 11)).toEqual({ y: 1815, m: 12, d: 10 });
+    expect(fromWikidataTime('+1815-12-00T00:00:00Z', 10)).toEqual({ y: 1815, m: 12 });
+    expect(fromWikidataTime('+1815-00-00T00:00:00Z', 9)).toEqual({ y: 1815 });
+  });
+
+  it('turns historical BCE years into astronomical ones', () => {
+    expect(fromWikidataTime('-0490-00-00T00:00:00Z', 9)).toEqual({ y: -489 });
+    expect(fromWikidataTime('-0001-00-00T00:00:00Z', 9)).toEqual({ y: 0 });
+    expect(fromWikidataTime('-0384-01-01T00:00:00Z', 9)).toEqual({ y: -383 });
+  });
+
+  it('keeps years 1–99 as themselves', () => {
+    expect(fromWikidataTime('+0079-08-24T00:00:00Z', 11)).toEqual({ y: 79, m: 8, d: 24 });
+  });
+
+  it('marks decades, centuries and circa values as approximate', () => {
+    expect(fromWikidataTime('+1450-00-00T00:00:00Z', 8)).toEqual({ y: 1450, approx: true });
+    expect(fromWikidataTime('-0500-00-00T00:00:00Z', 7)).toEqual({ y: -499, approx: true });
+    expect(fromWikidataTime('+1440-00-00T00:00:00Z', 9, true)).toEqual({ y: 1440, approx: true });
+  });
+
+  it('keeps real leap days and drops a Julian 29 February the Gregorian calendar lacks', () => {
+    expect(fromWikidataTime('+2000-02-29T00:00:00Z', 11)).toEqual({ y: 2000, m: 2, d: 29 });
+    expect(fromWikidataTime('+1500-02-29T00:00:00Z', 11)).toEqual({ y: 1500, m: 2 });
+  });
+
+  it('returns null for values it cannot read', () => {
+    expect(fromWikidataTime('soon', 11)).toBeNull();
+    expect(fromWikidataTime('+0000-00-00T00:00:00Z', 9)).toBeNull();
   });
 });

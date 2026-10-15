@@ -21,20 +21,28 @@ Milestones are ordered and each one ships something usable. Tick items as they l
 - [ ] Tags and a filter by tag
 - [ ] Reminder to export a backup if none has been made in 14 days
 
+## M2.5 — Quick capture
+- [x] Add from Wikipedia: search, then a prefilled entry (kind, dates and places from Wikidata, picture with credit, intro as a quoted excerpt, page cited as a source); duplicates detected by Wikidata id
+- [ ] Place picker in the entry editor (click a mini-map or type coordinates)
+
 ## M3 — Sync across devices
 - [ ] A remote copy that both devices can reach. Leading option: a JSON file in a private GitHub repo via the API (free, versioned history, one token). Alternative: a small Cloudflare Worker with KV.
 - [ ] Sync loop: pull, `mergeDocs`, push; run on open, on focus, and after edits
 - [ ] Uploaded pictures sync too (or move to remote storage)
 
-## M4 — Maps: territory over time
-- [ ] Map panel (MapLibre GL, offline-capable vector basemap) with a year slider tied to the timeline
-- [ ] Territories drawn from GeoJSON snapshots, with import from the historical-basemaps dataset
-- [ ] Optional: place entries on the map (battle sites, birthplaces)
+## M4 — Maps: change over time, Civ-style
+- [ ] Map view (MapLibre GL, only `MapView.tsx` imports it) on a bundled, tile-free Natural Earth basemap; Timeline | Map | Split
+- [ ] Shared current year: playhead on the timeline, year slider and Play on the map
+- [ ] Territories: import a polity across all snapshots from historical-basemaps, simplified on import, drawn in category pigment for the current year
+- [ ] Reference borders backdrop (opt-in, fetched and cached, never saved to the doc)
+- [ ] Entries with places as pins while the current year is within their dates; optional connection arcs
+- [ ] Regional trends (`Series.regions`), OWID "all countries" import, choropleth with legend; territory values as proportional circles
+- [ ] Tech spread: technology entries appear in date order as the year plays
 
 ## M5 — Seeing connections
 - [ ] Connection graph view (who influenced whom, causal chains), filterable by category and era
 - [ ] "Meanwhile" view: what else was happening during the selected entry's dates
-- [ ] Technology lineages: chains of "led to" connections drawn as a branching tree
+- [ ] Technology lineages: chains of "led to" connections drawn as a branching tree (may move into M4 as the tech tree)
 
 ## M6 — Learning
 - [ ] Review mode: quiz yourself from your own entries (dates, order, connections) with spaced repetition

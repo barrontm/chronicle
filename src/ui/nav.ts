@@ -1,9 +1,11 @@
+import type { ItemDraft } from '../media/wikipedia';
 import type { ItemKind } from '../model/types';
 
 /** What the side drawer is showing. The drawer keeps a stack so "Back" works across links. */
 export type Panel =
   | { type: 'item'; id: string; edit?: boolean }
-  | { type: 'new-item'; year?: number; categoryId?: string; kind?: ItemKind }
+  | { type: 'new-item'; year?: number; categoryId?: string; kind?: ItemKind; draft?: ItemDraft }
+  | { type: 'wiki-import' }
   | { type: 'note'; id: string; edit?: boolean }
   | { type: 'new-note'; linkedIds: string[] }
   | { type: 'source'; id: string; edit?: boolean }

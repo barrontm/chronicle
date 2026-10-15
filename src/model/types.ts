@@ -53,6 +53,24 @@ export interface MediaRef {
   sourceUrl?: string;
 }
 
+/** Where something happened, or where a person was born or died. Drawn on the map. */
+export interface Place {
+  name?: string;
+  /** Degrees, WGS84. */
+  lat: number;
+  lon: number;
+  role?: 'site' | 'born' | 'died';
+}
+
+/**
+ * Text quoted from a reference work (e.g. a Wikipedia intro). Kept apart from
+ * Bob's own notes and shown as a quotation with its source.
+ */
+export interface Excerpt {
+  text: string;
+  sourceId: string;
+}
+
 export interface TimelineItem {
   id: string;
   kind: ItemKind;
@@ -66,6 +84,10 @@ export interface TimelineItem {
   media?: MediaRef[];
   citations?: Citation[];
   tags?: string[];
+  places?: Place[];
+  excerpt?: Excerpt;
+  /** Wikidata id (e.g. "Q913") when the entry came from Wikipedia. Used to spot duplicates. */
+  wikidataId?: string;
   /** Epoch ms of the last edit. Drives per-item merge when syncing devices. */
   updatedAt: number;
 }
@@ -109,6 +131,8 @@ export interface Source {
   url?: string;
   /** Your own remarks on the source: reliability, what it's good for. */
   remarks?: string;
+  /** For web sources: the date you read it, as YYYY-MM-DD. */
+  accessed?: string;
   updatedAt: number;
 }
 
@@ -167,7 +191,7 @@ export interface Territory {
   updatedAt: number;
 }
 
-export const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION = 2;
 
 export interface TimelineDoc {
   schemaVersion: number;

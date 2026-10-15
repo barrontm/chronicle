@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "id": "doc_fixture",
   "title": "Test fixture",
   "updatedAt": 1760000000000,
@@ -18,7 +18,7 @@
     { "id": "i_plato", "kind": "person", "title": "Plato", "start": { "y": -427, "approx": true }, "end": { "y": -347, "approx": true }, "categoryId": "ideas", "updatedAt": 1760000000000 },
     { "id": "i_aristotle", "kind": "person", "title": "Aristotle", "start": { "y": -383 }, "end": { "y": -321 }, "categoryId": "ideas", "description": "Student of Plato, tutor of Alexander.", "citations": [{ "sourceId": "s_barnes", "locator": "ch. 1" }], "updatedAt": 1760000000000 },
     { "id": "i_rome_falls", "kind": "event", "title": "Deposition of Romulus Augustulus", "start": { "y": 476 }, "categoryId": "politics", "updatedAt": 1760000000000 },
-    { "id": "i_magna", "kind": "event", "title": "Magna Carta sealed", "start": { "y": 1215, "m": 6, "d": 15 }, "categoryId": "politics", "updatedAt": 1760000000000 },
+    { "id": "i_magna", "kind": "event", "title": "Magna Carta sealed", "start": { "y": 1215, "m": 6, "d": 15 }, "categoryId": "politics", "places": [{ "name": "Runnymede", "lat": 51.444, "lon": -0.565, "role": "site" }], "excerpt": { "text": "Fixture excerpt: a royal charter of rights agreed at Runnymede.", "sourceId": "s_wp_magna" }, "wikidataId": "Q99999901", "citations": [{ "sourceId": "s_wp_magna" }], "updatedAt": 1760000000000 },
     { "id": "i_hundred", "kind": "span", "title": "Hundred Years' War", "start": { "y": 1337 }, "end": { "y": 1453 }, "categoryId": "war", "updatedAt": 1760000000000 },
     { "id": "i_press", "kind": "event", "title": "Gutenberg's printing press", "start": { "y": 1440, "approx": true }, "categoryId": "technology", "updatedAt": 1760000000000 },
     { "id": "i_newton", "kind": "person", "title": "Isaac Newton", "start": { "y": 1643, "m": 1, "d": 4 }, "end": { "y": 1727, "m": 3, "d": 31 }, "categoryId": "science", "updatedAt": 1760000000000 },
@@ -49,7 +49,8 @@
     { "id": "n_teachers", "title": "Socrates → Plato → Aristotle", "body": "Three generations of teacher and student.\n\nAristotle studied at Plato's Academy for about twenty years.", "linkedIds": ["i_socrates", "i_plato", "i_aristotle"], "citations": [{ "sourceId": "s_barnes", "locator": "pp. 1–10" }], "updatedAt": 1760000000000 }
   ],
   "sources": [
-    { "id": "s_barnes", "kind": "book", "title": "Aristotle: A Very Short Introduction", "authors": "Jonathan Barnes", "year": "2000", "publisher": "Oxford University Press", "updatedAt": 1760000000000 }
+    { "id": "s_barnes", "kind": "book", "title": "Aristotle: A Very Short Introduction", "authors": "Jonathan Barnes", "year": "2000", "publisher": "Oxford University Press", "updatedAt": 1760000000000 },
+    { "id": "s_wp_magna", "kind": "web", "title": "Magna Carta", "publisher": "Wikipedia", "url": "https://en.wikipedia.org/wiki/Magna_Carta", "accessed": "2026-10-15", "updatedAt": 1760000000000 }
   ],
   "relations": [
     { "id": "r_1", "fromId": "i_socrates", "toId": "i_plato", "type": "influenced", "updatedAt": 1760000000000 },

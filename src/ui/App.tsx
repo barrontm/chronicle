@@ -6,6 +6,7 @@ import { DocProvider, useDoc } from './DocContext';
 import type { Nav, Panel } from './nav';
 import { ItemEditor, ItemView } from './panels/ItemPanels';
 import { Library } from './panels/Library';
+import { WikiImport } from './panels/WikiImport';
 import { NoteEditor, NoteView } from './panels/NotePanels';
 import { SeriesEditor } from './panels/SeriesEditor';
 import { SourceEditor, SourceView } from './panels/SourcePanels';
@@ -95,6 +96,7 @@ function Workspace() {
               <button role="menuitem" onClick={() => startNew({ type: 'new-item', kind: 'event' })}>Event</button>
               <button role="menuitem" onClick={() => startNew({ type: 'new-item', kind: 'span' })}>Period, war or movement</button>
               <button role="menuitem" onClick={() => startNew({ type: 'new-item', kind: 'person' })}>Person</button>
+              <button role="menuitem" onClick={() => startNew({ type: 'wiki-import' })}>From Wikipedia…</button>
               <hr />
               <button role="menuitem" onClick={() => startNew({ type: 'new-note', linkedIds: [] })}>Note</button>
               <button role="menuitem" onClick={() => startNew({ type: 'new-source' })}>Source</button>
@@ -144,6 +146,7 @@ function Workspace() {
                 <button className="btn primary" onClick={() => startNew({ type: 'new-item', kind: 'event' })}>Add an event</button>
                 <button className="btn" onClick={() => startNew({ type: 'new-item', kind: 'person' })}>Add a person</button>
                 <button className="btn" onClick={() => startNew({ type: 'new-item', kind: 'span' })}>Add a period</button>
+                <button className="btn" onClick={() => startNew({ type: 'wiki-import' })}>Add from Wikipedia</button>
               </div>
             </div>
           )}
@@ -194,7 +197,8 @@ function PanelBody({ panel, nav }: { panel: Panel; nav: Nav }) {
   // `key` resets editor state when switching between records.
   switch (panel.type) {
     case 'item': return panel.edit ? <ItemEditor key={`e-${panel.id}`} id={panel.id} nav={nav} /> : <ItemView key={panel.id} id={panel.id} nav={nav} />;
-    case 'new-item': return <ItemEditor key={`new-${panel.year}-${panel.kind}-${panel.categoryId}`} id={null} init={panel} nav={nav} />;
+    case 'new-item': return <ItemEditor key={`new-${panel.draft?.item.id ?? `${panel.year}-${panel.kind}-${panel.categoryId}`}`} id={null} init={panel} draft={panel.draft} nav={nav} />;
+    case 'wiki-import': return <WikiImport nav={nav} />;
     case 'note': return panel.edit ? <NoteEditor key={`e-${panel.id}`} id={panel.id} nav={nav} /> : <NoteView key={panel.id} id={panel.id} nav={nav} />;
     case 'new-note': return <NoteEditor key="new-note" id={null} linkedIds={panel.linkedIds} nav={nav} />;
     case 'source': return panel.edit ? <SourceEditor key={`e-${panel.id}`} id={panel.id} nav={nav} /> : <SourceView key={panel.id} id={panel.id} nav={nav} />;

@@ -28,7 +28,9 @@ export default defineConfig({
         // Pictures from Wikimedia stay viewable offline once seen.
         runtimeCaching: [
           {
-            urlPattern: ({ url }) => url.hostname === 'upload.wikimedia.org' || url.hostname === 'commons.wikimedia.org',
+            // Image bytes only. API calls (Commons search, file info) must stay fresh, so they're not matched here.
+            urlPattern: ({ url }) => url.hostname === 'upload.wikimedia.org'
+              || (url.hostname === 'commons.wikimedia.org' && url.pathname.startsWith('/wiki/Special:FilePath')),
             handler: 'CacheFirst',
             options: {
               cacheName: 'wikimedia-images',

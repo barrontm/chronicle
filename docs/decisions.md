@@ -2,6 +2,9 @@
 
 A log of choices that shouldn't be re-litigated every session. Newest first. To change a decision, add a new entry that supersedes the old one.
 
+## 2026-10-15 — Add from Wikipedia: facts, a citation and a quote, never a note
+"Add → From Wikipedia" prefills the normal entry editor and saves nothing until Bob confirms. Kind and dates come from Wikidata (precision kept, BCE converted in `dates.ts`), not from parsing article prose. The picture comes from Wikidata's P18 via Commons so credit and license are real; the page's own lead image may be non-free and is not used. The page becomes a `web` source with the date read. The intro is stored as an `excerpt` and shown as a quotation, so reference text never passes for Bob's own understanding. SEP was considered and dropped: it has no API and blocks cross-site requests.
+
 ## 2026-10-15 — Learning tool, empty by default
 Bob builds the timeline himself as he learns, so the app starts empty with an invitation to add the first entry. Sample history exists only as a test fixture. Notes, sources and connections are first-class, because the value is in his own understanding and how things link, not in coverage.
 

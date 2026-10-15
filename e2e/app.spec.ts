@@ -202,3 +202,107 @@ test('works offline after the first visit', async ({ page, context }) => {
   await expect(page.locator('.vis-item', { hasText: 'Fall of Constantinople' })).toBeVisible();
   await context.setOffline(false);
 });
+
+/** Mock Wikipedia, Wikidata and Commons for "Add from Wikipedia". Every response needs CORS headers. */
+async function mockWikipedia(page: Page) {
+  const cors = { 'Access-Control-Allow-Origin': '*' };
+  const snak = (value: unknown) => ({ mainsnak: { snaktype: 'value', datavalue: { value } }, rank: 'normal' });
+  await page.route('https://en.wikipedia.org/w/rest.php/v1/search/page**', (route) =>
+    route.fulfill({ headers: cors, json: { pages: [
+      { key: 'Ada_Lovelace', title: 'Ada Lovelace', description: 'English mathematician (1815–1852)', thumbnail: null },
+      { key: 'Lovelace_(film)', title: 'Lovelace (film)', description: '2013 film', thumbnail: null },
+    ] } }),
+  );
+  await page.route('https://en.wikipedia.org/api/rest_v1/page/summary/**', (route) =>
+    route.fulfill({ headers: cors, json: {
+      title: 'Ada Lovelace', description: 'English mathematician (1815–1852)', wikibase_item: 'Q7259',
+      extract: 'Augusta Ada King, Countess of Lovelace, was an English mathematician and writer.',
+      content_urls: { desktop: { page: 'https://en.wikipedia.org/wiki/Ada_Lovelace' } },
+    } }),
+  );
+  await page.route('https://www.wikidata.org/w/api.php**', (route) => {
+    const url = new URL(route.request().url());
+    if (url.searchParams.get('action') === 'wbgetclaims') {
+      return route.fulfill({ headers: cors, json: { claims: { P625: [snak({ latitude: 51.507, longitude: -0.128 })] } } });
+    }
+    if (url.searchParams.get('props') === 'labels') {
+      return route.fulfill({ headers: cors, json: { entities: { Q84: { labels: { en: { value: 'London' } } } } } });
+    }
+    return route.fulfill({ headers: cors, json: { entities: { Q7259: { claims: {
+      P31: [snak({ id: 'Q5' })],
+      P569: [snak({ time: '+1815-12-10T00:00:00Z', precision: 11 })],
+      P570: [snak({ time: '+1852-11-27T00:00:00Z', precision: 11 })],
+      P19: [snak({ id: 'Q84' })],
+      P18: [snak('Ada Lovelace portrait.jpg')],
+    } } } } });
+  });
+  await page.route('https://commons.wikimedia.org/w/api.php**', (route) =>
+    route.fulfill({ headers: cors, json: { query: { pages: { '1': { title: 'File:Ada Lovelace portrait.jpg', imageinfo: [{
+      url: 'https://upload.wikimedia.org/ada.jpg', thumburl: 'https://upload.wikimedia.org/ada-640.jpg',
+      descriptionurl: 'https://commons.wikimedia.org/wiki/File:Ada_Lovelace_portrait.jpg', mime: 'image/jpeg',
+      extmetadata: { Artist: { value: 'Alfred Edward Chalon' }, LicenseShortName: { value: 'Public domain' } },
+    }] } } } } }),
+  );
+  await page.route('https://upload.wikimedia.org/**', (route) =>
+    route.fulfill({ contentType: 'image/svg+xml', body: '<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"/>' }),
+  );
+}
+
+async function addAdaFromWikipedia(page: Page) {
+  await page.getByRole('button', { name: 'Add', exact: true }).click();
+  await page.getByRole('menuitem', { name: 'From Wikipedia…' }).click();
+  const panel = page.getByTestId('wiki-import');
+  await panel.getByLabel('Search Wikipedia').fill('Ada Lovelace');
+  await panel.getByRole('button', { name: 'Search' }).click();
+  await panel.getByTestId('wiki-results').getByRole('button', { name: /Ada Lovelace English mathematician/ }).click();
+}
+
+test('add a person from Wikipedia with dates, place, picture, quote and source @phone', async ({ page }) => {
+  await mockWikipedia(page);
+  await open(page);
+  await addAdaFromWikipedia(page);
+
+  const editor = page.getByTestId('item-editor');
+  await expect(editor.getByRole('button', { name: 'Person' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(editor.getByLabel('Name')).toHaveValue('Ada Lovelace');
+  await expect(editor.getByLabel('Born')).toHaveValue('1815-12-10');
+  await expect(editor.getByLabel('Died')).toHaveValue('1852-11-27');
+  await expect(editor.getByText('Born in London (51.51°N, 0.13°W)')).toBeVisible();
+  await expect(editor.getByTestId('excerpt')).toContainText('Countess of Lovelace');
+  await editor.getByLabel('Category').selectOption('science');
+  await editor.getByRole('button', { name: 'Add to timeline' }).click();
+
+  const view = page.getByTestId('item-view');
+  await expect(view.getByRole('heading', { name: 'Ada Lovelace' })).toBeVisible();
+  await expect(view.getByText('English mathematician (1815–1852)')).toBeVisible();
+  await expect(view.getByTestId('excerpt')).toContainText('Countess of Lovelace');
+  await expect(view.getByTestId('excerpt').getByRole('link', { name: 'Wikipedia' })).toHaveAttribute('href', 'https://en.wikipedia.org/wiki/Ada_Lovelace');
+  await expect(view.getByText(/Alfred Edward Chalon, Public domain/)).toBeVisible();
+  await expect(view.getByRole('button', { name: 'Wikipedia contributors, Ada Lovelace' })).toBeVisible(); // the cited source
+  await expect(page.locator('.vis-item', { hasText: 'Ada Lovelace' })).toBeVisible();
+});
+
+test('adding the same Wikipedia page twice opens the existing entry instead', async ({ page }) => {
+  await mockWikipedia(page);
+  await open(page);
+  await addAdaFromWikipedia(page);
+  await page.getByTestId('item-editor').getByRole('button', { name: 'Add to timeline' }).click();
+  await expect(page.getByTestId('item-view')).toBeVisible();
+
+  await addAdaFromWikipedia(page);
+  const panel = page.getByTestId('wiki-import');
+  await expect(panel.getByText('“Ada Lovelace” is already on your timeline.')).toBeVisible();
+  await panel.getByRole('button', { name: 'Open it' }).click();
+  await expect(page.getByTestId('item-view').getByRole('heading', { name: 'Ada Lovelace' })).toBeVisible();
+});
+
+test('adding from Wikipedia says a connection is needed when offline', async ({ page, context }) => {
+  await open(page);
+  await context.setOffline(true);
+  await page.getByRole('button', { name: 'Add', exact: true }).click();
+  await page.getByRole('menuitem', { name: 'From Wikipedia…' }).click();
+  const panel = page.getByTestId('wiki-import');
+  await panel.getByLabel('Search Wikipedia').fill('Ada Lovelace');
+  await panel.getByRole('button', { name: 'Search' }).click();
+  await expect(panel.getByRole('alert')).toHaveText(/You’re offline\. Adding from Wikipedia needs a connection/);
+});

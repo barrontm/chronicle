@@ -101,3 +101,23 @@ export function resultToMedia(r: CommonsResult): MediaRef {
     sourceUrl: r.sourceUrl,
   };
 }
+
+/** Metadata (credit, license, sized URL) for one known Commons file, e.g. a Wikidata P18 image. */
+export function buildFileInfoUrl(fileName: string): string {
+  const p = new URLSearchParams({
+    action: 'query',
+    format: 'json',
+    origin: '*',
+    titles: `File:${fileName.replace(/^File:/, '')}`,
+    prop: 'imageinfo',
+    iiprop: 'url|extmetadata|mime',
+    iiurlwidth: '640',
+  });
+  return `${API}?${p.toString()}`;
+}
+
+export async function fetchCommonsFile(fileName: string, signal?: AbortSignal): Promise<CommonsResult | undefined> {
+  const res = await fetch(buildFileInfoUrl(fileName), { signal });
+  if (!res.ok) throw new Error(`Wikimedia Commons returned ${res.status}. Try again in a moment.`);
+  return parseSearchResponse(await res.json())[0];
+}

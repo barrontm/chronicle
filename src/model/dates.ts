@@ -157,3 +157,27 @@ export function jsDateToDecimalYear(dt: Date): number {
 export function compareHistDate(a: HistDate, b: HistDate): number {
   return toDecimalYear(a) - toDecimalYear(b);
 }
+
+/**
+ * Read a Wikidata time value ("+1815-12-10T00:00:00Z" with a precision code).
+ * Wikidata's JSON writes BCE years in historical numbering ("-0490" = 490 BCE),
+ * so they're converted to astronomical here. Precision: 11 day, 10 month,
+ * 9 year; anything coarser (decade, century…) becomes an approximate year.
+ * Dates before 1582 are usually Julian; the day and month are kept as written,
+ * which is how historians cite them. A day the Gregorian calendar lacks
+ * (29 Feb 1500) is dropped, keeping the month. Returns null if unreadable.
+ */
+export function fromWikidataTime(time: string, precision: number, approx = false): HistDate | null {
+  const m = time.match(/^([+-])(\d+)-(\d{2})-(\d{2})T/);
+  if (!m) return null;
+  const year = Number(m[2]);
+  if (year < 1) return null;
+  const d: HistDate = { y: toAstronomical(year, m[1] === '-' ? 'BCE' : 'CE') };
+  const month = Number(m[3]);
+  const day = Number(m[4]);
+  if (precision >= 10 && month >= 1) d.m = month;
+  if (precision >= 11 && d.m && day >= 1) d.d = day;
+  if (precision < 9 || approx) d.approx = true;
+  if (d.d && !isValidHistDate(d)) delete d.d;
+  return isValidHistDate(d) ? d : null;
+}

@@ -251,3 +251,14 @@ dialog h2 { font-family: var(--font-read); margin: 0 0 12px; font-weight: 600; }
   .save-state { display: none; }
   .hide-narrow { display: none; }
 }
+
+/* Quoted reference text (e.g. a Wikipedia intro): visibly not Bob's own writing. */
+.excerpt { margin: 12px 0; padding: 4px 0 4px 12px; border-left: 3px solid var(--rule); color: var(--ink-2); }
+.excerpt p { font-family: var(--font-read); font-size: 15px; line-height: 1.6; margin: 0 0 4px; max-width: 62ch; }
+.excerpt footer { font-size: 12px; color: var(--muted); }
+.excerpt footer a { color: inherit; }
+
+.wiki-results button { display: flex; gap: 10px; align-items: center; }
+.wiki-results img, .wiki-thumb-empty { width: 48px; height: 48px; object-fit: cover; border-radius: var(--radius-s); background: var(--rule-soft); flex: none; }
+.wiki-results button:disabled { cursor: progress; opacity: .7; }
+.lede { color: var(--ink-2); font-size: 13px; margin: 0 0 12px; }

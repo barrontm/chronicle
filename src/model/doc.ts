@@ -73,6 +73,10 @@ export function validateItem(item: TimelineItem, categoryIds: Set<string>): stri
     p.push(`${name} ends before it starts`);
   }
   if (!categoryIds.has(item.categoryId)) p.push(`${name} uses unknown category "${item.categoryId}"`);
+  for (const pl of item.places ?? []) {
+    if (!Number.isFinite(pl.lat) || !Number.isFinite(pl.lon) || Math.abs(pl.lat) > 90 || Math.abs(pl.lon) > 180) p.push(`${name} has a place with invalid coordinates`);
+  }
+  if (item.excerpt && !item.excerpt.text?.trim()) p.push(`${name} has an empty excerpt`);
   return p;
 }
 
@@ -111,7 +115,10 @@ export function validateDoc(doc: TimelineDoc): string[] {
   const checkCitations = (owner: string, cites?: Citation[]) => {
     for (const c of cites ?? []) if (!sourceIds.has(c.sourceId)) p.push(`${owner} cites unknown source "${c.sourceId}"`);
   };
-  for (const it of doc.items) checkCitations(`"${it.title}"`, it.citations);
+  for (const it of doc.items) {
+    checkCitations(`"${it.title}"`, it.citations);
+    if (it.excerpt) checkCitations(`the excerpt on "${it.title}"`, [{ sourceId: it.excerpt.sourceId }]);
+  }
   for (const n of doc.notes) {
     checkUnique(n.id);
     if (!n.title?.trim()) p.push(`note ${n.id} has no title`);
@@ -140,12 +147,12 @@ export function parseDoc(json: string): TimelineDoc {
     throw new DocValidationError(['the file is not valid JSON']);
   }
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw new DocValidationError(['the file does not contain a timeline object']);
-  const r = raw as Partial<TimelineDoc>;
+  let r = raw as Partial<TimelineDoc>;
   if (typeof r.schemaVersion !== 'number') throw new DocValidationError(['the file has no schemaVersion']);
   if (r.schemaVersion > SCHEMA_VERSION) {
     throw new DocValidationError([`the file was made by a newer version of the app (schema ${r.schemaVersion}); update the app first`]);
   }
-  // Migrations go here: if (r.schemaVersion === 1) r = migrate1to2(r) …
+  if (r.schemaVersion === 1) r = migrate1to2(r);
   const doc: TimelineDoc = {
     schemaVersion: SCHEMA_VERSION,
     id: r.id ?? newId('doc'),
@@ -163,6 +170,14 @@ export function parseDoc(json: string): TimelineDoc {
   const problems = validateDoc(doc);
   if (problems.length) throw new DocValidationError(problems);
   return doc;
+}
+
+/**
+ * v2 adds optional fields only (item places, excerpt and wikidataId; source
+ * accessed date), so a v1 doc is already a valid v2 doc.
+ */
+function migrate1to2(r: Partial<TimelineDoc>): Partial<TimelineDoc> {
+  return { ...r, schemaVersion: 2 };
 }
 
 export function serializeDoc(doc: TimelineDoc): string {
@@ -214,7 +229,13 @@ export function remove(doc: TimelineDoc, collection: Collection, id: string, now
   if (collection === 'sources') {
     const strip = <T extends { citations?: Citation[]; updatedAt: number }>(r: T): T =>
       r.citations?.some((c) => c.sourceId === id) ? { ...r, citations: r.citations.filter((c) => c.sourceId !== id), updatedAt: now } : r;
-    next = { ...next, items: next.items.map(strip), notes: next.notes.map(strip) };
+    // A quoted excerpt without its source is unattributed text, so it goes with the source.
+    const dropExcerpt = (it: TimelineItem): TimelineItem => {
+      if (it.excerpt?.sourceId !== id) return it;
+      const { excerpt: _excerpt, ...rest } = it;
+      return { ...rest, updatedAt: now };
+    };
+    next = { ...next, items: next.items.map((it) => dropExcerpt(strip(it))), notes: next.notes.map(strip) };
   }
   return next;
 }

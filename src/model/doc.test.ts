@@ -11,10 +11,11 @@ import {
   serializeDoc,
   upsert,
 } from './doc';
-import type { TimelineItem } from './types';
+import { SCHEMA_VERSION, type TimelineItem } from './types';
 
 const fixtureJson = readFileSync(new URL('../../tests/fixtures/sample-history.json', import.meta.url), 'utf8');
 const fixture = () => parseDoc(fixtureJson);
+const fixtureV1Json = readFileSync(new URL('../../tests/fixtures/sample-history-v1.json', import.meta.url), 'utf8');
 
 describe('parseDoc', () => {
   it('accepts the fixture and round-trips it', () => {
@@ -47,6 +48,19 @@ describe('parseDoc', () => {
   it('rejects non-JSON and files from a newer schema', () => {
     expect(() => parseDoc('not json')).toThrow(/not valid JSON/);
     expect(() => parseDoc(JSON.stringify({ schemaVersion: 99 }))).toThrow(/newer version/);
+  });
+
+  it('still imports a schema 1 backup and upgrades it', () => {
+    const doc = parseDoc(fixtureV1Json);
+    expect(JSON.parse(fixtureV1Json).schemaVersion).toBe(1);
+    expect(doc.schemaVersion).toBe(SCHEMA_VERSION);
+    expect(doc.items.length).toBeGreaterThan(10);
+  });
+
+  it('rejects places with impossible coordinates', () => {
+    const bad = JSON.parse(fixtureJson);
+    bad.items[0].places = [{ lat: 95, lon: 10 }];
+    expect(() => parseDoc(JSON.stringify(bad))).toThrow(/invalid coordinates/);
   });
 
   it('rejects citations of sources that do not exist', () => {
@@ -82,6 +96,15 @@ describe('mutations', () => {
     const doc = remove(fixture(), 'sources', 's_barnes', 5);
     expect(doc.items.find((i) => i.id === 'i_aristotle')?.citations).toEqual([]);
     expect(doc.notes[0].citations).toEqual([]);
+    expect(() => parseDoc(serializeDoc(doc))).not.toThrow();
+  });
+
+  it('removing a source drops excerpts quoted from it', () => {
+    const doc = remove(fixture(), 'sources', 's_wp_magna', 5);
+    const magna = doc.items.find((i) => i.id === 'i_magna')!;
+    expect(magna.excerpt).toBeUndefined();
+    expect(magna.citations).toEqual([]);
+    expect(magna.updatedAt).toBe(5);
     expect(() => parseDoc(serializeDoc(doc))).not.toThrow();
   });
 });

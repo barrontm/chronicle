@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { describeRelation, newId, notesFor, relationsFor, remove, upsert, RELATION_TYPES } from '../../model/doc';
 import { compareHistDate, formatRange, formatHistDate } from '../../model/dates';
-import type { Citation, HistDate, ItemKind, MediaRef, Relation, RelationType, TimelineItem } from '../../model/types';
+import type { ItemDraft } from '../../media/wikipedia';
+import type { Citation, HistDate, ItemKind, MediaRef, Place, Relation, RelationType, Source, TimelineItem } from '../../model/types';
 import { useDoc } from '../DocContext';
 import { CitationsEditor, DateField, Field, RecordPicker } from '../fields';
 import { ImagePicker } from '../ImagePicker';
@@ -10,6 +11,25 @@ import { formatCitation, titleOf } from '../util';
 import { QuickSource } from './SourcePanels';
 
 const KIND_LABEL: Record<ItemKind, string> = { event: 'Event', span: 'Period', person: 'Person' };
+const PLACE_ROLE: Record<NonNullable<Place['role']>, string> = { site: '', born: 'Born in ', died: 'Died in ' };
+
+function placeLabel(pl: Place): string {
+  const coords = `${Math.abs(pl.lat).toFixed(2)}°${pl.lat >= 0 ? 'N' : 'S'}, ${Math.abs(pl.lon).toFixed(2)}°${pl.lon >= 0 ? 'E' : 'W'}`;
+  return `${PLACE_ROLE[pl.role ?? 'site']}${pl.name ? `${pl.name} (${coords})` : coords}`;
+}
+
+/** Quoted reference text, kept visibly apart from Bob's own writing. */
+function Excerpt({ excerpt, source }: { excerpt: { text: string }; source?: Source }) {
+  return (
+    <blockquote className="excerpt" data-testid="excerpt">
+      <p>{excerpt.text}</p>
+      <footer>
+        From {source?.url ? <a href={source.url} target="_blank" rel="noreferrer">{source.publisher ?? source.title}</a> : (source?.publisher ?? source?.title ?? 'a source')}
+        {source?.accessed && <>, read {source.accessed}</>}
+      </footer>
+    </blockquote>
+  );
+}
 
 export function Figure({ m }: { m: MediaRef }) {
   const { mediaUrl } = useDoc();
@@ -50,6 +70,8 @@ export function ItemView({ id, nav }: { id: string; nav: Nav }) {
         {years !== null && years > 0 && <span>{years} {years === 1 ? 'year' : 'years'}{item.kind === 'person' ? ' old' : ''}</span>}
       </div>
       {item.description && <p className="prose">{item.description}</p>}
+      {item.places && item.places.length > 0 && <p className="meta" data-testid="item-places">{item.places.map(placeLabel).join(' · ')}</p>}
+      {item.excerpt && <Excerpt excerpt={item.excerpt} source={sources.get(item.excerpt.sourceId)} />}
 
       <h3>Notes</h3>
       <ul className="linklist">
@@ -110,14 +132,19 @@ const CONNECTION_CHOICES: ConnectionChoice[] = RELATION_TYPES.flatMap((type): Co
     : [{ label: describeRelation(type, 'out'), type, dir: 'out' as const }, { label: describeRelation(type, 'in'), type, dir: 'in' as const }],
 );
 
-export function ItemEditor({ id, init, nav }: {
+export function ItemEditor({ id, init, draft: prefill, nav }: {
   id: string | null;
   init?: { year?: number; categoryId?: string; kind?: ItemKind };
+  /** A prefilled, unsaved entry (e.g. from Wikipedia) and the new sources it cites. */
+  draft?: ItemDraft;
   nav: Nav;
 }) {
-  const { doc, update } = useDoc();
+  const { doc: savedDoc, update } = useDoc();
+  const newSources = prefill?.newSources ?? [];
+  // Let the citation pickers see sources that will be saved along with the entry.
+  const doc = newSources.length ? { ...savedDoc, sources: [...savedDoc.sources, ...newSources] } : savedDoc;
   const existing = id ? doc.items.find((i) => i.id === id) : undefined;
-  const [draft, setDraft] = useState<TimelineItem>(() => existing ?? {
+  const [draft, setDraft] = useState<TimelineItem>(() => existing ?? prefill?.item ?? {
     id: newId('i'),
     kind: init?.kind ?? 'event',
     title: '',
@@ -133,6 +160,11 @@ export function ItemEditor({ id, init, nav }: {
   const [quickSource, setQuickSource] = useState(false);
 
   const set = <K extends keyof TimelineItem>(k: K, v: TimelineItem[K]) => setDraft((d) => ({ ...d, [k]: v }));
+  const setExcerpt = (e: TimelineItem['excerpt']) => setDraft((d) => {
+    if (e) return { ...d, excerpt: e };
+    const { excerpt: _excerpt, ...rest } = d;
+    return rest;
+  });
   const needsEnd = draft.kind === 'span';
   const endBeforeStart = draft.start && draft.end && compareHistDate(draft.end, draft.start) < 0;
   const canSave = draft.title.trim() && valid.start && draft.start && valid.end && (!needsEnd || draft.end) && !endBeforeStart;
@@ -140,8 +172,11 @@ export function ItemEditor({ id, init, nav }: {
   const save = () => {
     const item: TimelineItem = { ...draft, title: draft.title.trim(), end: draft.kind === 'event' ? undefined : draft.end };
     const keep = new Set(relations.map((r) => r.id));
+    const cited = new Set([...(item.citations ?? []).map((c) => c.sourceId), item.excerpt?.sourceId]);
     update((d) => {
-      let next = upsert(d, 'items', item);
+      let next = d;
+      for (const s of newSources) if (cited.has(s.id) && !next.sources.some((x) => x.id === s.id)) next = upsert(next, 'sources', s);
+      next = upsert(next, 'items', item);
       for (const r of initialRelations) if (!keep.has(r.id)) next = remove(next, 'relations', r.id);
       for (const r of relations) if (!initialRelations.includes(r)) next = upsert(next, 'relations', r);
       return next;
@@ -186,6 +221,28 @@ export function ItemEditor({ id, init, nav }: {
       <Field label="Summary" hint="A sentence or two. Longer thinking goes in a note.">
         <textarea value={draft.description ?? ''} onChange={(e) => set('description', e.target.value || undefined)} rows={3} />
       </Field>
+
+      {draft.excerpt && (
+        <>
+          <h3>From the source</h3>
+          <Excerpt excerpt={draft.excerpt} source={doc.sources.find((x) => x.id === draft.excerpt!.sourceId)} />
+          <button type="button" className="btn small quiet" onClick={() => setExcerpt(undefined)}>Remove quote</button>
+        </>
+      )}
+
+      {draft.places && draft.places.length > 0 && (
+        <>
+          <h3>Places</h3>
+          <div className="editor-list">
+            {draft.places.map((pl, i) => (
+              <div className="editor-row" key={i}>
+                <span className="grow">{placeLabel(pl)}</span>
+                <button type="button" className="btn small quiet" onClick={() => set('places', draft.places!.filter((_, j) => j !== i))}>Remove</button>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
 
       <h3>Pictures</h3>
       <div className="thumbs">
