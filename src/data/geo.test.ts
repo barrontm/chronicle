@@ -1,7 +1,7 @@
 import type { FeatureCollection, Polygon } from 'geojson';
 import { describe, expect, it } from 'vitest';
 import { BASEMAP_YEARS, basemapFor, basemapUrl, polityNames, snapshotsFor } from './basemaps';
-import { areaKm2, bbox, isArea, labelPoint, simplifyArea, simplifyLine } from './geo';
+import { areaKm2, bbox, FINE, isArea, labelPoint, parseGeoJsonAreas, simplifyArea, simplifyLine } from './geo';
 
 const square = (x: number, y: number, size: number): Polygon => ({
   type: 'Polygon',
@@ -88,5 +88,35 @@ describe('historical-basemaps', () => {
     expect(snaps.map((s) => [s.from.y, s.to?.y])).toEqual([[-299, -199], [-199, -99]]);
     expect(snaps[1].geometry!.type).toBe('MultiPolygon');
     expect(snaps[1].areaKm2).toBeGreaterThan(snaps[0].areaKm2!);
+  });
+});
+
+describe('GeoJSON files', () => {
+  it('finds named areas in a FeatureCollection and skips points', () => {
+    const fc = {
+      type: 'FeatureCollection',
+      features: [
+        { type: 'Feature', properties: { name: 'Athens' }, geometry: square(23, 38, 1) },
+        { type: 'Feature', properties: { NAME: ' Sparta ' }, geometry: square(22, 37, 1) },
+        { type: 'Feature', properties: null, geometry: { type: 'Point', coordinates: [23, 38] } },
+      ],
+    };
+    expect(parseGeoJsonAreas(JSON.stringify(fc)).map((a) => a.name)).toEqual(['Athens', 'Sparta']);
+  });
+
+  it('reads a bare geometry or a single Feature', () => {
+    expect(parseGeoJsonAreas(JSON.stringify(square(23, 38, 1)))).toEqual([{ name: undefined, geometry: square(23, 38, 1) }]);
+    expect(parseGeoJsonAreas(JSON.stringify({ type: 'Feature', properties: { title: 'Thebes' }, geometry: square(23, 38, 1) }))[0].name).toBe('Thebes');
+  });
+
+  it('explains files it can’t use', () => {
+    expect(() => parseGeoJsonAreas('not json')).toThrow('This file isn’t valid GeoJSON.');
+    expect(() => parseGeoJsonAreas(JSON.stringify({ type: 'Point', coordinates: [0, 0] }))).toThrow(/No areas in this file/);
+  });
+
+  it('keeps a 1 km island at the fine level that the import level drops', () => {
+    const island = square(23.4, 37.7, 0.01);
+    expect(simplifyArea(island)).toBeNull();
+    expect(simplifyArea(island, FINE.tolerance, FINE.decimals)).toEqual(island);
   });
 });

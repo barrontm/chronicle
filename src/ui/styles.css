@@ -300,6 +300,10 @@ dialog h2 { font-family: var(--font-read); margin: 0 0 12px; font-weight: 600; }
 .map-menu .field { margin: 0; }
 .map-menu .hint { font-size: 12px; color: var(--muted); }
 .check { display: flex; gap: 8px; align-items: center; font-size: 13px; cursor: pointer; }
+.map-draw { position: absolute; top: 10px; left: 10px; right: 54px; max-width: 640px; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; background: var(--panel); border: 1px solid var(--rule); border-radius: var(--radius-m); padding: 8px 10px; font-size: 13px; box-shadow: 0 6px 24px rgb(0 0 0 / 0.12); z-index: 3; }
+.map-draw .grow { flex: 1 1 200px; }
+.snapshot { border: 1px solid var(--rule); border-radius: var(--radius-s); padding: 8px 10px; margin: 0; min-width: 0; }
+.snapshot .field { margin-bottom: 4px; }
 .map-status { position: absolute; top: 46px; left: 10px; right: 54px; pointer-events: none; display: grid; justify-items: start; }
 .map-status .notice { pointer-events: auto; margin: 0; max-width: 420px; box-shadow: 0 2px 8px rgb(0 0 0 / 0.08); }
 .notice.subtle { background: color-mix(in srgb, var(--panel) 85%, transparent); color: var(--ink-2); font-size: 12px; padding: 4px 8px; }

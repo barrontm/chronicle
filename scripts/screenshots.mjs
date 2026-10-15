@@ -100,6 +100,27 @@ await showMap(p, 'Map', '300 BCE');
 await shot(p, 'phone-map');
 }
 
+// Drawing a border: zoom toward Greece, outline a shape, then the form after Done.
+async function drawBorder(p, prefix) {
+  await showMap(p, prefix === 'phone' ? 'Map' : 'Both', '450 BCE');
+  for (let i = 0; i < 3; i++) await p.getByRole('button', { name: 'Zoom in' }).click();
+  await p.getByRole('button', { name: 'Add a territory' }).click();
+  await p.getByTestId('own-borders').getByRole('button', { name: 'Draw on the map' }).click();
+  const box = await p.getByTestId('map').boundingBox();
+  const canvas = p.locator('[data-testid=map] canvas');
+  for (const [dx, dy] of [[-60, -10], [40, -40], [70, 30], [0, 70]]) await canvas.click({ position: { x: box.width / 2 + dx, y: box.height / 2 + dy } });
+  await p.waitForTimeout(300);
+  await shot(p, `${prefix}-draw`);
+  await p.getByTestId('draw-toolbar').getByRole('button', { name: 'Done' }).click();
+  await p.getByTestId('own-borders').getByLabel('Name').fill('Athens');
+  await p.waitForTimeout(300);
+  await shot(p, `${prefix}-draw-form`);
+}
+
+if (any('desktop-draw')) await drawBorder(await page('desktop-draw', desktop), 'desktop');
+if (any('dark-draw')) await drawBorder(await page('dark-draw', { ...desktop, colorScheme: 'dark' }), 'dark');
+if (any('phone-draw')) await drawBorder(await page('phone-draw', { viewport: { width: 412, height: 860 }, isMobile: true, hasTouch: true }), 'phone');
+
 if (argv.includes('--sheet') && taken.length) {
   // Tile the shots at half size into one page and capture it: one image to review instead of many.
   const imgs = taken.map((n) => `<figure class="${n.startsWith('phone') ? 'phone' : ''}"><img src="data:image/png;base64,${readFileSync(`${OUT}${n}.png`).toString('base64')}"><figcaption>${n}</figcaption></figure>`).join('');

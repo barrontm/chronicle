@@ -2,6 +2,9 @@
 
 A log of choices that shouldn't be re-litigated every session. Newest first. To change a decision, add a new entry that supersedes the old one.
 
+## 2026-10-15 — Borders Bob draws or brings: city-states without a dataset
+There is no open dataset of Greek city-state borders over time, and historical-basemaps has only three maps for Classical Greece (500, 400 and 323 BCE), at a resolution where poleis vanish. So Bob can draw a territory on the map (click points; extra parts for islands; drawing logic in the pure `ui/drawing.ts`) or bring areas from a GeoJSON file (geojson.io, QGIS, a paper's data). Both work offline and need no schema change: a drawn shape is just a `TerritorySnapshot` with dates he types. User files are simplified at a fine level (0.001°, 4 decimals) so small poleis and islands survive; historical-basemaps imports keep 0.05°. Snapshot dates are now editable, so borders can change at any year, not only at dataset years. The app still ships no borders of its own.
+
 ## 2026-10-15 — Map: MapLibre behind an adapter, no tiles, borders Bob chooses
 The map (MapLibre GL 6, pinned) follows the vis-timeline rule: only `src/ui/MapView.tsx` imports it, and the logic that decides what is on the map in a year lives in pure modules (`model/atYear.ts`, `ui/mapData.ts`). There is no tile server: a simplified Natural Earth basemap (countries, lakes, rivers, about 1 MB) is bundled in `public/geo` and precached, so the map works offline. Labels are HTML markers, because symbol text needs a glyph server.
 Borders come from historical-basemaps (GPL-3.0, credited on each territory). Bob imports the polities he studies; each import is simplified (Douglas–Peucker, 0.05°) so backups stay small, and it can extend an existing territory (Roman Republic → Roman Empire). The full world maps appear only as an opt-in "reference borders" backdrop, which is fetched, cached by the service worker, and never written to the doc, so the app still ships no history.

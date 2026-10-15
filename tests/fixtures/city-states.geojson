@@ -1,0 +1,7 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    { "type": "Feature", "properties": { "name": "Test Polis A" }, "geometry": { "type": "Polygon", "coordinates": [[[23.0, 38.0], [24.0, 38.0], [24.0, 38.6], [23.0, 38.6], [23.0, 38.0]]] } },
+    { "type": "Feature", "properties": { "name": "Test Polis B" }, "geometry": { "type": "Polygon", "coordinates": [[[22.0, 37.0], [22.8, 37.0], [22.8, 37.6], [22.0, 37.6], [22.0, 37.0]]] } }
+  ]
+}

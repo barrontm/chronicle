@@ -1,6 +1,8 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { formatYear, parseHistDate } from '../model/dates';
 import type { Category, Relation, Series, Territory, TimelineItem } from '../model/types';
+import type { Area } from '../data/geo';
+import { addPoint, canFinish, closePart, EMPTY_DRAFT, toGeometry, undo, type Draft } from './drawing';
 import { choroplethAt, mapKindOf } from './mapData';
 import type { BackdropStatus, MapOptions } from './MapView';
 import { formatValue } from './util';
@@ -26,11 +28,15 @@ interface Props {
   onOpenItem: (id: string) => void;
   onOpenTerritory: (id: string) => void;
   onAddTerritory: () => void;
+  /** Set while Bob is drawing a border on the map. */
+  drawing?: { onDone: (g: Area) => void; onCancel: () => void };
 }
 
 /** The map, its layers menu and its legend. The year bar lives outside, shared with the timeline. */
 export function MapPane(p: Props) {
   const [menu, setMenu] = useState(false);
+  const [draft, setDraft] = useState<Draft>(EMPTY_DRAFT);
+  useEffect(() => setDraft(EMPTY_DRAFT), [p.drawing]);
   const [backdrop, setBackdrop] = useState<BackdropStatus>({ state: 'off' });
   const mapSeries = useMemo(() => p.series.filter((s) => mapKindOf(s)), [p.series]);
   const dataSeries = mapSeries.find((s) => s.id === p.dataSeriesId);
@@ -53,9 +59,20 @@ export function MapPane(p: Props) {
           onOpenItem={p.onOpenItem}
           onOpenTerritory={p.onOpenTerritory}
           onBackdropStatus={setBackdrop}
+          draft={p.drawing ? draft : undefined}
+          onDrawPoint={p.drawing ? (pt, nearFirst) => setDraft((d) => (nearFirst ? closePart(d) : addPoint(d, pt))) : undefined}
         />
       </Suspense>
 
+      {p.drawing ? (
+        <div className="map-draw" role="toolbar" aria-label="Drawing a border" data-testid="draw-toolbar">
+          <span className="grow">{draft.current.length ? 'Click the first point to close the outline, or Done.' : 'Click on the map to outline the border.'}</span>
+          <button className="btn small" disabled={!draft.current.length && !draft.done.length} onClick={() => setDraft(undo)}>Undo point</button>
+          <button className="btn small" disabled={draft.current.length < 3} onClick={() => setDraft(closePart)} title="For islands and other separate pieces">Add another part</button>
+          <button className="btn small primary" disabled={!canFinish(draft)} onClick={() => { const g = toGeometry(draft); if (g) p.drawing!.onDone(g); }}>Done</button>
+          <button className="btn small quiet" onClick={p.drawing.onCancel}>Cancel</button>
+        </div>
+      ) : (
       <div className="map-tools">
         <button className="btn small" aria-expanded={menu} onClick={() => setMenu(!menu)}>Layers</button>
         <button className="btn small" onClick={p.onAddTerritory}>Add a territory</button>
@@ -76,6 +93,7 @@ export function MapPane(p: Props) {
           </div>
         )}
       </div>
+      )}
 
       <div className="map-status">
         {backdrop.state === 'loading' && <div className="notice" role="status">Loading reference borders for {formatYear(backdrop.year)}…</div>}

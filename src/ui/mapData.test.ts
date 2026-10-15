@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { parseDoc } from '../model/doc';
-import type { Relation, TimelineItem } from '../model/types';
+import type { Relation, Territory, TimelineItem } from '../model/types';
 import { arcsBetween, choroplethAt, mapKindOf, mixColor, parseColor, pinsAt, placesToDraw, territoriesAt, territoryCircles } from './mapData';
 
 const fixture = () => parseDoc(readFileSync(new URL('../../tests/fixtures/sample-history.json', import.meta.url), 'utf8'));
@@ -51,6 +51,18 @@ describe('territories and values', () => {
     expect(c.key).not.toBe(a.key);
     expect(a.labels[0]).toMatchObject({ id: 't_fixture', title: 'Fixture Republic', lon: 12.5, lat: 42 });
     expect(territoriesAt(doc.territories, 500, colorOf).shapes.features).toHaveLength(0);
+  });
+
+  it('switches a city-state’s borders at the dates Bob gave them', () => {
+    const shape = (s: number) => ({ type: 'Polygon' as const, coordinates: [[[23, 38], [23 + s, 38], [23 + s, 38 + s], [23, 38]]] });
+    const athens: Territory = {
+      id: 't_athens', title: 'Athens', categoryId: 'politics', updatedAt: 0,
+      // 508 BCE until 338 BCE, then smaller after Chaeronea.
+      snapshots: [{ from: { y: -507 }, to: { y: -337 }, geometry: shape(1) }, { from: { y: -337 }, geometry: shape(0.5) }],
+    };
+    expect(territoriesAt([athens], -508, colorOf).shapes.features).toHaveLength(0);
+    expect(territoriesAt([athens], -430, colorOf).shapes.features[0].geometry).toEqual(shape(1));
+    expect(territoriesAt([athens], -337, colorOf).shapes.features[0].geometry).toEqual(shape(0.5));
   });
 
   it('shades countries on a fixed scale and skips years without data', () => {

@@ -7,6 +7,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { basemapFor, BASEMAPS_CREDIT, fetchBasemap } from '../data/basemaps';
 import { formatYear } from '../model/dates';
 import type { Category, Relation, Series, Territory, TimelineItem } from '../model/types';
+import { draftFeatures, type Draft } from './drawing';
 import { arcsBetween, choroplethAt, mixColor, pinsAt, territoriesAt, territoryCircles } from './mapData';
 import { formatValue } from './util';
 
@@ -46,6 +47,9 @@ interface Props {
   onOpenItem: (id: string) => void;
   onOpenTerritory: (id: string) => void;
   onBackdropStatus: (s: BackdropStatus) => void;
+  /** While drawing a border: the shape so far, and where a click lands (and whether it's on the first point). */
+  draft?: Draft;
+  onDrawPoint?: (p: [number, number], nearFirst: boolean) => void;
 }
 
 const BASE = import.meta.env.BASE_URL;
@@ -89,6 +93,7 @@ function buildStyle(c: Colors): StyleSpecification {
       circles: { type: 'geojson', data: EMPTY },
       arcs: { type: 'geojson', data: EMPTY },
       pins: { type: 'geojson', data: EMPTY },
+      draft: { type: 'geojson', data: EMPTY },
     },
     layers: [
       { id: 'water', type: 'background', paint: { 'background-color': c.water } },
@@ -122,6 +127,12 @@ function buildStyle(c: Colors): StyleSpecification {
           'circle-stroke-opacity': ['get', 'opacity'],
         },
       },
+      { id: 'draft-fill', type: 'fill', source: 'draft', filter: ['==', ['geometry-type'], 'Polygon'], paint: { 'fill-color': c.ink, 'fill-opacity': 0.15 } },
+      { id: 'draft-line', type: 'line', source: 'draft', filter: ['!=', ['geometry-type'], 'Point'], paint: { 'line-color': c.ink, 'line-width': 2 } },
+      {
+        id: 'draft-points', type: 'circle', source: 'draft', filter: ['==', ['geometry-type'], 'Point'],
+        paint: { 'circle-color': c.panel, 'circle-radius': ['case', ['get', 'first'], 6, 4], 'circle-stroke-color': c.ink, 'circle-stroke-width': 2 },
+      },
     ],
   };
 }
@@ -137,6 +148,10 @@ function applyColors(map: maplibregl.Map, c: Colors) {
   map.setPaintProperty('backdrop-fill', 'fill-color', c.backdrop);
   map.setPaintProperty('backdrop-line', 'line-color', c.backdrop);
   map.setPaintProperty('pins', 'circle-stroke-color', ['case', ['get', 'selected'], c.ink, c.panel]);
+  map.setPaintProperty('draft-fill', 'fill-color', c.ink);
+  map.setPaintProperty('draft-line', 'line-color', c.ink);
+  map.setPaintProperty('draft-points', 'circle-color', c.panel);
+  map.setPaintProperty('draft-points', 'circle-stroke-color', c.ink);
 }
 
 function useColors(): Colors {
@@ -212,12 +227,19 @@ export default function MapView(props: Props) {
 
     map.on('load', () => setReady(true));
     const pointer = (layer: string) => {
-      map.on('mouseenter', layer, () => { map.getCanvas().style.cursor = 'pointer'; });
-      map.on('mouseleave', layer, () => { map.getCanvas().style.cursor = ''; });
+      map.on('mouseenter', layer, () => { if (!cb.current.onDrawPoint) map.getCanvas().style.cursor = 'pointer'; });
+      map.on('mouseleave', layer, () => { if (!cb.current.onDrawPoint) map.getCanvas().style.cursor = ''; });
     };
     pointer('pins');
     pointer('territories-fill');
     map.on('click', (e) => {
+      const draw = cb.current.onDrawPoint;
+      if (draw) {
+        // Clicking within 10 px of the first point closes the outline.
+        const first = cb.current.draft?.current[0];
+        const near = !!first && map.project(first as [number, number]).dist(e.point) <= 10;
+        return draw([e.lngLat.lng, e.lngLat.lat], near);
+      }
       const hit = map.queryRenderedFeatures(e.point, { layers: ['pins', 'territories-fill'] });
       const pin = hit.find((f) => f.layer.id === 'pins');
       if (pin) return cb.current.onOpenItem(String(pin.properties.id));
@@ -344,6 +366,21 @@ export default function MapView(props: Props) {
     return () => { live = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [backdropFile, ready]);
+
+  // Drawing a border: show the draft, aim with a crosshair, and let double-clicks add points instead of zooming.
+  const drawing = !!props.onDrawPoint;
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !ready) return;
+    (map.getSource('draft') as GeoJSONSource).setData(props.draft ? draftFeatures(props.draft) : EMPTY);
+  }, [props.draft, ready]);
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !ready) return;
+    map.getCanvas().style.cursor = drawing ? 'crosshair' : '';
+    if (drawing) map.doubleClickZoom.disable();
+    else map.doubleClickZoom.enable();
+  }, [drawing, ready]);
 
   // Bring a selected entry into view if it's off the map.
   useEffect(() => {

@@ -372,6 +372,64 @@ test('color the map by a trend with values per country', async ({ page }) => {
   await expect(legend).toContainText('No data for 1700');
 });
 
+test('draw a city-state’s borders and date them @phone', async ({ page }) => {
+  await open(page);
+  await openMap(page);
+  await goToYear(page, '450 BCE');
+  await page.getByRole('button', { name: 'Add a territory' }).click();
+  await page.getByTestId('own-borders').getByRole('button', { name: 'Draw on the map' }).click();
+
+  const toolbar = page.getByTestId('draw-toolbar');
+  await expect(toolbar).toContainText('Click on the map to outline the border.');
+  const box = (await page.getByTestId('map').boundingBox())!;
+  const at = (dx: number, dy: number) => ({ position: { x: box.width / 2 + dx, y: box.height / 2 + dy } });
+  const canvas = page.locator('[data-testid=map] canvas');
+  await canvas.click(at(-50, -20));
+  await canvas.click(at(50, -20));
+  await canvas.click(at(50, 50));
+  await toolbar.getByRole('button', { name: 'Undo point' }).click();
+  await canvas.click(at(0, 60));
+  await toolbar.getByRole('button', { name: 'Done' }).click();
+  await expect(toolbar).toHaveCount(0);
+
+  const form = page.getByTestId('own-borders');
+  await expect(form).toContainText('Borders ready');
+  await form.getByLabel('Name').fill('Athens');
+  await form.getByLabel('From').fill('508 BCE');
+  await form.getByRole('button', { name: 'Add to map' }).click();
+
+  const view = page.getByTestId('territory-view');
+  await expect(view.getByRole('heading', { name: 'Athens' })).toBeVisible();
+  await expect(view).toContainText('From 508 BCE');
+  await expect(view).toContainText('Borders from Drawn by me.');
+  await expect(territoryLabel(page, 'Athens')).toBeVisible();
+  await page.getByRole('button', { name: 'Close panel' }).click();
+  await goToYear(page, '600 BCE');
+  await expect(territoryLabel(page, 'Athens')).toHaveCount(0);
+});
+
+test('bring city-state borders from a GeoJSON file and date them in the editor', async ({ page }) => {
+  await open(page);
+  await openMap(page);
+  await goToYear(page, '431 BCE');
+  await page.getByRole('button', { name: 'Add a territory' }).click();
+  const own = page.getByTestId('own-borders');
+  await own.getByLabel('Or bring borders from a GeoJSON file').setInputFiles(fileURLToPath(new URL('../tests/fixtures/city-states.geojson', import.meta.url)));
+  await own.getByTestId('geojson-areas').getByRole('button', { name: /Test Polis B/ }).click();
+  await expect(own.getByLabel('Name')).toHaveValue('Test Polis B');
+  await own.getByRole('button', { name: 'Add to map' }).click();
+  await expect(territoryLabel(page, 'Test Polis B')).toBeVisible();
+
+  // Give the borders an end date: gone from the map afterwards.
+  await page.getByTestId('territory-view').getByRole('button', { name: 'Edit' }).click();
+  const editor = page.getByTestId('territory-editor');
+  await editor.getByLabel('Until').fill('404 BCE');
+  await editor.getByRole('button', { name: 'Save changes' }).click();
+  await expect(page.getByTestId('territory-view')).toContainText('431–404 BCE');
+  await goToYear(page, '400 BCE');
+  await expect(territoryLabel(page, 'Test Polis B')).toHaveCount(0);
+});
+
 test.describe('historical maps', () => {
   // The service worker caches historical maps, which would hide the requests from page.route.
   test.use({ serviceWorkers: 'block' });

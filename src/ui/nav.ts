@@ -1,3 +1,4 @@
+import type { Area } from '../data/geo';
 import type { ItemDraft } from '../media/wikipedia';
 import type { ItemKind } from '../model/types';
 
@@ -25,4 +26,6 @@ export interface Nav {
   canGoBack: boolean;
   /** Show the map at a year (e.g. "Show on map" from an entry or territory). */
   showOnMap: (year: number) => void;
+  /** Draw a border on the map; `onDone` gets the shape and the map's year when Bob finishes. */
+  draw: (onDone: (g: Area, year: number) => void) => void;
 }

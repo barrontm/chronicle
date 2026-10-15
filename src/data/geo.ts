@@ -136,3 +136,34 @@ export function isArea(g: unknown): g is Area {
   const t = (g as { type?: string })?.type;
   return (t === 'Polygon' || t === 'MultiPolygon') && Array.isArray((g as { coordinates?: unknown }).coordinates);
 }
+
+/** Simplification for borders Bob brings in himself: fine enough (about 100 m) to keep small city-states and islands. */
+export const FINE = { tolerance: 0.001, decimals: 4 };
+
+/**
+ * The areas in a GeoJSON file (FeatureCollection, Feature or bare geometry),
+ * named from a `name`, `NAME` or `title` property when there is one.
+ * Throws a readable error if the file isn't GeoJSON or has no areas.
+ */
+export function parseGeoJsonAreas(text: string): Array<{ name?: string; geometry: Area }> {
+  let json: unknown;
+  try {
+    json = JSON.parse(text);
+  } catch {
+    throw new Error('This file isn’t valid GeoJSON.');
+  }
+  const t = (json as { type?: string })?.type;
+  const features: Array<{ properties?: Record<string, unknown> | null; geometry?: unknown }> =
+    t === 'FeatureCollection' ? ((json as { features?: [] }).features ?? [])
+      : t === 'Feature' ? [json as { geometry?: unknown }]
+        : [{ geometry: json }];
+  const out: Array<{ name?: string; geometry: Area }> = [];
+  for (const f of features) {
+    if (!isArea(f?.geometry)) continue;
+    const p = f.properties ?? {};
+    const name = [p.name, p.NAME, p.title].find((v) => typeof v === 'string' && v.trim()) as string | undefined;
+    out.push({ name: name?.trim(), geometry: f.geometry });
+  }
+  if (!out.length) throw new Error('No areas in this file. It needs polygons, not just points or lines.');
+  return out;
+}

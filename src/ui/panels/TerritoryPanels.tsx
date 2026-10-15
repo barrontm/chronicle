@@ -1,11 +1,12 @@
 import type { FeatureCollection } from 'geojson';
 import { useMemo, useRef, useState } from 'react';
 import { BASEMAP_YEARS, basemapFor, BASEMAPS_CREDIT, fetchBasemap, polityNames, snapshotsFor, type BasemapYear } from '../../data/basemaps';
+import { areaKm2, FINE, parseGeoJsonAreas, simplifyArea, type Area } from '../../data/geo';
 import { compareHistDate, formatRange, formatYear, toDecimalYear } from '../../model/dates';
 import { newId, notesFor, remove, upsert } from '../../model/doc';
-import type { Territory, TerritorySnapshot } from '../../model/types';
+import type { HistDate, Territory, TerritorySnapshot } from '../../model/types';
 import { useDoc } from '../DocContext';
-import { Field, RecordPicker } from '../fields';
+import { DateField, Field, RecordPicker } from '../fields';
 import type { Nav } from '../nav';
 import { titleOf } from '../util';
 
@@ -16,7 +17,7 @@ function spanOf(t: Territory): string {
   const first = t.snapshots[0];
   const last = t.snapshots.at(-1);
   if (!first || !last) return 'No maps yet';
-  return formatRange(first.from, last.to ?? last.from);
+  return last.to ? formatRange(first.from, last.to) : `From ${formatYear(first.from.y)}`;
 }
 
 const sortSnaps = (s: TerritorySnapshot[]) => [...s].sort((a, b) => compareHistDate(a.from, b.from));
@@ -87,17 +88,28 @@ export function TerritoryView({ id, nav }: { id: string; nav: Nav }) {
   );
 }
 
+/** A snapshot being edited, with a stable key and whether its typed dates read correctly. */
+interface Row { k: string; s: TerritorySnapshot; ok: boolean }
+
+const snapshotOf = (geometry: Area, from: HistDate): TerritorySnapshot => ({ from, geometry, areaKm2: Math.round(areaKm2(geometry)) });
+
 export function TerritoryEditor({ id, nav }: { id: string; nav: Nav }) {
   const { doc, update } = useDoc();
   const existing = doc.territories.find((x) => x.id === id);
   const [d, setD] = useState<Territory | undefined>(existing);
+  const [rows, setRows] = useState<Row[]>(() => (existing?.snapshots ?? []).map((s) => ({ k: newId('s'), s, ok: true })));
   if (!d) return <div className="notice">This territory was deleted.</div>;
   const set = <K extends keyof Territory>(k: K, v: Territory[K]) => setD({ ...d, [k]: v });
+  const setRow = (k: string, change: Partial<TerritorySnapshot>, ok: boolean) =>
+    setRows((rs) => rs.map((r) => (r.k === k ? { ...r, s: { ...r.s, ...change }, ok } : r)));
+  const addShape = (geometry: Area, year: number) => setRows((rs) => [...rs, { k: newId('s'), s: snapshotOf(geometry, { y: year }), ok: true }]);
+  const backwards = rows.find((r) => r.s.to && compareHistDate(r.s.to, r.s.from) <= 0);
+  const valid = !!d.title.trim() && rows.every((r) => r.ok) && !backwards;
   return (
     <form data-testid="territory-editor" onSubmit={(e) => {
       e.preventDefault();
-      if (!d.title.trim()) return;
-      update((doc) => upsert(doc, 'territories', { ...d, title: d.title.trim() }));
+      if (!valid) return;
+      update((doc) => upsert(doc, 'territories', { ...d, title: d.title.trim(), snapshots: sortSnaps(rows.map((r) => r.s)) }));
       nav.replace({ type: 'territory', id });
     }}>
       <h2>Edit territory</h2>
@@ -109,17 +121,134 @@ export function TerritoryEditor({ id, nav }: { id: string; nav: Nav }) {
       </Field>
       <LinkedEntry value={d.itemId} onChange={(itemId) => set('itemId', itemId)} />
       <h3>Borders over time</h3>
+      <p className="lede">Each set of borders applies from its first year until the year you give (or until the next set).</p>
       <div className="editor-list">
-        {d.snapshots.map((s, i) => (
-          <div className="editor-row" key={i}>
-            <span className="grow">{s.to ? formatRange(s.from, s.to) : `From ${formatYear(s.from.y)}`}</span>
-            <button type="button" className="btn small quiet" onClick={() => set('snapshots', d.snapshots.filter((_, j) => j !== i))}>Remove</button>
-          </div>
+        {rows.map((r, i) => (
+          <fieldset className="snapshot" key={r.k} aria-label={`Borders ${i + 1}`}>
+            <div className="row">
+              <DateField label="From" value={r.s.from} onChange={(from, ok) => setRow(r.k, from ? { from } : {}, ok)} />
+              <DateField label="Until" optional value={r.s.to} onChange={(to, ok) => setRow(r.k, { to }, ok)} />
+            </div>
+            <div className="editor-row">
+              <small className="grow">{r.s.areaKm2 !== undefined ? `About ${km2.format(r.s.areaKm2)} km²` : ''}</small>
+              <button type="button" className="btn small quiet" onClick={() => setRows((rs) => rs.filter((x) => x.k !== r.k))}>Remove</button>
+            </div>
+          </fieldset>
         ))}
       </div>
+      {backwards && <div className="notice bad" role="alert">“Until” needs to come after “From”.</div>}
       <div className="actions">
-        <button className="btn primary" disabled={!d.title.trim()}>Save changes</button>
+        <button type="button" className="btn" onClick={() => nav.draw(addShape)}>Draw borders</button>
+      </div>
+      <GeoJsonFile onPick={(g) => addShape(g.geometry, d.snapshots.at(-1)?.from.y ?? 0)} />
+      <div className="actions">
+        <button className="btn primary" disabled={!valid}>Save changes</button>
         <button type="button" className="btn" onClick={() => nav.replace({ type: 'territory', id })}>Cancel</button>
+      </div>
+    </form>
+  );
+}
+
+/** Pick an area from a GeoJSON file (from geojson.io, QGIS, a paper's data…), simplified finely enough to keep small city-states. */
+function GeoJsonFile({ onPick }: { onPick: (a: { name?: string; geometry: Area; file: string }) => void }) {
+  const [areas, setAreas] = useState<{ file: string; list: Array<{ name?: string; geometry: Area }> } | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const input = useRef<HTMLInputElement>(null);
+  const pick = (file: string, a: { name?: string; geometry: Area }) => {
+    const geometry = simplifyArea(a.geometry, FINE.tolerance, FINE.decimals);
+    if (!geometry) return setError('That area is too small to keep.');
+    setAreas(null);
+    onPick({ name: a.name, geometry, file });
+  };
+  const read = async (f: File | undefined) => {
+    if (!f) return;
+    setError(null);
+    setAreas(null);
+    try {
+      const list = parseGeoJsonAreas(await f.text());
+      if (list.length === 1) pick(f.name, list[0]);
+      else setAreas({ file: f.name, list });
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      if (input.current) input.current.value = '';
+    }
+  };
+  return (
+    <>
+      <Field label="Or bring borders from a GeoJSON file" hint="Areas from geojson.io, QGIS or a dataset. Works offline.">
+        <input ref={input} type="file" accept=".geojson,.json,application/geo+json,application/json" onChange={(e) => void read(e.target.files?.[0])} />
+      </Field>
+      {error && <div className="notice bad" role="alert">{error}</div>}
+      {areas && (
+        <>
+          <p className="lede">This file has {areas.list.length} areas. Which one?</p>
+          <ul className="linklist polity-list" data-testid="geojson-areas">
+            {areas.list.map((a, i) => (
+              <li key={i}><button type="button" onClick={() => pick(areas.file, a)}><strong>{a.name ?? `Area ${i + 1}`}</strong><small>about {km2.format(areaKm2(a.geometry))} km²</small></button></li>
+            ))}
+          </ul>
+        </>
+      )}
+    </>
+  );
+}
+
+/** A territory from Bob's own borders: drawn on the map or brought from a file. */
+function OwnBorders({ year, nav }: { year: number; nav: Nav }) {
+  const { doc, update } = useDoc();
+  const [shape, setShape] = useState<{ geometry: Area; source: string } | null>(null);
+  const [title, setTitle] = useState('');
+  const [categoryId, setCategoryId] = useState(doc.categories.find((c) => c.id === 'politics')?.id ?? doc.categories[0]?.id ?? '');
+  const [itemId, setItemId] = useState<string | undefined>();
+  const [from, setFrom] = useState<{ d?: HistDate; ok: boolean }>({ d: { y: year }, ok: true });
+  const [to, setTo] = useState<{ d?: HistDate; ok: boolean }>({ ok: true });
+  const backwards = !!(from.d && to.d && compareHistDate(to.d, from.d) <= 0);
+  const valid = !!shape && !!title.trim() && !!from.d && from.ok && to.ok && !backwards;
+
+  const save = () => {
+    if (!valid) return;
+    const territory: Territory = {
+      id: newId('t'), title: title.trim(), categoryId, itemId,
+      snapshots: [{ ...snapshotOf(shape.geometry, from.d!), ...(to.d ? { to: to.d } : {}) }],
+      source: { name: shape.source }, updatedAt: 0,
+    };
+    update((d) => upsert(d, 'territories', territory));
+    nav.replace({ type: 'territory', id: territory.id });
+    nav.showOnMap(toDecimalYear(from.d!));
+  };
+
+  if (!shape) {
+    return (
+      <section data-testid="own-borders">
+        <h3>Your own borders</h3>
+        <p className="lede">Draw a city-state or any border the maps don’t have, or bring a GeoJSON file. Works offline.</p>
+        <div className="actions">
+          <button type="button" className="btn primary" onClick={() => nav.draw((geometry) => setShape({ geometry, source: 'Drawn by me' }))}>Draw on the map</button>
+        </div>
+        <GeoJsonFile onPick={(a) => { setShape({ geometry: a.geometry, source: a.file }); if (a.name) setTitle(a.name); }} />
+      </section>
+    );
+  }
+  return (
+    <form data-testid="own-borders" onSubmit={(e) => { e.preventDefault(); save(); }}>
+      <h3>Your own borders</h3>
+      <div className="notice" role="status">Borders ready: about {km2.format(areaKm2(shape.geometry))} km².</div>
+      <Field label="Name"><input value={title} onChange={(e) => setTitle(e.target.value)} required autoFocus /></Field>
+      <Field label="Category">
+        <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
+          {doc.categories.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
+        </select>
+      </Field>
+      <div className="row">
+        <DateField label="From" value={from.d} onChange={(d, ok) => setFrom({ d, ok })} />
+        <DateField label="Until" optional value={to.d} onChange={(d, ok) => setTo({ d, ok })} />
+      </div>
+      {backwards && <div className="notice bad" role="alert">“Until” needs to come after “From”.</div>}
+      <LinkedEntry value={itemId} onChange={setItemId} />
+      <div className="actions">
+        <button className="btn primary" disabled={!valid}>Add to map</button>
+        <button type="button" className="btn" onClick={() => setShape(null)}>Start over</button>
       </div>
     </form>
   );
@@ -238,7 +367,10 @@ export function TerritoryImport({ year, nav }: { year: number; nav: Nav }) {
   return (
     <div data-testid="territory-import">
       <h2>Add a territory</h2>
-      <p className="lede">Borders come from historical-basemaps, a set of world maps for about 50 years in history. They’re approximate, especially for early periods.</p>
+      <OwnBorders year={year} nav={nav} />
+
+      <h3>From historical maps</h3>
+      <p className="lede">Borders come from historical-basemaps, a set of world maps for about 50 years in history. They’re approximate, especially for early periods, and small city-states are often missing.</p>
 
       <div className="editor-row">
         <div className="grow">

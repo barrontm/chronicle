@@ -3,6 +3,7 @@ import { docYearRange, presenceAt } from '../model/atYear';
 import { toDecimalYear } from '../model/dates';
 import { mergeDocs, parseDoc, serializeDoc } from '../model/doc';
 import type { MediaRef, TimelineDoc } from '../model/types';
+import type { Area } from '../data/geo';
 import type { DocStore } from '../store/store';
 import { DocProvider, useDoc } from './DocContext';
 import type { Nav, Panel } from './nav';
@@ -91,6 +92,7 @@ function Workspace() {
   const [mapOptions, setMapOptions] = useStored<MapOptions>('chronicle.mapOptions', () => ({ backdrop: false, keepPast: false, connections: false }));
   const [dataSeriesId, setDataSeriesId] = useStored<string | null>('chronicle.mapData', () => null);
   const setYear = useCallback((y: number) => setYearState(y), []);
+  const [drawing, setDrawing] = useState<{ onDone: (g: Area, year: number) => void } | null>(null);
 
   // Remember the year between visits, but not on every animation frame.
   useEffect(() => {
@@ -137,6 +139,11 @@ function Workspace() {
       setYearState(y);
       if (view === 'timeline') setView(narrow ? 'map' : 'split');
     },
+    draw: (onDone) => {
+      setPlaying(false);
+      setDrawing({ onDone });
+      if (view === 'timeline') setView(narrow ? 'map' : 'split');
+    },
   }), [stack.length, view, narrow, setView]);
 
   const categories = useMemo(() => doc.categories.filter((c) => !hidden.has(c.id)), [doc.categories, hidden]);
@@ -158,12 +165,13 @@ function Workspace() {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape' || document.querySelector('dialog[open]')) return;
-      if (menu) setMenu(null);
+      if (drawing) setDrawing(null);
+      else if (menu) setMenu(null);
       else if (stack.length) setStack([]);
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [menu, stack.length]);
+  }, [menu, stack.length, drawing]);
 
   const startNew = (p: Panel) => { setMenu(null); setStack([p]); };
 
@@ -268,6 +276,7 @@ function Workspace() {
                 onOpenItem={(id) => setStack([{ type: 'item', id }])}
                 onOpenTerritory={(id) => setStack([{ type: 'territory', id }])}
                 onAddTerritory={() => startNew({ type: 'territory-import', year: Math.round(year) })}
+                drawing={drawing ? { onDone: (g) => { drawing.onDone(g, Math.round(year)); setDrawing(null); }, onCancel: () => setDrawing(null) } : undefined}
               />
               <YearBar year={year} range={range} onYear={(y) => { setPlaying(false); setYear(y); }} playing={playing} onPlaying={setPlaying} speed={speed} onSpeed={setSpeed} />
             </>
@@ -308,7 +317,8 @@ function Workspace() {
         </main>
 
         {panel && (
-          <aside className="drawer" aria-label="Details">
+          // On a phone the drawer covers the map, so step aside while drawing (it stays mounted, keeping the form).
+          <aside className="drawer" aria-label="Details" hidden={!!drawing && narrow}>
             <div className="drawer-head">
               {nav.canGoBack && <button className="btn small quiet" onClick={nav.back}>Back</button>}
               <span className="spacer" />
