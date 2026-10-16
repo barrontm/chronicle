@@ -72,6 +72,7 @@ p = await page('desktop', desktop);
 await withFixture(p);
 await shot(p, 'desktop-timeline');
 await p.locator('.vis-item', { hasText: 'Plato' }).click();
+await p.waitForTimeout(600); // the timeline zooms to his time
 await shot(p, 'desktop-entry');
 await p.getByTestId('item-view').getByRole('button', { name: 'Edit' }).click();
 await shot(p, 'desktop-editor', { fullPage: true });
@@ -89,6 +90,7 @@ await withFixture(p);
 await shot(p, 'desktop-dark');
 if (wanted('desktop-dark-influences')) {
   await p.locator('.vis-item', { hasText: 'Plato' }).click();
+  await p.waitForTimeout(600); // the timeline zooms to his time
   await shot(p, 'desktop-dark-influences');
   await p.getByRole('button', { name: 'Close panel' }).click();
 }
@@ -103,6 +105,7 @@ await withFixture(p);
 await shot(p, 'phone-timeline');
 if (wanted('phone-influences')) {
   await p.locator('.vis-item', { hasText: 'Plato' }).click();
+  await p.waitForTimeout(600); // the timeline zooms to his time
   await shot(p, 'phone-influences');
   await p.getByRole('button', { name: 'Close panel' }).click();
 }
@@ -174,6 +177,7 @@ async function places(p, prefix) {
   }));
   await withFixture(p);
   await p.locator('.vis-item', { hasText: 'Plato' }).click();
+  await p.waitForTimeout(600); // the timeline zooms to his time
   await p.getByTestId('item-view').getByRole('button', { name: 'Edit' }).click();
   await p.getByRole('button', { name: 'Add a place' }).click();
   await p.getByLabel('Place name').fill('Academy');

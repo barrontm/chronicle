@@ -6,31 +6,40 @@ import type { Relation } from '../model/types';
  * arrow geometry can be tested without vis-timeline.
  */
 
-export type InfluenceRole = 'infl-self' | 'infl-by' | 'infl-on';
+export type InfluenceRole = 'infl-self' | 'infl-by' | 'infl-on' | 'linked';
+
+/** Other connections (caused, part of, responded to, related) touching `id`, each as from → to. */
+function otherLinks(relations: Relation[], id: string): Relation[] {
+  return relations.filter((r) => r.type !== 'influenced' && r.fromId !== r.toId && (r.fromId === id || r.toId === id));
+}
 
 /**
- * Extra class per item when `selectedId` has influences: who influenced it
- * (`infl-by`), whom it influenced (`infl-on`), and itself. Everyone else is
- * dimmed. Undefined when there's nothing to light up, so nothing changes.
+ * Extra class per item when `selectedId` has connections: who influenced it
+ * (`infl-by`), whom it influenced (`infl-on`), anything else it's connected to
+ * (`linked`), and itself. Everyone else is dimmed. Undefined when there's
+ * nothing to light up, so nothing changes.
  */
 export function influenceClasses(relations: Relation[], selectedId: string | undefined): Map<string, InfluenceRole> | undefined {
   if (!selectedId) return undefined;
   const { by, on } = influencesOf(relations, selectedId);
-  if (!by.length && !on.length) return undefined;
+  const other = otherLinks(relations, selectedId);
+  if (!by.length && !on.length && !other.length) return undefined;
   const roles = new Map<string, InfluenceRole>();
+  for (const r of other) roles.set(r.fromId === selectedId ? r.toId : r.fromId, 'linked');
   for (const id of by) roles.set(id, 'infl-by');
   for (const id of on) roles.set(id, 'infl-on');
   roles.set(selectedId, 'infl-self');
   return roles;
 }
 
-/** The arrows to draw: influencer → influenced, each touching the selected item. */
-export function influenceArrows(relations: Relation[], selectedId: string | undefined): Array<{ fromId: string; toId: string; role: 'infl-by' | 'infl-on' }> {
+/** The arrows to draw, each touching the selected item: influencer → influenced, then other connections (from → to). */
+export function influenceArrows(relations: Relation[], selectedId: string | undefined): Array<{ fromId: string; toId: string; role: 'infl-by' | 'infl-on' | 'linked' }> {
   if (!selectedId) return [];
   const { by, on } = influencesOf(relations, selectedId);
   return [
     ...by.map((fromId) => ({ fromId, toId: selectedId, role: 'infl-by' as const })),
     ...on.map((toId) => ({ fromId: selectedId, toId, role: 'infl-on' as const })),
+    ...otherLinks(relations, selectedId).map((r) => ({ fromId: r.fromId, toId: r.toId, role: 'linked' as const })),
   ];
 }
 

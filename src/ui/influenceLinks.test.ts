@@ -6,13 +6,18 @@ const r = (fromId: string, toId: string, type: Relation['type'] = 'influenced'):
 const rels = [r('socrates', 'plato'), r('plato', 'aristotle'), r('plato', 'academy', 'caused')];
 
 describe('influenceClasses', () => {
-  it('lights up who influenced the selection and whom it influenced', () => {
-    expect(Object.fromEntries(influenceClasses(rels, 'plato')!)).toEqual({ socrates: 'infl-by', aristotle: 'infl-on', plato: 'infl-self' });
+  it('lights up who influenced the selection, whom it influenced, and its other connections', () => {
+    expect(Object.fromEntries(influenceClasses(rels, 'plato')!)).toEqual({ socrates: 'infl-by', aristotle: 'infl-on', academy: 'linked', plato: 'infl-self' });
+    expect(Object.fromEntries(influenceClasses(rels, 'academy')!)).toEqual({ plato: 'linked', academy: 'infl-self' });
   });
 
-  it('changes nothing without a selection or without influences', () => {
+  it('changes nothing without a selection or without connections', () => {
     expect(influenceClasses(rels, undefined)).toBeUndefined();
-    expect(influenceClasses(rels, 'academy')).toBeUndefined();
+    expect(influenceClasses(rels, 'socrates-pupil')).toBeUndefined();
+  });
+
+  it('keeps the influence role when an entry is also connected another way', () => {
+    expect(influenceClasses([...rels, r('socrates', 'plato', 'related')], 'plato')!.get('socrates')).toBe('infl-by');
   });
 });
 
@@ -21,6 +26,7 @@ describe('influenceArrows', () => {
     expect(influenceArrows(rels, 'plato')).toEqual([
       { fromId: 'socrates', toId: 'plato', role: 'infl-by' },
       { fromId: 'plato', toId: 'aristotle', role: 'infl-on' },
+      { fromId: 'plato', toId: 'academy', role: 'linked' },
     ]);
     expect(influenceArrows(rels, undefined)).toEqual([]);
   });

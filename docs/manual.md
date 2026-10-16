@@ -20,6 +20,14 @@ Chronicle is your own history timeline. It starts empty: you fill it in as you r
 - Each entry has a **category** (politics, war, ideas, science, technology, society, arts). The colored chips under the top bar show or hide a category everywhere, on the timeline and on the map.
 - Click an entry to open it, then **Edit** to change it or **Show on map** to jump to its year on the map.
 
+### Moving through time
+
+- **Scroll** with the mouse wheel or swipe sideways on a trackpad to move back and forth through time. Hold **Shift** while scrolling to move up and down through the categories instead.
+- **Zoom** with **Ctrl** or **⌘** plus the wheel, or pinch on a trackpad or phone.
+- The **thumbwheel** under the timeline spins through time: drag it, or flick it and let it glide. The year in the middle of the timeline shows beside it. With the thumbwheel selected, the arrow keys step a little and Page Up / Page Down a whole screen.
+- The **zoom bar** beside it has **−** and **+**, a slider, and stops for a **Year**, a **Decade**, a **Century** and a **Millennium**. **All** fits everything on your timeline. It also says how much time is in view.
+- **Click an entry** and the timeline zooms to its time, with everything it's connected to in view. If its connections are centuries away, it zooms to the entry alone. **Back to where I was** (top right of the timeline) returns to where you were before. **Show their time** (or **Show its time**) in the entry zooms there again.
+
 ### Places
 
 An entry's places put it on the map as a pin: where a battle was fought, or where a person was born and died. Entries added from Wikipedia usually come with them; for anything else, add them yourself while editing the entry.
@@ -45,6 +53,7 @@ This needs a connection.
 - **Write a note** on any entry, territory or trend. A note can be linked to several things at once, so one note can tie Pericles, the Delian League and Athens together.
 - **Sources** are your bibliography: books, articles, web pages. Add them from **Library → Sources → New source**.
 - **Add and cite** in an entry or note links a source, with the pages or location you read.
+- An entry's **Bibliography** gathers what to read on it: sources it cites, then sources cited by notes about it and by entries connected to it (each says where it was cited). For a person it also lists **Their works**: every source with them as an author. Write the author as you like (`Plato`, `Darwin, Charles`, `Plato; trans. Grube`) and it's found.
 
 ## Connections
 
@@ -54,7 +63,7 @@ In an entry's editor, connect it to another entry and choose the kind: *influenc
 
 ### Influences
 
-Click a person on the timeline and the people connected to them by *influenced* light up: amber for who influenced them, blue for whom they influenced, with arrows showing which way it went. Everything else fades back. Click empty space or close the panel to clear it. Arrows only show while both people are in view.
+Click a person on the timeline and the people connected to them by *influenced* light up: amber for who influenced them, blue for whom they influenced, with arrows showing which way it went. Entries connected in other ways (*caused*, *part of*, *responded to*, *related*) get a grey outline and a dashed line. Everything else fades back. The timeline zooms so they're all in view. Click empty space or close the panel to clear it. Lines only show while both entries are in view.
 
 For a person added from Wikipedia, **Suggest influences** lists who Wikipedia says influenced them and whom they influenced. People already on your timeline get **Connect**; the rest get **Add from Wikipedia**. When you add a person from Wikipedia, their influences who are already on your timeline are filled in as connections, so you can remove any you disagree with before saving. Suggestions need a connection.
 

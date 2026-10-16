@@ -18,7 +18,8 @@ import { MapPane, YearBar, type FlowOptions, type MapCamera, type MapOptions } f
 import { FlowEditor, FlowView } from './panels/FlowPanels';
 import { applyUpdate, useUpdateReady } from './updates';
 import { TerritoryEditor, TerritoryImport, TerritoryView } from './panels/TerritoryPanels';
-import { TimelineView, type VisibleWindow } from './TimelineView';
+import { TimeBar } from './TimeBar';
+import { TimelineView, type TimelineControl, type VisibleWindow } from './TimelineView';
 import { TrendStrips } from './TrendStrips';
 import { downloadText } from './util';
 
@@ -67,7 +68,8 @@ function Workspace() {
   const [stack, setStack] = useState<Panel[]>([]);
   const [hidden, setHidden] = useState<Set<string>>(new Set());
   const [win, setWin] = useState<VisibleWindow | null>(null);
-  const [fitSignal, setFitSignal] = useState(0);
+  const timeline = useRef<TimelineControl>(null);
+  const [canGoBackInTime, setCanGoBackInTime] = useState(false);
   const [menu, setMenu] = useState<'add' | 'file' | null>(null);
   const [pendingImport, setPendingImport] = useState<TimelineDoc | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
@@ -141,6 +143,10 @@ function Workspace() {
     back: () => setStack((s) => s.slice(0, -1)),
     close: () => setStack([]),
     canGoBack: stack.length > 1,
+    showTime: (id) => {
+      if (view === 'map') setView('timeline');
+      timeline.current?.focus(id);
+    },
     showOnMap: (y) => {
       setPlaying(false);
       setYearState(y);
@@ -245,7 +251,7 @@ function Workspace() {
           <button className="btn quiet" aria-expanded={menu === 'file'} onClick={() => setMenu(menu === 'file' ? null : 'file')}>More</button>
           {menu === 'file' && (
             <div className="menu-pop" role="menu">
-              <button role="menuitem" onClick={() => { setMenu(null); setFitSignal((n) => n + 1); }}>Show everything</button>
+              <button role="menuitem" onClick={() => { setMenu(null); timeline.current?.fit(); }}>Show everything</button>
               <hr />
               <button role="menuitem" onClick={() => {
                 setMenu(null);
@@ -324,7 +330,9 @@ function Workspace() {
               </div>
             </div>
           )}
+          {canGoBackInTime && <button className="btn small focus-chip" onClick={() => timeline.current?.back()}>Back to where I was</button>}
           <TimelineView
+            ref={timeline}
             items={doc.items}
             relations={doc.relations}
             categories={categories}
@@ -333,10 +341,11 @@ function Workspace() {
             onSelect={selectFromTimeline}
             onAddAt={(year, categoryId) => setStack([{ type: 'new-item', year, categoryId }])}
             onWindow={setWin}
-            fitSignal={fitSignal}
+            onCanGoBack={setCanGoBackInTime}
             year={showMap ? year : undefined}
             onYear={(y) => { setPlaying(false); setYear(y); }}
           />
+          {win && <TimeBar win={win} control={timeline} />}
           <TrendStrips
             series={doc.series}
             categories={categories}
