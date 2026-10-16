@@ -25,7 +25,7 @@ export function TimeBar({ win, control }: { win: VisibleWindow; control: RefObje
     <div className="time-bar" data-testid="time-bar">
       <Thumbwheel win={win} control={control} />
       <div className="zoom-bar" role="group" aria-label="Zoom">
-        <button className="btn small quiet" aria-label="Zoom out" onClick={() => control.current?.zoomBy(2)}>−</button>
+        <button className="btn small quiet" aria-label="Zoom the timeline out" onClick={() => control.current?.zoomBy(2)}>−</button>
         <input
           type="range"
           aria-label="Zoom"
@@ -35,7 +35,7 @@ export function TimeBar({ win, control }: { win: VisibleWindow; control: RefObje
           value={spanToSlider(span)}
           onChange={(e) => control.current?.setWindow(windowAround(center, sliderToSpan(Number(e.target.value))))}
         />
-        <button className="btn small quiet" aria-label="Zoom in" onClick={() => control.current?.zoomBy(0.5)}>+</button>
+        <button className="btn small quiet" aria-label="Zoom the timeline in" onClick={() => control.current?.zoomBy(0.5)}>+</button>
         <div className="zoom-stops">
           {ZOOM_STOPS.map((s) => (
             <button key={s.label} className="chip" aria-pressed={stop === s.label} onClick={() => zoomTo(s.years)}>{s.label}</button>
