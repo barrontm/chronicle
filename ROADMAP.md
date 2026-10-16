@@ -5,6 +5,8 @@ Milestones are ordered and each one ships something usable. Tick items as they l
 ## Next tickets
 One ticket per session, on its own branch: start fresh, finish with a commit, tick it below. Each ticket says which manual section changes (`docs/manual.md`). Ordered by value to learning and curiosity per effort. Size: S ≈ one sitting, M ≈ a longer one. Model: what to run it on (`/model …`).
 
+AI tickets (🤖, see the decision "AI drafts data, never images") also name a **Prompt** (`src/ai/<feature>/prompt.md`), **Cases** (`tests/ai-evals/<feature>/`) and a **Bar** (the score a live run must reach, checked with the `ai-eval` skill). Prompt tuning runs in its own short sessions (sonnet or haiku) that touch only the prompt, its cases and its recordings.
+
 Tickets marked 🏛 make the map good for Ancient Greece and its wars (city-state borders, alliances, campaigns). They come first because Bob is studying that now.
 
 1. ✅ **Place picker** · S · sonnet. Set an entry's places by hand (name plus coordinates; "Look up" via Wikidata search is a bonus), so hand-made entries get map pins. 🏛 Battles need this to appear on the map.
@@ -55,6 +57,20 @@ Tickets marked 🏛 make the map good for Ancient Greece and its wars (city-stat
 15. ✅ **Time navigation** · M · opus. The wheel moves through time (Shift scrolls lanes, Ctrl/⌘ or pinch zooms); a thumbwheel and a zoom bar with Year/Decade/Century/Millennium/All stops under the timeline. Clicking an entry zooms to its time with its connections in view, with "Back to where I was"; every connection lights up, not only influences. The entry panel's Bibliography gathers sources cited by it, its notes and its connections, and works by a person.
    Files: `src/ui/timeNav.ts` (tested), `src/ui/TimeBar.tsx`, `TimelineView.tsx`, `bibliographyFor` in `src/model/doc.ts` (tested), `ItemView`.
    Done when: an e2e test zooms with a stop, scrolls with the wheel and thumbwheel, clicks Plato and sees his time, his works and the way back.
+16. 🤖 **Draft map data with Claude Code** · S · sonnet. Stage 0: no app change. Skill and checker are in place; what remains is a first real draft. The `draft-map-data` skill drafts an import file from Wikidata and Pleiades with real citations; `scripts/check-draft.mjs` runs `parseDoc` and warns about unsourced records and places outside the area; Bob loads it with Import → Merge.
+   Done when: a draft of the Delian League's founding members imports cleanly and shows on the map.
+17. 🤖 **AI foundation** · M · opusplan. `@anthropic-ai/sdk` behind `src/ai/client.ts` (rules in `src/ai/CLAUDE.md`); a key setting kept on the device and out of backups, with clear offline and no-key states; provenance on drafted records (schema bump, shared with ticket 4's v5 if it lands first); a review panel that shows drafts as a dashed layer and accepts or rejects each record; `npm run eval:ai` on Promptfoo with a committed baseline, and recordings replayed in tests.
+   Files: `src/ai/`, `src/model/types.ts` and the checklist in `src/model/CLAUDE.md`, a new `DraftReview` panel, `MapView.tsx` (draft layer), `scripts/eval-ai.mjs`, `tests/ai-evals/`.
+   Done when: a mocked e2e test asks for a draft, sees it dashed on the map, accepts one record and rejects another; `eval:ai` runs one case live; old backups still import. Manual: a new "Drafting with AI" section.
+18. 🤖 🏛 **Draft a polis's borders** · M · sonnet. From Pleiades sites and the text Bob gives, draft a `TerritorySnapshot` (rough hull around a polis's known sites, clipped to land) for the years he names. Pairs well after ticket 3, so drafts are easy to fix.
+   Prompt: `src/ai/territory/prompt.md`. Cases: Athens, Sparta, Corinth, Thebes around 431 BCE. Bar: every case passes validation and contains its known sites.
+   Done when: the case set meets the bar and a mocked e2e test drafts Corinth and sees it on the map.
+19. 🤖 **Draft migration flows** · S · sonnet. Turn a described migration ("Greek colonies in Sicily, 8th century BCE") into a `Flow` with cause, measure, ends from Pleiades or countries, and sourced estimates; unknown numbers stay unknown, never invented.
+   Prompt: `src/ai/flows/prompt.md`. Cases: Greek colonization of Sicily, the Irish famine, the Great Migration. Bar: causes and directions all right, every number sourced.
+   Done when: the cases meet the bar and a mocked e2e test drafts one flow.
+20. 🤖 🏛 **Draft alliance members and campaign routes** · M · sonnet. After tickets 4 and 5: membership by year from Wikidata (P463) and cited sources; a campaign's route through Pleiades places in order.
+   Cases: the Delian League in 454 and 404 BCE, Xerxes' march in 480 BCE. Bar: members right in each test year, route starts and ends at the right places.
+   Done when: both case sets meet the bar.
 
 ## M1 — Foundation ✅ (2026-10-15)
 - [x] Entries (event / period / person) with BCE-aware dates and approximate dates

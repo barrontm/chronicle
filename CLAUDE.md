@@ -14,6 +14,8 @@ npm run check:quiet   # typecheck + unit + build + e2e, failures only: run befor
 npm run check         # same, full output: only when debugging a failure
 npm run shots -- --only map --sheet   # screenshots of the views you touched, tiled into one image
 npx playwright test e2e/visual.spec.ts --update-snapshots   # after an intended visual change
+node scripts/check-draft.mjs <file> --bbox …   # check a drafted import file before Bob merges it
+npm run eval:ai -- <feature>   # live AI test cases (costs money: ask first; see the ai-eval skill)
 ```
 
 ## Layout
@@ -21,17 +23,18 @@ npx playwright test e2e/visual.spec.ts --update-snapshots   # after an intended 
 src/model/   types.ts (schema), dates.ts (ALL date logic), doc.ts (pure mutations, merge), atYear.ts
 src/data/    series/OWID parsing, geo.ts, basemaps.ts
 src/media/   Commons, Wikipedia/Wikidata
+src/ai/      AI drafting (rules in its CLAUDE.md); only client.ts imports the Anthropic SDK
 src/ui/      React; TimelineView = only vis-timeline importer, MapView = only maplibre-gl importer
 e2e/         Playwright specs        tests/fixtures/  TEST DATA ONLY
 docs/        decisions.md, data-model.md, design.md
 ```
-Folder notes load automatically: `src/ui/CLAUDE.md`, `src/model/CLAUDE.md`, `e2e/CLAUDE.md`.
+Folder notes load automatically: `src/ui/CLAUDE.md`, `src/model/CLAUDE.md`, `src/ai/CLAUDE.md`, `e2e/CLAUDE.md`.
 
 ## Rules
 1. **Dates** only via `src/model/dates.ts` (astronomical years; 431 BCE = -430). Never `new Date(y, …)`.
 2. **Mutations** only through `upsert` / `remove` (via `update()` from `useDoc()`).
 3. **Schema changes** follow the checklist in `src/model/CLAUDE.md`. Old backups must always import.
-4. **No content** in the app, and **no AI-generated imagery**.
+4. **No content** in the app, and **no AI-generated imagery**. AI drafts records Bob accepts one by one, never images or notes (`src/ai/CLAUDE.md`).
 5. **Offline first.** Network features say clearly when offline.
 6. **Copy:** plain, sentence-case, Bob's point of view (see `docs/design.md`).
 7. **Verify visually** with screenshots of only the views you changed (desktop, phone, dark), as one sheet. The `design-review` skill does this; the Playwright MCP server (`.mcp.json`) is for hover, drag and scrubbing.
