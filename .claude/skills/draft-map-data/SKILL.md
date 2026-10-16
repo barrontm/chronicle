@@ -23,7 +23,9 @@ Keep a list of claims and where each came from. Drop any claim you can't source,
 A schema-4 doc (see `docs/data-model.md`, `src/model/types.ts`) in the scratchpad, named `draft-<subject>.json`:
 - Dates as `HistDate` in astronomical years (431 BCE = -430), `approx: true` where the source is vague.
 - Every entry cites its sources (`citations` → `sources`); every territory and flow has `source`.
-- Ids are fresh (`draft-<slug>-<n>`), `updatedAt` is now. No `deleted`.
+- Ids are fresh (`draft-<slug>-<n>`), each record's `updatedAt` is now. No `deleted`.
+- The doc's own top-level `updatedAt` is `0`. Merge takes the title, id and categories from the newer doc, so a newer draft would rename Bob's timeline and replace his lanes.
+- Reuse his category ids (the defaults are in `DEFAULT_CATEGORIES`, `src/model/doc.ts`) so the draft lands in an existing lane.
 - Quoted reference text goes in `excerpt`, never in a note: notes are Bob's own words, so a draft has **no notes**.
 - No pictures unless they come from Commons with credit and license. Never generated images.
 

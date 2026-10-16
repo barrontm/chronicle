@@ -29,6 +29,7 @@ try {
 }
 
 const warnings = [];
+if (doc.updatedAt > 0) warnings.push(`doc updatedAt is ${doc.updatedAt}, not 0: merging would replace Bob's title and categories with the draft's`);
 const outside = ([lon, lat]) => bbox && (lon < bbox[0] || lat < bbox[1] || lon > bbox[2] || lat > bbox[3]);
 const ringsOf = (g) => (g.type === 'Polygon' ? g.coordinates : g.coordinates.flat());
 
