@@ -19,6 +19,7 @@ const fixtureJson = readFileSync(new URL('../../tests/fixtures/sample-history.js
 const fixture = () => parseDoc(fixtureJson);
 const fixtureV1Json = readFileSync(new URL('../../tests/fixtures/sample-history-v1.json', import.meta.url), 'utf8');
 const fixtureV2Json = readFileSync(new URL('../../tests/fixtures/sample-history-v2.json', import.meta.url), 'utf8');
+const fixtureV3Json = readFileSync(new URL('../../tests/fixtures/sample-history-v3.json', import.meta.url), 'utf8');
 
 describe('parseDoc', () => {
   it('accepts the fixture and round-trips it', () => {
@@ -90,6 +91,44 @@ describe('parseDoc', () => {
     const bad = JSON.parse(fixtureJson);
     bad.sources = [];
     expect(() => parseDoc(JSON.stringify(bad))).toThrow(/unknown source/);
+  });
+});
+
+describe('migration flows', () => {
+  it('imports a schema 3 backup with no migrations yet', () => {
+    expect(JSON.parse(fixtureV3Json).schemaVersion).toBe(3);
+    const doc = parseDoc(fixtureV3Json);
+    expect(doc.schemaVersion).toBe(SCHEMA_VERSION);
+    expect(doc.flows).toEqual([]);
+    expect(doc.territories).toHaveLength(1);
+  });
+
+  it('checks causes, ends and numbers', () => {
+    const bad = JSON.parse(fixtureJson);
+    bad.flows[0].cause = 'wanderlust';
+    bad.flows[0].routes[0].to = { country: 'usa' };
+    bad.flows[1].routes[0].points[0].v = -5;
+    const problems = (() => { try { parseDoc(JSON.stringify(bad)); return []; } catch (e) { return (e as DocValidationError).problems; } })().join('\n');
+    expect(problems).toMatch(/unknown cause "wanderlust"/);
+    expect(problems).toMatch(/Famine emigration.*invalid end/);
+    expect(problems).toMatch(/Colonists abroad.*invalid numbers/);
+  });
+
+  it('unlinks a deleted entry and keeps routes to a deleted territory as a named point', () => {
+    let doc = remove(fixture(), 'items', 'i_indrev', 5);
+    expect(doc.flows[0].itemId).toBeUndefined();
+    doc = remove(doc, 'territories', 't_fixture', 6);
+    expect(doc.flows[0].routes[1].to).toEqual({ name: 'Fixture Republic', lon: 12.5, lat: 42 });
+    expect(doc.flows[0].updatedAt).toBe(6);
+    expect(parseDoc(serializeDoc(doc)).flows).toHaveLength(2);
+  });
+
+  it('merges migrations like everything else', () => {
+    const base = fixture();
+    const edited = upsert(base, 'flows', { ...base.flows[0], title: 'Edited' }, 2e12);
+    const removed = remove(base, 'flows', 'f_colonies', 2e12);
+    const merged = mergeDocs(edited, removed);
+    expect(merged.flows.map((f) => f.title)).toEqual(['Edited']);
   });
 });
 
@@ -197,7 +236,7 @@ describe('mergeDocs', () => {
 
 describe('openStoredDoc', () => {
   it('upgrades docs saved by older versions, keeping their records', () => {
-    for (const json of [fixtureV1Json, fixtureV2Json]) {
+    for (const json of [fixtureV1Json, fixtureV2Json, fixtureV3Json]) {
       const raw = JSON.parse(json);
       const { doc, status } = openStoredDoc(raw);
       expect(status).toBe('upgraded');

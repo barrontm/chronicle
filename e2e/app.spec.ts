@@ -419,7 +419,7 @@ test('“How drawing works” opens the manual at territories', async ({ page })
 
 // ---------- Carrying data into later versions ----------
 
-const FIXTURE_V2 = fileURLToPath(new URL('../tests/fixtures/sample-history-v2.json', import.meta.url));
+const FIXTURE_V3 = fileURLToPath(new URL('../tests/fixtures/sample-history-v3.json', import.meta.url));
 
 /** Replace the saved doc in IndexedDB, as an older or newer version of the app would have left it. */
 async function seedSavedDoc(page: Page, doc: Record<string, unknown>) {
@@ -453,11 +453,11 @@ async function savedState(page: Page) {
 test('a timeline saved by an older version opens upgraded, with a copy kept', async ({ page }) => {
   await open(page);
   const { readFileSync } = await import('node:fs');
-  await seedSavedDoc(page, JSON.parse(readFileSync(FIXTURE_V2, 'utf8')));
+  await seedSavedDoc(page, JSON.parse(readFileSync(FIXTURE_V3, 'utf8')));
   await page.reload();
   await expect(page.getByTestId('save-state')).toHaveText('Saved on this device');
   await expect(page.locator('.vis-item', { hasText: 'Aristotle' })).toBeVisible();
-  await expect.poll(() => savedState(page)).toMatchObject({ schemaVersion: 3, backups: 1 });
+  await expect.poll(() => savedState(page)).toMatchObject({ schemaVersion: 4, backups: 1 });
 });
 
 test('an older copy of the app never overwrites data from a newer one', async ({ page }) => {
@@ -544,6 +544,30 @@ test('color the map by a trend with values per country', async ({ page }) => {
   await expect(legend).toContainText('3 countries with data in 1900');
   await goToYear(page, '1700');
   await expect(legend).toContainText('No data for 1700');
+});
+
+test('record a migration and see its arrow only while people were moving', async ({ page }) => {
+  await open(page);
+  await openMap(page);
+  await page.getByRole('button', { name: 'Add', exact: true }).click();
+  await page.getByRole('menuitem', { name: 'Migration on the map…' }).click();
+  const editor = page.getByTestId('flow-editor');
+  await editor.getByLabel('Name', { exact: true }).fill('Irish famine emigration');
+  await editor.getByLabel('Cause').selectOption({ label: 'Famine & disaster' });
+  await editor.getByLabel('From country').fill('Ireland');
+  await editor.getByLabel('To country').fill('United States of America');
+  await editor.getByLabel('People moving each year').fill('1846, 130000\n1855, 130000');
+  await editor.getByRole('button', { name: 'Add to map' }).click();
+  await expect(page.getByTestId('flow-routes')).toContainText('Ireland → United States of America');
+
+  await goToYear(page, '1850');
+  await expect(page.getByTestId('map')).toHaveAttribute('data-flow-count', '1');
+  const legend = page.getByTestId('flow-legend');
+  await expect(legend).toContainText('Famine & disaster');
+  await expect(legend).toContainText('1 route in 1850');
+  await goToYear(page, '1870');
+  await expect(page.getByTestId('map')).toHaveAttribute('data-flow-count', '0');
+  await expect(legend).toContainText('No migration routes in 1870');
 });
 
 test('draw a city-state’s borders and date them @phone', async ({ page }) => {

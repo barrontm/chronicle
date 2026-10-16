@@ -1,7 +1,8 @@
-import type { Feature, FeatureCollection, LineString, Point } from 'geojson';
+import type { Feature, FeatureCollection, LineString, Point, Position } from 'geojson';
 import { labelPoint } from '../data/geo';
 import { presenceAt, regionExtent, snapshotAt, valueAt } from '../model/atYear';
-import type { Place, Relation, Series, Territory, TerritorySnapshot, TimelineItem } from '../model/types';
+import { formatYear } from '../model/dates';
+import type { Flow, FlowCause, FlowEnd, FlowRoute, Place, Relation, Series, SeriesPoint, Territory, TerritorySnapshot, TimelineItem } from '../model/types';
 
 /**
  * Turns the doc into GeoJSON for one year of the map. Pure (no MapLibre), so
@@ -157,4 +158,202 @@ export function parseColor(c: string): [number, number, number] | null {
   m = s.match(/^rgba?\(\s*(\d+)[,\s]+(\d+)[,\s]+(\d+)/i);
   if (m) return [Number(m[1]), Number(m[2]), Number(m[3])];
   return null;
+}
+
+// ---------- Migration flows ----------
+
+/** Causes in the order the legend and the editor list them. Colors are pigments, resolved by MapView. */
+export const CAUSES: Array<{ id: FlowCause; label: string; color: string }> = [
+  { id: 'conflict', label: 'Conflict & persecution', color: 'var(--pig-cinnabar)' },
+  { id: 'economic', label: 'Work & economy', color: 'var(--pig-ochre)' },
+  { id: 'disaster', label: 'Famine & disaster', color: 'var(--pig-umber)' },
+  { id: 'forced', label: 'Forced (slavery, deportation)', color: 'var(--pig-indigo)' },
+  { id: 'settlement', label: 'Colonization & settlement', color: 'var(--pig-verdigris)' },
+  { id: 'family', label: 'Family & other', color: 'var(--pig-lapis)' },
+  { id: 'unknown', label: 'Unknown', color: 'var(--muted)' },
+];
+export const causeOf = (id: FlowCause) => CAUSES.find((c) => c.id === id) ?? CAUSES[CAUSES.length - 1];
+
+/** Where route ends are: present-day countries come from the bundled basemap. */
+export interface FlowPlaces {
+  countries: Map<string, { name: string; lon: number; lat: number }>;
+  territories: Territory[];
+  year: number;
+}
+
+/** Whole years count, as for entries: points 1846…1855 cover all of 1855. Nothing is drawn outside them. */
+export function rateAt(points: SeriesPoint[], year: number): number | undefined {
+  if (!points.length) return undefined;
+  const xs = points.map((p) => p.x);
+  const lo = Math.min(...xs);
+  const hi = Math.max(...xs);
+  if (year < Math.floor(lo) || year >= Math.floor(hi) + 1) return undefined;
+  return valueAt(points, Math.min(hi, Math.max(lo, year)));
+}
+
+export interface ActiveRoute { flow: Flow; index: number; route: FlowRoute; value: number }
+
+/** Routes with people on them in `year`, for flows that pass `show` (visible category, cause not filtered out). */
+export function activeRoutes(flows: Flow[], year: number, show: (f: Flow) => boolean): ActiveRoute[] {
+  const out: ActiveRoute[] = [];
+  for (const flow of flows) {
+    if (!show(flow)) continue;
+    flow.routes.forEach((route, index) => {
+      const value = rateAt(route.points, year);
+      if (value !== undefined && value > 0) out.push({ flow, index, route, value });
+    });
+  }
+  return out;
+}
+
+/** The largest value ever recorded, per measure, so widths stay comparable as the year plays. Flows and stocks never share a scale. */
+export function flowScale(flows: Flow[]): Record<Flow['measure'], number> {
+  const max = { moved: 0, living: 0 };
+  for (const f of flows) for (const r of f.routes) for (const p of r.points) if (p.v > max[f.measure]) max[f.measure] = p.v;
+  return max;
+}
+
+export function endPlace(end: FlowEnd, places: FlowPlaces): { name: string; lon: number; lat: number } | undefined {
+  if ('country' in end) return places.countries.get(end.country);
+  if ('territoryId' in end) {
+    const t = places.territories.find((x) => x.id === end.territoryId);
+    if (!t) return undefined;
+    const geometry = snapshotAt(t, places.year)?.geometry ?? [...t.snapshots].reverse().find((s) => s.geometry)?.geometry;
+    return geometry ? { name: t.title, ...labelPoint(geometry) } : undefined;
+  }
+  return end;
+}
+
+/** "about 130,000", "about 1.3 million": estimates, so two significant figures. */
+export function aboutPeople(v: number): string {
+  if (v >= 1e6) return `about ${Number((v / 1e6).toPrecision(2))} million`;
+  const digits = Math.max(0, Math.floor(Math.log10(Math.max(v, 1))) - 1);
+  const r = Math.round(v / 10 ** digits) * 10 ** digits;
+  return `about ${r.toLocaleString('en')}`;
+}
+
+export function routeYears(points: SeriesPoint[]): string {
+  if (!points.length) return '';
+  const xs = points.map((p) => Math.floor(p.x));
+  const [a, b] = [Math.min(...xs), Math.max(...xs)];
+  return a === b ? formatYear(a) : `${formatYear(a)}–${formatYear(b)}`;
+}
+
+/** "Ireland → United States · famine & disaster · about 130,000 a year (1846–1855)" */
+export function describeRoute(r: ActiveRoute, from: string, to: string): string {
+  const cause = causeOf(r.flow.cause).label;
+  const amount = r.flow.measure === 'moved' ? `${aboutPeople(r.value)} a year` : `${aboutPeople(r.value)} living there`;
+  return `${from} → ${to} · ${cause[0].toLowerCase()}${cause.slice(1)} · ${amount} (${routeYears(r.route.points)})`;
+}
+
+const RAD = Math.PI / 180;
+const toVec = ([lon, lat]: Position) => [Math.cos(lat * RAD) * Math.cos(lon * RAD), Math.cos(lat * RAD) * Math.sin(lon * RAD), Math.sin(lat * RAD)];
+
+/**
+ * A curved route from a to b: the great circle, bowed a little to the right
+ * of the direction of travel so that A → B and B → A don't sit on top of each
+ * other. Longitudes are unwrapped, so routes across the Pacific stay continuous.
+ */
+export function arcPoints(a: Position, b: Position, n = 48): Position[] {
+  const [va, vb] = [toVec(a), toVec(b)];
+  const omega = Math.acos(Math.min(1, Math.max(-1, va[0] * vb[0] + va[1] * vb[1] + va[2] * vb[2])));
+  const pts: Position[] = [];
+  for (let i = 0; i <= n; i++) {
+    const t = i / n;
+    let lon: number;
+    let lat: number;
+    if (omega < 1e-9) [lon, lat] = [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
+    else {
+      const [ka, kb] = [Math.sin((1 - t) * omega) / Math.sin(omega), Math.sin(t * omega) / Math.sin(omega)];
+      const v = [0, 1, 2].map((k) => ka * va[k] + kb * vb[k]);
+      lon = Math.atan2(v[1], v[0]) / RAD;
+      lat = Math.atan2(v[2], Math.hypot(v[0], v[1])) / RAD;
+    }
+    const prev = pts[i - 1];
+    if (prev) while (lon - prev[0] > 180) lon -= 360;
+    if (prev) while (prev[0] - lon > 180) lon += 360;
+    pts.push([lon, lat]);
+  }
+  const [dx, dy] = [pts[n][0] - pts[0][0], pts[n][1] - pts[0][1]];
+  const len = Math.hypot(dx, dy);
+  if (len === 0) return pts;
+  const bow = 0.12 * len;
+  return pts.map(([lon, lat], i) => {
+    const s = Math.sin(Math.PI * (i / n)) * bow;
+    return [round4(lon + (dy / len) * s), round4(Math.max(-85, Math.min(85, lat - (dx / len) * s)))];
+  });
+}
+
+const round4 = (n: number) => Math.round(n * 1e4) / 1e4;
+const mercY = (lat: number) => Math.log(Math.tan(Math.PI / 4 + (lat * RAD) / 2)) / RAD;
+
+/** Compass bearing (degrees clockwise from north, as the map shows it) of the last step of a line. */
+export function endBearing(line: Position[]): number {
+  const [p, q] = [line[line.length - 2], line[line.length - 1]];
+  return Math.atan2(q[0] - p[0], mercY(q[1]) - mercY(p[1])) / RAD;
+}
+
+export interface FlowLineProps {
+  id: string;
+  label: string;
+  color: string;
+  width: number;
+  /** People moving per year get moving dashes; people living abroad a still arrow. */
+  moving: boolean;
+  /** Fraction of the route a dash travels per second. */
+  speed: number;
+}
+
+export function flowFeatures(active: ActiveRoute[], places: FlowPlaces, scale: Record<Flow['measure'], number>, colorOf: (c: FlowCause) => string) {
+  const lines: Feature<LineString, FlowLineProps>[] = [];
+  const heads: Feature<Point, { id: string; color: string; bearing: number; size: number }>[] = [];
+  for (const r of active) {
+    const a = endPlace(r.route.from, places);
+    const b = endPlace(r.route.to, places);
+    if (!a || !b || (a.lon === b.lon && a.lat === b.lat)) continue;
+    const coords = arcPoints([a.lon, a.lat], [b.lon, b.lat]);
+    const share = scale[r.flow.measure] > 0 ? r.value / scale[r.flow.measure] : 1;
+    const color = colorOf(r.flow.cause);
+    const width = 1.5 + 10 * share;
+    const id = `${r.flow.id}#${r.index}`;
+    lines.push({
+      type: 'Feature', geometry: { type: 'LineString', coordinates: coords },
+      properties: { id, label: describeRoute(r, a.name, b.name), color, width, moving: r.flow.measure === 'moved', speed: 0.06 + 0.24 * Math.sqrt(share) },
+    });
+    heads.push({ type: 'Feature', geometry: { type: 'Point', coordinates: coords[coords.length - 1] }, properties: { id, color, bearing: endBearing(coords), size: 0.5 + width / 12 } });
+  }
+  return { lines: fc(lines), heads: fc(heads) };
+}
+
+/**
+ * The moving dashes on people-per-year routes at `seconds` into the animation:
+ * evenly spaced along each route, travelling from origin to destination at the
+ * route's speed, so bigger flows visibly move faster.
+ */
+export function flowDashes(lines: FeatureCollection<LineString, FlowLineProps>, seconds: number): FeatureCollection<LineString, { color: string; width: number }> {
+  const out: Feature<LineString, { color: string; width: number }>[] = [];
+  for (const f of lines.features) {
+    if (!f.properties.moving) continue;
+    const c = f.geometry.coordinates;
+    const cum = [0];
+    for (let i = 1; i < c.length; i++) cum.push(cum[i - 1] + Math.hypot(c[i][0] - c[i - 1][0], mercY(c[i][1]) - mercY(c[i - 1][1])));
+    const total = cum[cum.length - 1];
+    if (total === 0) continue;
+    const count = Math.max(3, Math.min(24, Math.round(total / 4)));
+    const phase = (seconds * f.properties.speed) % 1;
+    const at = (frac: number): Position => {
+      const d = frac * total;
+      let i = 1;
+      while (i < cum.length - 1 && cum[i] < d) i++;
+      const t = (d - cum[i - 1]) / (cum[i] - cum[i - 1] || 1);
+      return [c[i - 1][0] + (c[i][0] - c[i - 1][0]) * t, c[i - 1][1] + (c[i][1] - c[i - 1][1]) * t];
+    };
+    for (let k = 0; k < count; k++) {
+      const start = (k / count + phase) % 1;
+      const end = Math.min(1, start + 0.35 / count);
+      if (end - start < 0.002) continue;
+      out.push({ type: 'Feature', geometry: { type: 'LineString', coordinates: [at(start), at((start + end) / 2), at(end)] }, properties: { color: f.properties.color, width: f.properties.width } });
+    }
+  }
+  return fc(out);
 }

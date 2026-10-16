@@ -21,7 +21,7 @@ export function formatCitation(source: Source | undefined, c: Citation): string 
 }
 
 export function titleOf(doc: TimelineDoc, id: string): string | undefined {
-  return doc.items.find((i) => i.id === id)?.title ?? doc.series.find((s) => s.id === id)?.title ?? doc.territories.find((t) => t.id === id)?.title;
+  return doc.items.find((i) => i.id === id)?.title ?? doc.series.find((s) => s.id === id)?.title ?? doc.territories.find((t) => t.id === id)?.title ?? doc.flows.find((f) => f.id === id)?.title;
 }
 
 export function downloadText(filename: string, text: string, type = 'application/json') {

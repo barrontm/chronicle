@@ -131,6 +131,26 @@ if (any('desktop-draw')) await drawBorder(await page('desktop-draw', desktop), '
 if (any('dark-draw')) await drawBorder(await page('dark-draw', { ...desktop, colorScheme: 'dark' }), 'dark');
 if (any('phone-draw')) await drawBorder(await page('phone-draw', { viewport: { width: 412, height: 860 }, isMobile: true, hasTouch: true }), 'phone');
 
+// Migration: the fixture's famine routes in 1850, then the editor.
+async function migration(p, prefix) {
+  await withFixture(p);
+  await showMap(p, prefix === 'phone' ? 'Map' : 'Both', '1850');
+  await p.getByRole('button', { name: 'Layers' }).click();
+  await p.waitForTimeout(600);
+  await shot(p, `${prefix}-migration`);
+  await p.getByRole('button', { name: 'Layers' }).click();
+  await p.getByRole('button', { name: 'Library' }).click();
+  await p.getByRole('tab', { name: /Migration/ }).click();
+  await p.getByRole('button', { name: /Famine emigration/ }).click();
+  await p.getByTestId('flow-view').getByRole('button', { name: 'Edit' }).click();
+  await p.waitForTimeout(300);
+  await shot(p, `${prefix}-migration-editor`);
+}
+
+if (any('desktop-migration')) await migration(await page('desktop-migration', desktop), 'desktop');
+if (any('dark-migration')) await migration(await page('dark-migration', { ...desktop, colorScheme: 'dark' }), 'dark');
+if (any('phone-migration')) await migration(await page('phone-migration', { viewport: { width: 412, height: 860 }, isMobile: true, hasTouch: true }), 'phone');
+
 // Find a trend: search the bundled catalogue (no network needed).
 async function trendSearch(p, prefix) {
   await p.getByRole('button', { name: 'Add a trend' }).click();

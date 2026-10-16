@@ -60,6 +60,7 @@ export function ItemView({ id, nav }: { id: string; nav: Nav }) {
   const sources = new Map(doc.sources.map((s) => [s.id, s]));
   const years = item.end ? Math.round(compareHistDate(item.end, item.start)) : null;
   const territories = doc.territories.filter((t) => t.itemId === id);
+  const flows = doc.flows.filter((f) => f.itemId === id);
 
   return (
     <article data-testid="item-view">
@@ -74,11 +75,12 @@ export function ItemView({ id, nav }: { id: string; nav: Nav }) {
       {item.description && <p className="prose">{item.description}</p>}
       {item.places && item.places.length > 0 && <p className="meta" data-testid="item-places">{item.places.map(placeLabel).join(' · ')}</p>}
       {item.excerpt && <Excerpt excerpt={item.excerpt} source={sources.get(item.excerpt.sourceId)} />}
-      {territories.length > 0 && (
+      {(territories.length > 0 || flows.length > 0) && (
         <>
           <h3>On the map</h3>
           <ul className="linklist">
             {territories.map((t) => <li key={t.id}><button onClick={() => nav.open({ type: 'territory', id: t.id })}><strong>{t.title}</strong><small>Territory, {t.snapshots.length} {t.snapshots.length === 1 ? 'map' : 'maps'}</small></button></li>)}
+            {flows.map((f) => <li key={f.id}><button onClick={() => nav.open({ type: 'flow', id: f.id })}><strong>{f.title}</strong><small>Migration, {f.routes.length} {f.routes.length === 1 ? 'route' : 'routes'}</small></button></li>)}
           </ul>
         </>
       )}
@@ -121,7 +123,7 @@ export function ItemView({ id, nav }: { id: string; nav: Nav }) {
 
       <div className="actions">
         <button className="btn primary" onClick={() => nav.replace({ type: 'item', id, edit: true })}>Edit</button>
-        {(item.places?.length || territories.length > 0) && <button className="btn" onClick={() => nav.showOnMap(toDecimalYear(item.start))}>Show on map</button>}
+        {(item.places?.length || territories.length > 0 || flows.length > 0) && <button className="btn" onClick={() => nav.showOnMap(toDecimalYear(item.start))}>Show on map</button>}
         <button
           className="btn danger"
           onClick={() => {
