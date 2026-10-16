@@ -532,6 +532,57 @@ test('“Show on map” jumps to an entry’s year with the map open', async ({ 
   await expect(page.locator('.map-label.pin', { hasText: 'Magna Carta sealed' })).toBeVisible();
 });
 
+test('give a hand-made entry its places: look one up, type one, edit and remove it, and see the pin', async ({ page }) => {
+  await page.route('https://en.wikipedia.org/w/api.php**', (route) => route.fulfill({
+    json: { query: { pages: [
+      { title: 'Salamis Island', index: 1, description: 'Greek island', coordinates: [{ lat: 37.9333, lon: 23.5 }] },
+      { title: 'Salamis (disambiguation)', index: 2 },
+    ] } },
+    headers: { 'Access-Control-Allow-Origin': '*' },
+  }));
+  await open(page);
+  await page.getByRole('button', { name: 'Add', exact: true }).click();
+  await page.getByRole('menuitem', { name: 'Event' }).click();
+  const editor = page.getByTestId('item-editor');
+  await editor.getByLabel('Title').fill('Battle of Salamis');
+  await editor.getByLabel('Date').fill('480 BCE');
+
+  // Look one up on Wikipedia; Enter in the name searches instead of saving the entry.
+  await editor.getByRole('button', { name: 'Add a place' }).click();
+  await editor.getByLabel('Place name').fill('Salamis');
+  await editor.getByLabel('Place name').press('Enter');
+  const results = editor.getByTestId('place-results');
+  await expect(results.getByRole('button')).toHaveCount(1);
+  await results.getByRole('button', { name: /Salamis Island/ }).click();
+  await expect(editor.getByLabel('Coordinates')).toHaveValue('37.9333, 23.5');
+  await editor.getByRole('button', { name: 'Add place' }).click();
+  const places = editor.getByTestId('places-list');
+  await expect(places).toContainText('Salamis (37.93°N, 23.50°E)');
+
+  // Type one by hand, fix it, then take it out again.
+  await editor.getByRole('button', { name: 'Add a place' }).click();
+  await editor.getByLabel('Place name').fill('Piraeus');
+  await editor.getByLabel('Coordinates').fill('not a place');
+  await expect(editor.getByText('I can’t read these.', { exact: false })).toBeVisible();
+  await expect(editor.getByRole('button', { name: 'Add place' })).toBeDisabled();
+  await editor.getByLabel('Coordinates').fill('37°56′N 23°38′E');
+  await editor.getByRole('button', { name: 'Add place' }).click();
+  await expect(places).toContainText('Piraeus (37.93°N, 23.63°E)');
+  await places.getByRole('button', { name: 'Edit' }).nth(1).click();
+  await editor.getByLabel('Place name').fill('Port of Piraeus');
+  await editor.getByRole('button', { name: 'Save place' }).click();
+  await expect(places).toContainText('Port of Piraeus');
+  await places.getByRole('button', { name: 'Remove' }).nth(1).click();
+  await expect(places).not.toContainText('Piraeus');
+
+  await editor.getByRole('button', { name: 'Add to timeline' }).click();
+  const view = page.getByTestId('item-view');
+  await expect(view.getByTestId('item-places')).toHaveText('Salamis (37.93°N, 23.50°E)');
+  await view.getByRole('button', { name: 'Show on map' }).click();
+  await expect(page.locator('[data-testid=map][data-ready]')).toBeAttached({ timeout: 20_000 });
+  await expect(page.locator('.map-label.pin', { hasText: 'Battle of Salamis' })).toBeVisible();
+});
+
 test('color the map by a trend with values per country', async ({ page }) => {
   await open(page);
   await importFixture(page);

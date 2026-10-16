@@ -7,7 +7,7 @@ One ticket per session, on its own branch: start fresh, finish with a commit, ti
 
 Tickets marked 🏛 make the map good for Ancient Greece and its wars (city-state borders, alliances, campaigns). They come first because Bob is studying that now.
 
-1. **Place picker** · S · sonnet. Set an entry's places by hand (name plus coordinates; "Look up" via Wikidata search is a bonus), so hand-made entries get map pins. 🏛 Battles need this to appear on the map.
+1. ✅ **Place picker** · S · sonnet. Set an entry's places by hand (name plus coordinates; "Look up" via Wikidata search is a bonus), so hand-made entries get map pins. 🏛 Battles need this to appear on the map.
    Files: `src/ui/panels/ItemPanels.tsx` (places section in `ItemEditor`), `src/media/wikipedia.ts` (coordinate lookup). Could also offer "Pick on the map", reusing `nav.draw`'s pattern.
    Done when: add, edit and remove places in the editor; an e2e test adds a place and sees the pin label on the map.
 2. 🏛 **Detailed Aegean coast** · S · sonnet. Bundle a Natural Earth 10m land and coastline layer clipped to the Mediterranean (about lon −10…45, lat 28…48), shown from zoom 5, and raise `maxZoom` to 12.
@@ -77,7 +77,7 @@ Tickets marked 🏛 make the map good for Ancient Greece and its wars (city-stat
 
 ## M2.5 — Quick capture
 - [x] Add from Wikipedia: search, then a prefilled entry (kind, dates and places from Wikidata, picture with credit, intro as a quoted excerpt, page cited as a source); duplicates detected by Wikidata id
-- [ ] Place picker in the entry editor (click a mini-map or type coordinates); for now places come from Wikipedia
+- [x] Place picker in the entry editor: look up on Wikipedia, pick on the map, or type coordinates
 
 ## M3 — Sync across devices
 - [ ] A remote copy that both devices can reach. Leading option: a JSON file in a private GitHub repo via the API (free, versioned history, one token). Alternative: a small Cloudflare Worker with KV.

@@ -90,6 +90,14 @@ export function buildLabelsAndPagesUrl(qids: string[]): string {
   return `${WIKIDATA_API}?${new URLSearchParams({ action: 'wbgetentities', ids: qids.join('|'), props: 'labels|sitelinks', sitefilter: 'enwiki', languages: 'en', format: 'json', origin: '*' })}`;
 }
 
+/** Pages matching a place name, with their coordinates and short description, in one request. */
+export function buildPlaceSearchUrl(query: string, limit = 8): string {
+  return `${WIKI}/w/api.php?${new URLSearchParams({
+    action: 'query', generator: 'search', gsrsearch: query, gsrlimit: String(limit), gsrnamespace: '0',
+    prop: 'coordinates|description', coprimary: 'primary', format: 'json', formatversion: '2', origin: '*',
+  })}`;
+}
+
 /** Everyone whose "influenced by" (P737) names this person. */
 export function buildInfluencedSearchUrl(qid: string): string {
   return `${WIKIDATA_API}?${new URLSearchParams({ action: 'query', list: 'search', srsearch: `haswbstatement:${P.influencedBy}=${qid}`, srlimit: '50', srnamespace: '0', format: 'json', origin: '*' })}`;
@@ -192,6 +200,25 @@ export function parseInfluencedSearch(json: unknown): string[] {
   return hits.flatMap((h) => (h.title && /^Q\d+$/.test(h.title) ? [h.title] : []));
 }
 
+export interface PlaceResult {
+  name: string;
+  description?: string;
+  lat: number;
+  lon: number;
+}
+
+/** `buildPlaceSearchUrl` response → pages that have coordinates, best match first. */
+export function parsePlaceSearch(json: unknown): PlaceResult[] {
+  type Page = { title?: string; index?: number; description?: string; coordinates?: Array<{ lat?: number; lon?: number }> };
+  const pages = (json as { query?: { pages?: Page[] } })?.query?.pages ?? [];
+  return [...pages]
+    .sort((a, b) => (a.index ?? 0) - (b.index ?? 0))
+    .flatMap((p) => {
+      const c = p.coordinates?.[0];
+      return p.title && typeof c?.lat === 'number' && typeof c.lon === 'number' ? [{ name: p.title, description: p.description, lat: c.lat, lon: c.lon }] : [];
+    });
+}
+
 /** English Wikipedia page titles by Wikidata id, from `buildLabelsAndPagesUrl`. */
 export function parsePages(json: unknown): Record<string, string> {
   const entities = (json as { entities?: Record<string, { sitelinks?: { enwiki?: { title?: string } } }> })?.entities ?? {};
@@ -277,6 +304,11 @@ export async function searchWikipedia(query: string, signal?: AbortSignal): Prom
 
 export async function fetchSummary(key: string, signal?: AbortSignal): Promise<WikiSummary> {
   return parseSummary(await getJson(buildSummaryUrl(key), signal));
+}
+
+/** Places on Wikipedia matching a name, for the place picker. */
+export async function lookUpPlace(query: string, signal?: AbortSignal): Promise<PlaceResult[]> {
+  return parsePlaceSearch(await getJson(buildPlaceSearchUrl(query), signal));
 }
 
 /** Places from Wikidata: the entity's own coordinates, or birth/death place, or location. */

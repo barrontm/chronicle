@@ -2,22 +2,18 @@ import { useState } from 'react';
 import { describeRelation, newId, notesFor, relationsFor, remove, upsert, RELATION_TYPES } from '../../model/doc';
 import { compareHistDate, formatRange, formatHistDate, toDecimalYear } from '../../model/dates';
 import type { ItemDraft } from '../../media/wikipedia';
-import type { Citation, HistDate, ItemKind, MediaRef, Place, Relation, RelationType, Source, TimelineItem } from '../../model/types';
+import type { Citation, HistDate, ItemKind, MediaRef, Relation, RelationType, Source, TimelineItem } from '../../model/types';
 import { useDoc } from '../DocContext';
 import { CitationsEditor, DateField, Field, RecordPicker } from '../fields';
 import { ImagePicker } from '../ImagePicker';
 import type { Nav } from '../nav';
 import { formatCitation, titleOf } from '../util';
+import { placeLabel } from '../../model/places';
 import { InfluenceSuggestions } from './Influences';
+import { PlacesEditor } from './PlacesEditor';
 import { QuickSource } from './SourcePanels';
 
 const KIND_LABEL: Record<ItemKind, string> = { event: 'Event', span: 'Period', person: 'Person' };
-const PLACE_ROLE: Record<NonNullable<Place['role']>, string> = { site: '', born: 'Born in ', died: 'Died in ' };
-
-function placeLabel(pl: Place): string {
-  const coords = `${Math.abs(pl.lat).toFixed(2)}°${pl.lat >= 0 ? 'N' : 'S'}, ${Math.abs(pl.lon).toFixed(2)}°${pl.lon >= 0 ? 'E' : 'W'}`;
-  return `${PLACE_ROLE[pl.role ?? 'site']}${pl.name ? `${pl.name} (${coords})` : coords}`;
-}
 
 /** Quoted reference text, kept visibly apart from Bob's own writing. */
 function Excerpt({ excerpt, source }: { excerpt: { text: string }; source?: Source }) {
@@ -245,19 +241,7 @@ export function ItemEditor({ id, init, draft: prefill, nav }: {
         </>
       )}
 
-      {draft.places && draft.places.length > 0 && (
-        <>
-          <h3>Places</h3>
-          <div className="editor-list">
-            {draft.places.map((pl, i) => (
-              <div className="editor-row" key={i}>
-                <span className="grow">{placeLabel(pl)}</span>
-                <button type="button" className="btn small quiet" onClick={() => set('places', draft.places!.filter((_, j) => j !== i))}>Remove</button>
-              </div>
-            ))}
-          </div>
-        </>
-      )}
+      <PlacesEditor places={draft.places ?? []} kind={draft.kind} onChange={(p) => set('places', p)} nav={nav} />
 
       <h3>Pictures</h3>
       <div className="thumbs">
