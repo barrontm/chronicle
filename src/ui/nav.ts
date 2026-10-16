@@ -7,6 +7,7 @@ export type Panel =
   | { type: 'item'; id: string; edit?: boolean }
   | { type: 'new-item'; year?: number; categoryId?: string; kind?: ItemKind; draft?: ItemDraft }
   | { type: 'wiki-import' }
+  | { type: 'ai-draft' }
   | { type: 'note'; id: string; edit?: boolean }
   | { type: 'new-note'; linkedIds: string[] }
   | { type: 'source'; id: string; edit?: boolean }

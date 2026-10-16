@@ -48,6 +48,20 @@ An entry's places put it on the map as a pin: where a battle was fought, or wher
 
 This needs a connection.
 
+## Drafting with AI
+
+**Add → Draft with AI…** lets Claude do the searching for you. Say what you're studying ("the main battles of the Greco-Persian Wars") and Claude picks the Wikipedia pages that belong, along with a category and a one-line reason for each. Then Chronicle reads the facts from Wikipedia and Wikidata, the same way **From Wikipedia** does: dates, places, the picture, the intro as a quotation, and the page as a source. Claude chooses and connects; it never writes the dates or places.
+
+Nothing is added until you decide, one record at a time:
+
+- **Accept** adds the entry and its source. **Edit first** opens it in the editor so you can change it before adding it. **Reject** leaves it out (**Undo** brings it back).
+- Entries waiting for you show on the map as **dashed pins** in their category's color, whatever year the map is on. **Show on map** takes you there.
+- **Connections** Claude suggests (a battle is part of its war) can be accepted once both entries are on your timeline.
+- **Left out by the checker** lists what Chronicle refused and why: a page Claude didn't actually find, something already on your timeline, too many at once.
+- An accepted entry says **Drafted with AI** at the top, with the model and prompt version, so you can always tell it apart. Claude's reasons are shown while you review and are never saved, and drafting never writes notes or makes pictures.
+
+It needs a connection and your own **Anthropic API key** (from console.anthropic.com), which you paste in the panel once. The key stays in this browser only: it's never in your backups or exports, and **Forget** removes it. Drafts are billed to your Anthropic account, usually a few cents each.
+
 ## Notes, sources and citations
 
 - **Write a note** on any entry, territory or trend. A note can be linked to several things at once, so one note can tie Pericles, the Delian League and Athens together.

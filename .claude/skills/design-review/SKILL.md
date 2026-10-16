@@ -13,7 +13,7 @@ npm run build && (npm run preview >/dev/null 2>&1 &)   # skip if a preview is al
 npm run shots -- --only <names> --sheet
 ```
 `<names>` are comma-separated fragments of shot names in `scripts/screenshots.mjs`:
-`desktop-empty`, `desktop-timeline`, `desktop-entry`, `desktop-editor`, `desktop-map`, `desktop-split`, `desktop-dark`, `desktop-dark-influences`, `desktop-dark-split`, `phone-timeline`, `phone-influences`, `phone-map`, and `desktop-`/`dark-`/`phone-` + `draw`, `draw-form`, `migration`, `migration-editor`, `trends`, `places`, `help`.
+`desktop-empty`, `desktop-timeline`, `desktop-entry`, `desktop-editor`, `desktop-map`, `desktop-split`, `desktop-dark`, `desktop-dark-influences`, `desktop-dark-split`, `phone-timeline`, `phone-influences`, `phone-map`, and `desktop-`/`dark-`/`phone-` + `draw`, `draw-form`, `migration`, `migration-editor`, `trends`, `places`, `help`, `ai-draft`.
 Always cover desktop, phone and dark for the touched view. For example `--only map,draw` or `--only trends`.
 If the view you changed has no shot, add one to `scripts/screenshots.mjs` (follow the existing flows) before reviewing.
 

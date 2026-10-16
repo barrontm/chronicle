@@ -8,6 +8,7 @@ import {
   type FlowEnd,
   type ItemKind,
   type Note,
+  type Provenance,
   type Relation,
   type RelationType,
   type Series,
@@ -190,8 +191,17 @@ export function validateDoc(doc: TimelineDoc): string[] {
     // Dangling links are tolerated (a linked item may have been deleted on another device) but not unknown kinds of data.
     if (!Array.isArray(n.linkedIds)) p.push(`note "${n.title}" has malformed links`);
   }
+  const checkDrafted = (owner: string, d: unknown) => {
+    if (d === undefined) return;
+    const v = d as Provenance;
+    if (!v || typeof v.model !== 'string' || typeof v.prompt !== 'string' || !Number.isFinite(v.draftedAt)) p.push(`${owner} has malformed draft details`);
+  };
+  for (const it of doc.items) checkDrafted(`"${it.title}"`, it.drafted);
+  for (const t of doc.territories) checkDrafted(`territory "${t.title}"`, t.drafted);
+  for (const f of doc.flows) checkDrafted(`migration "${f.title}"`, f.drafted);
   for (const r of doc.relations) {
     checkUnique(r.id);
+    checkDrafted(`connection ${r.id}`, r.drafted);
     if (!RELATION_TYPES.includes(r.type)) p.push(`connection ${r.id} has unknown type "${r.type}"`);
     if (r.fromId === r.toId) p.push(`connection ${r.id} links an item to itself`);
   }
@@ -219,6 +229,7 @@ export function parseDoc(json: string): TimelineDoc {
   if (r.schemaVersion === 1) r = migrate1to2(r);
   if (r.schemaVersion === 2) r = migrate2to3(r);
   if (r.schemaVersion === 3) r = migrate3to4(r);
+  if (r.schemaVersion === 4) r = migrate4to5(r);
   const doc: TimelineDoc = {
     schemaVersion: SCHEMA_VERSION,
     id: r.id ?? newId('doc'),
@@ -279,6 +290,11 @@ function migrate2to3(r: Partial<TimelineDoc>): Partial<TimelineDoc> {
 /** v4 adds migration flows. */
 function migrate3to4(r: Partial<TimelineDoc>): Partial<TimelineDoc> {
   return { ...r, schemaVersion: 4, flows: r.flows ?? [] };
+}
+
+/** v5 adds optional `drafted` provenance on entries, connections, territories and flows. */
+function migrate4to5(r: Partial<TimelineDoc>): Partial<TimelineDoc> {
+  return { ...r, schemaVersion: 5 };
 }
 
 export function serializeDoc(doc: TimelineDoc): string {

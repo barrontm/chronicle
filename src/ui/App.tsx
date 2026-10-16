@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { docYearRange, presenceAt } from '../model/atYear';
 import { toDecimalYear } from '../model/dates';
 import { mergeDocs, parseDoc, serializeDoc } from '../model/doc';
@@ -11,6 +11,7 @@ import { ItemEditor, ItemView } from './panels/ItemPanels';
 import { Help } from './panels/Help';
 import { Library } from './panels/Library';
 import { WikiImport } from './panels/WikiImport';
+import { pendingWithPlaces, type DraftSet } from '../ai/draft';
 import { NoteEditor, NoteView } from './panels/NotePanels';
 import { SeriesEditor } from './panels/SeriesEditor';
 import { SourceEditor, SourceView } from './panels/SourcePanels';
@@ -60,6 +61,9 @@ function useMedia(query: string): boolean {
   return match;
 }
 
+// The Anthropic SDK is only downloaded when Bob opens Draft with AI.
+const DraftReview = lazy(() => import('./panels/DraftReview').then((m) => ({ default: m.DraftReview })));
+
 const SAVE_LABEL = { loading: 'Opening…', saving: 'Saving…', saved: 'Saved on this device', error: 'Couldn’t save. Export a backup now.' } as const;
 
 function Workspace() {
@@ -74,6 +78,9 @@ function Workspace() {
   const [pendingImport, setPendingImport] = useState<TimelineDoc | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
+  // An AI draft waiting for review: kept here so the map can show it while the panel is open.
+  const [aiDraft, setAiDraft] = useState<DraftSet | null>(null);
+  const draftItems = useMemo(() => pendingWithPlaces(aiDraft).filter((i) => !doc.items.some((x) => x.id === i.id)), [aiDraft, doc.items]);
 
   // ----- Map and the shared current year -----
   const narrow = useMedia('(max-width: 860px)');
@@ -236,6 +243,7 @@ function Workspace() {
               <button role="menuitem" onClick={() => startNew({ type: 'new-item', kind: 'span' })}>Period, war or movement</button>
               <button role="menuitem" onClick={() => startNew({ type: 'new-item', kind: 'person' })}>Person</button>
               <button role="menuitem" onClick={() => startNew({ type: 'wiki-import' })}>From Wikipedia…</button>
+              <button role="menuitem" onClick={() => startNew({ type: 'ai-draft' })}>Draft with AI…</button>
               <hr />
               <button role="menuitem" onClick={() => startNew({ type: 'new-note', linkedIds: [] })}>Note</button>
               <button role="menuitem" onClick={() => startNew({ type: 'new-source' })}>Source</button>
@@ -297,6 +305,7 @@ function Workspace() {
                 relations={doc.relations}
                 series={doc.series}
                 flows={doc.flows}
+                draftItems={draftItems}
                 flowOptions={flowOptions}
                 onFlowOptions={setFlowOptions}
                 dataSeriesId={dataSeriesId}
@@ -364,7 +373,7 @@ function Workspace() {
               <span className="spacer" />
               <button className="btn small quiet" onClick={nav.close} aria-label="Close panel">Close</button>
             </div>
-            <PanelBody panel={panel} nav={nav} />
+            <PanelBody panel={panel} nav={nav} aiDraft={aiDraft} onAiDraft={setAiDraft} />
           </aside>
         )}
       </div>
@@ -381,12 +390,13 @@ function Workspace() {
   );
 }
 
-function PanelBody({ panel, nav }: { panel: Panel; nav: Nav }) {
+function PanelBody({ panel, nav, aiDraft, onAiDraft }: { panel: Panel; nav: Nav; aiDraft: DraftSet | null; onAiDraft: (d: DraftSet | null) => void }) {
   // `key` resets editor state when switching between records.
   switch (panel.type) {
     case 'item': return panel.edit ? <ItemEditor key={`e-${panel.id}`} id={panel.id} nav={nav} /> : <ItemView key={panel.id} id={panel.id} nav={nav} />;
     case 'new-item': return <ItemEditor key={`new-${panel.draft?.item.id ?? `${panel.year}-${panel.kind}-${panel.categoryId}`}`} id={null} init={panel} draft={panel.draft} nav={nav} />;
     case 'wiki-import': return <WikiImport nav={nav} />;
+    case 'ai-draft': return <Suspense fallback={<div className="notice" role="status">Opening…</div>}><DraftReview nav={nav} draft={aiDraft} onDraft={onAiDraft} /></Suspense>;
     case 'note': return panel.edit ? <NoteEditor key={`e-${panel.id}`} id={panel.id} nav={nav} /> : <NoteView key={panel.id} id={panel.id} nav={nav} />;
     case 'new-note': return <NoteEditor key="new-note" id={null} linkedIds={panel.linkedIds} nav={nav} />;
     case 'source': return panel.edit ? <SourceEditor key={`e-${panel.id}`} id={panel.id} nav={nav} /> : <SourceView key={panel.id} id={panel.id} nav={nav} />;

@@ -20,7 +20,7 @@ Facts come from sources, never from memory. Coordinates in particular must come 
 Keep a list of claims and where each came from. Drop any claim you can't source, and tell Bob it was dropped.
 
 ## 3. Write the file
-A schema-4 doc (see `docs/data-model.md`, `src/model/types.ts`) in the scratchpad, named `draft-<subject>.json`:
+A schema-5 doc (see `docs/data-model.md`, `src/model/types.ts`) in the scratchpad, named `draft-<subject>.json`:
 - Dates as `HistDate` in astronomical years (431 BCE = -430), `approx: true` where the source is vague.
 - Every entry cites its sources (`citations` → `sources`); every territory and flow has `source`.
 - Ids are fresh (`draft-<slug>-<n>`), each record's `updatedAt` is now. No `deleted`.

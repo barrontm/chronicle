@@ -9,7 +9,7 @@ import { loadCountries } from '../data/countries';
 import { formatYear } from '../model/dates';
 import type { Category, Flow, Relation, Series, Territory, TimelineItem } from '../model/types';
 import { draftFeatures, type Draft } from './drawing';
-import { activeRoutes, arcsBetween, causeOf, choroplethAt, flowDashes, flowFeatures, flowScale, mixColor, pinsAt, territoriesAt, territoryCircles, type FlowLineProps, type FlowPlaces } from './mapData';
+import { activeRoutes, arcsBetween, causeOf, choroplethAt, draftPins, flowDashes, flowFeatures, flowScale, mixColor, pinsAt, territoriesAt, territoryCircles, type FlowLineProps, type FlowPlaces } from './mapData';
 import { formatValue } from './util';
 
 /**
@@ -45,6 +45,8 @@ interface Props {
   relations: Relation[];
   /** Migrations to draw (already filtered by category and cause). */
   flows: Flow[];
+  /** AI-drafted entries waiting for review, drawn as dashed pins whatever the year. */
+  draftItems?: TimelineItem[];
   /** The trend chosen as the map's data layer, if any. */
   dataSeries?: Series;
   options: MapOptions;
@@ -487,6 +489,45 @@ export default function MapView(props: Props) {
     if (drawing) map.doubleClickZoom.disable();
     else map.doubleClickZoom.enable();
   }, [drawing, ready]);
+
+  // AI drafts: dashed rings (HTML, since circle strokes can't dash) with their names, framed whenever the set changes.
+  const draftMarkers = useRef(new Map<string, maplibregl.Marker>());
+  const drafts = useMemo(() => draftPins(props.draftItems ?? [], colorOf), [props.draftItems, colorOf]);
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !ready) return;
+    const store = draftMarkers.current;
+    const seen = new Set<string>();
+    for (const p of drafts.pins) {
+      seen.add(p.id);
+      let m = store.get(p.id);
+      if (!m) {
+        const el = document.createElement('div');
+        el.classList.add('map-label', 'draft-pin');
+        el.title = `Draft: ${p.title}`;
+        const ring = document.createElement('span');
+        ring.className = 'ring';
+        const text = document.createElement('span');
+        text.className = 'name';
+        el.append(ring, text);
+        m = new maplibregl.Marker({ element: el, anchor: 'top', offset: [0, -7] }).setLngLat([p.lon, p.lat]).addTo(map);
+        store.set(p.id, m);
+      }
+      const el = m.getElement();
+      el.style.setProperty('--c', p.color);
+      el.querySelector('.name')!.textContent = p.title;
+      m.setLngLat([p.lon, p.lat]);
+    }
+    for (const [id, m] of store) if (!seen.has(id)) { m.remove(); store.delete(id); }
+  }, [drafts, ready]);
+  const draftKey = drafts.pins.map((p) => p.id).join();
+  useEffect(() => {
+    const map = mapRef.current;
+    const b = drafts.bounds;
+    if (!map || !ready || !b) return;
+    map.fitBounds([[b[0], b[1]], [b[2], b[3]]], { padding: 80, maxZoom: 7, duration: 600 });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draftKey, ready]);
 
   // Bring a selected entry into view if it's off the map.
   useEffect(() => {

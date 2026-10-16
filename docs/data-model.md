@@ -49,6 +49,7 @@ TimelineDoc
 
 ## Version history
 
+- **5** (2026-10-16): optional `drafted` provenance (`{ model, prompt, draftedAt }`) on entries, connections, territories and flows, set when Bob accepts an AI draft. Nothing else changes, so v4 files import as they are (`tests/fixtures/sample-history-v4.json`).
 - **4** (2026-10-15): `flows` (migrations). Older files get an empty list (`tests/fixtures/sample-history-v3.json` must keep importing).
 - **3** (2026-10-15): territory geometry typed as Polygon/MultiPolygon (other shapes are dropped on import, since v2 never drew them), territory `itemId`/`wikidataId`, series `regions`. `tests/fixtures/sample-history-v2.json` must keep importing.
 - **2** (2026-10-15): item `places`, `excerpt`, `wikidataId`; source `accessed`. All optional, so v1 files import unchanged (`tests/fixtures/sample-history-v1.json`).

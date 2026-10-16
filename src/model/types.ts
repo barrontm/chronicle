@@ -73,6 +73,19 @@ export interface Excerpt {
   sourceId: string;
 }
 
+/**
+ * Where an AI-drafted record came from. Set when Bob accepts a draft; it stays
+ * if he edits the record later, so he can always tell drafted data apart.
+ */
+export interface Provenance {
+  /** Model id, e.g. "claude-opus-5-5". */
+  model: string;
+  /** Feature and prompt version, e.g. "entries@1". */
+  prompt: string;
+  /** Epoch ms when the draft was made. */
+  draftedAt: number;
+}
+
 export interface TimelineItem {
   id: string;
   kind: ItemKind;
@@ -90,6 +103,8 @@ export interface TimelineItem {
   excerpt?: Excerpt;
   /** Wikidata id (e.g. "Q913") when the entry came from Wikipedia. Used to spot duplicates. */
   wikidataId?: string;
+  /** Set when the entry was drafted with AI and accepted. */
+  drafted?: Provenance;
   /** Epoch ms of the last edit. Drives per-item merge when syncing devices. */
   updatedAt: number;
 }
@@ -147,6 +162,7 @@ export interface Relation {
   toId: string;
   type: RelationType;
   note?: string;
+  drafted?: Provenance;
   updatedAt: number;
 }
 
@@ -200,6 +216,7 @@ export interface Territory {
   itemId?: string;
   wikidataId?: string;
   source?: { name: string; url?: string };
+  drafted?: Provenance;
   updatedAt: number;
 }
 
@@ -240,10 +257,11 @@ export interface Flow {
   routes: FlowRoute[];
   source?: { name: string; url?: string };
   note?: string;
+  drafted?: Provenance;
   updatedAt: number;
 }
 
-export const SCHEMA_VERSION = 4;
+export const SCHEMA_VERSION = 5;
 
 export interface TimelineDoc {
   schemaVersion: number;

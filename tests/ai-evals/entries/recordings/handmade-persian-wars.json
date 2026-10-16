@@ -1,0 +1,275 @@
+{
+  "case": "handmade-persian-wars",
+  "handmade": true,
+  "note": "Written by hand as test data before the first live run; replace with a recording from npm run eval:ai.",
+  "model": "claude-opus-5-5",
+  "prompt": "entries@1",
+  "exchanges": [
+    {
+      "url": "https://api.anthropic.com/v1/messages?beta=true",
+      "body": {
+        "id": "msg_rec_1",
+        "type": "message",
+        "role": "assistant",
+        "model": "claude-opus-5-5",
+        "content": [
+          {
+            "type": "tool_use",
+            "id": "toolu_1",
+            "name": "search_wikipedia",
+            "input": {
+              "query": "Battle of Marathon"
+            }
+          },
+          {
+            "type": "tool_use",
+            "id": "toolu_2",
+            "name": "search_wikipedia",
+            "input": {
+              "query": "Battle of Salamis Greco-Persian Wars"
+            }
+          }
+        ],
+        "stop_reason": "tool_use",
+        "stop_sequence": null,
+        "usage": {
+          "input_tokens": 1200,
+          "output_tokens": 180
+        }
+      }
+    },
+    {
+      "url": "https://en.wikipedia.org/w/rest.php/v1/search/page?q=Battle+of+Marathon&limit=10",
+      "body": {
+        "pages": [
+          {
+            "id": 1,
+            "key": "Battle_of_Marathon",
+            "title": "Battle of Marathon",
+            "description": "Battle of the first Persian invasion of Greece"
+          }
+        ]
+      }
+    },
+    {
+      "url": "https://en.wikipedia.org/w/rest.php/v1/search/page?q=Battle+of+Salamis+Greco-Persian+Wars&limit=10",
+      "body": {
+        "pages": [
+          {
+            "id": 2,
+            "key": "Battle_of_Salamis",
+            "title": "Battle of Salamis",
+            "description": "Naval battle of the second Persian invasion of Greece"
+          },
+          {
+            "id": 3,
+            "key": "Greco-Persian_Wars",
+            "title": "Greco-Persian Wars",
+            "description": "Conflicts between the Achaemenid Empire and Greek city-states"
+          }
+        ]
+      }
+    },
+    {
+      "url": "https://api.anthropic.com/v1/messages?beta=true",
+      "body": {
+        "id": "msg_rec_2",
+        "type": "message",
+        "role": "assistant",
+        "model": "claude-opus-5-5",
+        "content": [
+          {
+            "type": "text",
+            "text": "Here are the main battles."
+          },
+          {
+            "type": "tool_use",
+            "id": "toolu_3",
+            "name": "propose_entries",
+            "input": {
+              "entries": [
+                {
+                  "page": "Greco-Persian_Wars",
+                  "category": "war",
+                  "why": "The wars these battles belong to."
+                },
+                {
+                  "page": "Battle_of_Marathon",
+                  "category": "war",
+                  "why": "Athens defeats the first Persian invasion."
+                },
+                {
+                  "page": "Battle_of_Salamis",
+                  "category": "war",
+                  "why": "The Greek fleet defeats Xerxes at sea."
+                },
+                {
+                  "page": "Battle_of_Atlantis",
+                  "category": "war",
+                  "why": "A page that was never found by searching."
+                }
+              ],
+              "connections": [
+                {
+                  "from": "Battle_of_Marathon",
+                  "to": "Greco-Persian_Wars",
+                  "type": "part-of"
+                },
+                {
+                  "from": "Battle_of_Salamis",
+                  "to": "Greco-Persian_Wars",
+                  "type": "part-of"
+                }
+              ]
+            }
+          }
+        ],
+        "stop_reason": "tool_use",
+        "stop_sequence": null,
+        "usage": {
+          "input_tokens": 1200,
+          "output_tokens": 180
+        }
+      }
+    },
+    {
+      "url": "https://en.wikipedia.org/api/rest_v1/page/summary/Battle_of_Marathon",
+      "body": {
+        "title": "Battle of Marathon",
+        "description": "Battle of the first Persian invasion of Greece",
+        "extract": "Fixture excerpt about the Battle of Marathon.",
+        "wikibase_item": "Q99999920",
+        "content_urls": {
+          "desktop": {
+            "page": "https://en.wikipedia.org/wiki/Battle_of_Marathon"
+          }
+        },
+        "coordinates": {
+          "lat": 38.118,
+          "lon": 23.978
+        }
+      }
+    },
+    {
+      "url": "https://www.wikidata.org/w/api.php?action=wbgetentities&ids=Q99999920&props=claims&format=json&origin=*",
+      "body": {
+        "entities": {
+          "Q99999920": {
+            "claims": {
+              "P585": [
+                {
+                  "mainsnak": {
+                    "snaktype": "value",
+                    "datavalue": {
+                      "value": {
+                        "time": "-0490-09-00T00:00:00Z",
+                        "precision": 9
+                      }
+                    }
+                  },
+                  "rank": "normal"
+                }
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "url": "https://en.wikipedia.org/api/rest_v1/page/summary/Battle_of_Salamis",
+      "body": {
+        "title": "Battle of Salamis",
+        "description": "Naval battle of the second Persian invasion of Greece",
+        "extract": "Fixture excerpt about the Battle of Salamis.",
+        "wikibase_item": "Q99999921",
+        "content_urls": {
+          "desktop": {
+            "page": "https://en.wikipedia.org/wiki/Battle_of_Salamis"
+          }
+        },
+        "coordinates": {
+          "lat": 37.95,
+          "lon": 23.57
+        }
+      }
+    },
+    {
+      "url": "https://www.wikidata.org/w/api.php?action=wbgetentities&ids=Q99999921&props=claims&format=json&origin=*",
+      "body": {
+        "entities": {
+          "Q99999921": {
+            "claims": {
+              "P585": [
+                {
+                  "mainsnak": {
+                    "snaktype": "value",
+                    "datavalue": {
+                      "value": {
+                        "time": "-0480-09-00T00:00:00Z",
+                        "precision": 9
+                      }
+                    }
+                  },
+                  "rank": "normal"
+                }
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "url": "https://en.wikipedia.org/api/rest_v1/page/summary/Greco-Persian_Wars",
+      "body": {
+        "title": "Greco-Persian Wars",
+        "description": "Conflicts between the Achaemenid Empire and Greek city-states",
+        "extract": "Fixture excerpt about the Greco-Persian Wars.",
+        "wikibase_item": "Q99999922",
+        "content_urls": {
+          "desktop": {
+            "page": "https://en.wikipedia.org/wiki/Greco-Persian_Wars"
+          }
+        }
+      }
+    },
+    {
+      "url": "https://www.wikidata.org/w/api.php?action=wbgetentities&ids=Q99999922&props=claims&format=json&origin=*",
+      "body": {
+        "entities": {
+          "Q99999922": {
+            "claims": {
+              "P580": [
+                {
+                  "mainsnak": {
+                    "snaktype": "value",
+                    "datavalue": {
+                      "value": {
+                        "time": "-0499-00-00T00:00:00Z",
+                        "precision": 9
+                      }
+                    }
+                  },
+                  "rank": "normal"
+                }
+              ],
+              "P582": [
+                {
+                  "mainsnak": {
+                    "snaktype": "value",
+                    "datavalue": {
+                      "value": {
+                        "time": "-0449-00-00T00:00:00Z",
+                        "precision": 9
+                      }
+                    }
+                  },
+                  "rank": "normal"
+                }
+              ]
+            }
+          }
+        }
+      }
+    }
+  ]
+}
