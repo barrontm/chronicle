@@ -1,8 +1,8 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { parseDoc } from '../model/doc';
-import type { Relation, Territory, TimelineItem } from '../model/types';
-import { arcsBetween, choroplethAt, mapKindOf, mixColor, parseColor, pinsAt, placesToDraw, territoriesAt, territoryCircles } from './mapData';
+import type { Flow, Relation, Territory, TimelineItem } from '../model/types';
+import { aboutPeople, activeRoutes, arcPoints, arcsBetween, choroplethAt, endBearing, flowDashes, flowFeatures, flowScale, mapKindOf, mixColor, parseColor, pinsAt, placesToDraw, rateAt, territoriesAt, territoryCircles, type FlowPlaces } from './mapData';
 
 const fixture = () => parseDoc(readFileSync(new URL('../../tests/fixtures/sample-history.json', import.meta.url), 'utf8'));
 const colorOf = (id: string) => (id === 'hidden' ? undefined : '#123456');
@@ -98,5 +98,83 @@ describe('colors', () => {
     expect(parseColor('rgb(1, 2, 3)')).toEqual([1, 2, 3]);
     expect(parseColor('papayawhip')).toBeNull();
     expect(mixColor('#000000', '#ffffff', 0.5)).toBe('rgb(128, 128, 128)');
+  });
+});
+
+describe('migration flows', () => {
+  const famine: Flow = {
+    id: 'f', title: 'Famine emigration', categoryId: 'society', cause: 'disaster', measure: 'moved', updatedAt: 0,
+    routes: [{ from: { country: 'IRL' }, to: { country: 'USA' }, points: [{ x: 1846, v: 130000 }, { x: 1855, v: 130000 }] }],
+  };
+  const places: FlowPlaces = {
+    countries: new Map([['IRL', { name: 'Ireland', lon: -8, lat: 53 }], ['USA', { name: 'United States', lon: -99, lat: 39 }]]),
+    territories: fixture().territories,
+    year: 1850,
+  };
+
+  it('counts whole years and draws nothing outside the numbers', () => {
+    const pts = famine.routes[0].points;
+    expect(rateAt(pts, 1845.9)).toBeUndefined();
+    expect(rateAt(pts, 1846)).toBe(130000);
+    expect(rateAt(pts, 1855.7)).toBe(130000);
+    expect(rateAt(pts, 1856)).toBeUndefined();
+    expect(rateAt([{ x: 1900, v: 10 }, { x: 1910, v: 30 }], 1905)).toBe(20);
+    expect(activeRoutes([famine], 1850, () => true)).toHaveLength(1);
+    expect(activeRoutes([famine], 1870, () => true)).toHaveLength(0);
+    expect(activeRoutes([famine], 1850, (f) => f.cause !== 'disaster')).toHaveLength(0);
+  });
+
+  it('keeps flows and stocks on separate scales', () => {
+    const living: Flow = { ...famine, id: 'l', measure: 'living', routes: [{ ...famine.routes[0], points: [{ x: 1900, v: 4e6 }] }] };
+    expect(flowScale([famine, living])).toEqual({ moved: 130000, living: 4e6 });
+  });
+
+  it('follows a curved great circle that ends exactly at both places', () => {
+    const arc = arcPoints([-8, 53], [-99, 39]);
+    expect(arc[0]).toEqual([-8, 53]);
+    expect(arc.at(-1)).toEqual([-99, 39]);
+    // The great circle from Ireland to the US arcs north of both ends.
+    expect(Math.max(...arc.map((p) => p[1]))).toBeGreaterThan(53);
+    // A → B and B → A bow to opposite sides.
+    const there = arcPoints([0, 0], [20, 0])[24];
+    const back = arcPoints([20, 0], [0, 0])[24];
+    expect(Math.sign(there[1])).toBe(-Math.sign(back[1]));
+    // Across the Pacific the line stays continuous instead of crossing the whole map.
+    const pacific = arcPoints([140, 35], [-122, 37]);
+    for (let i = 1; i < pacific.length; i++) expect(Math.abs(pacific[i][0] - pacific[i - 1][0])).toBeLessThan(10);
+    expect(endBearing([[0, 0], [0, 1]])).toBeCloseTo(0);
+    expect(endBearing([[0, 0], [1, 0]])).toBeCloseTo(90);
+  });
+
+  it('makes a labeled, arrowed route sized by the rate', () => {
+    const active = activeRoutes([famine], 1850, () => true);
+    const { lines, heads } = flowFeatures(active, places, flowScale([famine]), () => '#123456');
+    expect(lines.features[0].properties).toMatchObject({
+      label: 'Ireland → United States · famine & disaster · about 130,000 a year (1846–1855)',
+      moving: true, width: 11.5, color: '#123456',
+    });
+    expect(heads.features[0].geometry.coordinates).toEqual([-99, 39]);
+    // A route to a territory that has no borders that year still finds it; an unknown country is skipped.
+    const toTerr: Flow = { ...famine, routes: [{ ...famine.routes[0], to: { territoryId: 't_fixture' } }, { ...famine.routes[0], to: { country: 'ZZZ' } }] };
+    const t = flowFeatures(activeRoutes([toTerr], 1850, () => true), places, flowScale([toTerr]), () => '#000');
+    expect(t.lines.features).toHaveLength(1);
+    expect(t.heads.features[0].geometry.coordinates).toEqual([12.5, 42]);
+  });
+
+  it('moves dashes from origin to destination, faster for bigger flows', () => {
+    const { lines } = flowFeatures(activeRoutes([famine], 1850, () => true), places, flowScale([famine]), () => '#000');
+    const a = flowDashes(lines, 0);
+    const b = flowDashes(lines, 0.5);
+    expect(a.features.length).toBeGreaterThanOrEqual(3);
+    // The first dash has moved west, towards the United States.
+    expect(b.features[0].geometry.coordinates[0][0]).toBeLessThan(a.features[0].geometry.coordinates[0][0]);
+    const still = flowFeatures(activeRoutes([{ ...famine, measure: 'living' }], 1850, () => true), places, { moved: 0, living: 130000 }, () => '#000');
+    expect(flowDashes(still.lines, 1).features).toEqual([]);
+  });
+
+  it('rounds estimates to two figures', () => {
+    expect(aboutPeople(131234)).toBe('about 130,000');
+    expect(aboutPeople(1340000)).toBe('about 1.3 million');
+    expect(aboutPeople(45)).toBe('about 45');
   });
 });

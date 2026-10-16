@@ -72,6 +72,7 @@ export function docYearRange(doc: TimelineDoc): [number, number] | null {
     for (const p of s.points) see(p.x);
     for (const pts of Object.values(s.regions ?? {})) for (const p of pts) see(p.x);
   }
+  for (const f of doc.flows ?? []) for (const r of f.routes) for (const p of r.points) see(p.x);
   return lo <= hi ? [Math.floor(lo), Math.ceil(hi)] : null;
 }
 

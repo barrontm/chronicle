@@ -72,6 +72,7 @@ A new trend opens with **Find a trend**: one search over about 4,200 Our World i
 - Entries with places show as **pins** while the year is within their dates. Events stay for a few decades afterwards so you can see them. **Layers → Keep past entries on the map** leaves them all, to watch something spread.
 - **Layers → Show reference borders** draws faint outlines of every polity from the nearest historical world map. They're for orientation only, aren't saved, and need a connection the first time.
 - **Layers → Color the map by** shades countries by a trend for the current year, on today's borders, with a legend.
+- **Layers → Migration** shows the migrations you've recorded as arrows, and lets you hide some causes. See [Migration](#migration).
 - The map remembers where you left it on this device.
 
 ## Territories
@@ -102,6 +103,23 @@ Pick a **Map year**, press **Show its polities**, choose one, and Chronicle look
 ### Borders that change over time
 
 Open a territory and press **Edit**. Under **Borders over time**, every set of borders has its own **From** and **Until** dates, which you can change. **Draw borders** or a GeoJSON file adds another set, for example Athens after 338 BCE. **Remove** deletes a set. Press **Save changes** when you're done.
+
+## Migration
+
+A migration is people moving between places: the Irish leaving during the famine, Greek colonists sailing west, the Great Migration north. On the map it's a curved arrow from where they left to where they went, **thicker for more people** and **colored by cause**. Hover over an arrow to read it, for example "Ireland → United States of America · famine & disaster · about 130,000 a year (1846–1855)". Click it to open the migration.
+
+To record one, choose **Add → Migration on the map…** (or **New migration** in the Library):
+
+1. Give it a **Name** and a **Cause**: conflict & persecution, work & economy, famine & disaster, forced (slavery, deportation), colonization & settlement, family & other, or unknown.
+2. Choose what **the numbers are**:
+   - **People moving each year**: dashes move along the arrow toward where people went, faster when more people are moving.
+   - **People living abroad**: how many people from one place lived in the other that year. These are still arrows, so they're never mistaken for people on the move.
+3. For each route, pick **From** and **To**. Each end can be **a country** (today's countries, by name), **one of your territories** (drawn where its borders are in the year shown), or **a place on the map**: give it a name and press **Pick on the map**, or type its latitude and longitude. Ancient and early modern places work this way.
+4. Type the numbers one year per line, like `1846, 130000`. Years in between are filled in, and the arrow only shows between the first and last year. For a steady rate, give the same number for the first and last year. Estimates are fine; say how sure you are in the **Note**.
+5. **Add another route** for the same migration going to more places (Ireland to Britain, to Canada…).
+6. Add the **Source** of the numbers and link the **Entry on your timeline** it belongs to. That entry then lists it under **On the map**.
+
+The map's legend shows the causes on the map that year and how many routes are drawn. If you delete a territory that a route uses, the route keeps that end as a named place where the territory was.
 
 ## Backups and working offline
 

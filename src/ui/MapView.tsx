@@ -2,13 +2,14 @@ import * as maplibregl from 'maplibre-gl';
 import type { GeoJSONSource, MapLayerMouseEvent, StyleSpecification } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
-import type { FeatureCollection } from 'geojson';
+import type { FeatureCollection, LineString } from 'geojson';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { basemapFor, BASEMAPS_CREDIT, fetchBasemap } from '../data/basemaps';
+import { loadCountries } from '../data/countries';
 import { formatYear } from '../model/dates';
-import type { Category, Relation, Series, Territory, TimelineItem } from '../model/types';
+import type { Category, Flow, Relation, Series, Territory, TimelineItem } from '../model/types';
 import { draftFeatures, type Draft } from './drawing';
-import { arcsBetween, choroplethAt, mixColor, pinsAt, territoriesAt, territoryCircles } from './mapData';
+import { activeRoutes, arcsBetween, causeOf, choroplethAt, flowDashes, flowFeatures, flowScale, mixColor, pinsAt, territoriesAt, territoryCircles, type FlowLineProps, type FlowPlaces } from './mapData';
 import { formatValue } from './util';
 
 /**
@@ -42,6 +43,8 @@ interface Props {
   territories: Territory[];
   categories: Category[];
   relations: Relation[];
+  /** Migrations to draw (already filtered by category and cause). */
+  flows: Flow[];
   /** The trend chosen as the map's data layer, if any. */
   dataSeries?: Series;
   options: MapOptions;
@@ -49,6 +52,7 @@ interface Props {
   selectedId?: string;
   onOpenItem: (id: string) => void;
   onOpenTerritory: (id: string) => void;
+  onOpenFlow: (id: string) => void;
   onBackdropStatus: (s: BackdropStatus) => void;
   /** Where to open the map, and a callback when Bob pans or zooms. */
   camera?: MapCamera;
@@ -98,6 +102,9 @@ function buildStyle(c: Colors): StyleSpecification {
       territories: { type: 'geojson', data: EMPTY },
       circles: { type: 'geojson', data: EMPTY },
       arcs: { type: 'geojson', data: EMPTY },
+      flows: { type: 'geojson', data: EMPTY },
+      'flow-dashes': { type: 'geojson', data: EMPTY },
+      'flow-heads': { type: 'geojson', data: EMPTY },
       pins: { type: 'geojson', data: EMPTY },
       draft: { type: 'geojson', data: EMPTY },
     },
@@ -120,6 +127,20 @@ function buildStyle(c: Colors): StyleSpecification {
       {
         id: 'circles', type: 'circle', source: 'circles',
         paint: { 'circle-color': ['get', 'color'], 'circle-opacity': 0.35, 'circle-radius': ['get', 'radius'], 'circle-stroke-color': ['get', 'color'], 'circle-stroke-width': 1.5 },
+      },
+      {
+        id: 'flows', type: 'line', source: 'flows', layout: { 'line-cap': 'round' },
+        // Moving routes are a faint track for their dashes; still arrows (people living abroad) are solid.
+        paint: { 'line-color': ['get', 'color'], 'line-width': ['get', 'width'], 'line-opacity': ['case', ['get', 'moving'], 0.3, 0.75] },
+      },
+      { id: 'flow-dashes', type: 'line', source: 'flow-dashes', paint: { 'line-color': ['get', 'color'], 'line-width': ['get', 'width'], 'line-opacity': 0.95 } },
+      {
+        id: 'flow-heads', type: 'symbol', source: 'flow-heads',
+        layout: {
+          'icon-image': 'flow-arrow', 'icon-size': ['get', 'size'], 'icon-rotate': ['get', 'bearing'], 'icon-rotation-alignment': 'map',
+          'icon-anchor': 'top', 'icon-allow-overlap': true, 'icon-ignore-placement': true,
+        },
+        paint: { 'icon-color': ['get', 'color'] },
       },
       { id: 'arcs', type: 'line', source: 'arcs', paint: { 'line-color': ['get', 'color'], 'line-opacity': ['*', 0.7, ['get', 'opacity']], 'line-width': 1.5, 'line-dasharray': [2, 1.5] } },
       {
@@ -193,8 +214,32 @@ function syncLabels(map: maplibregl.Map, store: Map<string, maplibregl.Marker>, 
   for (const [id, m] of store) if (!seen.has(id)) { m.remove(); store.delete(id); }
 }
 
+/** An arrowhead pointing up with its tip at the top edge, as a signed distance field so it can take any color. */
+function arrowImage(size = 40): { width: number; height: number; data: Uint8Array } {
+  const data = new Uint8Array(size * size * 4);
+  const tri = [[size / 2, 2], [size - 4, size - 4], [4, size - 4]];
+  for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
+    let inside = true;
+    let d = Infinity;
+    for (let i = 0; i < 3; i++) {
+      const [ax, ay] = tri[i];
+      const [bx, by] = tri[(i + 1) % 3];
+      const cross = (bx - ax) * (y + 0.5 - ay) - (by - ay) * (x + 0.5 - ax);
+      if (cross < 0) inside = false;
+      const len = Math.hypot(bx - ax, by - ay);
+      const t = Math.max(0, Math.min(1, ((x + 0.5 - ax) * (bx - ax) + (y + 0.5 - ay) * (by - ay)) / (len * len)));
+      d = Math.min(d, Math.hypot(x + 0.5 - (ax + t * (bx - ax)), y + 0.5 - (ay + t * (by - ay))));
+    }
+    const signed = inside ? -d : d;
+    data[(y * size + x) * 4 + 3] = Math.max(0, Math.min(255, Math.round(255 * (0.75 - signed / 8))));
+  }
+  return { width: size, height: size, data };
+}
+
+const reducedMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+
 export default function MapView(props: Props) {
-  const { year, items, territories, categories, relations, dataSeries, options, fadeYears, selectedId, onBackdropStatus } = props;
+  const { year, items, territories, categories, relations, flows, dataSeries, options, fadeYears, selectedId, onBackdropStatus } = props;
   const host = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const [ready, setReady] = useState(false);
@@ -231,7 +276,10 @@ export default function MapView(props: Props) {
     mapRef.current = map;
     const popup = new maplibregl.Popup({ closeButton: false, closeOnClick: false, className: 'map-popup', offset: 10 });
 
-    map.on('load', () => setReady(true));
+    map.on('load', () => {
+      map.addImage('flow-arrow', arrowImage(), { sdf: true, pixelRatio: 2 });
+      setReady(true);
+    });
     map.on('moveend', () => {
       const c = map.getCenter();
       cb.current.onCamera?.({ center: [Math.round(c.lng * 1e4) / 1e4, Math.round(c.lat * 1e4) / 1e4], zoom: Math.round(map.getZoom() * 100) / 100 });
@@ -242,6 +290,7 @@ export default function MapView(props: Props) {
     };
     pointer('pins');
     pointer('territories-fill');
+    pointer('flows');
     map.on('click', (e) => {
       const draw = cb.current.onDrawPoint;
       if (draw) {
@@ -250,21 +299,25 @@ export default function MapView(props: Props) {
         const near = !!first && map.project(first as [number, number]).dist(e.point) <= 10;
         return draw([e.lngLat.lng, e.lngLat.lat], near);
       }
-      const hit = map.queryRenderedFeatures(e.point, { layers: ['pins', 'territories-fill'] });
+      const hit = map.queryRenderedFeatures(e.point, { layers: ['pins', 'flows', 'territories-fill'] });
       const pin = hit.find((f) => f.layer.id === 'pins');
       if (pin) return cb.current.onOpenItem(String(pin.properties.id));
+      const flow = hit.find((f) => f.layer.id === 'flows');
+      if (flow) return cb.current.onOpenFlow(String(flow.properties.id).split('#')[0]);
       const terr = hit.find((f) => f.layer.id === 'territories-fill');
       if (terr) cb.current.onOpenTerritory(String(terr.properties.id));
     });
     // Hover: a pin's title, a country's value on the data layer, or a polity name from the backdrop.
     map.on('mousemove', (e: MapLayerMouseEvent) => {
-      const hits = map.queryRenderedFeatures(e.point, { layers: ['pins', 'circles', 'territories-fill', 'land', 'backdrop-fill'] });
+      const hits = map.queryRenderedFeatures(e.point, { layers: ['pins', 'flows', 'circles', 'territories-fill', 'land', 'backdrop-fill'] });
       let text: string | undefined;
       const pin = hits.find((f) => f.layer.id === 'pins');
+      const flow = hits.find((f) => f.layer.id === 'flows');
       const circle = hits.find((f) => f.layer.id === 'circles');
       const country = hits.find((f) => f.layer.id === 'land');
       const s = hover.current.series;
       if (pin) text = String(pin.properties.title);
+      else if (flow) text = String(flow.properties.label);
       else if (circle && s) text = `${circle.properties.title}: ${formatValue(Number(circle.properties.value), s.unit)}`;
       else if (country && s && hover.current.values.has(String(country.properties.iso3))) {
         text = `${country.properties.name}: ${formatValue(hover.current.values.get(String(country.properties.iso3))!, s.unit)}`;
@@ -325,6 +378,49 @@ export default function MapView(props: Props) {
       text: f.properties.title, className: 'pin', opacity: f.properties.opacity,
     })));
   }, [items, relations, year, fadeYears, options.keepPast, options.connections, colorOf, selectedId, ready]);
+
+  // Migration: curved routes sized by the rate, arrowheads, and dashes that move while people are moving.
+  const [countries, setCountries] = useState<FlowPlaces['countries']>(new Map());
+  useEffect(() => {
+    if (!flows.length || countries.size) return;
+    let live = true;
+    // Without the list, routes to countries wait; named points and territories still draw.
+    loadCountries().then((list) => { if (live) setCountries(new Map(list.map((c) => [c.code, c]))); }, () => {});
+    return () => { live = false; };
+  }, [flows.length, countries.size]);
+  const scale = useMemo(() => flowScale(flows), [flows]);
+  const flowLines = useRef<FeatureCollection<LineString, FlowLineProps>>({ type: 'FeatureCollection', features: [] });
+  const [moving, setMoving] = useState(false);
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !ready) return;
+    const active = activeRoutes(flows, year, () => true);
+    const { lines, heads } = flowFeatures(active, { countries, territories, year }, scale, (c) => colors.resolve(causeOf(c).color));
+    flowLines.current = lines;
+    (map.getSource('flows') as GeoJSONSource).setData(lines);
+    (map.getSource('flow-heads') as GeoJSONSource).setData(heads);
+    // For tests and assistive checks: how many routes are drawn right now.
+    host.current?.setAttribute('data-flow-count', String(lines.features.length));
+    const anyMoving = lines.features.some((f) => f.properties.moving);
+    setMoving(anyMoving);
+    // While the animation runs it redraws the dashes itself; otherwise draw them still.
+    if (!anyMoving || reducedMotion()) (map.getSource('flow-dashes') as GeoJSONSource).setData(flowDashes(lines, 0));
+  }, [flows, year, countries, territories, scale, colors, ready]);
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !ready || !moving || reducedMotion()) return;
+    const src = map.getSource('flow-dashes') as GeoJSONSource;
+    const t0 = performance.now();
+    let last = 0;
+    let raf = 0;
+    const tick = (now: number) => {
+      // About 30 frames a second is smooth enough and keeps the map responsive.
+      if (now - last > 33) { last = now; src.setData(flowDashes(flowLines.current, (now - t0) / 1000)); }
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [moving, ready]);
 
   // Data layer: countries shaded by value, territories with sized circles.
   useEffect(() => {

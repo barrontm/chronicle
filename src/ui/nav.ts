@@ -14,8 +14,10 @@ export type Panel =
   | { type: 'series'; id: string | null }
   | { type: 'territory'; id: string; edit?: boolean }
   | { type: 'territory-import'; year: number }
+  | { type: 'flow'; id: string; edit?: boolean }
+  | { type: 'new-flow'; itemId?: string }
   | { type: 'help'; section?: string }
-  | { type: 'library'; tab: 'notes' | 'sources' | 'trends' | 'territories' };
+  | { type: 'library'; tab: 'notes' | 'sources' | 'trends' | 'territories' | 'migration' };
 
 export interface Nav {
   /** Open a panel on top of the current one. */
@@ -29,4 +31,6 @@ export interface Nav {
   showOnMap: (year: number) => void;
   /** Draw a border on the map; `onDone` gets the shape and the map's year when Bob finishes. */
   draw: (onDone: (g: Area, year: number) => void) => void;
+  /** Pick one point on the map; `onDone` gets [lon, lat]. */
+  pick: (onDone: (p: [number, number]) => void) => void;
 }

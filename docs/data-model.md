@@ -1,6 +1,6 @@
 # Data model
 
-Source of truth: `src/model/types.ts`. This page explains the why. Schema version: **3**.
+Source of truth: `src/model/types.ts`. This page explains the why. Schema version: **4**.
 
 ```
 TimelineDoc
@@ -21,6 +21,12 @@ TimelineDoc
 ├── territories[]  a polity's borders over time
 │     ├── snapshots[]   {from, to?, geometry: Polygon | MultiPolygon, areaKm2}; to is exclusive
 │     └── itemId        → its timeline entry (usually a period)
+├── flows[]        migrations: people moving between places
+│     ├── cause         conflict | economic | disaster | forced | settlement | family | unknown
+│     ├── measure       moved (people per year) | living (people living abroad)
+│     ├── routes[]      {from, to, points {x: decimal year, v: people}}
+│     │                   an end is {country: ISO-3} | {territoryId} | {name, lon, lat}
+│     └── itemId        → its timeline entry
 └── deleted{}      tombstones: id → deletion time (for merging devices)
 ```
 
@@ -34,6 +40,7 @@ TimelineDoc
 - **Deletes cascade gently.** Deleting an entry removes its connections and unlinks it from notes, but the notes survive. Deleting a source strips citations of it and drops any excerpt quoted from it (an unattributed quote is worse than none).
 - **Snapshots, not animation.** A territory is a list of snapshots, each in force from `from` up to (not including) `to`. The map shows whichever is in force for the current year; nothing is interpolated between borders.
 - **Values per place live on the trend.** `Series.regions` holds a curve per country or territory. `points` is the headline strip and may be empty for a map-only trend. Removing a territory removes its values (and the trend, if nothing is left).
+- **Flows are not trends.** A migration has two ends and a cause, which a `Series` can't hold, so it's its own record. `measure` keeps flows (people moving per year, drawn with moving dashes) apart from stocks (people living abroad, drawn still), and the map scales each separately, so one is never passed off as the other. Routes draw only between their first and last year (whole years count) and interpolate in between. Deleting a territory turns route ends there into named points at its last label point; deleting an entry unlinks its flows.
 - **Excerpts are not notes.** Text copied from a reference work lives in `excerpt`, shown as a quotation with its source. Notes stay Bob's own words.
 
 ## Dates
@@ -42,6 +49,7 @@ TimelineDoc
 
 ## Version history
 
+- **4** (2026-10-15): `flows` (migrations). Older files get an empty list (`tests/fixtures/sample-history-v3.json` must keep importing).
 - **3** (2026-10-15): territory geometry typed as Polygon/MultiPolygon (other shapes are dropped on import, since v2 never drew them), territory `itemId`/`wikidataId`, series `regions`. `tests/fixtures/sample-history-v2.json` must keep importing.
 - **2** (2026-10-15): item `places`, `excerpt`, `wikidataId`; source `accessed`. All optional, so v1 files import unchanged (`tests/fixtures/sample-history-v1.json`).
 

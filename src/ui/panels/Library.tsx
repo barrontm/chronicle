@@ -2,9 +2,10 @@ import { useState } from 'react';
 import { formatYear } from '../../model/dates';
 import { useDoc } from '../DocContext';
 import type { Nav } from '../nav';
+import { routeYears } from '../mapData';
 import { titleOf } from '../util';
 
-type Tab = 'notes' | 'sources' | 'trends' | 'territories';
+type Tab = 'notes' | 'sources' | 'trends' | 'territories' | 'migration';
 
 /** Everything that isn't on the timeline itself: your notes, your bibliography, your trends. */
 export function Library({ tab: initial, nav }: { tab: Tab; nav: Nav }) {
@@ -18,6 +19,7 @@ export function Library({ tab: initial, nav }: { tab: Tab; nav: Nav }) {
   const sources = [...doc.sources].filter((s) => match(s.title, s.authors, s.remarks)).sort((a, b) => (a.authors ?? a.title).localeCompare(b.authors ?? b.title));
   const trends = doc.series.filter((s) => match(s.title, s.unit));
   const territories = doc.territories.filter((t) => match(t.title)).sort((a, b) => a.title.localeCompare(b.title));
+  const flows = doc.flows.filter((f) => match(f.title, f.note)).sort((a, b) => a.title.localeCompare(b.title));
 
   return (
     <section data-testid="library">
@@ -27,6 +29,7 @@ export function Library({ tab: initial, nav }: { tab: Tab; nav: Nav }) {
         <button type="button" role="tab" aria-selected={tab === 'sources'} onClick={() => setTab('sources')}>Sources ({doc.sources.length})</button>
         <button type="button" role="tab" aria-selected={tab === 'trends'} onClick={() => setTab('trends')}>Trends ({doc.series.length})</button>
         <button type="button" role="tab" aria-selected={tab === 'territories'} onClick={() => setTab('territories')}>Territories ({doc.territories.length})</button>
+        <button type="button" role="tab" aria-selected={tab === 'migration'} onClick={() => setTab('migration')}>Migration ({doc.flows.length})</button>
       </div>
       <input className="input" value={q} onChange={(e) => setQ(e.target.value)} placeholder={`Search ${tab}…`} aria-label={`Search ${tab}`} style={{ marginBottom: 8 }} />
 
@@ -92,6 +95,22 @@ export function Library({ tab: initial, nav }: { tab: Tab; nav: Nav }) {
                 <button onClick={() => nav.open({ type: 'territory', id: t.id })}>
                   <strong>{t.title}</strong>
                   <small>{t.snapshots.length} {t.snapshots.length === 1 ? 'map' : 'maps'}{t.snapshots[0] ? `, from ${formatYear(t.snapshots[0].from.y)}` : ''}</small>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+      {tab === 'migration' && (
+        <>
+          <button className="btn small" onClick={() => nav.open({ type: 'new-flow' })}>New migration</button>
+          {doc.flows.length === 0 && <p className="hint" style={{ color: 'var(--muted)' }}>Migrations are people moving between places, like the Irish leaving during the famine. They show on the map as arrows.</p>}
+          <ul className="linklist">
+            {flows.map((f) => (
+              <li key={f.id}>
+                <button onClick={() => nav.open({ type: 'flow', id: f.id })}>
+                  <strong>{f.title}</strong>
+                  <small>{f.routes.length} {f.routes.length === 1 ? 'route' : 'routes'}{f.routes[0] ? `, ${routeYears(f.routes.flatMap((r) => r.points))}` : ''}</small>
                 </button>
               </li>
             ))}

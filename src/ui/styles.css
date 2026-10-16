@@ -344,10 +344,17 @@ dialog h2 { font-family: var(--font-read); margin: 0 0 12px; font-weight: 600; }
 .map-status .notice { pointer-events: auto; margin: 0; max-width: 420px; box-shadow: 0 2px 8px rgb(0 0 0 / 0.08); }
 .notice.subtle { background: color-mix(in srgb, var(--panel) 85%, transparent); color: var(--ink-2); font-size: 12px; padding: 4px 8px; }
 
-.map-legend { position: absolute; left: 10px; bottom: 10px; width: 240px; max-width: calc(100% - 20px); background: color-mix(in srgb, var(--panel) 92%, transparent); border: 1px solid var(--rule); border-radius: var(--radius-m); padding: 8px 10px; font-size: 12px; display: grid; gap: 4px; }
+.map-legends { position: absolute; left: 10px; bottom: 10px; max-width: calc(100% - 20px); max-height: calc(100% - 60px); overflow: auto; display: flex; flex-direction: column; gap: 6px; }
+.map-legends:empty { display: none; }
+.map-legend { width: 240px; max-width: 100%; background: color-mix(in srgb, var(--panel) 92%, transparent); border: 1px solid var(--rule); border-radius: var(--radius-m); padding: 8px 10px; font-size: 12px; display: grid; gap: 4px; }
 .map-legend strong { font-size: 13px; }
 .map-legend small { color: var(--ink-2); }
 .map-legend .ramp { height: 10px; border-radius: 2px; background: linear-gradient(to right, color-mix(in srgb, var(--c) 12%, var(--map-land)), var(--c)); }
+.map-legend .cause-key { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.map-legend .cause-key li { display: flex; align-items: center; gap: 6px; }
+.cause-key .swatch, .cause-filter .swatch { display: inline-block; width: 14px; height: 4px; border-radius: 2px; background: var(--c); }
+.cause-filter { border: 0; margin: 0 0 0 22px; padding: 0; display: grid; gap: 2px; }
+.cause-filter .check { display: flex; align-items: center; gap: 6px; font-size: 13px; }
 .map-legend .ramp-labels { display: flex; justify-content: space-between; color: var(--ink-2); font-variant-numeric: tabular-nums; }
 
 .map-label { font-size: 12px; line-height: 1.2; color: var(--ink); pointer-events: none; white-space: nowrap; text-shadow: 0 0 3px var(--map-land), 0 0 3px var(--map-land), 0 0 2px var(--map-land); }

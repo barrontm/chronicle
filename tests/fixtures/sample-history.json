@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 3,
+  "schemaVersion": 4,
   "id": "doc_fixture",
   "title": "Test fixture",
   "updatedAt": 1760000000000,
@@ -63,6 +63,23 @@
         { "from": { "y": -199 }, "to": { "y": 100 }, "areaKm2": 300000, "geometry": { "type": "MultiPolygon", "coordinates": [[[[7, 38], [18, 38], [18, 46], [7, 46], [7, 38]]]] } }
       ],
       "source": { "name": "Hand-drawn boxes (test data)" }, "updatedAt": 1760000000000
+    }
+  ],
+  "flows": [
+    {
+      "id": "f_famine", "title": "Famine emigration (test data)", "categoryId": "society", "cause": "disaster", "measure": "moved", "itemId": "i_indrev",
+      "routes": [
+        { "from": { "country": "IRL" }, "to": { "country": "USA" }, "points": [{ "x": 1846, "v": 100000 }, { "x": 1851, "v": 220000 }, { "x": 1855, "v": 60000 }] },
+        { "from": { "country": "IRL" }, "to": { "territoryId": "t_fixture" }, "points": [{ "x": 1846, "v": 5000 }, { "x": 1855, "v": 5000 }] }
+      ],
+      "source": { "name": "Made-up values for tests" }, "updatedAt": 1760000000000
+    },
+    {
+      "id": "f_colonies", "title": "Colonists abroad (test data)", "categoryId": "politics", "cause": "settlement", "measure": "living",
+      "routes": [
+        { "from": { "name": "Corinth", "lon": 22.88, "lat": 37.91 }, "to": { "name": "Syracuse", "lon": 15.29, "lat": 37.08 }, "points": [{ "x": -550, "v": 1000 }, { "x": -450, "v": 20000 }] }
+      ],
+      "updatedAt": 1760000000000
     }
   ],
   "notes": [

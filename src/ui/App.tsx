@@ -14,7 +14,8 @@ import { WikiImport } from './panels/WikiImport';
 import { NoteEditor, NoteView } from './panels/NotePanels';
 import { SeriesEditor } from './panels/SeriesEditor';
 import { SourceEditor, SourceView } from './panels/SourcePanels';
-import { MapPane, YearBar, type MapCamera, type MapOptions } from './MapPane';
+import { MapPane, YearBar, type FlowOptions, type MapCamera, type MapOptions } from './MapPane';
+import { FlowEditor, FlowView } from './panels/FlowPanels';
 import { applyUpdate, useUpdateReady } from './updates';
 import { TerritoryEditor, TerritoryImport, TerritoryView } from './panels/TerritoryPanels';
 import { TimelineView, type VisibleWindow } from './TimelineView';
@@ -97,6 +98,8 @@ function Workspace() {
   const [dataSeriesId, setDataSeriesId] = useStored<string | null>('chronicle.mapData', () => null);
   const setYear = useCallback((y: number) => setYearState(y), []);
   const [drawing, setDrawing] = useState<{ onDone: (g: Area, year: number) => void } | null>(null);
+  const [picking, setPicking] = useState<{ onDone: (p: [number, number]) => void } | null>(null);
+  const [flowOptions, setFlowOptions] = useStored<FlowOptions>('chronicle.mapFlows', () => ({ show: true, hiddenCauses: [] }));
 
   // Remember the year between visits, but not on every animation frame.
   useEffect(() => {
@@ -145,7 +148,13 @@ function Workspace() {
     },
     draw: (onDone) => {
       setPlaying(false);
+      setPicking(null);
       setDrawing({ onDone });
+      if (view === 'timeline') setView(narrow ? 'map' : 'split');
+    },
+    pick: (onDone) => {
+      setDrawing(null);
+      setPicking({ onDone });
       if (view === 'timeline') setView(narrow ? 'map' : 'split');
     },
   }), [stack.length, view, narrow, setView]);
@@ -170,12 +179,13 @@ function Workspace() {
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape' || document.querySelector('dialog[open]')) return;
       if (drawing) setDrawing(null);
+      else if (picking) setPicking(null);
       else if (menu) setMenu(null);
       else if (stack.length) setStack([]);
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [menu, stack.length, drawing]);
+  }, [menu, stack.length, drawing, picking]);
 
   const startNew = (p: Panel) => { setMenu(null); setStack([p]); };
 
@@ -184,7 +194,7 @@ function Workspace() {
     setImportError(null);
     try {
       const incoming = parseDoc(await file.text());
-      if (doc.items.length + doc.notes.length + doc.sources.length + doc.series.length === 0) replace(incoming);
+      if (doc.items.length + doc.notes.length + doc.sources.length + doc.series.length + doc.territories.length + doc.flows.length === 0) replace(incoming);
       else setPendingImport(incoming);
     } catch (e) {
       setImportError((e as Error).message);
@@ -225,6 +235,7 @@ function Workspace() {
               <button role="menuitem" onClick={() => startNew({ type: 'new-source' })}>Source</button>
               <button role="menuitem" onClick={() => startNew({ type: 'series', id: null })}>Trend over time</button>
               <button role="menuitem" onClick={() => startNew({ type: 'territory-import', year: Math.round(year) })}>Territory on the map…</button>
+              <button role="menuitem" onClick={() => startNew({ type: 'new-flow' })}>Migration on the map…</button>
             </div>
           )}
         </div>
@@ -279,6 +290,9 @@ function Workspace() {
                 categories={categories}
                 relations={doc.relations}
                 series={doc.series}
+                flows={doc.flows}
+                flowOptions={flowOptions}
+                onFlowOptions={setFlowOptions}
                 dataSeriesId={dataSeriesId}
                 onDataSeries={setDataSeriesId}
                 options={mapOptions}
@@ -287,10 +301,12 @@ function Workspace() {
                 selectedId={selectedId}
                 onOpenItem={(id) => setStack([{ type: 'item', id }])}
                 onOpenTerritory={(id) => setStack([{ type: 'territory', id }])}
+                onOpenFlow={(id) => setStack([{ type: 'flow', id }])}
                 onAddTerritory={() => startNew({ type: 'territory-import', year: Math.round(year) })}
                 camera={mapCamera}
                 onCamera={setMapCamera}
                 drawing={drawing ? { onDone: (g) => { drawing.onDone(g, Math.round(year)); setDrawing(null); }, onCancel: () => setDrawing(null) } : undefined}
+                picking={picking ? { onDone: (pt) => { picking.onDone(pt); setPicking(null); }, onCancel: () => setPicking(null) } : undefined}
               />
               <YearBar year={year} range={range} onYear={(y) => { setPlaying(false); setYear(y); }} playing={playing} onPlaying={setPlaying} speed={speed} onSpeed={setSpeed} />
             </>
@@ -332,8 +348,8 @@ function Workspace() {
         </main>
 
         {panel && (
-          // On a phone the drawer covers the map, so step aside while drawing (it stays mounted, keeping the form).
-          <aside className="drawer" aria-label="Details" hidden={!!drawing && narrow}>
+          // On a phone the drawer covers the map, so step aside while drawing or picking a place (it stays mounted, keeping the form).
+          <aside className="drawer" aria-label="Details" hidden={!!(drawing || picking) && narrow}>
             <div className="drawer-head">
               {nav.canGoBack && <button className="btn small quiet" onClick={nav.back}>Back</button>}
               <span className="spacer" />
@@ -368,6 +384,8 @@ function PanelBody({ panel, nav }: { panel: Panel; nav: Nav }) {
     case 'new-source': return <SourceEditor key="new-source" id={null} nav={nav} />;
     case 'series': return <SeriesEditor key={panel.id ?? 'new-series'} id={panel.id} nav={nav} />;
     case 'territory': return panel.edit ? <TerritoryEditor key={`e-${panel.id}`} id={panel.id} nav={nav} /> : <TerritoryView key={panel.id} id={panel.id} nav={nav} />;
+    case 'flow': return panel.edit ? <FlowEditor key={`e-${panel.id}`} id={panel.id} nav={nav} /> : <FlowView key={panel.id} id={panel.id} nav={nav} />;
+    case 'new-flow': return <FlowEditor key={`new-flow-${panel.itemId ?? ''}`} id={null} itemId={panel.itemId} nav={nav} />;
     case 'territory-import': return <TerritoryImport key={`ti-${panel.year}`} year={panel.year} nav={nav} />;
     case 'help': return <Help key={panel.section ?? 'help'} section={panel.section} />;
     case 'library': return <Library tab={panel.tab} nav={nav} />;

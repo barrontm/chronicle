@@ -1,8 +1,11 @@
-import { isArea } from '../data/geo';
+import { isArea, labelPoint } from '../data/geo';
 import { isValidHistDate, compareHistDate } from './dates';
 import {
   SCHEMA_VERSION,
   type Citation,
+  type Flow,
+  type FlowCause,
+  type FlowEnd,
   type ItemKind,
   type Note,
   type Relation,
@@ -42,6 +45,7 @@ export function createEmptyDoc(title = 'My history'): TimelineDoc {
     items: [],
     series: [],
     territories: [],
+    flows: [],
     notes: [],
     sources: [],
     relations: [],
@@ -118,6 +122,31 @@ export function validateTerritory(t: Territory, categoryIds: Set<string>): strin
   return p;
 }
 
+export const FLOW_CAUSES: FlowCause[] = ['conflict', 'economic', 'disaster', 'forced', 'settlement', 'family', 'unknown'];
+
+function validEnd(e: FlowEnd | undefined): boolean {
+  if (!e || typeof e !== 'object') return false;
+  if ('country' in e) return /^[A-Z]{3}$/.test(e.country);
+  // A territory that was deleted on another device is tolerated; the route just isn't drawn.
+  if ('territoryId' in e) return typeof e.territoryId === 'string' && !!e.territoryId;
+  return Number.isFinite(e.lat) && Number.isFinite(e.lon) && Math.abs(e.lat) <= 90 && Math.abs(e.lon) <= 180;
+}
+
+export function validateFlow(f: Flow, categoryIds: Set<string>): string[] {
+  const p: string[] = [];
+  const name = f.title ? `migration "${f.title}"` : `migration ${f.id}`;
+  if (!f.id || !f.title?.trim()) p.push('a migration is missing its id or title');
+  if (!categoryIds.has(f.categoryId)) p.push(`${name} uses unknown category "${f.categoryId}"`);
+  if (!FLOW_CAUSES.includes(f.cause)) p.push(`${name} has unknown cause "${f.cause}"`);
+  if (f.measure !== 'moved' && f.measure !== 'living') p.push(`${name} has unknown measure "${f.measure}"`);
+  if (!Array.isArray(f.routes)) return [...p, `${name} has malformed routes`];
+  for (const r of f.routes) {
+    if (!validEnd(r.from) || !validEnd(r.to)) p.push(`${name} has a route with an invalid end`);
+    if (!Array.isArray(r.points) || r.points.some((pt) => !Number.isFinite(pt.x) || !Number.isFinite(pt.v) || pt.v < 0)) p.push(`${name} has a route with invalid numbers`);
+  }
+  return p;
+}
+
 export function validateDoc(doc: TimelineDoc): string[] {
   const p: string[] = [];
   const catIds = new Set(doc.categories.map((c) => c.id));
@@ -137,6 +166,10 @@ export function validateDoc(doc: TimelineDoc): string[] {
   for (const t of doc.territories) {
     checkUnique(t.id);
     p.push(...validateTerritory(t, catIds));
+  }
+  for (const f of doc.flows) {
+    checkUnique(f.id);
+    p.push(...validateFlow(f, catIds));
   }
   const sourceIds = new Set(doc.sources.map((s) => s.id));
   for (const s of doc.sources) {
@@ -185,6 +218,7 @@ export function parseDoc(json: string): TimelineDoc {
   }
   if (r.schemaVersion === 1) r = migrate1to2(r);
   if (r.schemaVersion === 2) r = migrate2to3(r);
+  if (r.schemaVersion === 3) r = migrate3to4(r);
   const doc: TimelineDoc = {
     schemaVersion: SCHEMA_VERSION,
     id: r.id ?? newId('doc'),
@@ -193,6 +227,7 @@ export function parseDoc(json: string): TimelineDoc {
     items: r.items ?? [],
     series: r.series ?? [],
     territories: r.territories ?? [],
+    flows: r.flows ?? [],
     notes: r.notes ?? [],
     sources: r.sources ?? [],
     relations: r.relations ?? [],
@@ -241,6 +276,11 @@ function migrate2to3(r: Partial<TimelineDoc>): Partial<TimelineDoc> {
   };
 }
 
+/** v4 adds migration flows. */
+function migrate3to4(r: Partial<TimelineDoc>): Partial<TimelineDoc> {
+  return { ...r, schemaVersion: 4, flows: r.flows ?? [] };
+}
+
 export function serializeDoc(doc: TimelineDoc): string {
   return JSON.stringify(doc, null, 2);
 }
@@ -248,11 +288,12 @@ export function serializeDoc(doc: TimelineDoc): string {
 // ---------- Mutations (pure; return a new doc) ----------
 
 /** The collections of id'd, timestamped records inside a doc. */
-export type Collection = 'items' | 'series' | 'territories' | 'notes' | 'sources' | 'relations';
+export type Collection = 'items' | 'series' | 'territories' | 'flows' | 'notes' | 'sources' | 'relations';
 type RecordOf<C extends Collection> = {
   items: TimelineItem;
   series: Series;
   territories: Territory;
+  flows: Flow;
   notes: Note;
   sources: Source;
   relations: Relation;
@@ -272,13 +313,15 @@ export function upsert<C extends Collection>(doc: TimelineDoc, collection: C, re
  * Remove a record and clean up anything pointing at it:
  *  - deleting an item/series/territory removes its connections and unlinks it from notes
  *  - deleting a source removes citations of it
+ *  - deleting an entry unlinks its migrations; deleting a territory turns
+ *    route ends there into named points, so the routes stay on the map
  * Notes themselves are never deleted as a side effect; your writing is kept.
  */
 export function remove(doc: TimelineDoc, collection: Collection, id: string, now = Date.now()): TimelineDoc {
   const deleted = { ...doc.deleted, [id]: now };
   let next: TimelineDoc = { ...doc, [collection]: (doc[collection] as { id: string }[]).filter((r) => r.id !== id), deleted, updatedAt: now };
 
-  if (collection === 'items' || collection === 'series' || collection === 'territories') {
+  if (collection === 'items' || collection === 'series' || collection === 'territories' || collection === 'flows') {
     const dropped = next.relations.filter((r) => r.fromId === id || r.toId === id);
     for (const r of dropped) deleted[r.id] = now;
     next = {
@@ -288,7 +331,11 @@ export function remove(doc: TimelineDoc, collection: Collection, id: string, now
     };
   }
   if (collection === 'items') {
-    next = { ...next, territories: next.territories.map((t) => (t.itemId === id ? { ...t, itemId: undefined, updatedAt: now } : t)) };
+    next = {
+      ...next,
+      territories: next.territories.map((t) => (t.itemId === id ? { ...t, itemId: undefined, updatedAt: now } : t)),
+      flows: next.flows.map((f) => (f.itemId === id ? { ...f, itemId: undefined, updatedAt: now } : f)),
+    };
   }
   if (collection === 'territories') {
     // Values recorded for the territory go with it; the rest of the trend stays,
@@ -300,7 +347,7 @@ export function remove(doc: TimelineDoc, collection: Collection, id: string, now
       if (s.points.length < 2 && !Object.keys(regions).length) deleted[s.id] = now;
       else series.push({ ...s, regions, updatedAt: now });
     }
-    next = { ...next, series };
+    next = { ...next, series, flows: next.flows.map((f) => detachTerritory(f, doc.territories.find((t) => t.id === id), now)) };
   }
   if (collection === 'sources') {
     const strip = <T extends { citations?: Citation[]; updatedAt: number }>(r: T): T =>
@@ -314,6 +361,14 @@ export function remove(doc: TimelineDoc, collection: Collection, id: string, now
     next = { ...next, items: next.items.map((it) => dropExcerpt(strip(it))), notes: next.notes.map(strip) };
   }
   return next;
+}
+
+/** Route ends at a deleted territory become named points where its latest borders were labeled. */
+function detachTerritory(f: Flow, t: Territory | undefined, now: number): Flow {
+  if (!t || !f.routes.some((r) => ('territoryId' in r.from && r.from.territoryId === t.id) || ('territoryId' in r.to && r.to.territoryId === t.id))) return f;
+  const shape = [...t.snapshots].reverse().find((s) => s.geometry)?.geometry;
+  const swap = (e: FlowEnd): FlowEnd => ('territoryId' in e && e.territoryId === t.id && shape ? { name: t.title, ...labelPoint(shape) } : e);
+  return { ...f, routes: f.routes.map((r) => ({ ...r, from: swap(r.from), to: swap(r.to) })), updatedAt: now };
 }
 
 // ---------- Queries ----------
@@ -388,6 +443,7 @@ export function mergeDocs(a: TimelineDoc, b: TimelineDoc): TimelineDoc {
     items: mergeList(a.items, b.items, deleted),
     series: mergeList(a.series, b.series, deleted),
     territories: mergeList(a.territories, b.territories, deleted),
+    flows: mergeList(a.flows ?? [], b.flows ?? [], deleted),
     notes: mergeList(a.notes, b.notes, deleted),
     sources: mergeList(a.sources, b.sources, deleted),
     relations: mergeList(a.relations, b.relations, deleted),

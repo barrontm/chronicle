@@ -254,10 +254,10 @@ function OwnBorders({ year, nav }: { year: number; nav: Nav }) {
   );
 }
 
-function LinkedEntry({ value, onChange }: { value?: string; onChange: (id: string | undefined) => void }) {
+export function LinkedEntry({ value, onChange, hint = 'Optional: the period or person this territory belongs to.' }: { value?: string; onChange: (id: string | undefined) => void; hint?: string }) {
   const { doc } = useDoc();
   return (
-    <Field label="Entry on your timeline" hint="Optional: the period or person this territory belongs to.">
+    <Field label="Entry on your timeline" hint={hint}>
       {value ? (
         <div className="editor-row">
           <span className="grow">{titleOf(doc, value) ?? 'Missing entry'}</span>

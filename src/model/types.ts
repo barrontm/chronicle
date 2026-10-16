@@ -203,7 +203,47 @@ export interface Territory {
   updatedAt: number;
 }
 
-export const SCHEMA_VERSION = 3;
+/**
+ * One end of a migration route: a present-day country (ISO 3166-1 alpha-3),
+ * one of your territories (drawn at its label point in the year shown), or a
+ * named point for places that are neither (a Greek colony, a port).
+ */
+export type FlowEnd =
+  | { country: string }
+  | { territoryId: string }
+  | { name: string; lon: number; lat: number };
+
+export type FlowCause = 'conflict' | 'economic' | 'disaster' | 'forced' | 'settlement' | 'family' | 'unknown';
+
+/**
+ * - moved:  people moving per year along the route (a flow; drawn with moving dashes)
+ * - living: people from `from` living in `to` that year (a stock; drawn as a still arrow)
+ */
+export type FlowMeasure = 'moved' | 'living';
+
+export interface FlowRoute {
+  from: FlowEnd;
+  to: FlowEnd;
+  /** x = astronomical year, v = people (per year for 'moved'). Interpolated between points; nothing outside them. */
+  points: SeriesPoint[];
+}
+
+/** People moving between places over time: the Irish famine emigration, Greek colonization, the Great Migration. */
+export interface Flow {
+  id: string;
+  title: string;
+  categoryId: string;
+  cause: FlowCause;
+  measure: FlowMeasure;
+  /** The timeline entry this migration belongs to, if any. */
+  itemId?: string;
+  routes: FlowRoute[];
+  source?: { name: string; url?: string };
+  note?: string;
+  updatedAt: number;
+}
+
+export const SCHEMA_VERSION = 4;
 
 export interface TimelineDoc {
   schemaVersion: number;
@@ -213,6 +253,7 @@ export interface TimelineDoc {
   items: TimelineItem[];
   series: Series[];
   territories: Territory[];
+  flows: Flow[];
   notes: Note[];
   sources: Source[];
   relations: Relation[];
