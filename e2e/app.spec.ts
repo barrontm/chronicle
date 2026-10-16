@@ -323,11 +323,13 @@ test('zoomed far out, names run past bars too narrow for them, and go back in wh
   // The whole name is drawn, not clipped to the bar.
   const name = plato.locator('.it > span');
   expect((await name.boundingBox())!.width).toBeGreaterThan((await plato.boundingBox())!.width);
-  // Names near the right edge are pulled left so the edge doesn't cut them off.
+  // Names near the right edge are pulled left so the edge doesn't cut them off
+  // (once the zoom settles: vis-timeline reports it 200 ms after the last wheel step).
   const panel = (await page.locator('.vis-panel.vis-center').boundingBox())!;
   for (const who of ['Isaac Newton', 'Albert Einstein']) {
-    const label = (await page.locator('.vis-item', { hasText: who }).locator('.it > span').boundingBox())!;
-    expect(label.x + label.width).toBeLessThanOrEqual(panel.x + panel.width + 1);
+    const label = page.locator('.vis-item', { hasText: who }).locator('.it > span');
+    await expect.poll(async () => { const b = (await label.boundingBox())!; return b.x + b.width; })
+      .toBeLessThanOrEqual(panel.x + panel.width + 1);
   }
   // Year labels on the axis never run into each other, even on a phone.
   const yearLabels = await page.locator('.vis-time-axis .vis-text.vis-minor:not(.vis-measure)').evaluateAll((els, edge) =>
@@ -580,6 +582,7 @@ test('draw a city-state’s borders and date them @phone', async ({ page }) => {
   await expect(territoryLabel(page, 'Athens')).toHaveCount(0);
 
   // What's drawn on the map is saved: it's still there after reopening the app.
+  await expect(page.getByTestId('save-state')).toHaveText('Saved on this device');
   await page.reload();
   await openMap(page);
   await goToYear(page, '450 BCE');
