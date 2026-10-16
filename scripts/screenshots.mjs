@@ -131,6 +131,18 @@ if (any('desktop-draw')) await drawBorder(await page('desktop-draw', desktop), '
 if (any('dark-draw')) await drawBorder(await page('dark-draw', { ...desktop, colorScheme: 'dark' }), 'dark');
 if (any('phone-draw')) await drawBorder(await page('phone-draw', { viewport: { width: 412, height: 860 }, isMobile: true, hasTouch: true }), 'phone');
 
+// Find a trend: search the bundled catalogue (no network needed).
+async function trendSearch(p, prefix) {
+  await p.getByRole('button', { name: 'Add a trend' }).click();
+  await p.getByTestId('series-editor').getByLabel('Search trends').fill('population');
+  await p.locator('.trend-results li').first().waitFor();
+  await p.waitForTimeout(300);
+  await shot(p, `${prefix}-trends`);
+}
+if (any('desktop-trends')) await trendSearch(await page('desktop-trends', desktop), 'desktop');
+if (any('dark-trends')) await trendSearch(await page('dark-trends', { ...desktop, colorScheme: 'dark' }), 'dark');
+if (any('phone-trends')) await trendSearch(await page('phone-trends', { viewport: { width: 412, height: 860 }, isMobile: true, hasTouch: true }), 'phone');
+
 // The manual.
 async function help(p, prefix) {
   await p.getByRole('button', { name: 'Help' }).click();

@@ -33,8 +33,9 @@ export default defineConfig({
         icons: [{ src: 'icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' }],
       },
       workbox: {
-        // geo/*.json is the bundled basemap, so the map works offline.
-        globPatterns: ['**/*.{js,mjs,css,html,svg,woff2}', 'geo/*.json'],
+        // geo/*.json is the bundled basemap, so the map works offline; data/*.json is the
+        // trend catalogue, so "Find a trend" searches offline.
+        globPatterns: ['**/*.{js,mjs,css,html,svg,woff2}', 'geo/*.json', 'data/*.json'],
         maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
         // Pictures from Wikimedia stay viewable offline once seen.
         runtimeCaching: [
@@ -56,6 +57,18 @@ export default defineConfig({
             options: {
               cacheName: 'historical-basemaps',
               expiration: { maxEntries: 60, maxAgeSeconds: 60 * 60 * 24 * 365 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+          {
+            // A trend's numbers: fresh when online, the last copy when offline.
+            urlPattern: ({ url }) => (url.hostname === 'ourworldindata.org' && url.pathname.startsWith('/grapher/') && url.pathname.endsWith('.csv'))
+              || (url.hostname === 'api.worldbank.org' && url.pathname.startsWith('/v2/country/')),
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'trend-data',
+              networkTimeoutSeconds: 15,
+              expiration: { maxEntries: 200, maxAgeSeconds: 60 * 60 * 24 * 365 },
               cacheableResponse: { statuses: [0, 200] },
             },
           },

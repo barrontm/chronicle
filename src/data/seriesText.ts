@@ -1,4 +1,4 @@
-import { parseHistDate, toDecimalYear } from '../model/dates';
+import { fromOwidYear, parseHistDate, toDecimalYear } from '../model/dates';
 import type { SeriesPoint } from '../model/types';
 
 /** Minimal RFC 4180 CSV parser (quoted fields, escaped quotes, CRLF). */
@@ -62,23 +62,26 @@ export function pointsToText(points: SeriesPoint[]): string {
     .join('\n');
 }
 
-export interface OwidTable {
+/** A downloaded dataset: values per entity (country or region) and indicator. */
+export interface TrendTable {
   entities: string[];
   indicators: string[];
   /** Points for one entity and indicator. */
   pointsFor(entity: string, indicator: string): SeriesPoint[];
   /**
    * Points for every country, keyed by ISO 3166-1 alpha-3 code, for coloring
-   * the map. OWID's own aggregates ("OWID_WRL", continents, income groups) are left out.
+   * the map. Aggregates (world, continents, income groups) are left out.
    */
   countriesFor(indicator: string): Record<string, SeriesPoint[]>;
 }
 
+export type OwidTable = TrendTable;
+
 /**
  * Read an Our World in Data grapher CSV (columns: Entity, Code, Year, …indicators).
- * OWID years are astronomical integers already (e.g. -10000).
+ * OWID writes BCE years as plain negatives (-10000 is 10,000 BCE); they're converted to astronomical.
  */
-export function parseOwidCsv(text: string): OwidTable {
+export function parseOwidCsv(text: string): TrendTable {
   const rows = parseCsv(text);
   if (rows.length < 2) throw new Error('The file has no data rows.');
   const header = rows[0].map((h) => h.trim());
@@ -91,7 +94,7 @@ export function parseOwidCsv(text: string): OwidTable {
   if (!indicatorCols.length) throw new Error('The file has no indicator columns.');
   const data = rows.slice(1);
   const entities = [...new Set(data.map((r) => r[ei]))].sort();
-  const table: OwidTable = {
+  const table: TrendTable = {
     entities,
     indicators: indicatorCols.map((c) => c.h),
     countriesFor(indicator) {
@@ -111,7 +114,7 @@ export function parseOwidCsv(text: string): OwidTable {
       return data
         .filter((r) => r[ei] === entity && r[col.i] !== '' && r[col.i] !== undefined)
         // "Year" columns hold integers; "Day" columns hold ISO dates like 2020-01-22.
-        .map((r) => ({ x: /^-?\d+$/.test(r[yi]) ? Number(r[yi]) : Number(r[yi].slice(0, 4)), v: Number(r[col.i]) }))
+        .map((r) => ({ x: /^-?\d+$/.test(r[yi]) ? fromOwidYear(Number(r[yi])) : Number(r[yi].slice(0, 4)), v: Number(r[col.i]) }))
         .filter((p) => Number.isFinite(p.x) && Number.isFinite(p.v))
         .sort((a, b) => a.x - b.x);
     },
@@ -128,4 +131,45 @@ export function owidCsvUrl(input: string): string {
   if (!url.pathname.endsWith('.csv')) url.pathname += '.csv';
   url.search = '?v=1&csvType=full&useColumnShortNames=false';
   return url.toString();
+}
+
+interface WorldBankRow {
+  indicator: { id: string; value: string };
+  country: { id: string; value: string };
+  countryiso3code: string;
+  date: string;
+  value: number | null;
+}
+
+/**
+ * Read a World Bank API response (`/v2/country/all/indicator/<id>?format=json`):
+ * `[meta, rows]`, or `[{ message }]` on error. `aggregates` are the codes of regions
+ * and income groups, which stay choosable by name but don't color the map.
+ */
+export function parseWorldBankJson(body: unknown, aggregates: Iterable<string>): TrendTable {
+  if (!Array.isArray(body)) throw new Error('The World Bank sent something unexpected.');
+  const [meta, rows] = body as [{ message?: { value?: string }[] }, WorldBankRow[] | null];
+  if (meta?.message?.length) throw new Error(`The World Bank says: ${meta.message[0].value ?? 'unknown error'}`);
+  const data = (rows ?? []).filter((r) => r.value !== null && Number.isFinite(r.value) && /^\d{4}$/.test(r.date));
+  if (!data.length) throw new Error('The World Bank has no values for this indicator.');
+  const skip = new Set(aggregates);
+  const indicator = data[0].indicator.value;
+  const byEntity = new Map<string, SeriesPoint[]>();
+  const codes = new Map<string, string>();
+  for (const r of data) {
+    const name = r.country.value;
+    if (!byEntity.has(name)) byEntity.set(name, []);
+    byEntity.get(name)!.push({ x: Number(r.date), v: r.value as number });
+    if (/^[A-Z]{3}$/.test(r.countryiso3code) && !skip.has(r.countryiso3code)) codes.set(name, r.countryiso3code);
+  }
+  for (const pts of byEntity.values()) pts.sort((a, b) => a.x - b.x);
+  return {
+    entities: [...byEntity.keys()].sort(),
+    indicators: [indicator],
+    pointsFor: (entity, ind) => (ind === indicator ? byEntity.get(entity) ?? [] : []),
+    countriesFor(ind) {
+      if (ind !== indicator) return {};
+      return Object.fromEntries([...codes].map(([name, code]) => [code, byEntity.get(name)!]));
+    },
+  };
 }

@@ -663,29 +663,91 @@ test.describe('historical maps', () => {
   });
 });
 
-test('import a trend for every country from Our World in Data and color the map with it', async ({ page }) => {
-  await page.route('https://ourworldindata.org/grapher/**', (route) =>
-    route.fulfill({
-      headers: { 'Access-Control-Allow-Origin': '*' },
-      contentType: 'text/csv',
-      body: ['Entity,Code,Year,Literacy rate', 'France,FRA,1820,38', 'France,FRA,1900,83', 'India,IND,1900,5', 'World,OWID_WRL,1820,12', 'World,OWID_WRL,1900,21'].join('\n'),
-    }),
-  );
-  await open(page);
-  await page.getByRole('button', { name: 'Add a trend' }).click();
-  const editor = page.getByTestId('series-editor');
-  await editor.getByLabel('Our World in Data chart link').fill('https://ourworldindata.org/grapher/literacy-rate');
-  await editor.getByRole('button', { name: 'Fetch' }).click();
-  await editor.getByLabel('Country or region').selectOption({ label: 'Every country (colors the map)' });
-  await editor.getByRole('button', { name: 'Use data for 2 countries' }).click();
-  await expect(editor.getByTestId('country-data')).toContainText('Values for 2 countries color the map.');
-  await editor.getByLabel('Unit').fill('%');
-  await editor.getByRole('button', { name: 'Add trend' }).click();
-  await expect(page.locator('.strip', { hasText: 'Literacy rate' })).toBeVisible(); // the World curve
+test.describe('trends from Our World in Data and the World Bank', () => {
+  // The service worker caches trend data and the catalogue, which would hide them from page.route.
+  test.use({ serviceWorkers: 'block' });
 
-  await openMap(page);
-  await goToYear(page, '1900');
-  await page.getByRole('button', { name: 'Layers' }).click();
-  await page.getByLabel('Color the map by').selectOption({ label: 'Literacy rate' });
-  await expect(page.getByTestId('map-legend')).toContainText('2 countries with data in 1900');
+  test('import a trend for every country from Our World in Data and color the map with it', async ({ page }) => {
+    await page.route('https://ourworldindata.org/grapher/**', (route) =>
+      route.fulfill({
+        headers: { 'Access-Control-Allow-Origin': '*' },
+        contentType: 'text/csv',
+        body: ['Entity,Code,Year,Literacy rate', 'France,FRA,1820,38', 'France,FRA,1900,83', 'India,IND,1900,5', 'World,OWID_WRL,1820,12', 'World,OWID_WRL,1900,21'].join('\n'),
+      }),
+    );
+    await open(page);
+    await page.getByRole('button', { name: 'Add a trend' }).click();
+    const editor = page.getByTestId('series-editor');
+    await editor.getByLabel('Our World in Data chart link').fill('https://ourworldindata.org/grapher/literacy-rate');
+    await editor.getByRole('button', { name: 'Fetch' }).click();
+    await editor.getByLabel('Country or region').selectOption({ label: 'Every country (colors the map)' });
+    await editor.getByRole('button', { name: 'Use data for 2 countries' }).click();
+    await expect(editor.getByTestId('country-data')).toContainText('Values for 2 countries color the map.');
+    await editor.getByLabel('Unit').fill('%');
+    await editor.getByRole('button', { name: 'Add trend' }).click();
+    await expect(page.locator('.strip', { hasText: 'Literacy rate' })).toBeVisible(); // the World curve
+
+    await openMap(page);
+    await goToYear(page, '1900');
+    await page.getByRole('button', { name: 'Layers' }).click();
+    await page.getByLabel('Color the map by').selectOption({ label: 'Literacy rate' });
+    await expect(page.getByTestId('map-legend')).toContainText('2 countries with data in 1900');
+  });
+
+  test('find a trend by searching, then import the World Bank numbers for every country', async ({ page }) => {
+    await page.route('**/data/trend-index.json', (route) =>
+      route.fulfill({
+        contentType: 'application/json',
+        body: JSON.stringify({
+          built: '2026-10-15',
+          wbAggregates: ['WLD'],
+          items: [
+            { s: 'owid', id: 'gdp-per-capita', t: 'GDP per capita', from: 1, to: 2022 },
+            { s: 'wb', id: 'SM.POP.TOTL', t: 'International migrant stock, total', d: 'People born in another country.', k: 'Social Development' },
+          ],
+        }),
+      }),
+    );
+    await page.route('https://api.worldbank.org/v2/country/all/indicator/SM.POP.TOTL**', (route) =>
+      route.fulfill({
+        headers: { 'Access-Control-Allow-Origin': '*' },
+        contentType: 'application/json',
+        body: JSON.stringify([{ page: 1, pages: 1 }, [
+          ...[['World', 'WLD', 1990, 152986157], ['World', 'WLD', 2020, 280598105], ['Germany', 'DEU', 1990, 5936181], ['Germany', 'DEU', 2020, 15762457], ['Mexico', 'MEX', 2020, 1197624]]
+            .map(([name, code, year, value]) => ({ indicator: { id: 'SM.POP.TOTL', value: 'International migrant stock, total' }, country: { id: 'xx', value: name }, countryiso3code: code, date: String(year), value })),
+        ]]),
+      }),
+    );
+    await open(page);
+    await page.getByRole('button', { name: 'Add a trend' }).click();
+    const editor = page.getByTestId('series-editor');
+    await editor.getByLabel('Search trends').fill('migrant');
+    await editor.getByRole('button', { name: /International migrant stock, total/ }).click();
+    await editor.getByLabel('Country or region').selectOption({ label: 'Every country (colors the map)' });
+    await editor.getByRole('button', { name: 'Use data for 2 countries' }).click();
+    await expect(editor.getByLabel('Name')).toHaveValue('International migrant stock, total');
+    await expect(editor.getByLabel('Source', { exact: true })).toHaveValue('World Bank');
+    await editor.getByRole('button', { name: 'Add trend' }).click();
+    await expect(page.locator('.strip', { hasText: 'International migrant stock' })).toBeVisible();
+
+    await openMap(page);
+    await goToYear(page, '2020');
+    await page.getByRole('button', { name: 'Layers' }).click();
+    await page.getByLabel('Color the map by').selectOption({ label: 'International migrant stock, total' });
+    await expect(page.getByTestId('map-legend')).toContainText('2 countries with data in 2020');
+  });
+
+  test('searching trends works offline; fetching numbers says it needs a connection', async ({ page, context }) => {
+    await page.route('**/data/trend-index.json', (route) =>
+      route.fulfill({ contentType: 'application/json', body: JSON.stringify({ built: '', wbAggregates: [], items: [{ s: 'owid', id: 'population', t: 'Population', from: -10000, to: 2023 }] }) }),
+    );
+    await open(page);
+    await page.getByRole('button', { name: 'Add a trend' }).click();
+    const editor = page.getByTestId('series-editor');
+    await expect(editor.getByText('Loading the list of trends…')).toBeHidden();
+    await context.setOffline(true);
+    await editor.getByLabel('Search trends').fill('popul');
+    await editor.getByRole('button', { name: /Population/ }).click();
+    await expect(editor.getByRole('alert')).toContainText('You’re offline. Getting numbers from Our World in Data needs a connection.');
+  });
 });

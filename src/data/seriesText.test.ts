@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { owidCsvUrl, parseCsv, parseOwidCsv, parsePointsText, pointsToText } from './seriesText';
+import { owidCsvUrl, parseCsv, parseOwidCsv, parsePointsText, parseWorldBankJson, pointsToText } from './seriesText';
+import worldBank from '../../tests/fixtures/worldbank-population.json';
 
 describe('parseCsv', () => {
   it('handles quotes, commas in quotes and CRLF', () => {
@@ -41,7 +42,7 @@ describe('Our World in Data', () => {
     expect(t.entities).toEqual(['France', 'World']);
     expect(t.indicators).toEqual(['Population (historical)']);
     expect(t.pointsFor('World', 'Population (historical)')).toEqual([
-      { x: -10000, v: 4501152 },
+      { x: -9999, v: 4501152 }, // 10,000 BCE
       { x: 1800, v: 984000000 },
     ]);
   });
@@ -70,5 +71,27 @@ describe('Our World in Data', () => {
       'https://ourworldindata.org/grapher/population.csv?v=1&csvType=full&useColumnShortNames=false',
     );
     expect(() => owidCsvUrl('https://example.com/x')).toThrow(/Our World in Data chart/);
+  });
+});
+
+describe('parseWorldBankJson', () => {
+  const table = parseWorldBankJson(worldBank, ['WLD', 'ECS']);
+
+  it('lists every entity by name, aggregates included, with points sorted by year', () => {
+    expect(table.entities).toEqual(['Europe & Central Asia', 'France', 'India', 'World']);
+    expect(table.indicators).toEqual(['Population, total']);
+    expect(table.pointsFor('World', 'Population, total')).toEqual([{ x: 1960, v: 3031474000 }, { x: 2020, v: 7856138000 }]);
+  });
+
+  it('keys countries by ISO code, skips aggregates and missing values', () => {
+    expect(table.countriesFor('Population, total')).toEqual({
+      FRA: [{ x: 1960, v: 46649927 }, { x: 2020, v: 67571107 }],
+      IND: [{ x: 2020, v: 1396387127 }],
+    });
+  });
+
+  it('reports World Bank errors and empty indicators', () => {
+    expect(() => parseWorldBankJson([{ message: [{ value: 'Invalid value' }] }], [])).toThrow('The World Bank says: Invalid value');
+    expect(() => parseWorldBankJson([{ page: 1 }, null], [])).toThrow('no values');
   });
 });

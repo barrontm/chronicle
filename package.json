@@ -13,7 +13,8 @@
     "check:manual": "node scripts/check-manual.mjs",
     "check": "npm run check:manual && npm run typecheck && npm test && npm run build && npm run test:e2e",
     "check:quiet": "node scripts/check-manual.mjs && tsc --noEmit --pretty false && vitest run --reporter=dot --silent && vite build --logLevel warn && playwright test --reporter=dot --quiet",
-    "shots": "node scripts/screenshots.mjs"
+    "shots": "node scripts/screenshots.mjs",
+    "build:trend-index": "node scripts/build-trend-index.ts"
   },
   "license": "UNLICENSED",
   "dependencies": {

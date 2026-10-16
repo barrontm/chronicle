@@ -167,6 +167,15 @@ export function compareHistDate(a: HistDate, b: HistDate): number {
  * which is how historians cite them. A day the Gregorian calendar lacks
  * (29 Feb 1500) is dropped, keeping the month. Returns null if unreadable.
  */
+/**
+ * Our World in Data year to astronomical. OWID counts BCE years as plain negatives
+ * (-10000 is 10,000 BCE) with no year 0 between them, so negatives shift by one.
+ * A stray year 0 is kept as is.
+ */
+export function fromOwidYear(y: number): number {
+  return y < 0 ? y + 1 : y;
+}
+
 export function fromWikidataTime(time: string, precision: number, approx = false): HistDate | null {
   const m = time.match(/^([+-])(\d+)-(\d{2})-(\d{2})T/);
   if (!m) return null;

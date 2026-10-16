@@ -40,6 +40,12 @@ Tickets marked 🏛 make the map good for Ancient Greece and its wars (city-stat
 11. **Backup reminder** · S · haiku. Remind after 14 days without an export.
    Files: `src/ui/App.tsx` (store the last export date with `useStored`).
    Done when: the reminder shows once, and exporting or dismissing hides it.
+12. **Bubbles for counts, click a country for its curve** · M · opus. Totals (people, migrants, $) become circles at country centroids (`labelPoint` over the bundled countries), area ∝ value, scaled to the maximum over all years so growth shows as the year plays; rates keep shading. `defaultMapStyle(series)` guesses from the unit; a "Show as: Shades / Bubbles" toggle (per trend, `useStored`) overrides. The legend gets reference circles. Clicking a country opens a sparkline with the current year marked.
+   Files: `src/ui/mapData.ts` (`countryBubbles`, `defaultMapStyle`, tested), `MapView.tsx` (bubbles layer, popover), `MapPane.tsx` (toggle, legend).
+   Done when: an e2e test switches a population trend to bubbles and sees the bubble legend.
+13. **Migration by origin and destination** · M · opus. A script converts UN DESA "International Migrant Stock 2024: Destination and Origin" (1990–2024; total, men, women) into `public/data/migration/<ISO3>.json`, fetched on demand. The catalogue gains "Immigrants to X by country of origin" and "Emigrants from X by destination"; importing one makes a regional `Series` keyed by the partner country, shown as bubbles (ticket 12). First confirm the UN download URL and file sizes.
+   Files: `scripts/build-migration.ts`, `scripts/build-trend-index.ts`, `src/data/trendCatalog.ts`, `SeriesEditor.tsx`.
+   Done when: a mocked e2e test imports "Emigrants from Ireland by destination" and sees a bubble on the United States.
 
 ## M1 — Foundation ✅ (2026-10-15)
 - [x] Entries (event / period / person) with BCE-aware dates and approximate dates
@@ -48,6 +54,7 @@ Tickets marked 🏛 make the map good for Ancient Greece and its wars (city-stat
 - [x] Connections between entries (influenced, led to, part of, responded to, related)
 - [x] Pictures: Wikimedia Commons search with credit and license, image links, uploads
 - [x] Trend strips aligned to the timeline: paste data or import from Our World in Data, log scale
+- [x] Find a trend: search Our World in Data and World Bank datasets (catalogue bundled for offline search)
 - [x] Offline PWA, IndexedDB storage, export backup, import with merge
 - [x] Unit tests, e2e tests, CI, deploy workflow
 

@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   compareHistDate,
+  formatYear,
+  fromOwidYear,
   formatAxisYear,
   formatHistDate,
   formatRange,
@@ -131,5 +133,15 @@ describe('fromWikidataTime', () => {
   it('returns null for values it cannot read', () => {
     expect(fromWikidataTime('soon', 11)).toBeNull();
     expect(fromWikidataTime('+0000-00-00T00:00:00Z', 9)).toBeNull();
+  });
+});
+
+describe('fromOwidYear', () => {
+  it('reads OWID negatives as BCE years', () => {
+    expect(formatYear(fromOwidYear(-10000))).toBe('10000 BCE');
+    expect(formatYear(fromOwidYear(-1))).toBe('1 BCE');
+    expect(fromOwidYear(0)).toBe(0);
+    expect(fromOwidYear(1)).toBe(1);
+    expect(fromOwidYear(2023)).toBe(2023);
   });
 });
