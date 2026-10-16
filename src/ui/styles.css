@@ -180,6 +180,12 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .timeline-host .vis-item.vis-range.approx { border-left-style: dashed; }
 .timeline-host .vis-item.kind-person.approx { border-style: dashed; }
 
+/* A bar too narrow for its name at this zoom lets the name run on past it, with a halo so it reads over grid lines. */
+.timeline-host .vis-item.vis-range.label-out .vis-item-overflow { overflow: visible; }
+.timeline-host .vis-item.vis-range.label-out .it > span {
+  text-shadow: 0 0 3px var(--bg), 0 0 3px var(--bg), 0 0 2px var(--bg);
+}
+
 /* Influences of the selected person light up; everything else steps back. */
 .timeline-host .vis-item { transition: opacity 0.15s, box-shadow 0.15s; }
 .timeline-host .vis-item.dimmed { opacity: 0.3; }

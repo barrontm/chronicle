@@ -5,6 +5,7 @@ import { Timeline, type TimelineOptions } from 'vis-timeline/peer';
 import { decimalYearToJsDate, formatAxisYear, formatYear, jsDateToDecimalYear, toJsDate } from '../model/dates';
 import type { Category, MediaRef, Relation, TimelineItem } from '../model/types';
 import { anchors, arcPath, influenceArrows, influenceClasses } from './influenceLinks';
+import { labelWidthPx, narrowIds } from './labels';
 import { escapeHtml } from './util';
 
 /**
@@ -97,6 +98,16 @@ type WithMarker = Timeline & { setCustomTimeMarker(title: string, id?: string, e
 
 const SVG = 'http://www.w3.org/2000/svg';
 
+/** Measures label text in the timeline's font (13px), with one shared canvas. */
+let measureCtx: CanvasRenderingContext2D | null | undefined;
+function measureLabel(text: string): number {
+  if (measureCtx === undefined) {
+    measureCtx = document.createElement('canvas').getContext('2d');
+    if (measureCtx) measureCtx.font = `13px ${getComputedStyle(document.body).fontFamily}`;
+  }
+  return measureCtx ? measureCtx.measureText(text).width : text.length * 7;
+}
+
 /** The overlay that holds influence arrows, inside the timeline's plotting area so it clips and scrolls with it. */
 function makeArrowLayer(center: Element): SVGSVGElement {
   const svg = document.createElementNS(SVG, 'svg');
@@ -131,6 +142,8 @@ export function TimelineView({ items, categories, relations, selectedId, thumbFo
   const infl = useRef({ items, relations, selectedId });
   infl.current = { items, relations, selectedId };
   const baseClass = useRef(new Map<string, string>());
+  /** Ranges (periods, lives) with how wide their names are, to spot bars too narrow for them. */
+  const ranges = useRef<Array<{ id: string; start: number; end: number; labelPx: number }>>([]);
   const arrowLayer = useRef<SVGSVGElement | null>(null);
 
   /** Redraw arrows from current item positions. Items off-screen aren't rendered, so they get no arrow. */
@@ -161,12 +174,20 @@ export function TimelineView({ items, categories, relations, selectedId, thumbFo
     }
   };
 
-  /** Light up the selection's influences and dim the rest; or clear it all. */
-  const applyInfluence = () => {
+  /**
+   * Classes that depend on more than the item: names that run past a bar too
+   * narrow for them at this zoom, and the selection's influences lit up with
+   * the rest dimmed.
+   */
+  const applyClasses = () => {
     const roles = influenceClasses(infl.current.relations, infl.current.selectedId);
+    const t = tl.current;
+    const panelPx = host.current?.querySelector('.vis-panel.vis-center')?.clientWidth ?? 0;
+    const w = t?.getWindow();
+    const narrow = w && panelPx ? narrowIds(ranges.current, { start: w.start.getTime(), end: w.end.getTime() }, panelPx) : new Set<string>();
     const set = itemSet.current;
     const updates = set.getIds().map((id) => {
-      const extra = roles ? ` ${roles.get(id as string) ?? 'dimmed'}` : '';
+      const extra = `${narrow.has(id as string) ? ' label-out' : ''}${roles ? ` ${roles.get(id as string) ?? 'dimmed'}` : ''}`;
       return { id: id as string, className: `${baseClass.current.get(id as string) ?? ''}${extra}` };
     });
     if (updates.some((u) => set.get(u.id)?.className !== u.className)) set.update(updates);
@@ -225,6 +246,8 @@ export function TimelineView({ items, categories, relations, selectedId, thumbFo
       });
     };
     t.on('rangechange', report);
+    // After each zoom or pan, let names out of bars that got too narrow for them (and back in).
+    t.on('rangechanged', applyClasses);
     t.on('changed', report);
     // Fires after every redraw (zoom, pan, scroll), so arrows follow their items.
     t.on('changed', drawArrows);
@@ -255,19 +278,25 @@ export function TimelineView({ items, categories, relations, selectedId, thumbFo
     groupSet.current.add(categories.map((c) => ({ id: c.id, content: c.label, style: `--c: ${c.color}` })));
     const visItems = items.filter((i) => colorOf.has(i.categoryId)).map((i) => toVisItem(i, colorOf.get(i.categoryId)!, thumbFor));
     baseClass.current = new Map(visItems.map((v) => [v.id, v.className]));
+    const visById = new Map(visItems.map((v) => [v.id, v]));
+    ranges.current = items.flatMap((i) => {
+      const v = visById.get(i.id);
+      if (!v || v.type !== 'range') return [];
+      return [{ id: i.id, start: v.start.getTime(), end: v.end.getTime(), labelPx: labelWidthPx(i.title, !!i.media?.length && !!thumbFor(i.media[0]), measureLabel) }];
+    });
     itemSet.current.clear();
     itemSet.current.add(visItems);
-    applyInfluence();
+    applyClasses();
     // Rebuilding the items drops vis-timeline's selection; put it back.
     tl.current?.setSelection(infl.current.selectedId ? [infl.current.selectedId] : []);
   }, [items, categories, thumbFor]);
 
   useEffect(() => {
-    applyInfluence();
+    applyClasses();
   }, [relations]);
 
   useEffect(() => {
-    applyInfluence();
+    applyClasses();
     tl.current?.setSelection(selectedId ? [selectedId] : []);
     if (selectedId && itemSet.current.get(selectedId)) {
       // Bring the item into view without changing zoom if it's off-screen.

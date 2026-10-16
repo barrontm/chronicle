@@ -312,6 +312,24 @@ test('clicking a person lights up their influences on the timeline @phone', asyn
   await expect(page.locator('.influence-arrows path.arc')).toHaveCount(0);
 });
 
+test('zoomed far out, names run past bars too narrow for them, and go back in when zoomed in', async ({ page }) => {
+  await open(page);
+  await importFixture(page);
+  const plato = page.locator('.vis-item', { hasText: 'Plato' });
+  const box = (await page.getByTestId('timeline').boundingBox())!;
+  await page.mouse.move(box.x + box.width / 2, box.y + 150);
+  for (let i = 0; i < 6; i++) await page.mouse.wheel(0, 300);
+  await expect(plato).toHaveClass(/label-out/);
+  // The whole name is drawn, not clipped to the bar.
+  const name = plato.locator('.it > span');
+  expect((await name.boundingBox())!.width).toBeGreaterThan((await plato.boundingBox())!.width);
+
+  const at = (await plato.boundingBox())!;
+  await page.mouse.move(at.x + 2, at.y - 4);
+  for (let i = 0; i < 14; i++) await page.mouse.wheel(0, -300);
+  await expect(plato).not.toHaveClass(/label-out/);
+});
+
 test('Wikipedia suggests influences: connect one on the timeline, add one that isn’t', async ({ page }) => {
   const cors = { 'Access-Control-Allow-Origin': '*' };
   const snak = (value: unknown) => ({ mainsnak: { snaktype: 'value', datavalue: { value } }, rank: 'normal' });
