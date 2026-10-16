@@ -689,6 +689,9 @@ test('record a migration and see its arrow only while people were moving', async
 });
 
 test('draw a city-state’s borders and date them @phone', async ({ page }) => {
+  // Loads the WebGL map twice (before and after reopening); under SwiftShader with
+  // parallel workers that alone can pass the default 30s.
+  test.slow();
   await open(page);
   await openMap(page);
   await goToYear(page, '450 BCE');
