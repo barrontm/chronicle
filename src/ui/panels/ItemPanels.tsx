@@ -8,6 +8,7 @@ import { CitationsEditor, DateField, Field, RecordPicker } from '../fields';
 import { ImagePicker } from '../ImagePicker';
 import type { Nav } from '../nav';
 import { formatCitation, titleOf } from '../util';
+import { InfluenceSuggestions } from './Influences';
 import { QuickSource } from './SourcePanels';
 
 const KIND_LABEL: Record<ItemKind, string> = { event: 'Event', span: 'Period', person: 'Person' };
@@ -105,6 +106,7 @@ export function ItemView({ id, nav }: { id: string; nav: Nav }) {
           </ul>
         </>
       )}
+      {item.kind === 'person' && item.wikidataId && <InfluenceSuggestions key={item.id} item={item} nav={nav} />}
 
       {item.citations && item.citations.length > 0 && (
         <>
@@ -164,7 +166,8 @@ export function ItemEditor({ id, init, draft: prefill, nav }: {
   });
   const [valid, setValid] = useState({ start: !!draft.start, end: true });
   const initialRelations = existing ? doc.relations.filter((r) => r.fromId === draft.id || r.toId === draft.id) : [];
-  const [relations, setRelations] = useState<Relation[]>(initialRelations);
+  // A Wikipedia draft arrives with influences on people already on the timeline.
+  const [relations, setRelations] = useState<Relation[]>(existing ? initialRelations : prefill?.relations ?? []);
   const [choice, setChoice] = useState(0);
   const [picking, setPicking] = useState(false);
   const [quickSource, setQuickSource] = useState(false);

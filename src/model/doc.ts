@@ -329,6 +329,15 @@ export function relationsFor(doc: TimelineDoc, id: string): { outgoing: Relation
   };
 }
 
+/** Who influenced `id` (by) and whom `id` influenced (on), from "influenced" connections. */
+export function influencesOf(relations: Relation[], id: string): { by: string[]; on: string[] } {
+  const infl = relations.filter((r) => r.type === 'influenced');
+  return {
+    by: infl.filter((r) => r.toId === id).map((r) => r.fromId),
+    on: infl.filter((r) => r.fromId === id).map((r) => r.toId),
+  };
+}
+
 /** Human phrasing for a connection, read in either direction. */
 export function describeRelation(type: RelationType, direction: 'out' | 'in'): string {
   const out: Record<RelationType, string> = {

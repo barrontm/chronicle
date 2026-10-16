@@ -16,6 +16,7 @@ Chronicle is your own history timeline. It starts empty: you fill it in as you r
 - An **event** is a moment (a battle, a treaty). A **period** has a start and an end (a war, a reign). A **person** runs from birth to death.
 - Type dates the way you would say them: `431 BCE`, `c. 1440`, `1914-07-28`. The field shows how it read your date. Leave the end empty if it's unknown or ongoing.
 - Approximate dates (`c.`) show with a dashed edge on the timeline.
+- Zoomed far out, a short life or period is drawn too thin to hold its name, so the name runs on past it and entries spread onto more lines so names don't overlap. Zoom in and names go back inside their bars. Names near the right edge move left so they stay on screen, and the years along the top space themselves out so they never run together, even on a phone zoomed all the way out.
 - Each entry has a **category** (politics, war, ideas, science, technology, society, arts). The colored chips under the top bar show or hide a category everywhere, on the timeline and on the map.
 - Click an entry to open it, then **Edit** to change it or **Show on map** to jump to its year on the map.
 
@@ -36,6 +37,12 @@ This needs a connection.
 In an entry's editor, connect it to another entry and choose the kind: *influenced*, *caused*, *part of*, *responded to* or *related*. Connections show on both entries. On the map, **Layers → Show connections** draws a dashed line between connected entries when both are on the map.
 
 > Use *part of* for battles in a war, so later you can see a war and its battles together.
+
+### Influences
+
+Click a person on the timeline and the people connected to them by *influenced* light up: amber for who influenced them, blue for whom they influenced, with arrows showing which way it went. Everything else fades back. Click empty space or close the panel to clear it. Arrows only show while both people are in view.
+
+For a person added from Wikipedia, **Suggest influences** lists who Wikipedia says influenced them and whom they influenced. People already on your timeline get **Connect**; the rest get **Add from Wikipedia**. When you add a person from Wikipedia, their influences who are already on your timeline are filled in as connections, so you can remove any you disagree with before saving. Suggestions need a connection.
 
 ## Pictures
 

@@ -296,6 +296,93 @@ test('adding the same Wikipedia page twice opens the existing entry instead', as
   await expect(page.getByTestId('item-view').getByRole('heading', { name: 'Ada Lovelace' })).toBeVisible();
 });
 
+test('clicking a person lights up their influences on the timeline @phone', async ({ page }) => {
+  await open(page);
+  await importFixture(page);
+  await page.locator('.vis-item', { hasText: 'Plato' }).click();
+  await expect(page.locator('.vis-item.infl-by', { hasText: 'Socrates' })).toBeVisible();
+  await expect(page.locator('.vis-item.infl-on', { hasText: 'Aristotle' })).toBeVisible();
+  await expect(page.locator('.vis-item.dimmed', { hasText: 'Confucius' })).toBeVisible();
+  await expect(page.locator('.influence-arrows path.arc')).toHaveCount(2);
+  await expect(page.locator('.influence-arrows path.arc.infl-by')).toHaveAttribute('data-from', 'i_socrates');
+
+  // A person without influences changes nothing.
+  await page.locator('.vis-item', { hasText: 'Confucius' }).click();
+  await expect(page.locator('.vis-item.dimmed')).toHaveCount(0);
+  await expect(page.locator('.influence-arrows path.arc')).toHaveCount(0);
+});
+
+test('zoomed far out, names run past bars too narrow for them, and go back in when zoomed in @phone', async ({ page }) => {
+  await open(page);
+  await importFixture(page);
+  const plato = page.locator('.vis-item', { hasText: 'Plato' });
+  const box = (await page.getByTestId('timeline').boundingBox())!;
+  await page.mouse.move(box.x + box.width / 2, box.y + 150);
+  for (let i = 0; i < 6; i++) await page.mouse.wheel(0, 300);
+  await expect(plato).toHaveClass(/label-out/);
+  // The whole name is drawn, not clipped to the bar.
+  const name = plato.locator('.it > span');
+  expect((await name.boundingBox())!.width).toBeGreaterThan((await plato.boundingBox())!.width);
+  // Names near the right edge are pulled left so the edge doesn't cut them off.
+  const panel = (await page.locator('.vis-panel.vis-center').boundingBox())!;
+  for (const who of ['Isaac Newton', 'Albert Einstein']) {
+    const label = (await page.locator('.vis-item', { hasText: who }).locator('.it > span').boundingBox())!;
+    expect(label.x + label.width).toBeLessThanOrEqual(panel.x + panel.width + 1);
+  }
+  // Year labels on the axis never run into each other, even on a phone.
+  const yearLabels = await page.locator('.vis-time-axis .vis-text.vis-minor:not(.vis-measure)').evaluateAll((els, edge) =>
+    els.filter((e) => e.textContent?.trim()).map((e) => e.getBoundingClientRect())
+      .filter((r) => r.right > edge.left && r.left < edge.right).map((r) => [r.left, r.right]).sort((x, y) => x[0] - y[0]),
+  { left: panel.x, right: panel.x + panel.width });
+  expect(yearLabels.length).toBeGreaterThan(1);
+  for (let i = 1; i < yearLabels.length; i++) expect(yearLabels[i][0]).toBeGreaterThanOrEqual(yearLabels[i - 1][1] - 1);
+
+  // Over the year axis the wheel only zooms; over the lanes a phone may scroll them instead.
+  const at = (await plato.boundingBox())!;
+  const axis = (await page.locator('.vis-time-axis').first().boundingBox())!;
+  await page.mouse.move(at.x + 2, axis.y + axis.height / 2);
+  // Zoom in until Plato's life is wider than his name (a phone zooms less per step).
+  for (let i = 0; i < 60 && /label-out/.test((await plato.getAttribute('class')) ?? ''); i++) {
+    await page.mouse.wheel(0, -300);
+    await page.waitForTimeout(50);
+  }
+  await expect(plato).not.toHaveClass(/label-out/);
+});
+
+test('Wikipedia suggests influences: connect one on the timeline, add one that isn’t', async ({ page }) => {
+  const cors = { 'Access-Control-Allow-Origin': '*' };
+  const snak = (value: unknown) => ({ mainsnak: { snaktype: 'value', datavalue: { value } }, rank: 'normal' });
+  await page.route('https://www.wikidata.org/w/api.php**', (route) => {
+    const url = new URL(route.request().url());
+    if (url.searchParams.get('action') === 'query') {
+      expect(url.searchParams.get('srsearch')).toBe('haswbstatement:P737=Q99999912');
+      return route.fulfill({ headers: cors, json: { query: { search: [{ title: 'Q99999930' }] } } });
+    }
+    if (url.searchParams.get('props') === 'labels|sitelinks') {
+      const page = (label: string) => ({ labels: { en: { value: label } }, sitelinks: { enwiki: { title: label } } });
+      return route.fulfill({ headers: cors, json: { entities: {
+        Q99999910: page('Plato'), Q99999911: page('Socrates'), Q99999930: page('Alexander the Great'),
+      } } });
+    }
+    return route.fulfill({ headers: cors, json: { entities: { Q99999912: { claims: {
+      P31: [snak({ id: 'Q5' })], P737: [snak({ id: 'Q99999910' }), snak({ id: 'Q99999911' })],
+    } } } } });
+  });
+  await open(page);
+  await importFixture(page);
+  await page.locator('.vis-item', { hasText: 'Aristotle' }).click();
+  const view = page.getByTestId('item-view');
+  const suggestions = view.getByTestId('influence-suggestions');
+  await suggestions.getByRole('button', { name: 'Suggest influences' }).click();
+
+  // Plato is already connected, so only Socrates is offered.
+  await expect(suggestions.getByText('Plato')).toHaveCount(0);
+  await suggestions.getByRole('listitem').filter({ hasText: 'Socrates' }).getByRole('button', { name: 'Connect' }).click();
+  await expect(view.getByRole('button', { name: 'Influenced by Socrates' })).toBeVisible();
+  await expect(suggestions.getByText('Socrates')).toHaveCount(0);
+  await expect(suggestions.getByRole('listitem').filter({ hasText: 'Alexander the Great' }).getByRole('button', { name: 'Add from Wikipedia' })).toBeVisible();
+});
+
 test('adding from Wikipedia says a connection is needed when offline', async ({ page, context }) => {
   await open(page);
   await context.setOffline(true);

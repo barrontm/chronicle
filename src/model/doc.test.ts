@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   createEmptyDoc,
   DocValidationError,
+  influencesOf,
   mergeDocs,
   notesFor,
   openStoredDoc,
@@ -12,7 +13,7 @@ import {
   serializeDoc,
   upsert,
 } from './doc';
-import { SCHEMA_VERSION, type TimelineItem } from './types';
+import { SCHEMA_VERSION, type Relation, type TimelineItem } from './types';
 
 const fixtureJson = readFileSync(new URL('../../tests/fixtures/sample-history.json', import.meta.url), 'utf8');
 const fixture = () => parseDoc(fixtureJson);
@@ -217,5 +218,14 @@ describe('openStoredDoc', () => {
     const opened = openStoredDoc(newer);
     expect(opened.status).toBe('newer');
     expect(opened.doc).toBe(newer);
+  });
+});
+
+describe('influencesOf', () => {
+  it('reads only "influenced" connections, in both directions', () => {
+    const r = (id: string, fromId: string, toId: string, type: Relation['type'] = 'influenced'): Relation => ({ id, fromId, toId, type, updatedAt: 1 });
+    const rels = [r('1', 'socrates', 'plato'), r('2', 'plato', 'aristotle'), r('3', 'plato', 'academy', 'caused')];
+    expect(influencesOf(rels, 'plato')).toEqual({ by: ['socrates'], on: ['aristotle'] });
+    expect(influencesOf(rels, 'nobody')).toEqual({ by: [], on: [] });
   });
 });

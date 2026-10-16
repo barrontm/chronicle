@@ -1,6 +1,6 @@
 import { compareHistDate, fromWikidataTime } from '../model/dates';
 import { newId } from '../model/doc';
-import type { HistDate, ItemKind, Place, Source, TimelineItem } from '../model/types';
+import type { HistDate, ItemKind, Place, Relation, Source, TimelineItem } from '../model/types';
 import { fetchCommonsFile, resultToMedia } from './commons';
 
 /**
@@ -19,7 +19,7 @@ const CIRCA = 'Q5727902';
 const P = {
   instanceOf: 'P31', born: 'P569', died: 'P570', start: 'P580', end: 'P582', pointInTime: 'P585',
   inception: 'P571', dissolved: 'P576', coords: 'P625', image: 'P18', birthPlace: 'P19', deathPlace: 'P20',
-  location: 'P276', circumstances: 'P1480',
+  location: 'P276', circumstances: 'P1480', influencedBy: 'P737',
 } as const;
 
 export interface WikiSearchResult {
@@ -52,12 +52,16 @@ export interface WikidataFacts {
   birthPlaceId?: string;
   deathPlaceId?: string;
   locationId?: string;
+  /** Wikidata ids of people this one was influenced by (P737). */
+  influencedByIds: string[];
 }
 
 /** An entry ready for the editor, plus any sources it cites that aren't saved yet. */
 export interface ItemDraft {
   item: TimelineItem;
   newSources: Source[];
+  /** Connections to entries already on the timeline, suggested by Wikidata. */
+  relations?: Relation[];
 }
 
 export function buildSearchUrl(query: string, limit = 10): string {
@@ -79,6 +83,16 @@ export function buildCoordsUrl(qid: string): string {
 
 export function buildLabelsUrl(qids: string[]): string {
   return `${WIKIDATA_API}?${new URLSearchParams({ action: 'wbgetentities', ids: qids.join('|'), props: 'labels', languages: 'en', format: 'json', origin: '*' })}`;
+}
+
+/** Labels plus English Wikipedia page titles, so a suggestion can be added from Wikipedia. */
+export function buildLabelsAndPagesUrl(qids: string[]): string {
+  return `${WIKIDATA_API}?${new URLSearchParams({ action: 'wbgetentities', ids: qids.join('|'), props: 'labels|sitelinks', sitefilter: 'enwiki', languages: 'en', format: 'json', origin: '*' })}`;
+}
+
+/** Everyone whose "influenced by" (P737) names this person. */
+export function buildInfluencedSearchUrl(qid: string): string {
+  return `${WIKIDATA_API}?${new URLSearchParams({ action: 'query', list: 'search', srsearch: `haswbstatement:${P.influencedBy}=${qid}`, srlimit: '50', srnamespace: '0', format: 'json', origin: '*' })}`;
 }
 
 const https = (u: string | undefined) => (u?.startsWith('//') ? `https:${u}` : u);
@@ -137,6 +151,13 @@ function coordsOf(claims: Claims): { lat: number; lon: number } | undefined {
 
 const idOf = (claims: Claims, prop: string) => firstValue<{ id?: string }>(claims, prop)?.id;
 
+/** Every usable item value of a property, not just the first. */
+const idsOf = (claims: Claims, prop: string): string[] => [
+  ...new Set((claims[prop] ?? [])
+    .filter((c) => c.rank !== 'deprecated' && c.mainsnak?.snaktype === 'value')
+    .flatMap((c) => { const id = (c.mainsnak?.datavalue?.value as { id?: string })?.id; return id ? [id] : []; })),
+];
+
 export function parseEntity(json: unknown, qid: string): WikidataFacts {
   const claims = (json as { entities?: Record<string, { claims?: Claims }> })?.entities?.[qid]?.claims ?? {};
   return {
@@ -151,6 +172,7 @@ export function parseEntity(json: unknown, qid: string): WikidataFacts {
     birthPlaceId: idOf(claims, P.birthPlace),
     deathPlaceId: idOf(claims, P.deathPlace),
     locationId: idOf(claims, P.location),
+    influencedByIds: idsOf(claims, P.influencedBy),
   };
 }
 
@@ -162,6 +184,42 @@ export function parseCoords(json: unknown): { lat: number; lon: number } | undef
 export function parseLabels(json: unknown): Record<string, string> {
   const entities = (json as { entities?: Record<string, { labels?: { en?: { value?: string } } }> })?.entities ?? {};
   return Object.fromEntries(Object.entries(entities).flatMap(([id, e]) => (e.labels?.en?.value ? [[id, e.labels.en.value]] : [])));
+}
+
+/** Search results from `buildInfluencedSearchUrl` → Wikidata ids. */
+export function parseInfluencedSearch(json: unknown): string[] {
+  const hits = (json as { query?: { search?: Array<{ title?: string }> } })?.query?.search ?? [];
+  return hits.flatMap((h) => (h.title && /^Q\d+$/.test(h.title) ? [h.title] : []));
+}
+
+/** English Wikipedia page titles by Wikidata id, from `buildLabelsAndPagesUrl`. */
+export function parsePages(json: unknown): Record<string, string> {
+  const entities = (json as { entities?: Record<string, { sitelinks?: { enwiki?: { title?: string } } }> })?.entities ?? {};
+  return Object.fromEntries(Object.entries(entities).flatMap(([id, e]) => (e.sitelinks?.enwiki?.title ? [[id, e.sitelinks.enwiki.title]] : [])));
+}
+
+/** One person Wikipedia says is linked by influence to the one you're looking at. */
+export interface InfluenceSuggestion {
+  qid: string;
+  label: string;
+  /** English Wikipedia page key, when there is one, for "Add from Wikipedia". */
+  pageKey?: string;
+  /** 'by': they influenced this person. 'on': this person influenced them. */
+  direction: 'by' | 'on';
+  /** The entry already on the timeline, if any. */
+  existingId?: string;
+}
+
+/**
+ * "Influenced" connections between a (new) entry and entries already on the
+ * timeline, from Wikidata ids in both directions.
+ */
+export function influenceRelations(itemId: string, byIds: string[], onIds: string[], existingItems: TimelineItem[]): Relation[] {
+  const byQid = new Map(existingItems.filter((i) => i.wikidataId && i.id !== itemId).map((i) => [i.wikidataId!, i.id]));
+  const rel = (fromId: string, toId: string): Relation => ({ id: newId('r'), fromId, toId, type: 'influenced', updatedAt: 0 });
+  const by = [...new Set(byIds)].flatMap((q) => (byQid.has(q) ? [rel(byQid.get(q)!, itemId)] : []));
+  const on = [...new Set(onIds)].flatMap((q) => (byQid.has(q) ? [rel(itemId, byQid.get(q)!)] : []));
+  return [...by, ...on];
 }
 
 /** Person if Wikidata says human; a period if it has distinct start and end; otherwise an event. */
@@ -235,6 +293,44 @@ async function fetchPlaces(f: WikidataFacts, signal?: AbortSignal): Promise<Plac
   return wanted.flatMap((w, i) => (coords[i] ? [{ name: (labels as Record<string, string>)[w.id], ...coords[i]!, role: w.role }] : []));
 }
 
+/** Who this person influenced, according to Wikidata. */
+async function fetchInfluenced(qid: string, signal?: AbortSignal): Promise<string[]> {
+  return parseInfluencedSearch(await getJson(buildInfluencedSearchUrl(qid), signal));
+}
+
+/** Wikidata allows 50 ids per wbgetentities call. */
+async function fetchLabelsAndPages(qids: string[], signal?: AbortSignal): Promise<{ labels: Record<string, string>; pages: Record<string, string> }> {
+  const chunks: string[][] = [];
+  for (let i = 0; i < qids.length; i += 50) chunks.push(qids.slice(i, i + 50));
+  const jsons = await Promise.all(chunks.map((c) => getJson(buildLabelsAndPagesUrl(c), signal)));
+  return {
+    labels: Object.assign({}, ...jsons.map(parseLabels)),
+    pages: Object.assign({}, ...jsons.map(parsePages)),
+  };
+}
+
+/** Influences in both directions for one person, matched against the timeline. */
+export async function suggestInfluences(qid: string, existingItems: TimelineItem[], signal?: AbortSignal): Promise<InfluenceSuggestion[]> {
+  const [facts, onIds] = await Promise.all([
+    getJson(buildEntityUrl(qid), signal).then((j) => parseEntity(j, qid)),
+    fetchInfluenced(qid, signal),
+  ]);
+  const byIds = facts.influencedByIds.filter((q) => q !== qid);
+  const ons = [...new Set(onIds)].filter((q) => q !== qid);
+  const all = [...new Set([...byIds, ...ons])];
+  if (!all.length) return [];
+  const { labels, pages } = await fetchLabelsAndPages(all, signal);
+  const existing = new Map(existingItems.filter((i) => i.wikidataId).map((i) => [i.wikidataId!, i.id]));
+  const make = (q: string, direction: 'by' | 'on'): InfluenceSuggestion => ({
+    qid: q,
+    label: labels[q] ?? pages[q] ?? q,
+    ...(pages[q] ? { pageKey: pages[q].replace(/ /g, '_') } : {}),
+    direction,
+    ...(existing.has(q) ? { existingId: existing.get(q) } : {}),
+  });
+  return [...byIds.map((q) => make(q, 'by')), ...ons.map((q) => make(q, 'on'))];
+}
+
 /**
  * Fetch everything for one search result. If the entry is already on the
  * timeline (same Wikidata id), returns its id instead of a draft.
@@ -253,6 +349,17 @@ export async function draftFromWikipedia(
     places = await fetchPlaces(facts, opts.signal);
   }
   const draft = buildDraft({ summary, facts, places, existingSources: opts.existingSources, categoryId: opts.categoryId, today: opts.today });
+  // Influences are a bonus too: connect the new person to people already on the timeline.
+  if (facts?.isHuman && summary.qid) {
+    let onIds: string[] = [];
+    try {
+      onIds = await fetchInfluenced(summary.qid, opts.signal);
+    } catch {
+      /* "influenced by" from the entity is still worth having */
+    }
+    const relations = influenceRelations(draft.item.id, facts.influencedByIds, onIds, opts.existingItems);
+    if (relations.length) draft.relations = relations;
+  }
   // The picture is a bonus: if Commons is slow or the file is odd, the entry is still worth having.
   if (facts?.imageFile) {
     try {
