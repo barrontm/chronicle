@@ -40,6 +40,18 @@ Tickets marked 🏛 make the map good for Ancient Greece and its wars (city-stat
 11. **Backup reminder** · S · haiku. Remind after 14 days without an export.
    Files: `src/ui/App.tsx` (store the last export date with `useStored`).
    Done when: the reminder shows once, and exporting or dismissing hides it.
+12. **Migration flows on the map** · M · opusplan. Schema bump. Curved arrows between places: width = people moving per year at the current year, color = cause, and dashes that move from origin to destination at a speed set by the rate, so direction and volume read at a glance. `Flow { id, title, categoryId, cause, measure: 'moved' | 'living', itemId?, routes: { from: FlowEnd, to: FlowEnd, points: SeriesPoint[] }[], source?, note?, updatedAt }`. `FlowEnd` is a country code, a territory id, or a named point (lon/lat), so Bob can record ancient and early-modern migrations by hand (Greek colonies, the Irish famine, the Great Migration), with estimated numbers, dates, a cause, a source, and the entry it belongs to. Causes: conflict & persecution, work & economy, famine & disaster, forced (slavery, deportation), colonization & settlement, family & other, unknown. `measure` keeps flows (people moving per year: moving dashes) apart from stocks (people living abroad: still arrows, labeled so), so the map never passes one off as the other. Hover: "Ireland → United States · famine & disaster · about 130,000 a year (1846–1855)". The map's layers menu gets "Migration" with a filter by cause and a legend; an entry's panel lists its flows and "Show on map".
+   Files: `src/model/types.ts` and the checklist in `src/model/CLAUDE.md`, `doc.ts` (upsert, remove, merge), flow geometry and the per-year rate in `src/ui/mapData.ts` (great-circle arcs, tested), `MapView.tsx` (arrow layers, animated dashes), a new `FlowEditor` panel (pick ends by country, territory, or a click on the map, reusing `nav.draw`'s pattern).
+   Done when: an e2e test records Ireland → United States (famine, 1846–1855), sees the arrow in 1850 and not in 1870, and old backups still import.
+13. **Migration data: refugees by cause, flows since 1990** · M · opus. Two imports that make `Flow`s (ticket 12) for one country at a time, both offered in Find a trend:
+   - **Refugees (UNHCR):** `api.unhcr.org/population/v1/population/` (CORS open, live, yearly since 1951), origin → country of asylum. "Refugees from Syria by country of asylum" or "Refugees living in Germany by origin". Cause is conflict & persecution; measure is `living` (refugees there that year), with an option for the yearly change as an approximate flow.
+   - **All migration (Abel & Cohen, CC BY):** five-year bilateral flow estimates for 200 countries, 1990–2020, by sex (figshare). It's a 21 MB CSV, so `scripts/build-migration-flows.ts` splits it into `public/data/flows/<ISO3>.json` (fetched on demand, runtime-cached, not precached). Shown as people per year (each period's total ÷ 5), with cause "unknown (all reasons)"; the legend says these are model estimates.
+   - Only the biggest routes are drawn by default (top 15 by volume, with a slider), so the map stays readable.
+   Files: `scripts/build-migration-flows.ts`, `scripts/build-trend-index.ts` (catalogue entries), `src/data/flows.ts` (parsers, tested with fixtures), Find a trend in `SeriesEditor.tsx` / `TrendSearch.tsx`.
+   Done when: mocked e2e tests import refugees from Syria and see the arrow to Turkey, and import flows from Mexico and see the arrow to the United States, each with its cause in the legend.
+14. **Bubbles for counts, click a country for its curve** · M · opus. Totals (people, $) become circles at country centroids (`labelPoint` over the bundled countries), area ∝ value, scaled to the maximum over all years so growth shows as the year plays; rates keep shading. `defaultMapStyle(series)` guesses from the unit; a "Show as: Shades / Bubbles" toggle (per trend, `useStored`) overrides. The legend gets reference circles. Clicking a country opens a sparkline with the current year marked.
+   Files: `src/ui/mapData.ts` (`countryBubbles`, `defaultMapStyle`, tested), `MapView.tsx` (bubbles layer, popover), `MapPane.tsx` (toggle, legend).
+   Done when: an e2e test switches a population trend to bubbles and sees the bubble legend.
 
 ## M1 — Foundation ✅ (2026-10-15)
 - [x] Entries (event / period / person) with BCE-aware dates and approximate dates
@@ -48,6 +60,7 @@ Tickets marked 🏛 make the map good for Ancient Greece and its wars (city-stat
 - [x] Connections between entries (influenced, led to, part of, responded to, related)
 - [x] Pictures: Wikimedia Commons search with credit and license, image links, uploads
 - [x] Trend strips aligned to the timeline: paste data or import from Our World in Data, log scale
+- [x] Find a trend: search Our World in Data and World Bank datasets (catalogue bundled for offline search)
 - [x] Offline PWA, IndexedDB storage, export backup, import with merge
 - [x] Unit tests, e2e tests, CI, deploy workflow
 

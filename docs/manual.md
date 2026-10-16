@@ -52,9 +52,19 @@ For a person added from Wikipedia, **Suggest influences** lists who Wikipedia sa
 
 A trend is a number that changes over the years (population, the price of wheat), drawn as a strip under the timeline.
 
-- **Add → Trend over time**, then paste one “year, value” per line, or paste an Our World in Data chart link to bring its data in.
+- **Add → Trend over time**, then paste one “year, value” per line, or bring numbers in from a dataset.
 - Choose **Linear** or **Log** scale. Log suits numbers that grow by multiples.
-- An Our World in Data trend can bring **every country**. You can then color the map by it (see [The map](#the-map)).
+
+### Find a trend
+
+A new trend opens with **Find a trend**: one search over about 4,200 Our World in Data charts and about 1,500 World Bank indicators (population, the economy, migration, health, education, technology).
+
+- Type a few words, like “population”, “GDP per capita” or “migrant women”. Every word has to match, and words in the title count most.
+- **From** narrows the search to one source. **Goes back before** keeps only data that starts earlier than a year, like 1800 or 500 BCE. Our World in Data has the long histories (population back to 10,000 BCE, GDP back to year 1); World Bank data mostly starts in 1960.
+- Pick a result, then choose a country, the World, or **Every country**, and press **Use**. The name, unit and source are filled in for you, and anything you've already typed is kept.
+- **Every country** lets you color the map by the trend (see [The map](#the-map)).
+- You can also paste an Our World in Data chart link.
+- Searching works offline. Getting a trend's numbers needs a connection, but a trend you've fetched before also comes back offline.
 
 ## The map
 
@@ -97,7 +107,7 @@ Open a territory and press **Edit**. Under **Borders over time**, every set of b
 
 - **More → Export a backup** downloads your whole timeline as one file. Keep it somewhere safe; it's also how you move your timeline to another device.
 - **More → Import a file…** opens a backup. If you already have a timeline, choose **Merge into my timeline** (keeps both; where the same thing changed in both, the newer change wins) or **Replace my timeline**.
-- Everything except searching Wikipedia, Commons and Our World in Data, and loading historical maps, works offline. Those say so when you're offline.
+- Everything except searching Wikipedia and Commons, getting a trend's numbers, and loading historical maps, works offline. Those say so when you're offline.
 - Older backups always open in newer versions of Chronicle.
 
 ## Versions
