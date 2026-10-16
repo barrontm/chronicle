@@ -1,5 +1,5 @@
 import moment from 'moment';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { DataSet } from 'vis-data/peer';
 import { Timeline, type TimelineOptions } from 'vis-timeline/peer';
 import { decimalYearToJsDate, formatAxisYear, formatYear, jsDateToDecimalYear, toJsDate } from '../model/dates';
@@ -111,6 +111,11 @@ function measureLabel(text: string): number {
   return measureCtx ? measureCtx.measureText(text).width : text.length * 7;
 }
 
+/** Resolves once the label font has loaded; until then the canvas measures a fallback font. */
+function labelFontLoaded(): Promise<unknown> {
+  return document.fonts?.load(`13px ${getComputedStyle(document.body).fontFamily}`) ?? Promise.resolve();
+}
+
 /** The overlay that holds influence arrows, inside the timeline's plotting area so it clips and scrolls with it. */
 function makeArrowLayer(center: Element): SVGSVGElement {
   const svg = document.createElementNS(SVG, 'svg');
@@ -134,6 +139,13 @@ function makeArrowLayer(center: Element): SVGSVGElement {
 
 export function TimelineView({ items, categories, relations, selectedId, thumbFor, onSelect, onAddAt, onWindow, fitSignal, year, onYear }: Props) {
   const host = useRef<HTMLDivElement>(null);
+  // Names are measured again once the font arrives, so long names aren't cut off at the edge.
+  const [fontReady, setFontReady] = useState(false);
+  useEffect(() => {
+    let live = true;
+    labelFontLoaded().then(() => live && setFontReady(true), () => {});
+    return () => { live = false; };
+  }, []);
   const tl = useRef<Timeline | null>(null);
   const itemSet = useRef(new DataSet<ReturnType<typeof toVisItem>>());
   const groupSet = useRef(new DataSet<{ id: string; content: string; style: string }>());
@@ -319,7 +331,7 @@ export function TimelineView({ items, categories, relations, selectedId, thumbFo
     applyClasses();
     // Rebuilding the items drops vis-timeline's selection; put it back.
     tl.current?.setSelection(infl.current.selectedId ? [infl.current.selectedId] : []);
-  }, [items, categories, thumbFor]);
+  }, [items, categories, thumbFor, fontReady]);
 
   useEffect(() => {
     applyClasses();
