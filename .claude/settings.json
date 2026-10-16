@@ -15,7 +15,13 @@
   },
   "permissions": {
     "allow": [
-      "Bash(npm run *)",
+      "Bash(npm run dev*)",
+      "Bash(npm run check*)",
+      "Bash(npm run shots*)",
+      "Bash(npm run build*)",
+      "Bash(npm run typecheck*)",
+      "Bash(npm run test*)",
+      "Bash(npm run preview*)",
       "Bash(npm test*)",
       "Bash(npx vitest*)",
       "Bash(npx playwright test*)",
@@ -29,7 +35,8 @@
       "Read(public/geo/**)",
       "Read(package-lock.json)",
       "Read(dist/**)",
-      "Read(node_modules/**/dist/*.mjs)"
+      "Read(node_modules/**/dist/*.mjs)",
+      "Read(.env*)"
     ]
   },
   "enabledMcpjsonServers": [

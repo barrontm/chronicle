@@ -4,7 +4,7 @@
 import { execSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
 
-const USER_FACING = /^src\/(ui|model|media|data|store)\//;
+const USER_FACING = /^src\/(ui|model|media|data|store|ai)\//;
 
 /** True if these changed files include something user-facing but not the manual. */
 export function needsManual(files) {

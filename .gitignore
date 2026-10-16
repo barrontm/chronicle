@@ -6,3 +6,5 @@ playwright-report/
 screenshots/
 *.log
 .DS_Store
+.env*
+tests/ai-evals/*/report.md
