@@ -201,6 +201,40 @@ if (any('desktop-help')) await help(await page('desktop-help', desktop), 'deskto
 if (any('dark-help')) await help(await page('dark-help', { ...desktop, colorScheme: 'dark' }), 'dark');
 if (any('phone-help')) await help(await page('phone-help', { viewport: { width: 412, height: 860 }, isMobile: true, hasTouch: true }), 'phone');
 
+// Draft with AI: a recorded run replayed (no network, no key needed), one entry accepted.
+async function aiDraft(p, prefix) {
+  const rec = JSON.parse(readFileSync(fileURLToPath(new URL('../tests/ai-evals/entries/recordings/handmade-persian-wars.json', import.meta.url)), 'utf8'));
+  const used = new Set();
+  const anthropic = (u) => u.startsWith('https://api.anthropic.com/');
+  const cors = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': '*', 'Access-Control-Allow-Methods': '*' };
+  for (const pattern of ['https://api.anthropic.com/**', 'https://en.wikipedia.org/**', 'https://www.wikidata.org/**']) {
+    await p.route(pattern, (route) => {
+      const url = route.request().url();
+      if (route.request().method() === 'OPTIONS') return route.fulfill({ status: 204, headers: cors });
+      const i = rec.exchanges.findIndex((e, n) => !used.has(n) && (anthropic(url) ? anthropic(e.url) : e.url === url));
+      if (i < 0) return route.fulfill({ status: 404, headers: cors, body: '' });
+      used.add(i);
+      return route.fulfill({ headers: cors, json: rec.exchanges[i].body });
+    });
+  }
+  await withFixture(p);
+  await showMap(p, prefix === 'phone' ? 'Map' : 'Both', '-480');
+  await p.getByRole('button', { name: 'Add', exact: true }).click();
+  await p.getByRole('menuitem', { name: 'Draft with AI…' }).click();
+  const panel = p.getByTestId('draft-review');
+  await panel.getByLabel('Your Anthropic API key').fill('sk-ant-screenshot-1234');
+  await panel.getByRole('button', { name: 'Save key' }).click();
+  await panel.getByLabel('What should Claude draft?').fill('The main battles of the Greco-Persian Wars');
+  await panel.getByRole('button', { name: 'Draft' }).click();
+  await panel.getByTestId('draft-entry').nth(2).waitFor();
+  await panel.getByTestId('draft-entry').nth(0).getByRole('button', { name: 'Accept' }).click();
+  await p.waitForTimeout(800); // the map frames the dashed pins
+  await shot(p, `${prefix}-ai-draft`);
+}
+if (any('desktop-ai-draft')) await aiDraft(await page('desktop-ai-draft', desktop), 'desktop');
+if (any('dark-ai-draft')) await aiDraft(await page('dark-ai-draft', { ...desktop, colorScheme: 'dark' }), 'dark');
+if (any('phone-ai-draft')) await aiDraft(await page('phone-ai-draft', { viewport: { width: 412, height: 860 }, isMobile: true, hasTouch: true }), 'phone');
+
 if (argv.includes('--sheet') && taken.length) {
   // Tile the shots at half size into one page and capture it: one image to review instead of many.
   const imgs = taken.map((n) => `<figure class="${n.startsWith('phone') ? 'phone' : ''}"><img src="data:image/png;base64,${readFileSync(`${OUT}${n}.png`).toString('base64')}"><figcaption>${n}</figcaption></figure>`).join('');

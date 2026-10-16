@@ -1,0 +1,24 @@
+# Cases for drafting entries (src/ai/entries). Promptfoo's format: vars are the
+# request, each assert is a JavaScript expression over `output` (the DraftSet).
+# Run live with: npm run eval:ai -- entries   (costs money; see the ai-eval skill)
+description: Draft timeline entries for a topic Bob describes
+tests:
+  - description: greco-persian-battles
+    vars:
+      request: The main battles of the Greco-Persian Wars
+    assert:
+      - type: javascript
+        metric: finds Marathon, Thermopylae and Salamis
+        value: "['Battle of Marathon', 'Battle of Thermopylae', 'Battle of Salamis'].every((t) => output.entries.some((e) => e.item.title === t))"
+      - type: javascript
+        metric: battles are dated in the 490s–470s BCE
+        value: "output.entries.filter((e) => /^Battle of/.test(e.item.title)).every((e) => e.item.start && e.item.start.y >= -499 && e.item.start.y <= -469)"
+      - type: javascript
+        metric: battles have a place on the map
+        value: "output.entries.filter((e) => /^Battle of/.test(e.item.title)).every((e) => e.item.places && e.item.places.length > 0)"
+      - type: javascript
+        metric: at least one battle is part of a war
+        value: "output.connections.some((c) => c.relation.type === 'part-of')"
+      - type: javascript
+        metric: stays on topic (15 entries at most)
+        value: "output.entries.length <= 15"

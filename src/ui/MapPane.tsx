@@ -23,6 +23,8 @@ interface Props {
   relations: Relation[];
   series: Series[];
   flows: Flow[];
+  /** AI-drafted entries waiting for review, drawn as dashed pins. */
+  draftItems: TimelineItem[];
   flowOptions: FlowOptions;
   onFlowOptions: (o: FlowOptions) => void;
   dataSeriesId: string | null;
@@ -73,6 +75,7 @@ export function MapPane(p: Props) {
           categories={p.categories}
           relations={p.relations}
           flows={shownFlows}
+          draftItems={p.draftItems}
           dataSeries={dataSeries}
           options={p.options}
           fadeYears={p.fadeYears}

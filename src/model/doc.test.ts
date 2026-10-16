@@ -22,6 +22,7 @@ const fixture = () => parseDoc(fixtureJson);
 const fixtureV1Json = readFileSync(new URL('../../tests/fixtures/sample-history-v1.json', import.meta.url), 'utf8');
 const fixtureV2Json = readFileSync(new URL('../../tests/fixtures/sample-history-v2.json', import.meta.url), 'utf8');
 const fixtureV3Json = readFileSync(new URL('../../tests/fixtures/sample-history-v3.json', import.meta.url), 'utf8');
+const fixtureV4Json = readFileSync(new URL('../../tests/fixtures/sample-history-v4.json', import.meta.url), 'utf8');
 
 describe('parseDoc', () => {
   it('accepts the fixture and round-trips it', () => {
@@ -236,9 +237,25 @@ describe('mergeDocs', () => {
   });
 });
 
+describe('draft provenance', () => {
+  it('imports a schema 4 backup as it is', () => {
+    expect(JSON.parse(fixtureV4Json).schemaVersion).toBe(4);
+    const doc = parseDoc(fixtureV4Json);
+    expect(doc.schemaVersion).toBe(SCHEMA_VERSION);
+    expect(doc.items).toEqual(JSON.parse(fixtureV4Json).items);
+  });
+
+  it('keeps provenance and rejects a malformed one', () => {
+    expect(fixture().items.find((i) => i.id === 'i_principia')?.drafted).toEqual({ model: 'claude-opus-5-5', prompt: 'entries@1', draftedAt: 1760000000000 });
+    const bad = JSON.parse(fixtureJson);
+    bad.items[0].drafted = { model: 'x' };
+    expect(() => parseDoc(JSON.stringify(bad))).toThrow(/malformed draft details/);
+  });
+});
+
 describe('openStoredDoc', () => {
   it('upgrades docs saved by older versions, keeping their records', () => {
-    for (const json of [fixtureV1Json, fixtureV2Json, fixtureV3Json]) {
+    for (const json of [fixtureV1Json, fixtureV2Json, fixtureV3Json, fixtureV4Json]) {
       const raw = JSON.parse(json);
       const { doc, status } = openStoredDoc(raw);
       expect(status).toBe('upgraded');

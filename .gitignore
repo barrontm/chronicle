@@ -8,3 +8,7 @@ screenshots/
 .DS_Store
 .env*
 tests/ai-evals/*/report.md
+
+# AI eval output (report and drafts to look at); recordings and results.json are committed
+tests/ai-evals/*/out/
+tests/ai-evals/*/report.md

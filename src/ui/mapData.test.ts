@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { parseDoc } from '../model/doc';
 import type { Flow, Relation, Territory, TimelineItem } from '../model/types';
-import { aboutPeople, activeRoutes, arcPoints, arcsBetween, choroplethAt, endBearing, flowDashes, flowFeatures, flowScale, mapKindOf, mixColor, parseColor, pinsAt, placesToDraw, rateAt, territoriesAt, territoryCircles, type FlowPlaces } from './mapData';
+import { aboutPeople, activeRoutes, arcPoints, arcsBetween, choroplethAt, draftPins, endBearing, flowDashes, flowFeatures, flowScale, mapKindOf, mixColor, parseColor, pinsAt, placesToDraw, rateAt, territoriesAt, territoryCircles, type FlowPlaces } from './mapData';
 
 const fixture = () => parseDoc(readFileSync(new URL('../../tests/fixtures/sample-history.json', import.meta.url), 'utf8'));
 const colorOf = (id: string) => (id === 'hidden' ? undefined : '#123456');
@@ -176,5 +176,17 @@ describe('migration flows', () => {
     expect(aboutPeople(131234)).toBe('about 130,000');
     expect(aboutPeople(1340000)).toBe('about 1.3 million');
     expect(aboutPeople(45)).toBe('about 45');
+  });
+});
+
+describe('draftPins', () => {
+  const item = (id: string, places: TimelineItem['places'], kind: TimelineItem['kind'] = 'event'): TimelineItem => ({ id, kind, title: id, start: { y: -489 }, categoryId: 'war', places, updatedAt: 0 });
+  it('draws every pending draft at its places, with bounds to frame them', () => {
+    const r = draftPins([item('a', [{ lat: 38, lon: 24 }]), item('b', [{ lat: 37, lon: 23.5 }, { lat: 40, lon: 20 }]), item('c', undefined)], () => '#c00');
+    expect(r.pins.map((p) => [p.id, p.lon, p.lat, p.color])).toEqual([['a#0', 24, 38, '#c00'], ['b#0', 23.5, 37, '#c00'], ['b#1', 20, 40, '#c00']]);
+    expect(r.bounds).toEqual([20, 37, 24, 40]);
+  });
+  it('has no bounds when nothing has a place', () => {
+    expect(draftPins([item('c', [])], () => undefined)).toEqual({ pins: [], bounds: null });
   });
 });

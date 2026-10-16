@@ -30,6 +30,19 @@ export function placesToDraw(item: TimelineItem): Place[] {
   return sites.length ? sites : places.slice(0, 1);
 }
 
+/** An AI-drafted entry waiting for review: drawn at every place, whatever the year, so Bob sees the whole draft. */
+export interface DraftPin { id: string; title: string; color: string; lon: number; lat: number }
+
+export function draftPins(items: TimelineItem[], colorOf: ColorOf): { pins: DraftPin[]; bounds: [number, number, number, number] | null } {
+  const pins = items.flatMap((item) => placesToDraw(item).map((p, i) => ({
+    id: `${item.id}#${i}`, title: item.title, color: colorOf(item.categoryId) ?? '#666', lon: p.lon, lat: p.lat,
+  })));
+  if (!pins.length) return { pins, bounds: null };
+  const lons = pins.map((p) => p.lon);
+  const lats = pins.map((p) => p.lat);
+  return { pins, bounds: [Math.min(...lons), Math.min(...lats), Math.max(...lons), Math.max(...lats)] };
+}
+
 export function pinsAt(items: TimelineItem[], year: number, opts: { fadeYears: number; keepPast: boolean; colorOf: ColorOf; selectedId?: string }): FeatureCollection<Point, PinProps> {
   const features: Feature<Point, PinProps>[] = [];
   for (const item of items) {

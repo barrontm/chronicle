@@ -486,7 +486,7 @@ test('“How drawing works” opens the manual at territories', async ({ page })
 
 // ---------- Carrying data into later versions ----------
 
-const FIXTURE_V3 = fileURLToPath(new URL('../tests/fixtures/sample-history-v3.json', import.meta.url));
+const FIXTURE_V4 = fileURLToPath(new URL('../tests/fixtures/sample-history-v4.json', import.meta.url));
 
 /** Replace the saved doc in IndexedDB, as an older or newer version of the app would have left it. */
 async function seedSavedDoc(page: Page, doc: Record<string, unknown>) {
@@ -520,11 +520,11 @@ async function savedState(page: Page) {
 test('a timeline saved by an older version opens upgraded, with a copy kept', async ({ page }) => {
   await open(page);
   const { readFileSync } = await import('node:fs');
-  await seedSavedDoc(page, JSON.parse(readFileSync(FIXTURE_V3, 'utf8')));
+  await seedSavedDoc(page, JSON.parse(readFileSync(FIXTURE_V4, 'utf8')));
   await page.reload();
   await expect(page.getByTestId('save-state')).toHaveText('Saved on this device');
   await expect(page.locator('.vis-item', { hasText: 'Aristotle' })).toBeVisible();
-  await expect.poll(() => savedState(page)).toMatchObject({ schemaVersion: 4, backups: 1 });
+  await expect.poll(() => savedState(page)).toMatchObject({ schemaVersion: 5, backups: 1 });
 });
 
 test('an older copy of the app never overwrites data from a newer one', async ({ page }) => {
@@ -894,5 +894,83 @@ test.describe('trends from Our World in Data and the World Bank', () => {
     await editor.getByLabel('Search trends').fill('popul');
     await editor.getByRole('button', { name: /Population/ }).click();
     await expect(editor.getByRole('alert')).toContainText('You’re offline. Getting numbers from Our World in Data needs a connection.');
+  });
+});
+
+// ---------- Drafting with AI ----------
+
+test.describe('drafting with AI', () => {
+  /** Replay a recorded drafting run: Anthropic answers in order, Wikipedia and Wikidata by URL. Nothing reaches the network. */
+  async function replayRecording(page: Page, name: string) {
+    const { readFileSync } = await import('node:fs');
+    const { replayer } = await import('../tests/ai-evals/replay');
+    const rec = JSON.parse(readFileSync(fileURLToPath(new URL(`../tests/ai-evals/entries/recordings/${name}.json`, import.meta.url)), 'utf8'));
+    const next = replayer(rec);
+    const cors = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': '*', 'Access-Control-Allow-Methods': '*' };
+    const sent: unknown[] = [];
+    for (const pattern of ['https://api.anthropic.com/**', 'https://en.wikipedia.org/**', 'https://www.wikidata.org/**']) {
+      await page.route(pattern, (route) => {
+        const req = route.request();
+        if (req.method() === 'OPTIONS') return route.fulfill({ status: 204, headers: cors });
+        if (req.url().startsWith('https://api.anthropic.com/')) sent.push({ key: req.headers()['x-api-key'], body: req.postDataJSON() });
+        const e = next(req.url());
+        return e ? route.fulfill({ status: e.status ?? 200, headers: cors, json: e.body }) : route.fulfill({ status: 404, headers: cors, body: 'not recorded' });
+      });
+    }
+    return sent;
+  }
+
+  test('draft entries, see them dashed on the map, accept one and reject another', async ({ page }) => {
+    test.slow();
+    const sent = await replayRecording(page, 'handmade-persian-wars');
+    await open(page);
+    await openMap(page, 'Both');
+    await page.getByRole('button', { name: 'Add', exact: true }).click();
+    await page.getByRole('menuitem', { name: 'Draft with AI…' }).click();
+    const panel = page.getByTestId('draft-review');
+    await expect(panel.getByRole('button', { name: 'Draft' })).toBeDisabled();
+    await panel.getByLabel('Your Anthropic API key').fill('sk-ant-test-key-1234');
+    await panel.getByRole('button', { name: 'Save key' }).click();
+    await expect(panel.getByTestId('ai-key')).toContainText('sk-ant-…1234');
+    await panel.getByLabel('What should Claude draft?').fill('The main battles of the Greco-Persian Wars');
+    await panel.getByRole('button', { name: 'Draft' }).click();
+
+    const entries = panel.getByTestId('draft-entry');
+    await expect(entries).toHaveCount(3);
+    await expect(entries.nth(1)).toContainText('Battle of Marathon');
+    await expect(entries.nth(1)).toContainText('490 BCE');
+    await expect(panel.getByText('Left out by the checker (1)')).toBeVisible();
+    expect(sent).toHaveLength(2);
+    expect(sent[0]).toMatchObject({ key: 'sk-ant-test-key-1234' });
+
+    // Pending entries with places are dashed pins on the map, whatever the year.
+    const draftPins = page.locator('.map-label.draft-pin');
+    await expect(draftPins).toHaveCount(2);
+    await expect(draftPins.filter({ hasText: 'Battle of Salamis' })).toBeVisible();
+
+    await entries.nth(1).getByRole('button', { name: 'Accept' }).click();
+    await expect(entries.nth(1)).toContainText('Added');
+    await entries.nth(2).getByRole('button', { name: 'Reject' }).click();
+    await expect(entries.nth(2)).toContainText('Left out');
+    await expect(draftPins).toHaveCount(0);
+
+    // The connection waits until both its ends are on the timeline.
+    const marathonToWar = panel.getByTestId('draft-connection').first();
+    await expect(marathonToWar).toContainText('Accept both entries first.');
+    await expect(marathonToWar.getByRole('button', { name: 'Accept' })).toHaveCount(0);
+
+    await expect(page.locator('.vis-item', { hasText: 'Battle of Marathon' })).toBeVisible();
+    await expect(page.locator('.vis-item', { hasText: 'Battle of Salamis' })).toHaveCount(0);
+    await entries.nth(1).getByRole('button', { name: 'Added · Open' }).click();
+    await expect(page.getByTestId('item-drafted')).toContainText('Drafted with AI (claude-opus-5-5, entries@1)');
+  });
+
+  test('says clearly when offline', async ({ page, context }) => {
+    await open(page);
+    await page.getByRole('button', { name: 'Add', exact: true }).click();
+    await page.getByRole('menuitem', { name: 'Draft with AI…' }).click();
+    await context.setOffline(true);
+    await expect(page.getByTestId('draft-review').getByRole('alert')).toContainText('You’re offline. Drafting with AI needs a connection');
+    await context.setOffline(false);
   });
 });

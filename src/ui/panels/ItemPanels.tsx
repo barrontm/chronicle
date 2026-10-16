@@ -72,6 +72,11 @@ export function ItemView({ id, nav }: { id: string; nav: Nav }) {
       {item.description && <p className="prose">{item.description}</p>}
       {item.places && item.places.length > 0 && <p className="meta" data-testid="item-places">{item.places.map(placeLabel).join(' · ')}</p>}
       {item.excerpt && <Excerpt excerpt={item.excerpt} source={sources.get(item.excerpt.sourceId)} />}
+      {item.drafted && (
+        <p className="meta" data-testid="item-drafted">
+          Drafted with AI ({item.drafted.model}, {item.drafted.prompt}) on {new Date(item.drafted.draftedAt).toLocaleDateString()} and accepted by you. The facts come from its sources.
+        </p>
+      )}
       {(territories.length > 0 || flows.length > 0) && (
         <>
           <h3>On the map</h3>

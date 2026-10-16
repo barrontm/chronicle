@@ -1,0 +1,99 @@
+{
+  "schemaVersion": 4,
+  "id": "doc_fixture",
+  "title": "Test fixture",
+  "updatedAt": 1760000000000,
+  "categories": [
+    { "id": "politics", "label": "Politics & government", "color": "var(--pig-lapis)" },
+    { "id": "war", "label": "War & conflict", "color": "var(--pig-cinnabar)" },
+    { "id": "ideas", "label": "Philosophy & religion", "color": "var(--pig-umber)" },
+    { "id": "science", "label": "Science", "color": "var(--pig-verdigris)" },
+    { "id": "technology", "label": "Technology", "color": "var(--pig-ochre)" },
+    { "id": "society", "label": "Society & economy", "color": "var(--pig-madder)" }
+  ],
+  "items": [
+    { "id": "i_pelop", "kind": "span", "title": "Peloponnesian War", "start": { "y": -430 }, "end": { "y": -403 }, "categoryId": "war", "description": "Athens and its empire against Sparta and the Peloponnesian League.", "updatedAt": 1760000000000 },
+    { "id": "i_confucius", "kind": "person", "title": "Confucius", "start": { "y": -550, "approx": true }, "end": { "y": -478 }, "categoryId": "ideas", "updatedAt": 1760000000000 },
+    { "id": "i_socrates", "kind": "person", "title": "Socrates", "start": { "y": -469, "approx": true }, "end": { "y": -398 }, "categoryId": "ideas", "wikidataId": "Q99999911", "updatedAt": 1760000000000 },
+    { "id": "i_plato", "kind": "person", "title": "Plato", "start": { "y": -427, "approx": true }, "end": { "y": -347, "approx": true }, "categoryId": "ideas", "wikidataId": "Q99999910", "updatedAt": 1760000000000 },
+    { "id": "i_aristotle", "kind": "person", "title": "Aristotle", "start": { "y": -383 }, "end": { "y": -321 }, "categoryId": "ideas", "description": "Student of Plato, tutor of Alexander.", "citations": [{ "sourceId": "s_barnes", "locator": "ch. 1" }], "wikidataId": "Q99999912", "updatedAt": 1760000000000 },
+    { "id": "i_rome_falls", "kind": "event", "title": "Deposition of Romulus Augustulus", "start": { "y": 476 }, "categoryId": "politics", "updatedAt": 1760000000000 },
+    { "id": "i_magna", "kind": "event", "title": "Magna Carta sealed", "start": { "y": 1215, "m": 6, "d": 15 }, "categoryId": "politics", "places": [{ "name": "Runnymede", "lat": 51.444, "lon": -0.565, "role": "site" }], "excerpt": { "text": "Fixture excerpt: a royal charter of rights agreed at Runnymede.", "sourceId": "s_wp_magna" }, "wikidataId": "Q99999901", "citations": [{ "sourceId": "s_wp_magna" }], "updatedAt": 1760000000000 },
+    { "id": "i_hundred", "kind": "span", "title": "Hundred Years' War", "start": { "y": 1337 }, "end": { "y": 1453 }, "categoryId": "war", "updatedAt": 1760000000000 },
+    { "id": "i_press", "kind": "event", "title": "Gutenberg's printing press", "start": { "y": 1440, "approx": true }, "categoryId": "technology", "updatedAt": 1760000000000 },
+    { "id": "i_newton", "kind": "person", "title": "Isaac Newton", "start": { "y": 1643, "m": 1, "d": 4 }, "end": { "y": 1727, "m": 3, "d": 31 }, "categoryId": "science", "updatedAt": 1760000000000 },
+    { "id": "i_principia", "kind": "event", "title": "Principia published", "start": { "y": 1687 }, "categoryId": "science", "updatedAt": 1760000000000 },
+    { "id": "i_indrev", "kind": "span", "title": "Industrial Revolution", "start": { "y": 1760, "approx": true }, "end": { "y": 1840, "approx": true }, "categoryId": "society", "updatedAt": 1760000000000 },
+    { "id": "i_frenchrev", "kind": "span", "title": "French Revolution", "start": { "y": 1789 }, "end": { "y": 1799 }, "categoryId": "politics", "updatedAt": 1760000000000 },
+    { "id": "i_darwin", "kind": "person", "title": "Charles Darwin", "start": { "y": 1809, "m": 2, "d": 12 }, "end": { "y": 1882, "m": 4, "d": 19 }, "categoryId": "science", "updatedAt": 1760000000000 },
+    { "id": "i_origin", "kind": "event", "title": "On the Origin of Species", "start": { "y": 1859, "m": 11, "d": 24 }, "categoryId": "science", "updatedAt": 1760000000000 },
+    { "id": "i_einstein", "kind": "person", "title": "Albert Einstein", "start": { "y": 1879, "m": 3, "d": 14 }, "end": { "y": 1955, "m": 4, "d": 18 }, "categoryId": "science", "media": [{ "id": "md_einstein", "source": "commons", "url": "https://commons.wikimedia.org/wiki/Special:FilePath/Albert_Einstein_Head.jpg?width=800", "thumbUrl": "https://commons.wikimedia.org/wiki/Special:FilePath/Albert_Einstein_Head.jpg?width=120", "caption": "Einstein in 1947", "credit": "Orren Jack Turner", "license": "Public domain", "sourceUrl": "https://commons.wikimedia.org/wiki/File:Albert_Einstein_Head.jpg" }], "updatedAt": 1760000000000 },
+    { "id": "i_ww1", "kind": "span", "title": "First World War", "start": { "y": 1914, "m": 7, "d": 28 }, "end": { "y": 1918, "m": 11, "d": 11 }, "categoryId": "war", "updatedAt": 1760000000000 },
+    { "id": "i_ww2", "kind": "span", "title": "Second World War", "start": { "y": 1939, "m": 9, "d": 1 }, "end": { "y": 1945, "m": 9, "d": 2 }, "categoryId": "war", "updatedAt": 1760000000000 },
+    { "id": "i_moon", "kind": "event", "title": "Apollo 11 Moon landing", "start": { "y": 1969, "m": 7, "d": 20 }, "categoryId": "technology", "updatedAt": 1760000000000 }
+  ],
+  "series": [
+    {
+      "id": "sr_pop", "title": "World population", "unit": "billion", "categoryId": "society", "scale": "linear",
+      "points": [{ "x": 1700, "v": 0.6 }, { "x": 1800, "v": 1.0 }, { "x": 1900, "v": 1.65 }, { "x": 1927, "v": 2 }, { "x": 1950, "v": 2.5 }, { "x": 1960, "v": 3 }, { "x": 1974, "v": 4 }, { "x": 1987, "v": 5 }, { "x": 1999, "v": 6 }, { "x": 2011, "v": 7 }, { "x": 2022, "v": 8 }],
+      "source": { "name": "Approximate milestone figures (test data)" }, "updatedAt": 1760000000000
+    },
+    {
+      "id": "sr_transistors", "title": "Transistors per microprocessor", "unit": "transistors", "categoryId": "technology", "scale": "log",
+      "points": [{ "x": 1971, "v": 2300 }, { "x": 1978, "v": 29000 }, { "x": 1985, "v": 275000 }, { "x": 1993, "v": 3100000 }, { "x": 2000, "v": 42000000 }, { "x": 2006, "v": 291000000 }, { "x": 2020, "v": 16000000000 }],
+      "source": { "name": "Approximate figures (test data)" }, "updatedAt": 1760000000000
+    },
+    {
+      "id": "sr_regional", "title": "Regional index (test data)", "unit": "index", "categoryId": "society", "scale": "linear",
+      "points": [],
+      "regions": {
+        "FRA": [{ "x": 1800, "v": 10 }, { "x": 1900, "v": 40 }, { "x": 2000, "v": 90 }],
+        "GBR": [{ "x": 1800, "v": 20 }, { "x": 1900, "v": 60 }, { "x": 2000, "v": 95 }],
+        "ITA": [{ "x": 1800, "v": 5 }, { "x": 1900, "v": 25 }, { "x": 2000, "v": 85 }],
+        "t_fixture": [{ "x": -400, "v": 1 }, { "x": 0, "v": 5 }]
+      },
+      "source": { "name": "Made-up values for tests" }, "updatedAt": 1760000000000
+    }
+  ],
+  "territories": [
+    {
+      "id": "t_fixture", "title": "Fixture Republic", "categoryId": "politics", "itemId": "i_pelop",
+      "snapshots": [
+        { "from": { "y": -499 }, "to": { "y": -199 }, "areaKm2": 40000, "geometry": { "type": "Polygon", "coordinates": [[[11, 41], [14, 41], [14, 43], [11, 43], [11, 41]]] } },
+        { "from": { "y": -199 }, "to": { "y": 100 }, "areaKm2": 300000, "geometry": { "type": "MultiPolygon", "coordinates": [[[[7, 38], [18, 38], [18, 46], [7, 46], [7, 38]]]] } }
+      ],
+      "source": { "name": "Hand-drawn boxes (test data)" }, "updatedAt": 1760000000000
+    }
+  ],
+  "flows": [
+    {
+      "id": "f_famine", "title": "Famine emigration (test data)", "categoryId": "society", "cause": "disaster", "measure": "moved", "itemId": "i_indrev",
+      "routes": [
+        { "from": { "country": "IRL" }, "to": { "country": "USA" }, "points": [{ "x": 1846, "v": 100000 }, { "x": 1851, "v": 220000 }, { "x": 1855, "v": 60000 }] },
+        { "from": { "country": "IRL" }, "to": { "territoryId": "t_fixture" }, "points": [{ "x": 1846, "v": 5000 }, { "x": 1855, "v": 5000 }] }
+      ],
+      "source": { "name": "Made-up values for tests" }, "updatedAt": 1760000000000
+    },
+    {
+      "id": "f_colonies", "title": "Colonists abroad (test data)", "categoryId": "politics", "cause": "settlement", "measure": "living",
+      "routes": [
+        { "from": { "name": "Corinth", "lon": 22.88, "lat": 37.91 }, "to": { "name": "Syracuse", "lon": 15.29, "lat": 37.08 }, "points": [{ "x": -550, "v": 1000 }, { "x": -450, "v": 20000 }] }
+      ],
+      "updatedAt": 1760000000000
+    }
+  ],
+  "notes": [
+    { "id": "n_teachers", "title": "Socrates → Plato → Aristotle", "body": "Three generations of teacher and student.\n\nAristotle studied at Plato's Academy for about twenty years.", "linkedIds": ["i_socrates", "i_plato", "i_aristotle"], "citations": [{ "sourceId": "s_barnes", "locator": "pp. 1–10" }], "updatedAt": 1760000000000 }
+  ],
+  "sources": [
+    { "id": "s_barnes", "kind": "book", "title": "Aristotle: A Very Short Introduction", "authors": "Jonathan Barnes", "year": "2000", "publisher": "Oxford University Press", "updatedAt": 1760000000000 },
+    { "id": "s_wp_magna", "kind": "web", "title": "Magna Carta", "publisher": "Wikipedia", "url": "https://en.wikipedia.org/wiki/Magna_Carta", "accessed": "2026-10-15", "updatedAt": 1760000000000 },
+    { "id": "s_republic", "kind": "book", "title": "Republic", "authors": "Plato; trans. G. M. A. Grube", "year": "1992", "publisher": "Hackett", "updatedAt": 1760000000000 }
+  ],
+  "relations": [
+    { "id": "r_1", "fromId": "i_socrates", "toId": "i_plato", "type": "influenced", "updatedAt": 1760000000000 },
+    { "id": "r_2", "fromId": "i_plato", "toId": "i_aristotle", "type": "influenced", "updatedAt": 1760000000000 },
+    { "id": "r_3", "fromId": "i_principia", "toId": "i_newton", "type": "related", "updatedAt": 1760000000000 }
+  ],
+  "deleted": {}
+}
