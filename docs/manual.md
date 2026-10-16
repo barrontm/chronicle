@@ -20,6 +20,20 @@ Chronicle is your own history timeline. It starts empty: you fill it in as you r
 - Each entry has a **category** (politics, war, ideas, science, technology, society, arts). The colored chips under the top bar show or hide a category everywhere, on the timeline and on the map.
 - Click an entry to open it, then **Edit** to change it or **Show on map** to jump to its year on the map.
 
+### Places
+
+An entry's places put it on the map as a pin: where a battle was fought, or where a person was born and died. Entries added from Wikipedia usually come with them; for anything else, add them yourself while editing the entry.
+
+1. Under **Places**, press **Add a place** and type its name.
+2. Find where it is in one of three ways:
+   - **Look up** (or press Enter) searches Wikipedia for places with that name. Pick one and its coordinates are filled in. Your name for the place stays as you typed it. This needs a connection.
+   - **Pick on the map** and click the spot.
+   - Type the **coordinates**, latitude first, the way Wikipedia or an atlas prints them: `37.97, 23.72` or `37°58′N 23°43′E`. Underneath, it shows how it read them.
+3. For a person, choose what happened there: **Born here**, **Died here** or another place in their life.
+4. Press **Add place**, then **Add to timeline** (or **Save changes**) to keep the entry.
+
+**Edit** changes a place and **Remove** takes it off. An entry can have as many places as you like.
+
 ## Adding from Wikipedia
 
 **Add → From Wikipedia…** searches Wikipedia. Pick a page and you get a new entry filled in: kind and dates from Wikidata, places for the map, a picture with its credit, the intro as a quotation, and the page as a source. Nothing is saved until you check it and press **Add to timeline**. If you already have that entry, Chronicle tells you.

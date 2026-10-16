@@ -8,6 +8,8 @@ import {
   influenceRelations,
   buildSearchUrl,
   buildSummaryUrl,
+  buildPlaceSearchUrl,
+  parsePlaceSearch,
   kindAndDates,
   parseCoords,
   parseEntity,
@@ -159,5 +161,36 @@ describe('influences', () => {
       { fromId: 'plato', toId: 'aristotle', type: 'influenced' },
     ]);
     expect(influenceRelations('plato', [], [], existing)).toEqual([]);
+  });
+});
+
+describe('place lookup', () => {
+  it('asks Wikipedia for coordinates and descriptions in one CORS request', () => {
+    const url = buildPlaceSearchUrl('Salamis');
+    expect(url).toContain('generator=search');
+    expect(url).toContain('gsrsearch=Salamis');
+    expect(url).toContain('prop=coordinates%7Cdescription');
+    expect(url).toContain('origin=*');
+  });
+
+  it('keeps pages with coordinates, best match first', () => {
+    const json = {
+      query: {
+        pages: [
+          { title: 'Battle of Salamis', index: 2, description: 'Naval battle in 480 BC', coordinates: [{ lat: 37.95, lon: 23.57 }] },
+          { title: 'Salamis Island', index: 1, description: 'Greek island', coordinates: [{ lat: 37.9333, lon: 23.5 }] },
+          { title: 'Salamis (disambiguation)', index: 3 },
+        ],
+      },
+    };
+    expect(parsePlaceSearch(json)).toEqual([
+      { name: 'Salamis Island', description: 'Greek island', lat: 37.9333, lon: 23.5 },
+      { name: 'Battle of Salamis', description: 'Naval battle in 480 BC', lat: 37.95, lon: 23.57 },
+    ]);
+  });
+
+  it('returns nothing for no matches', () => {
+    expect(parsePlaceSearch({ batchcomplete: true })).toEqual([]);
+    expect(parsePlaceSearch(null)).toEqual([]);
   });
 });

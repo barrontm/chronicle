@@ -163,6 +163,30 @@ if (any('desktop-trends')) await trendSearch(await page('desktop-trends', deskto
 if (any('dark-trends')) await trendSearch(await page('dark-trends', { ...desktop, colorScheme: 'dark' }), 'dark');
 if (any('phone-trends')) await trendSearch(await page('phone-trends', { viewport: { width: 412, height: 860 }, isMobile: true, hasTouch: true }), 'phone');
 
+// The place picker in the entry editor, with Wikipedia's answer mocked.
+async function places(p, prefix) {
+  await p.route('https://en.wikipedia.org/w/api.php**', (route) => route.fulfill({
+    json: { query: { pages: [
+      { title: 'Platonic Academy', index: 1, description: 'School founded by Plato in Athens', coordinates: [{ lat: 37.9925, lon: 23.7083 }] },
+      { title: 'Academy of Athens (modern)', index: 2, description: 'National academy of Greece', coordinates: [{ lat: 37.9802, lon: 23.7327 }] },
+    ] } },
+    headers: { 'Access-Control-Allow-Origin': '*' },
+  }));
+  await withFixture(p);
+  await p.locator('.vis-item', { hasText: 'Plato' }).click();
+  await p.getByTestId('item-view').getByRole('button', { name: 'Edit' }).click();
+  await p.getByRole('button', { name: 'Add a place' }).click();
+  await p.getByLabel('Place name').fill('Academy');
+  await p.getByRole('button', { name: 'Look up' }).click();
+  await p.getByTestId('place-results').waitFor();
+  await p.getByLabel('Coordinates').fill('37°59′N 23°42′E');
+  await p.getByTestId('place-form').scrollIntoViewIfNeeded();
+  await shot(p, `${prefix}-places`);
+}
+if (any('desktop-places')) await places(await page('desktop-places', desktop), 'desktop');
+if (any('dark-places')) await places(await page('dark-places', { ...desktop, colorScheme: 'dark' }), 'dark');
+if (any('phone-places')) await places(await page('phone-places', { viewport: { width: 412, height: 860 }, isMobile: true, hasTouch: true }), 'phone');
+
 // The manual.
 async function help(p, prefix) {
   await p.getByRole('button', { name: 'Help' }).click();
