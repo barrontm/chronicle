@@ -310,6 +310,7 @@ function Workspace() {
           )}
           <TimelineView
             items={doc.items}
+            relations={doc.relations}
             categories={categories}
             selectedId={selectedId}
             thumbFor={thumbFor}

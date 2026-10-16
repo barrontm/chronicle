@@ -1,15 +1,19 @@
 import { describe, expect, it } from 'vitest';
-import type { Source } from '../model/types';
+import type { Source, TimelineItem } from '../model/types';
 import {
   buildCoordsUrl,
   buildDraft,
   buildEntityUrl,
+  buildInfluencedSearchUrl,
+  influenceRelations,
   buildSearchUrl,
   buildSummaryUrl,
   kindAndDates,
   parseCoords,
   parseEntity,
+  parseInfluencedSearch,
   parseLabels,
+  parsePages,
   parseSearch,
   parseSummary,
 } from './wikipedia';
@@ -123,5 +127,37 @@ describe('buildDraft', () => {
     expect(item.places).toEqual([{ name: 'Marathon', lat: 38.15, lon: 23.96, role: 'site' }]);
     expect(item.start).toBeUndefined();
     expect(item.kind).toBe('event');
+  });
+});
+
+describe('influences', () => {
+  it('reads every "influenced by" value, skipping deprecated ones and duplicates', () => {
+    const f = parseEntity(entity('Q868', {
+      P31: [item('Q5')], P737: [item('Q913'), item('Q859'), item('Q913'), { ...item('Q1'), rank: 'deprecated' }],
+    }), 'Q868');
+    expect(f.influencedByIds).toEqual(['Q913', 'Q859']);
+    expect(parseEntity(entity('Q33', {}), 'Q33').influencedByIds).toEqual([]);
+  });
+
+  it('searches Wikidata for who someone influenced, and reads the hits', () => {
+    expect(decodeURIComponent(buildInfluencedSearchUrl('Q859'))).toContain('srsearch=haswbstatement:P737=Q859');
+    expect(buildInfluencedSearchUrl('Q859')).toContain('origin=*');
+    expect(parseInfluencedSearch({ query: { search: [{ title: 'Q868' }, { title: 'Property:P1' }, { title: 'Q37621' }] } })).toEqual(['Q868', 'Q37621']);
+    expect(parseInfluencedSearch({})).toEqual([]);
+  });
+
+  it('reads English Wikipedia page titles', () => {
+    expect(parsePages({ entities: { Q859: { sitelinks: { enwiki: { title: 'Plato' } } }, Q2: { sitelinks: {} } } })).toEqual({ Q859: 'Plato' });
+  });
+
+  it('connects a new person only to people already on the timeline, both ways', () => {
+    const on = (id: string, wikidataId?: string): TimelineItem => ({ id, kind: 'person', title: id, start: { y: -400 }, categoryId: 'c', updatedAt: 1, ...(wikidataId ? { wikidataId } : {}) });
+    const existing = [on('socrates', 'Q913'), on('aristotle', 'Q868'), on('handmade')];
+    const rels = influenceRelations('plato', ['Q913', 'Q999'], ['Q868', 'Q868'], existing);
+    expect(rels.map(({ fromId, toId, type }) => ({ fromId, toId, type }))).toEqual([
+      { fromId: 'socrates', toId: 'plato', type: 'influenced' },
+      { fromId: 'plato', toId: 'aristotle', type: 'influenced' },
+    ]);
+    expect(influenceRelations('plato', [], [], existing)).toEqual([]);
   });
 });

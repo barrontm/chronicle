@@ -82,20 +82,30 @@ await showMap(p, 'Both', '1215');
 await shot(p, 'desktop-split');
 }
 
-if (any('desktop-dark', 'desktop-dark-split')) {
+if (any('desktop-dark', 'desktop-dark-split', 'desktop-dark-influences')) {
 
 p = await page('dark', { ...desktop, colorScheme: 'dark' });
 await withFixture(p);
 await shot(p, 'desktop-dark');
+if (wanted('desktop-dark-influences')) {
+  await p.locator('.vis-item', { hasText: 'Plato' }).click();
+  await shot(p, 'desktop-dark-influences');
+  await p.getByRole('button', { name: 'Close panel' }).click();
+}
 await showMap(p, 'Both', '200 BCE');
 await shot(p, 'desktop-dark-split');
 }
 
-if (any('phone-timeline', 'phone-map')) {
+if (any('phone-timeline', 'phone-map', 'phone-influences')) {
 
 p = await page('phone', { viewport: { width: 412, height: 860 }, isMobile: true, hasTouch: true });
 await withFixture(p);
 await shot(p, 'phone-timeline');
+if (wanted('phone-influences')) {
+  await p.locator('.vis-item', { hasText: 'Plato' }).click();
+  await shot(p, 'phone-influences');
+  await p.getByRole('button', { name: 'Close panel' }).click();
+}
 await showMap(p, 'Map', '300 BCE');
 await shot(p, 'phone-map');
 }

@@ -83,6 +83,7 @@ Tickets marked 🏛 make the map good for Ancient Greece and its wars (city-stat
 - [ ] Interpolate a territory's area as a trend (from its snapshots)
 
 ## M5 — Seeing connections
+- [x] Influences on the timeline: click a person to light up who influenced them and whom they influenced, with arrows; suggestions from Wikipedia (Wikidata "influenced by")
 - [ ] Connection graph view (who influenced whom, causal chains), filterable by category and era
 - [ ] "Meanwhile" view: what else was happening during the selected entry's dates
 - [ ] Technology lineages: chains of "led to" connections drawn as a branching tree (may move into M4 as the tech tree)

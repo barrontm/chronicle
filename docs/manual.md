@@ -37,6 +37,12 @@ In an entry's editor, connect it to another entry and choose the kind: *influenc
 
 > Use *part of* for battles in a war, so later you can see a war and its battles together.
 
+### Influences
+
+Click a person on the timeline and the people connected to them by *influenced* light up: amber for who influenced them, blue for whom they influenced, with arrows showing which way it went. Everything else fades back. Click empty space or close the panel to clear it. Arrows only show while both people are in view.
+
+For a person added from Wikipedia, **Suggest influences** lists who Wikipedia says influenced them and whom they influenced. People already on your timeline get **Connect**; the rest get **Add from Wikipedia**. When you add a person from Wikipedia, their influences who are already on your timeline are filled in as connections, so you can remove any you disagree with before saving. Suggestions need a connection.
+
 ## Pictures
 
 **Add a picture** on an entry. Search Wikimedia Commons (credit and license come with it), paste an **Image link**, or **Upload** your own. Pictures you have looked at stay available offline.

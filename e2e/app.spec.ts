@@ -296,6 +296,56 @@ test('adding the same Wikipedia page twice opens the existing entry instead', as
   await expect(page.getByTestId('item-view').getByRole('heading', { name: 'Ada Lovelace' })).toBeVisible();
 });
 
+test('clicking a person lights up their influences on the timeline @phone', async ({ page }) => {
+  await open(page);
+  await importFixture(page);
+  await page.locator('.vis-item', { hasText: 'Plato' }).click();
+  await expect(page.locator('.vis-item.infl-by', { hasText: 'Socrates' })).toBeVisible();
+  await expect(page.locator('.vis-item.infl-on', { hasText: 'Aristotle' })).toBeVisible();
+  await expect(page.locator('.vis-item.dimmed', { hasText: 'Confucius' })).toBeVisible();
+  await expect(page.locator('.influence-arrows path.arc')).toHaveCount(2);
+  await expect(page.locator('.influence-arrows path.arc.infl-by')).toHaveAttribute('data-from', 'i_socrates');
+
+  // A person without influences changes nothing.
+  await page.locator('.vis-item', { hasText: 'Confucius' }).click();
+  await expect(page.locator('.vis-item.dimmed')).toHaveCount(0);
+  await expect(page.locator('.influence-arrows path.arc')).toHaveCount(0);
+});
+
+test('Wikipedia suggests influences: connect one on the timeline, add one that isn’t', async ({ page }) => {
+  const cors = { 'Access-Control-Allow-Origin': '*' };
+  const snak = (value: unknown) => ({ mainsnak: { snaktype: 'value', datavalue: { value } }, rank: 'normal' });
+  await page.route('https://www.wikidata.org/w/api.php**', (route) => {
+    const url = new URL(route.request().url());
+    if (url.searchParams.get('action') === 'query') {
+      expect(url.searchParams.get('srsearch')).toBe('haswbstatement:P737=Q99999912');
+      return route.fulfill({ headers: cors, json: { query: { search: [{ title: 'Q99999930' }] } } });
+    }
+    if (url.searchParams.get('props') === 'labels|sitelinks') {
+      const page = (label: string) => ({ labels: { en: { value: label } }, sitelinks: { enwiki: { title: label } } });
+      return route.fulfill({ headers: cors, json: { entities: {
+        Q99999910: page('Plato'), Q99999911: page('Socrates'), Q99999930: page('Alexander the Great'),
+      } } });
+    }
+    return route.fulfill({ headers: cors, json: { entities: { Q99999912: { claims: {
+      P31: [snak({ id: 'Q5' })], P737: [snak({ id: 'Q99999910' }), snak({ id: 'Q99999911' })],
+    } } } } });
+  });
+  await open(page);
+  await importFixture(page);
+  await page.locator('.vis-item', { hasText: 'Aristotle' }).click();
+  const view = page.getByTestId('item-view');
+  const suggestions = view.getByTestId('influence-suggestions');
+  await suggestions.getByRole('button', { name: 'Suggest influences' }).click();
+
+  // Plato is already connected, so only Socrates is offered.
+  await expect(suggestions.getByText('Plato')).toHaveCount(0);
+  await suggestions.getByRole('listitem').filter({ hasText: 'Socrates' }).getByRole('button', { name: 'Connect' }).click();
+  await expect(view.getByRole('button', { name: 'Influenced by Socrates' })).toBeVisible();
+  await expect(suggestions.getByText('Socrates')).toHaveCount(0);
+  await expect(suggestions.getByRole('listitem').filter({ hasText: 'Alexander the Great' }).getByRole('button', { name: 'Add from Wikipedia' })).toBeVisible();
+});
+
 test('adding from Wikipedia says a connection is needed when offline', async ({ page, context }) => {
   await open(page);
   await context.setOffline(true);
