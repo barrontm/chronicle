@@ -16,7 +16,7 @@ Chronicle is your own history timeline. It starts empty: you fill it in as you r
 - An **event** is a moment (a battle, a treaty). A **period** has a start and an end (a war, a reign). A **person** runs from birth to death.
 - Type dates the way you would say them: `431 BCE`, `c. 1440`, `1914-07-28`. The field shows how it read your date. Leave the end empty if it's unknown or ongoing.
 - Approximate dates (`c.`) show with a dashed edge on the timeline.
-- Zoomed far out, a short life or period is drawn too thin to hold its name, so the name runs on past it and entries spread onto more lines so names don't overlap. Zoom in and names go back inside their bars.
+- Zoomed far out, a short life or period is drawn too thin to hold its name, so the name runs on past it and entries spread onto more lines so names don't overlap. Zoom in and names go back inside their bars. Names near the right edge move left so they stay on screen, and the years along the top space themselves out so they never run together, even on a phone zoomed all the way out.
 - Each entry has a **category** (politics, war, ideas, science, technology, society, arts). The colored chips under the top bar show or hide a category everywhere, on the timeline and on the map.
 - Click an entry to open it, then **Edit** to change it or **Show on map** to jump to its year on the map.
 

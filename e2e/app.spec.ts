@@ -312,7 +312,7 @@ test('clicking a person lights up their influences on the timeline @phone', asyn
   await expect(page.locator('.influence-arrows path.arc')).toHaveCount(0);
 });
 
-test('zoomed far out, names run past bars too narrow for them, and go back in when zoomed in', async ({ page }) => {
+test('zoomed far out, names run past bars too narrow for them, and go back in when zoomed in @phone', async ({ page }) => {
   await open(page);
   await importFixture(page);
   const plato = page.locator('.vis-item', { hasText: 'Plato' });
@@ -323,10 +323,29 @@ test('zoomed far out, names run past bars too narrow for them, and go back in wh
   // The whole name is drawn, not clipped to the bar.
   const name = plato.locator('.it > span');
   expect((await name.boundingBox())!.width).toBeGreaterThan((await plato.boundingBox())!.width);
+  // Names near the right edge are pulled left so the edge doesn't cut them off.
+  const panel = (await page.locator('.vis-panel.vis-center').boundingBox())!;
+  for (const who of ['Isaac Newton', 'Albert Einstein']) {
+    const label = (await page.locator('.vis-item', { hasText: who }).locator('.it > span').boundingBox())!;
+    expect(label.x + label.width).toBeLessThanOrEqual(panel.x + panel.width + 1);
+  }
+  // Year labels on the axis never run into each other, even on a phone.
+  const yearLabels = await page.locator('.vis-time-axis .vis-text.vis-minor:not(.vis-measure)').evaluateAll((els, edge) =>
+    els.filter((e) => e.textContent?.trim()).map((e) => e.getBoundingClientRect())
+      .filter((r) => r.right > edge.left && r.left < edge.right).map((r) => [r.left, r.right]).sort((x, y) => x[0] - y[0]),
+  { left: panel.x, right: panel.x + panel.width });
+  expect(yearLabels.length).toBeGreaterThan(1);
+  for (let i = 1; i < yearLabels.length; i++) expect(yearLabels[i][0]).toBeGreaterThanOrEqual(yearLabels[i - 1][1] - 1);
 
+  // Over the year axis the wheel only zooms; over the lanes a phone may scroll them instead.
   const at = (await plato.boundingBox())!;
-  await page.mouse.move(at.x + 2, at.y - 4);
-  for (let i = 0; i < 14; i++) await page.mouse.wheel(0, -300);
+  const axis = (await page.locator('.vis-time-axis').first().boundingBox())!;
+  await page.mouse.move(at.x + 2, axis.y + axis.height / 2);
+  // Zoom in until Plato's life is wider than his name (a phone zooms less per step).
+  for (let i = 0; i < 60 && /label-out/.test((await plato.getAttribute('class')) ?? ''); i++) {
+    await page.mouse.wheel(0, -300);
+    await page.waitForTimeout(50);
+  }
   await expect(plato).not.toHaveClass(/label-out/);
 });
 

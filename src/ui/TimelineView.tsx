@@ -5,7 +5,7 @@ import { Timeline, type TimelineOptions } from 'vis-timeline/peer';
 import { decimalYearToJsDate, formatAxisYear, formatYear, jsDateToDecimalYear, toJsDate } from '../model/dates';
 import type { Category, MediaRef, Relation, TimelineItem } from '../model/types';
 import { anchors, arcPath, influenceArrows, influenceClasses } from './influenceLinks';
-import { labelWidthPx, narrowIds } from './labels';
+import { axisLabelEvery, axisStepYears, labelWidthPx, narrowLabels } from './labels';
 import { escapeHtml } from './util';
 
 /**
@@ -47,10 +47,13 @@ function yearOf(d: VisDate | Date): number {
   return moment.isMoment(d) ? d.year() : d.getUTCFullYear();
 }
 
-function minorLabel(date: Date, scale: string, step: number): string {
+/** `every`: label only every n-th tick (see `axisLabelEvery`), so crowded year labels don't run together. */
+function minorLabel(date: Date, scale: string, step: number, every = 1): string {
   const d = date as unknown as VisDate;
   switch (scale) {
-    case 'year': return step >= 10 ? formatAxisYear(yearOf(d)) : formatYear(yearOf(d));
+    case 'year':
+      if (every > 1 && yearOf(d) % (step * every) !== 0) return '';
+      return step >= 10 ? formatAxisYear(yearOf(d)) : formatYear(yearOf(d));
     case 'month': return d.format('MMM');
     case 'week': case 'day': case 'weekday': return d.format('D');
     default: return d.format('HH:mm');
@@ -142,6 +145,15 @@ export function TimelineView({ items, categories, relations, selectedId, thumbFo
   const infl = useRef({ items, relations, selectedId });
   infl.current = { items, relations, selectedId };
   const baseClass = useRef(new Map<string, string>());
+  const baseStyle = useRef(new Map<string, string>());
+  /** Width of the plotting area, kept for spacing the axis labels. */
+  const panelPx = useRef(0);
+  /**
+   * Handed to vis-timeline once as `timeAxis`; it keeps the reference and reads
+   * it on every redraw, so setting `scale` forces a step and clearing it
+   * hands the choice back to vis-timeline.
+   */
+  const axisStep = useRef<{ scale?: 'year'; step?: number }>({});
   /** Ranges (periods, lives) with how wide their names are, to spot bars too narrow for them. */
   const ranges = useRef<Array<{ id: string; start: number; end: number; labelPx: number }>>([]);
   const arrowLayer = useRef<SVGSVGElement | null>(null);
@@ -182,15 +194,19 @@ export function TimelineView({ items, categories, relations, selectedId, thumbFo
   const applyClasses = () => {
     const roles = influenceClasses(infl.current.relations, infl.current.selectedId);
     const t = tl.current;
-    const panelPx = host.current?.querySelector('.vis-panel.vis-center')?.clientWidth ?? 0;
+    const width = host.current?.querySelector('.vis-panel.vis-center')?.clientWidth ?? 0;
     const w = t?.getWindow();
-    const narrow = w && panelPx ? narrowIds(ranges.current, { start: w.start.getTime(), end: w.end.getTime() }, panelPx) : new Set<string>();
+    const narrow = w && width ? narrowLabels(ranges.current, { start: w.start.getTime(), end: w.end.getTime() }, width) : new Map<string, number>();
     const set = itemSet.current;
-    const updates = set.getIds().map((id) => {
-      const extra = `${narrow.has(id as string) ? ' label-out' : ''}${roles ? ` ${roles.get(id as string) ?? 'dimmed'}` : ''}`;
-      return { id: id as string, className: `${baseClass.current.get(id as string) ?? ''}${extra}` };
+    const updates = set.getIds().map((key) => {
+      const id = key as string;
+      const pull = narrow.get(id);
+      const extra = `${pull !== undefined ? ' label-out' : ''}${roles ? ` ${roles.get(id) ?? 'dimmed'}` : ''}`;
+      // A name near the right edge is pulled left so it isn't cut off.
+      const style = `${baseStyle.current.get(id) ?? ''}${pull ? `; --pull: ${pull}px` : ''}`;
+      return { id, className: `${baseClass.current.get(id) ?? ''}${extra}`, style };
     });
-    if (updates.some((u) => set.get(u.id)?.className !== u.className)) set.update(updates);
+    if (updates.some((u) => { const cur = set.get(u.id); return cur?.className !== u.className || cur?.style !== u.style; })) set.update(updates);
     drawArrows();
   };
 
@@ -209,7 +225,15 @@ export function TimelineView({ items, categories, relations, selectedId, thumbFo
       selectable: true,
       dataAttributes: ['id'], // lets the influence arrows find each item's element
       xss: { disabled: true }, // every string we inject goes through escapeHtml
-      format: { minorLabels: minorLabel, majorLabels: majorLabel },
+      timeAxis: axisStep.current,
+      format: {
+        minorLabels: (date: Date, scale: string, step: number) => {
+          const w = tl.current?.getWindow();
+          const years = w ? (w.end.getTime() - w.start.getTime()) / YEAR_MS : 0;
+          return minorLabel(date, scale, step, scale === 'year' && years > 0 ? axisLabelEvery(step, panelPx.current / years) : 1);
+        },
+        majorLabels: majorLabel,
+      },
       groupTemplate: (g?: { content: string; style: string } | null) => {
         if (!g) return '';
         const el = document.createElement('div');
@@ -238,6 +262,11 @@ export function TimelineView({ items, categories, relations, selectedId, thumbFo
       const hostBox = host.current?.getBoundingClientRect();
       const box = center?.getBoundingClientRect();
       if (!box || !hostBox) return;
+      panelPx.current = box.width;
+      const years = (w.end.getTime() - w.start.getTime()) / YEAR_MS;
+      const step = years > 0 ? axisStepYears(box.width / years) : undefined;
+      if (step) Object.assign(axisStep.current, { scale: 'year', step });
+      else { delete axisStep.current.scale; delete axisStep.current.step; }
       cb.current.onWindow({
         start: jsDateToDecimalYear(w.start),
         end: jsDateToDecimalYear(w.end),
@@ -278,6 +307,7 @@ export function TimelineView({ items, categories, relations, selectedId, thumbFo
     groupSet.current.add(categories.map((c) => ({ id: c.id, content: c.label, style: `--c: ${c.color}` })));
     const visItems = items.filter((i) => colorOf.has(i.categoryId)).map((i) => toVisItem(i, colorOf.get(i.categoryId)!, thumbFor));
     baseClass.current = new Map(visItems.map((v) => [v.id, v.className]));
+    baseStyle.current = new Map(visItems.map((v) => [v.id, v.style]));
     const visById = new Map(visItems.map((v) => [v.id, v]));
     ranges.current = items.flatMap((i) => {
       const v = visById.get(i.id);

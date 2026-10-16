@@ -185,6 +185,8 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .timeline-host .vis-item.vis-range.label-out .it > span {
   text-shadow: 0 0 3px var(--bg), 0 0 3px var(--bg), 0 0 2px var(--bg);
 }
+/* Near the right edge the name is pulled left (by --pull) so it stays on screen. */
+.timeline-host .vis-item.vis-range.label-out .it { transform: translateX(calc(-1 * var(--pull, 0px))); position: relative; z-index: 1; }
 
 /* Influences of the selected person light up; everything else steps back. */
 .timeline-host .vis-item { transition: opacity 0.15s, box-shadow 0.15s; }
