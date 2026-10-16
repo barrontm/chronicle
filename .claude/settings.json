@@ -31,5 +31,8 @@
       "Read(dist/**)",
       "Read(node_modules/**/dist/*.mjs)"
     ]
-  }
+  },
+  "enabledMcpjsonServers": [
+    "playwright"
+  ]
 }

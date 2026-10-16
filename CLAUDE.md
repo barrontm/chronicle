@@ -13,6 +13,7 @@ npm run dev           # dev server
 npm run check:quiet   # typecheck + unit + build + e2e, failures only: run before every commit
 npm run check         # same, full output: only when debugging a failure
 npm run shots -- --only map --sheet   # screenshots of the views you touched, tiled into one image
+npx playwright test e2e/visual.spec.ts --update-snapshots   # after an intended visual change
 ```
 
 ## Layout
@@ -33,7 +34,7 @@ Folder notes load automatically: `src/ui/CLAUDE.md`, `src/model/CLAUDE.md`, `e2e
 4. **No content** in the app, and **no AI-generated imagery**.
 5. **Offline first.** Network features say clearly when offline.
 6. **Copy:** plain, sentence-case, Bob's point of view (see `docs/design.md`).
-7. **Verify visually** with screenshots of only the views you changed (desktop, phone, dark), as one sheet.
+7. **Verify visually** with screenshots of only the views you changed (desktop, phone, dark), as one sheet. The `design-review` skill does this; the Playwright MCP server (`.mcp.json`) is for hover, drag and scrubbing.
 8. **Tests with features:** unit tests for logic, one e2e test for the main flow, network mocked.
 9. **Manual:** every user-visible change updates `docs/manual.md` (shown in the app under Help) in the same commit, in Bob's words. `check:quiet` fails otherwise; "Manual: none" in a commit message is only for changes Bob can't see.
 

@@ -6,3 +6,5 @@
 - Tag a test `@phone` to also run it at Pixel 7 size.
 - In the Claude cloud sandbox use the preinstalled browser: `PW_CHROMIUM_PATH=/opt/pw-browsers/chromium-1194/chrome-linux/chrome`.
 - Run one test while iterating: `npx playwright test -g "name" --reporter=line`.
+- `visual.spec.ts` compares the timeline, map, dark split and phone views against baselines in `visual.spec.ts-snapshots/`. They run on macOS only (Linux fonts differ), so CI skips them. After an intended visual change: `npx playwright test e2e/visual.spec.ts --update-snapshots`, look at the new images, commit them.
+- Map-heavy tests that load the map more than once need `test.slow()`: SwiftShader with parallel workers can pass the default 30s.
