@@ -1,6 +1,8 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import {
+  authoredBy,
+  bibliographyFor,
   createEmptyDoc,
   DocValidationError,
   influencesOf,
@@ -266,5 +268,35 @@ describe('influencesOf', () => {
     const rels = [r('1', 'socrates', 'plato'), r('2', 'plato', 'aristotle'), r('3', 'plato', 'academy', 'caused')];
     expect(influencesOf(rels, 'plato')).toEqual({ by: ['socrates'], on: ['aristotle'] });
     expect(influencesOf(rels, 'nobody')).toEqual({ by: [], on: [] });
+  });
+});
+
+describe('bibliographyFor', () => {
+  it('gathers sources cited here, by notes, and by connected entries, each once', () => {
+    const { cited, related } = bibliographyFor(fixture(), 'i_aristotle');
+    expect(cited.map((e) => [e.source.id, e.locator])).toEqual([['s_barnes', 'ch. 1']]);
+    expect(related).toEqual([]);
+    const plato = bibliographyFor(fixture(), 'i_plato');
+    expect(plato.cited).toEqual([]);
+    expect(plato.related.map((e) => [e.source.id, e.via])).toEqual([['s_barnes', 'Socrates → Plato → Aristotle']]);
+  });
+
+  it('lists works a person wrote', () => {
+    expect(bibliographyFor(fixture(), 'i_plato').works.map((s) => s.id)).toEqual(['s_republic']);
+    expect(bibliographyFor(fixture(), 'i_pelop').works).toEqual([]);
+  });
+});
+
+describe('authoredBy', () => {
+  it('matches a name however the authors are written', () => {
+    expect(authoredBy('Plato; trans. G. M. A. Grube', 'Plato')).toBe(true);
+    expect(authoredBy('Darwin, Charles', 'Charles Darwin')).toBe(true);
+    expect(authoredBy('Will Durant and Ariel Durant', 'Ariel Durant')).toBe(true);
+    expect(authoredBy('Aristotélēs', 'Aristoteles')).toBe(true);
+  });
+
+  it('doesn’t match part of a word or a missing author', () => {
+    expect(authoredBy('Andrei Platonov', 'Plato')).toBe(false);
+    expect(authoredBy(undefined, 'Plato')).toBe(false);
   });
 });

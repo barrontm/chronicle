@@ -97,7 +97,7 @@ test('write a note linked to two people, with a cited source', async ({ page }) 
 
   // Follow the link to Plato: the note is listed there too.
   await note.getByRole('button', { name: 'Plato' }).click();
-  await expect(page.getByTestId('item-view').getByRole('button', { name: /Forms vs\. substances/ })).toBeVisible();
+  await expect(page.getByTestId('item-view').getByRole('button', { name: /^Forms vs\. substances/ })).toBeVisible();
 
   // The source shows where it is cited.
   await page.getByRole('button', { name: 'Library' }).click();
@@ -121,7 +121,7 @@ test('connect two entries and navigate between them', async ({ page }) => {
   await expect(view.getByText('Influenced by')).toBeVisible();
   await view.getByRole('button', { name: /Socrates/ }).click();
   await expect(page.getByTestId('item-view').getByText('Influenced', { exact: true })).toBeVisible();
-  await page.getByRole('button', { name: 'Back' }).click();
+  await page.getByRole('button', { name: 'Back', exact: true }).click();
   await expect(page.getByTestId('item-view').getByRole('heading', { name: 'Plato' })).toBeVisible();
 });
 
@@ -306,10 +306,67 @@ test('clicking a person lights up their influences on the timeline @phone', asyn
   await expect(page.locator('.influence-arrows path.arc')).toHaveCount(2);
   await expect(page.locator('.influence-arrows path.arc.infl-by')).toHaveAttribute('data-from', 'i_socrates');
 
-  // A person without influences changes nothing.
+  // A person without connections changes nothing. (Clicking Plato zoomed in on his time; show everything first.)
+  await page.getByRole('button', { name: 'Close panel' }).click();
+  await page.getByRole('button', { name: 'More' }).click();
+  await page.getByRole('menuitem', { name: 'Show everything' }).click();
   await page.locator('.vis-item', { hasText: 'Confucius' }).click();
   await expect(page.locator('.vis-item.dimmed')).toHaveCount(0);
   await expect(page.locator('.influence-arrows path.arc')).toHaveCount(0);
+});
+
+test('move through time with the wheel, the thumbwheel and the zoom bar; clicking a person zooms to their time @phone', async ({ page }) => {
+  await open(page);
+  await importFixture(page);
+  const span = page.getByTestId('zoom-span');
+  const wheel = page.getByTestId('thumbwheel');
+  const centre = async () => Number(await wheel.getAttribute('aria-valuenow'));
+
+  // A zoom stop sets how much time is in view.
+  await page.getByTestId('time-bar').getByRole('button', { name: 'Century' }).click();
+  await expect(span).toHaveText('100 years in view');
+  await expect(page.getByTestId('time-bar').getByRole('button', { name: 'Century' })).toHaveAttribute('aria-pressed', 'true');
+
+  // The plain wheel moves through time without zooming.
+  const before = await centre();
+  const box = (await page.getByTestId('timeline').boundingBox())!;
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.wheel(0, 200);
+  await expect.poll(centre).toBeGreaterThan(before);
+  await expect(span).toHaveText('100 years in view');
+
+  // Dragging the thumbwheel right goes back in time; the arrow keys step forward.
+  const w = (await wheel.boundingBox())!;
+  const afterWheel = await centre();
+  await page.mouse.move(w.x + w.width * 0.3, w.y + w.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(w.x + w.width * 0.6, w.y + w.height / 2, { steps: 5 });
+  await page.mouse.up();
+  await expect.poll(centre).toBeLessThan(afterWheel);
+  // A key press also stops a flick's glide, so read the year after it.
+  await wheel.focus();
+  await page.keyboard.press('ArrowLeft');
+  const settled = await centre();
+  await page.keyboard.press('ArrowRight');
+  await expect.poll(centre).toBeGreaterThan(settled);
+
+  // "All" shows everything; clicking Plato then frames his life with Socrates and Aristotle.
+  await page.getByTestId('time-bar').getByRole('button', { name: 'All' }).click();
+  await expect(span).toHaveText(/[0-9,]{4,} years in view/);
+  await page.locator('.vis-item', { hasText: 'Plato' }).click();
+  await expect(span).toHaveText('180 years in view');
+  await expect(page.locator('.vis-item.infl-by', { hasText: 'Socrates' })).toBeInViewport();
+  await expect(page.locator('.vis-item.infl-on', { hasText: 'Aristotle' })).toBeInViewport();
+
+  // His bibliography: what notes and connections cite, and what he wrote.
+  const bib = page.getByTestId('bibliography');
+  await expect(bib.getByRole('button', { name: /Aristotle: A Very Short Introduction.*Cited in Socrates → Plato → Aristotle/ })).toBeVisible();
+  await expect(bib.getByTestId('works-by')).toContainText('Republic');
+
+  // Back to where I was.
+  await page.getByRole('button', { name: 'Back to where I was' }).click();
+  await expect(span).toHaveText(/[0-9,]{4,} years in view/);
+  await expect(page.getByRole('button', { name: 'Back to where I was' })).toHaveCount(0);
 });
 
 test('zoomed far out, names run past bars too narrow for them, and go back in when zoomed in @phone', async ({ page }) => {
@@ -318,7 +375,16 @@ test('zoomed far out, names run past bars too narrow for them, and go back in wh
   const plato = page.locator('.vis-item', { hasText: 'Plato' });
   const box = (await page.getByTestId('timeline').boundingBox())!;
   await page.mouse.move(box.x + box.width / 2, box.y + 150);
+  // Ctrl + wheel zooms (it's also what a trackpad pinch sends); the plain wheel moves through time.
+  await page.keyboard.down('Control');
   for (let i = 0; i < 6; i++) await page.mouse.wheel(0, 300);
+  await page.keyboard.up('Control');
+  // Shift + wheel scrolls the lanes, so a phone can reach the science lane (it moves no time).
+  const centre = await page.getByTestId('thumbwheel').getAttribute('aria-valuenow');
+  await page.keyboard.down('Shift');
+  await page.mouse.wheel(0, 600);
+  await page.keyboard.up('Shift');
+  await expect(page.getByTestId('thumbwheel')).toHaveAttribute('aria-valuenow', centre!);
   await expect(plato).toHaveClass(/label-out/);
   // The whole name is drawn, not clipped to the bar.
   const name = plato.locator('.it > span');
@@ -339,15 +405,16 @@ test('zoomed far out, names run past bars too narrow for them, and go back in wh
   expect(yearLabels.length).toBeGreaterThan(1);
   for (let i = 1; i < yearLabels.length; i++) expect(yearLabels[i][0]).toBeGreaterThanOrEqual(yearLabels[i - 1][1] - 1);
 
-  // Over the year axis the wheel only zooms; over the lanes a phone may scroll them instead.
   const at = (await plato.boundingBox())!;
   const axis = (await page.locator('.vis-time-axis').first().boundingBox())!;
   await page.mouse.move(at.x + 2, axis.y + axis.height / 2);
   // Zoom in until Plato's life is wider than his name (a phone zooms less per step).
+  await page.keyboard.down('Control');
   for (let i = 0; i < 60 && /label-out/.test((await plato.getAttribute('class')) ?? ''); i++) {
     await page.mouse.wheel(0, -300);
     await page.waitForTimeout(50);
   }
+  await page.keyboard.up('Control');
   await expect(plato).not.toHaveClass(/label-out/);
 });
 

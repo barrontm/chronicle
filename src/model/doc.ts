@@ -393,6 +393,65 @@ export function influencesOf(relations: Relation[], id: string): { by: string[];
   };
 }
 
+export interface BibliographyEntry {
+  source: Source;
+  locator?: string;
+  /** Where the citation was found, for sources not cited by the entry itself: a note's or a connected entry's title. */
+  via?: string;
+}
+
+/** Lowercase, accents and punctuation dropped, so "Aristotélēs" and "aristoteles" match. */
+function normalizeName(s: string): string {
+  return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
+}
+
+/**
+ * Whether an authors field ("Durant, Will; Durant, Ariel", "Plato, trans. Grube")
+ * names this person: the whole name, its "Last, First" form, or the name as
+ * whole words within one author.
+ */
+export function authoredBy(authors: string | undefined, person: string): boolean {
+  const name = normalizeName(person);
+  if (!authors || !name) return false;
+  return authors.split(/;|&|\band\b/i).some((raw) => {
+    const parts = raw.split(',').map((p) => p.trim()).filter(Boolean);
+    const reversed = parts.length >= 2 ? normalizeName(`${parts[1]} ${parts[0]}`) : undefined;
+    const a = normalizeName(raw);
+    return a === name || reversed === name || ` ${a} `.includes(` ${name} `);
+  });
+}
+
+/**
+ * Everything to read on an entry: sources it cites, sources cited by notes about
+ * it and by entries connected to it, and, for a person, sources they wrote.
+ */
+export function bibliographyFor(doc: TimelineDoc, id: string): { cited: BibliographyEntry[]; related: BibliographyEntry[]; works: Source[] } {
+  const item = doc.items.find((i) => i.id === id);
+  const sources = new Map(doc.sources.map((s) => [s.id, s]));
+  const cited = (item?.citations ?? []).flatMap((c) => {
+    const source = sources.get(c.sourceId);
+    return source ? [{ source, locator: c.locator }] : [];
+  });
+  const seen = new Set(cited.map((e) => e.source.id));
+  const related: BibliographyEntry[] = [];
+  const addFrom = (citations: Citation[] | undefined, via: string) => {
+    for (const c of citations ?? []) {
+      const source = sources.get(c.sourceId);
+      if (!source || seen.has(source.id)) continue;
+      seen.add(source.id);
+      related.push({ source, locator: c.locator, via });
+    }
+  };
+  for (const n of notesFor(doc, id)) addFrom(n.citations, n.title);
+  const { outgoing, incoming } = relationsFor(doc, id);
+  for (const otherId of [...outgoing.map((r) => r.toId), ...incoming.map((r) => r.fromId)]) {
+    const other = doc.items.find((i) => i.id === otherId);
+    if (other) addFrom(other.citations, other.title);
+  }
+  const works = item?.kind === 'person' ? doc.sources.filter((s) => authoredBy(s.authors, item.title)) : [];
+  return { cited, related, works };
+}
+
 /** Human phrasing for a connection, read in either direction. */
 export function describeRelation(type: RelationType, direction: 'out' | 'in'): string {
   const out: Record<RelationType, string> = {

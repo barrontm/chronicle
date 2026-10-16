@@ -87,7 +87,8 @@
   ],
   "sources": [
     { "id": "s_barnes", "kind": "book", "title": "Aristotle: A Very Short Introduction", "authors": "Jonathan Barnes", "year": "2000", "publisher": "Oxford University Press", "updatedAt": 1760000000000 },
-    { "id": "s_wp_magna", "kind": "web", "title": "Magna Carta", "publisher": "Wikipedia", "url": "https://en.wikipedia.org/wiki/Magna_Carta", "accessed": "2026-10-15", "updatedAt": 1760000000000 }
+    { "id": "s_wp_magna", "kind": "web", "title": "Magna Carta", "publisher": "Wikipedia", "url": "https://en.wikipedia.org/wiki/Magna_Carta", "accessed": "2026-10-15", "updatedAt": 1760000000000 },
+    { "id": "s_republic", "kind": "book", "title": "Republic", "authors": "Plato; trans. G. M. A. Grube", "year": "1992", "publisher": "Hackett", "updatedAt": 1760000000000 }
   ],
   "relations": [
     { "id": "r_1", "fromId": "i_socrates", "toId": "i_plato", "type": "influenced", "updatedAt": 1760000000000 },

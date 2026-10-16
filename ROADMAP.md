@@ -52,6 +52,9 @@ Tickets marked 🏛 make the map good for Ancient Greece and its wars (city-stat
 14. **Bubbles for counts, click a country for its curve** · M · opus. Totals (people, $) become circles at country centroids (`labelPoint` over the bundled countries), area ∝ value, scaled to the maximum over all years so growth shows as the year plays; rates keep shading. `defaultMapStyle(series)` guesses from the unit; a "Show as: Shades / Bubbles" toggle (per trend, `useStored`) overrides. The legend gets reference circles. Clicking a country opens a sparkline with the current year marked.
    Files: `src/ui/mapData.ts` (`countryBubbles`, `defaultMapStyle`, tested), `MapView.tsx` (bubbles layer, popover), `MapPane.tsx` (toggle, legend).
    Done when: an e2e test switches a population trend to bubbles and sees the bubble legend.
+15. ✅ **Time navigation** · M · opus. The wheel moves through time (Shift scrolls lanes, Ctrl/⌘ or pinch zooms); a thumbwheel and a zoom bar with Year/Decade/Century/Millennium/All stops under the timeline. Clicking an entry zooms to its time with its connections in view, with "Back to where I was"; every connection lights up, not only influences. The entry panel's Bibliography gathers sources cited by it, its notes and its connections, and works by a person.
+   Files: `src/ui/timeNav.ts` (tested), `src/ui/TimeBar.tsx`, `TimelineView.tsx`, `bibliographyFor` in `src/model/doc.ts` (tested), `ItemView`.
+   Done when: an e2e test zooms with a stop, scrolls with the wheel and thumbwheel, clicks Plato and sees his time, his works and the way back.
 
 ## M1 — Foundation ✅ (2026-10-15)
 - [x] Entries (event / period / person) with BCE-aware dates and approximate dates

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { describeRelation, newId, notesFor, relationsFor, remove, upsert, RELATION_TYPES } from '../../model/doc';
+import { bibliographyFor, describeRelation, newId, notesFor, relationsFor, remove, upsert, RELATION_TYPES } from '../../model/doc';
 import { compareHistDate, formatRange, formatHistDate, toDecimalYear } from '../../model/dates';
 import type { ItemDraft } from '../../media/wikipedia';
 import type { Citation, HistDate, ItemKind, MediaRef, Relation, RelationType, Source, TimelineItem } from '../../model/types';
@@ -54,6 +54,7 @@ export function ItemView({ id, nav }: { id: string; nav: Nav }) {
   const notes = notesFor(doc, id);
   const { outgoing, incoming } = relationsFor(doc, id);
   const sources = new Map(doc.sources.map((s) => [s.id, s]));
+  const bib = bibliographyFor(doc, id);
   const years = item.end ? Math.round(compareHistDate(item.end, item.start)) : null;
   const territories = doc.territories.filter((t) => t.itemId === id);
   const flows = doc.flows.filter((f) => f.itemId === id);
@@ -106,19 +107,51 @@ export function ItemView({ id, nav }: { id: string; nav: Nav }) {
       )}
       {item.kind === 'person' && item.wikidataId && <InfluenceSuggestions key={item.id} item={item} nav={nav} />}
 
-      {item.citations && item.citations.length > 0 && (
-        <>
-          <h3>Sources</h3>
-          <ul className="linklist">
-            {item.citations.map((c, i) => (
-              <li key={i}><button className="citation" onClick={() => nav.open({ type: 'source', id: c.sourceId })}>{formatCitation(sources.get(c.sourceId), c)}</button></li>
-            ))}
-          </ul>
-        </>
+      {(bib.cited.length > 0 || bib.related.length > 0 || item.kind === 'person') && (
+        <section data-testid="bibliography">
+          <h3>Bibliography</h3>
+          {bib.cited.length > 0 && (
+            <ul className="linklist">
+              {bib.cited.map((e, i) => (
+                <li key={i}><button className="citation" onClick={() => nav.open({ type: 'source', id: e.source.id })}>{formatCitation(e.source, { sourceId: e.source.id, locator: e.locator })}</button></li>
+              ))}
+            </ul>
+          )}
+          {bib.related.length > 0 && (
+            <>
+              <h4>From notes and connections</h4>
+              <ul className="linklist">
+                {bib.related.map((e) => (
+                  <li key={e.source.id}>
+                    <button className="citation" onClick={() => nav.open({ type: 'source', id: e.source.id })}>
+                      {formatCitation(e.source, { sourceId: e.source.id, locator: e.locator })}
+                      <small>Cited in {e.via}</small>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+          {item.kind === 'person' && (
+            <>
+              <h4>Their works</h4>
+              {bib.works.length > 0 ? (
+                <ul className="linklist" data-testid="works-by">
+                  {bib.works.map((s) => (
+                    <li key={s.id}><button className="citation" onClick={() => nav.open({ type: 'source', id: s.id })}>{formatCitation(s, { sourceId: s.id })}</button></li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="hint" style={{ color: 'var(--muted)' }}>Sources with {item.title} as an author show up here.</p>
+              )}
+            </>
+          )}
+        </section>
       )}
 
       <div className="actions">
         <button className="btn primary" onClick={() => nav.replace({ type: 'item', id, edit: true })}>Edit</button>
+        <button className="btn" onClick={() => nav.showTime(id)}>{item.kind === 'person' ? 'Show their time' : 'Show its time'}</button>
         {(item.places?.length || territories.length > 0 || flows.length > 0) && <button className="btn" onClick={() => nav.showOnMap(toDecimalYear(item.start))}>Show on map</button>}
         <button
           className="btn danger"
