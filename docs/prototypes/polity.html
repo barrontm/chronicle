@@ -1,0 +1,772 @@
+<title>Chronicle how Athens was governed</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600&family=Spectral+SC:wght@500;600&family=Spectral:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+<style>
+/* Layout: a quiet desk holding one device (laptop or phone); inside it, Chronicle's own tokens from src/ui/styles.css.
+   A polity is political, so its diagram and bar take lapis; patterns carry the form of government. */
+:root {
+  --desk: #dfe3dc; --desk-ink: #35424d; --frame: #1d2b3a;
+  --bg: #eef0ec; --panel: #fbfbf8; --ink: #1d2b3a; --ink-2: #4d5b66; --muted: #74808a;
+  --rule: #cfd4cc; --rule-soft: #e1e4dd; --focus: #2f5da8; --band: #e2e6df; --band-edge: #c3c9c0;
+  --pol: #2f5da8; --umber: #7a5a3a; --slave: #8d969c;
+  --font-read: 'Spectral', Georgia, serif;
+  --font-sc: 'Spectral SC', 'Spectral', Georgia, serif;
+  --font-ui: 'Public Sans', system-ui, sans-serif;
+  --motion-quick: 150ms; --motion-move: 400ms; --ease: cubic-bezier(.2,.7,.2,1);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --desk: #0b1116; --desk-ink: #b7bfbf; --frame: #2a3540;
+    --bg: #131b23; --panel: #1a242e; --ink: #e3e6e0; --ink-2: #b7bfbf; --muted: #8a959b;
+    --rule: #33414d; --rule-soft: #26323d; --focus: #7fa3e0; --band: #1e2832; --band-edge: #36444f;
+    --pol: #6f93d6; --umber: #b9936b; --slave: #5d676e;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --desk: #0b1116; --desk-ink: #b7bfbf; --frame: #2a3540;
+  --bg: #131b23; --panel: #1a242e; --ink: #e3e6e0; --ink-2: #b7bfbf; --muted: #8a959b;
+  --rule: #33414d; --rule-soft: #26323d; --focus: #7fa3e0; --band: #1e2832; --band-edge: #36444f;
+  --pol: #6f93d6; --umber: #b9936b; --slave: #5d676e;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { background: var(--desk); color: var(--ink); font-family: var(--font-ui); }
+button { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+/* ---------- prototype chrome (outside the device) ---------- */
+.proto { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 14px 28px; display: grid; gap: 12px; }
+.pbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; color: var(--desk-ink); }
+.pbar h1 { font: 600 15px/1.2 var(--font-ui); margin: 0; letter-spacing: .01em; }
+.pbar h1 span { font-weight: 400; color: var(--muted); margin-left: 6px; }
+.controls { display: flex; flex-wrap: wrap; gap: 8px 14px; margin-left: auto; }
+.seg { display: inline-flex; align-items: center; gap: 6px; border: 0; padding: 0; margin: 0; }
+.seg legend { float: left; font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin-right: 4px; padding: 0; }
+.seg .opts { display: inline-flex; border: 1px solid var(--band-edge); border-radius: 6px; overflow: hidden; background: var(--panel); }
+.seg button { border: 0; background: none; padding: 5px 10px; font-size: 12.5px; cursor: pointer; color: var(--ink-2); }
+.seg button + button { border-left: 1px solid var(--band-edge); }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--panel); }
+.pnote { margin: 0; font: 14px/1.5 var(--font-read); color: var(--desk-ink); max-width: 84ch; min-height: 4.5em; }
+.pnote b { font-weight: 600; }
+.pnote .how { display: block; font: 12.5px/1.5 var(--font-ui); color: var(--muted); margin-top: 3px; }
+.stage { display: flex; justify-content: center; min-width: 0; }
+.device { position: relative; width: min(1240px, 100%); height: 780px; border: 1px solid var(--band-edge); border-radius: 10px; overflow: hidden; background: var(--bg); box-shadow: 0 18px 50px -24px rgb(0 0 0 / .35); }
+.device.phone { width: 412px; max-width: 100%; height: 860px; border: 9px solid var(--frame); border-radius: 34px; }
+@media (max-width: 720px) {
+  .seg.device-seg { display: none; }
+  .device, .device.phone { width: 100%; height: 82vh; min-height: 640px; border: 1px solid var(--band-edge); border-radius: 12px; }
+}
+
+/* ---------- the app inside ---------- */
+.app { position: absolute; inset: 0; display: flex; flex-direction: column; background: var(--bg); color: var(--ink); }
+.topbar { display: flex; align-items: center; gap: 12px; height: 46px; padding: 0 14px; border-bottom: 1px solid var(--rule); background: var(--panel); flex: none; }
+.crumbs { display: flex; align-items: center; gap: 8px; min-width: 0; white-space: nowrap; overflow: hidden; }
+.crumbs .glyph { width: 14px; height: 14px; flex: none; color: var(--pol); }
+.crumbs .here { font: 600 15px/1 var(--font-sc); letter-spacing: .05em; }
+.crumbs .kind { font-size: 11.5px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
+.views { margin-left: auto; display: inline-flex; border: 1px solid var(--rule); border-radius: 6px; overflow: hidden; flex: none; }
+.views button { border: 0; background: none; padding: 5px 11px; font-size: 12.5px; cursor: pointer; color: var(--ink-2); white-space: nowrap; }
+.views button + button { border-left: 1px solid var(--rule); }
+.views button[aria-pressed="true"] { background: var(--rule-soft); color: var(--ink); font-weight: 600; }
+
+.main { position: relative; flex: 1; min-height: 0; display: flex; }
+.diag { position: relative; flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.dhead { flex: none; display: flex; align-items: flex-start; gap: 12px; padding: 12px 16px 0; }
+.dhead .year { font: 500 22px/1.1 var(--font-read); font-variant-numeric: oldstyle-nums; white-space: nowrap; }
+.dhead .rname { font: 15px/1.3 var(--font-read); color: var(--ink-2); margin-top: 2px; }
+.dhead .rname b { font-weight: 600; color: var(--ink); }
+.dhead .nav { margin-left: auto; display: flex; gap: 6px; flex: none; }
+.dhead .nav button { border: 1px solid var(--rule); background: var(--panel); border-radius: 4px; padding: 5px 9px; font-size: 12px; cursor: pointer; color: var(--ink-2); max-width: 210px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dhead .nav button:hover:not(:disabled) { color: var(--ink); border-color: var(--ink-2); }
+.dhead .nav button:disabled { opacity: .45; cursor: default; }
+.dbox { position: relative; flex: 1; min-height: 0; }
+.dbox > svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+
+/* diagram marks */
+.n-box { fill: var(--panel); stroke: var(--ink-2); stroke-width: 1.2; }
+.n-box.nominal { fill: var(--bg); stroke: var(--rule); }
+.n-box.out { fill: color-mix(in srgb, var(--umber) 9%, var(--panel)); stroke: var(--umber); }
+.n-name { font: 500 14.5px/1 var(--font-read); fill: var(--ink); }
+.n-sub { font: 11px/1 var(--font-ui); fill: var(--muted); }
+.nominal .n-name, .n-name.nominal { fill: var(--muted); }
+.n-sub.nominal { font-style: italic; }
+.n-circ { fill: color-mix(in srgb, var(--pol) 16%, var(--panel)); stroke: var(--pol); stroke-width: 1.3; }
+.n-circ.nominal { fill: none; stroke: var(--rule); stroke-width: 1.3; }
+.n-circ.out { fill: color-mix(in srgb, var(--umber) 14%, var(--panel)); stroke: var(--umber); }
+.n-circ.unknown { fill: none; stroke-dasharray: 4 3; }
+.n-halo { fill: color-mix(in srgb, var(--pol) 9%, transparent); stroke: none; }
+.lk { fill: none; stroke: var(--ink-2); stroke-width: 1.4; }
+.lk.advises { stroke-width: 1.1; }
+.lk.commands { stroke-width: 2.6; }
+.lk.checks { stroke: var(--ink); }
+.lk-head { fill: var(--ink-2); }
+.lk-head.checks { fill: none; stroke: var(--ink); stroke-width: 2; }
+.lk-head.advises { fill: none; stroke: var(--ink-2); stroke-width: 1.2; }
+.lk-label { font: 11px/1 var(--font-ui); fill: var(--ink-2); paint-order: stroke; stroke: var(--bg); stroke-width: 4px; stroke-linejoin: round; }
+.say-lbl { font: 11px/1 var(--font-ui); fill: var(--ink-2); }
+.say-lbl.strong { fill: var(--ink); font-weight: 600; }
+.say-head { font: 600 10.5px/1 var(--font-ui); letter-spacing: .08em; fill: var(--muted); text-transform: uppercase; }
+.say-unk { fill: none; stroke: var(--muted); stroke-dasharray: 4 3; }
+.say-unk-t { font: italic 13px/1 var(--font-read); fill: var(--muted); }
+[data-node] { cursor: default; }
+.lkey { position: absolute; right: 14px; top: 6px; display: grid; gap: 3px; padding: 6px 9px; background: color-mix(in srgb, var(--bg) 88%, transparent); border: 1px solid var(--rule-soft); border-radius: 4px; font-size: 11.5px; color: var(--ink-2); }
+.lkey div { display: flex; align-items: center; gap: 7px; white-space: nowrap; }
+
+/* card on the right */
+.card { flex: none; width: 340px; border-left: 1px solid var(--rule); background: var(--panel); padding: 16px 18px 18px; overflow-y: auto; }
+.card .kind { display: flex; align-items: center; gap: 7px; margin: 0 0 6px; font-size: 11.5px; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); }
+.card h2 { font: 500 22px/1.2 var(--font-read); margin: 0 0 4px; text-wrap: balance; }
+.card .meta { margin: 0 0 12px; font: 14px/1.35 var(--font-read); color: var(--ink-2); font-variant-numeric: oldstyle-nums; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.formchip { display: inline-flex; align-items: center; gap: 6px; padding: 1px 7px 1px 2px; border: 1px solid var(--rule); border-radius: 3px; font: 12px/1.6 var(--font-ui); color: var(--ink); background: var(--bg); }
+.formchip svg { flex: none; }
+.card h3 { font: 600 11px/1 var(--font-ui); text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 14px 0 7px; }
+.card ul.changes { margin: 0; padding: 0 0 0 16px; font: 14.5px/1.45 var(--font-read); display: grid; gap: 5px; }
+.card ul.changes li::marker { color: var(--pol); }
+.card blockquote { margin: 0 0 10px; padding: 2px 0 2px 12px; border-left: 2px solid var(--pol); font: 15px/1.5 var(--font-read); }
+.card cite { display: block; margin-top: 4px; font: normal 11.5px/1.3 var(--font-ui); color: var(--muted); }
+.card .none { margin: 0; font: italic 14px/1.4 var(--font-read); color: var(--muted); }
+.card .saytxt { margin: 0; font-size: 13px; line-height: 1.5; color: var(--ink-2); }
+
+/* the polity's bar: regimes as patterned segments */
+.lane { position: relative; flex: none; height: 58px; display: flex; border-top: 1px solid var(--rule); background: var(--bg); }
+.lane-ctl { flex: none; width: 124px; display: flex; flex-direction: column; justify-content: center; gap: 4px; padding: 0 10px 0 14px; border-right: 1px solid var(--rule-soft); }
+.lane-ctl .lname { display: flex; align-items: center; gap: 6px; font: 600 12px/1 var(--font-sc); letter-spacing: .1em; color: var(--ink-2); }
+.lane-ctl .row { display: flex; gap: 5px; }
+.lane-ctl button { height: 26px; min-width: 28px; border: 1px solid var(--rule); background: var(--panel); border-radius: 4px; cursor: pointer; display: grid; place-items: center; padding: 0 6px; font-size: 11.5px; color: var(--ink-2); }
+.lane-ctl .play { background: var(--ink); color: var(--panel); border-color: var(--ink); }
+.track { position: relative; flex: 1; min-width: 0; touch-action: none; cursor: ew-resize; }
+.track svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.seg-r { stroke: var(--pol); stroke-width: 1; }
+.seg-r.cur { stroke: var(--ink); stroke-width: 2; }
+.seg-unrec { fill: none; stroke: var(--muted); stroke-dasharray: 4 3; }
+.seg-unrec-t { font: italic 12px/1 var(--font-read); fill: var(--muted); }
+.client { fill: var(--umber); }
+.head line { stroke: var(--ink); stroke-width: 1.5; }
+.head circle { fill: var(--ink); stroke: var(--bg); stroke-width: 2; }
+.axis { position: relative; flex: none; height: 24px; margin-left: 124px; border-top: 1px solid var(--rule-soft); background: var(--panel); overflow: hidden; }
+.axis span { position: absolute; top: 0; padding-top: 6px; font: 11px/1 var(--font-ui); color: var(--ink-2); font-variant-numeric: tabular-nums; transform: translateX(-50%); white-space: nowrap; }
+.axis span::before { content: ''; position: absolute; left: 50%; top: 0; height: 4px; border-left: 1px solid var(--rule); }
+.forms { flex: none; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 16px; padding: 6px 14px 7px; border-top: 1px solid var(--rule-soft); background: var(--panel); font-size: 11.5px; color: var(--ink-2); }
+.forms .hd { font-size: 10.5px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+.forms span { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.tip { position: absolute; z-index: 9; pointer-events: none; padding: 5px 8px; background: var(--ink); color: var(--panel); font-size: 12px; line-height: 1.35; border-radius: 3px; white-space: nowrap; }
+
+/* compare: Athens and Sparta in 431 BCE */
+.compare { position: absolute; inset: 0; overflow-y: auto; background: var(--bg); padding: 12px 16px 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 0 22px; align-content: start; }
+.compare[hidden] { display: none; }
+.cmp-col { min-width: 0; display: flex; flex-direction: column; }
+.cmp-col h2 { margin: 0; display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.cmp-col h2 .pn { font: 600 16px/1.2 var(--font-sc); letter-spacing: .08em; }
+.cmp-col h2 .rn { font: 15px/1.3 var(--font-read); color: var(--ink-2); }
+.cmp-col .cbox { position: relative; height: 410px; }
+.cmp-col .cbox > svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.cmp-table { grid-column: 1 / -1; margin-top: 12px; border-top: 1px solid var(--rule); display: grid; grid-template-columns: 170px 1fr 1fr; font-size: 13.5px; }
+.cmp-table > div { padding: 8px 10px 8px 0; border-bottom: 1px solid var(--rule-soft); font: 14.5px/1.4 var(--font-read); }
+.cmp-table > .rh { font: 12px/1.4 var(--font-ui); color: var(--muted); padding-top: 10px; }
+.cmp-table > .ch { font: 600 11px/1 var(--font-ui); text-transform: uppercase; letter-spacing: .08em; color: var(--muted); padding-top: 12px; }
+
+/* phone: one column that scrolls */
+.is-phone .main { flex-direction: column; overflow-y: auto; }
+.is-phone .diag { flex: none; }
+.is-phone .dhead { flex-wrap: wrap; padding: 10px 12px 0; }
+.is-phone .dhead .year { font-size: 19px; }
+.is-phone .dhead .nav { margin-left: 0; width: 100%; }
+.is-phone .dhead .nav button { flex: 1; max-width: none; }
+.is-phone .dbox { flex: none; height: 430px; }
+.is-phone .lkey { display: none; }
+.is-phone .card { width: auto; border-left: 0; border-top: 1px solid var(--rule); overflow: visible; }
+.is-phone .crumbs .kind { display: none; }
+.is-phone .views button { padding: 5px 8px; font-size: 12px; }
+.is-phone .lane-ctl { width: 92px; padding: 0 6px 0 10px; }
+.is-phone .lane-ctl .lname { display: none; }
+.is-phone .axis { margin-left: 92px; }
+.is-phone .forms { gap: 3px 12px; padding: 6px 10px; }
+.is-phone .forms .hd { width: 100%; }
+.is-phone .compare { grid-template-columns: 1fr; padding: 10px 12px 20px; }
+.is-phone .cmp-col .cbox { height: 380px; }
+.is-phone .cmp-table { grid-template-columns: 1fr 1fr; }
+.is-phone .cmp-table > .rh { grid-column: 1 / -1; padding-bottom: 0; border-bottom: 0; }
+.is-phone .cmp-table > .ch:first-child { display: none; }
+
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition-duration: 0s !important; animation-duration: 0s !important; } }
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <pattern id="f-democracy" width="6" height="6" patternUnits="userSpaceOnUse"><rect width="6" height="6" fill="color-mix(in srgb, var(--pol) 12%, var(--panel))"/><circle cx="3" cy="3" r="1.25" fill="var(--pol)"/></pattern>
+    <pattern id="f-oligarchy" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="6" height="6" fill="color-mix(in srgb, var(--pol) 12%, var(--panel))"/><rect width="2" height="6" fill="var(--pol)"/></pattern>
+    <pattern id="f-timocracy" width="6" height="6" patternUnits="userSpaceOnUse"><rect width="6" height="6" fill="color-mix(in srgb, var(--pol) 12%, var(--panel))"/><rect y="2" width="6" height="2" fill="var(--pol)"/></pattern>
+    <pattern id="f-tyranny" width="6" height="6" patternUnits="userSpaceOnUse"><rect width="6" height="6" fill="var(--pol)"/></pattern>
+  </defs>
+</svg>
+
+<div class="proto">
+  <header class="pbar">
+    <h1>How Athens was governed <span>Phase 0 prototype · sample data</span></h1>
+    <div class="controls">
+      <fieldset class="seg" id="vd"><legend>Diagram</legend><span class="opts"><button data-v="A" aria-pressed="true">A · Chart</button><button data-v="B" aria-pressed="false">B · Bodies</button></span></fieldset>
+      <fieldset class="seg device-seg" id="dev"><legend>Device</legend><span class="opts"><button data-v="laptop" aria-pressed="true">Laptop</button><button data-v="phone" aria-pressed="false">Phone</button></span></fieldset>
+      <fieldset class="seg" id="thm"><legend>Theme</legend><span class="opts"><button data-v="light" aria-pressed="false">Light</button><button data-v="dark" aria-pressed="false">Dark</button></span></fieldset>
+    </div>
+  </header>
+  <p class="pnote" id="pnote"></p>
+  <main class="stage">
+    <div class="device" id="device">
+      <div class="app" id="app">
+        <div class="topbar">
+          <div class="crumbs"><svg class="glyph" viewBox="0 0 18 18" aria-hidden="true"><rect x="3" y="3" width="12" height="12" fill="currentColor"/></svg><span class="here">Athens</span><span class="kind">Polity</span></div>
+          <div class="views" role="group" aria-label="View"><button id="vTime" type="button" aria-pressed="true">Through time</button><button id="vCmp" type="button" aria-pressed="false">With Sparta, 431 BCE</button></div>
+        </div>
+        <div class="main" id="main">
+          <section class="diag" id="diag">
+            <div class="dhead">
+              <div><div class="year" id="year"></div><div class="rname" id="rname"></div></div>
+              <div class="nav"><button id="prev" type="button"></button><button id="next" type="button"></button></div>
+            </div>
+            <div class="dbox" id="dbox"><svg id="dsvg" role="img" aria-label="How Athens was governed at this year"></svg><div class="lkey" id="lkey"></div></div>
+          </section>
+          <aside class="card" id="card" aria-live="polite"></aside>
+          <div class="compare" id="compare" hidden></div>
+        </div>
+        <div class="lane" id="lane">
+          <div class="lane-ctl">
+            <span class="lname"><svg width="10" height="10" aria-hidden="true"><rect width="10" height="10" fill="var(--pol)"/></svg>Athens</span>
+            <div class="row"><button id="play" class="play" type="button" aria-label="Play"></button><button id="speed" type="button" title="Speed">1×</button></div>
+          </div>
+          <div class="track" id="track"><svg id="tsvg"></svg></div>
+        </div>
+        <div class="axis" id="axis"></div>
+        <div class="forms" id="forms"></div>
+        <div class="tip" id="tip" hidden></div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+(() => {
+'use strict';
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;');
+// ---------- dates: astronomical years, as in src/model/dates.ts (431 BCE = -430) ----------
+const bce = n => 1 - n;
+const t = (y, f) => 1 - y + f;
+const yr = T => { const a = Math.floor(T); return a <= 0 ? `${1 - a} BCE` : `${a} CE`; };
+const span = (a, b) => { const A = 1 - Math.floor(a), B = 1 - Math.floor(b - 1e-6); return A === B ? `${A} BCE` : `${A}–${B} BCE`; };
+const fmtN = n => n.toLocaleString('en-US');
+
+// ---------- institutions: where each sits in the diagram (tier 0 offices, 1 councils and courts, 2 assemblies) ----------
+const INST = {
+  archons: { name: 'Archons', tier: 0, slot: .3, gk: 'archontes' },
+  generals: { name: 'Generals', tier: 0, slot: .64, gk: 'strategoi' },
+  tyrant: { name: 'Tyrant', tier: 0, slot: .5, gk: 'tyrannos' },
+  thirty: { name: 'The Thirty', tier: 0, slot: .5 },
+  eleven: { name: 'The Eleven', tier: 0, slot: .18 },
+  kings: { name: 'Two kings', tier: 0, slot: .3, gk: 'basileis' },
+  ephors: { name: 'Ephors', tier: 0, slot: .68, gk: 'ephoroi' },
+  areopagus: { name: 'Areopagus', tier: 1, slot: .12, gk: 'Areios Pagos' },
+  council: { name: 'Council', tier: 1, slot: .42, gk: 'boule' },
+  four: { name: 'The Four Hundred', short: 'The 400', tier: 1, slot: .42 },
+  courts: { name: "People's courts", short: 'Courts', tier: 1, slot: .7, gk: 'dikasteria' },
+  lawmakers: { name: 'Lawmakers', tier: 1, slot: .94, gk: 'nomothetai' },
+  gerousia: { name: 'Elders', tier: 1, slot: .42, gk: 'gerousia' },
+  assembly: { name: 'Assembly', tier: 2, slot: .5, gk: 'ekklesia' },
+  fivek: { name: 'The Five Thousand', short: 'The 5,000', tier: 2, slot: .5 },
+  threek: { name: 'The Three Thousand', short: 'The 3,000', tier: 2, slot: .5 },
+  apella: { name: 'Assembly', tier: 2, slot: .5, gk: 'apella' },
+  sparta: { name: 'Spartan garrison', short: 'Spartans', tier: 0, slot: 1, out: true },
+  macedon: { name: 'Macedonian garrison', short: 'Macedon', tier: 0, slot: 1, out: true },
+};
+const KIND_LABEL = { elects: 'elects', appoints: 'appoints', advises: 'prepares business', checks: 'checks', commands: 'commands' };
+const FORM = {
+  aristocracy: { label: 'the few, by birth', pat: 'oligarchy' },
+  timocracy: { label: 'by wealth', pat: 'timocracy' },
+  tyranny: { label: 'one ruler', pat: 'tyranny' },
+  democracy: { label: 'the many', pat: 'democracy' },
+  oligarchy: { label: 'the few', pat: 'oligarchy' },
+};
+const FORM_NAME = { aristocracy: 'Aristocracy', timocracy: 'Timocracy', tyranny: 'Tyranny', democracy: 'Democracy', oligarchy: 'Oligarchy' };
+
+// ---------- Athens' regimes (sample data, Bob's highlights; numbers are estimates and say so) ----------
+// say: who had a say. total/enslaved/vote are mid estimates with ranges; null = not known.
+const RADICAL = {
+  inst: { archons: { n: 9, sub: '9, by lot' }, generals: { n: 10, sub: '10, elected' }, areopagus: { n: [100, 200], sub: 'murder trials only', nominal: true }, council: { n: 500, sub: '500, by lot' }, courts: { n: 6000, sub: '6,000 jurors, by lot' }, assembly: { n: 6000, sub: 'about 6,000 attend' } },
+  links: [['citizens', 'council', 'elects', 'by lot'], ['citizens', 'courts', 'elects', 'by lot'], ['assembly', 'generals', 'elects'], ['council', 'assembly', 'advises'], ['courts', 'archons', 'checks', 'audit officials'], ['courts', 'assembly', 'checks', 'can strike down decrees']],
+};
+const REGIMES = [
+  { id: 'nobles', title: 'Rule of the nobles', form: 'aristocracy', from: bce(683), to: bce(594), approxFrom: true,
+    inst: { archons: { n: 9, sub: '9, nobles only' }, areopagus: { n: null, sub: 'former archons, for life' }, assembly: { n: null, sub: 'role unclear', nominal: true } },
+    links: [['areopagus', 'archons', 'appoints', 'chooses']],
+    say: { vote: null, power: null, powerLabel: 'a few noble families', note: 'No reliable numbers before the 5th century.' },
+    changes: ['Nine archons, all from noble families, run the state for a year.', 'The Areopagus, made of former archons, chooses them and guards the laws.', "Draco writes down the laws in 621; they are harsh."],
+    q: [['Before Solon, only men of noble birth could be archons, and the Areopagus chose them.', 'Archon', 'Athens']] },
+  { id: 'solon', title: "Solon's reforms", form: 'timocracy', from: bce(594), to: bce(561),
+    inst: { archons: { n: 9, sub: '9, top classes only' }, areopagus: { n: null, sub: 'former archons' }, council: { n: 400, sub: '400, 100 per tribe' }, courts: { n: null, sub: 'any citizen can appeal', name: "People's court" }, assembly: { n: null, sub: 'all citizens' } },
+    links: [['assembly', 'archons', 'elects', 'elects, then lot'], ['council', 'assembly', 'advises'], ['courts', 'archons', 'checks', 'hears appeals'], ['areopagus', 'archons', 'checks', 'guards the laws']],
+    say: { vote: null, power: null, powerLabel: 'the richest classes hold office', note: 'No reliable numbers before the 5th century.' },
+    changes: ['Citizens are sorted into four classes by the size of their harvest; office follows wealth, not birth.', 'A new Council of 400 prepares business for the Assembly.', "Any citizen can appeal to the people's court.", 'Debts are cancelled and enslavement for debt ends.'],
+    q: [['Solon divided the citizens into four classes by the size of their harvest.', 'Solonian Constitution', 'Classes'], ['He cancelled debts and freed Athenians who had been enslaved for debt.', 'Solon', 'Reforms']] },
+  { id: 'tyranny', title: 'Tyranny of the Peisistratids', form: 'tyranny', from: bce(561), to: bce(510),
+    inst: { tyrant: { n: 1, sub: 'Peisistratus, then Hippias' }, archons: { n: 9, sub: "the tyrant's men" }, areopagus: { n: null, sub: 'in name only', nominal: true }, council: { n: 400, sub: 'in name only', nominal: true }, assembly: { n: null, sub: 'in name only', nominal: true } },
+    links: [['tyrant', 'archons', 'appoints']],
+    say: { vote: null, power: 1, powerLabel: 'one man', note: 'No reliable numbers before the 5th century.' },
+    changes: ["Peisistratus takes power with a bodyguard; Solon's institutions stay, but he decides who holds office.", 'His son Hippias rules until Sparta helps drive him out in 510.'],
+    q: [["Peisistratus kept Solon's laws but made sure his own family held the offices.", 'Peisistratos', 'Rule']] },
+  { id: 'cleisthenes', title: "Cleisthenes' democracy", form: 'democracy', from: bce(508), to: bce(462),
+    inst: { archons: { n: 9, sub: '9, elected' }, generals: { n: 10, sub: '10, elected' }, areopagus: { n: [100, 200], sub: 'former archons' }, council: { n: 500, sub: '500, 50 per tribe' }, courts: { n: null, sub: 'any citizen can appeal', name: "People's court" }, assembly: { n: null, sub: 'all citizens' } },
+    links: [['assembly', 'generals', 'elects'], ['assembly', 'archons', 'elects'], ['council', 'assembly', 'advises'], ['areopagus', 'archons', 'checks', 'guards the laws']],
+    say: { vote: 30000, note: 'Herodotus speaks of 30,000 Athenians about 500 BCE; the rest of the population is not known.' },
+    changes: ['Ten new tribes each mix citizens from the coast, the city and the inland.', 'A Council of 500, fifty from each tribe, prepares business for the Assembly.', 'Ten generals are elected each year, from 501.', 'Ostracism: the Assembly can send one man away for ten years (first used in 487).'],
+    q: [['Cleisthenes replaced the four old tribes with ten new ones, each mixing coast, city and inland.', 'Cleisthenes', 'Reforms']] },
+  { id: 'radical', title: 'Radical democracy', form: 'democracy', from: bce(462), to: t(411, .45), ...RADICAL,
+    say: { total: [250000, 350000], enslaved: [80000, 120000], vote: [40000, 60000] },
+    changes: ['The Areopagus loses its powers except for murder trials; the Council, the Assembly and the courts take them over.', 'Jurors are paid from about 450, so the poor can serve.', 'Archons are open to the third class (457).', 'From 451, only children of two Athenian parents are citizens.'],
+    q: [["Ephialtes' reforms of 462 BC took most of the Areopagus's powers and gave them to the Council, the Assembly and the courts.", 'Athenian democracy', 'History'], ['Most officials were chosen by lot for one year; the generals were elected and could be re-elected.', 'Athenian democracy', 'Officials']] },
+  { id: 'four', title: 'The Four Hundred', form: 'oligarchy', from: t(411, .45), to: t(411, .72),
+    inst: { four: { n: 400, sub: '400, hand-picked' }, generals: { n: 10, sub: 'appointed by them' }, fivek: { n: 5000, sub: 'on paper only', nominal: true } },
+    links: [['four', 'generals', 'appoints']],
+    say: { total: [200000, 300000], enslaved: [70000, 110000], vote: 5000, voteNominal: true, power: 400, powerLabel: 'the Four Hundred' },
+    changes: ['With the war going badly, an assembly at Colonus votes the democracy away.', 'Four hundred men rule in place of the Council; the Five Thousand exist on paper only.', 'They fall after four months, when the fleet at Samos refuses to obey them.'],
+    q: [['In 411 BC an assembly at Colonus voted to hand power to four hundred men.', 'Athenian coup of 411 BC', '']] },
+  { id: 'fivek', title: 'The Five Thousand', form: 'oligarchy', from: t(411, .72), to: t(410, .45),
+    inst: { fivek: { n: [5000, 9000], sub: 'men who can afford armour' }, council: { n: null, sub: 'chosen by them' }, generals: { n: 10, sub: '10, elected' }, archons: { n: 9, sub: '9' } },
+    links: [['fivek', 'generals', 'elects'], ['fivek', 'council', 'elects']],
+    say: { total: [200000, 300000], enslaved: [70000, 110000], vote: [5000, 9000] },
+    changes: ['Only men who can afford hoplite armour vote: about 5,000, perhaps more.', 'Pay for office ends.'],
+    q: [['Thucydides thought the government of the Five Thousand the best Athens had in his lifetime.', 'The Five Thousand', '']] },
+  { id: 'restored', title: 'Democracy restored', form: 'democracy', from: t(410, .45), to: t(404, .3), ...RADICAL,
+    say: { total: [200000, 300000], enslaved: [70000, 110000], vote: [25000, 35000] },
+    changes: ['The full democracy returns after the victory at Cyzicus.', 'After Arginusae (406), the Assembly tries six generals together and has them executed.'],
+    q: null },
+  { id: 'thirty', title: 'The Thirty', form: 'oligarchy', client: 'Sparta', from: t(404, .3), to: t(403, .7),
+    inst: { thirty: { n: 30, sub: '30, named under Lysander' }, eleven: { n: 11, sub: 'arrests and executions' }, council: { n: 500, sub: 'picked by the Thirty' }, threek: { n: 3000, sub: 'the only citizens left' }, sparta: { n: 700, sub: '700 on the Acropolis' } },
+    links: [['sparta', 'thirty', 'appoints', 'imposed by Lysander'], ['thirty', 'eleven', 'commands'], ['thirty', 'council', 'appoints'], ['thirty', 'threek', 'appoints', 'draws up the list']],
+    say: { total: [180000, 260000], enslaved: [60000, 100000], vote: 3000, power: 30, powerLabel: 'the Thirty' },
+    changes: ["Under Lysander's eye, the Assembly names thirty men to rewrite the laws.", 'Only the Three Thousand keep their rights; about 1,500 people are killed.', 'A Spartan garrison holds the Acropolis.'],
+    q: [['A pro-Spartan oligarchy, the Thirty Tyrants, ruled Athens for about eight months in 404–403 BC.', 'Thirty Tyrants', ''], ['The Thirty killed about 1,500 Athenians and seized the property of rich metics.', 'Thirty Tyrants', 'Rule']] },
+  { id: 'fourth', title: 'The restored democracy', form: 'democracy', from: t(403, .7), to: bce(322),
+    inst: { archons: { n: 9, sub: '9, by lot' }, generals: { n: 10, sub: '10, elected' }, areopagus: { n: [100, 200], sub: 'former archons' }, council: { n: 500, sub: '500, by lot' }, courts: { n: 6000, sub: '6,000 jurors, by lot' }, lawmakers: { n: [500, 1001], sub: 'panels of jurors' }, assembly: { n: 6000, sub: 'paid to attend' } },
+    links: [['citizens', 'council', 'elects', 'by lot'], ['citizens', 'courts', 'elects', 'by lot'], ['courts', 'lawmakers', 'appoints', 'drawn from jurors'], ['lawmakers', 'assembly', 'checks', 'only they change laws'], ['assembly', 'generals', 'elects'], ['council', 'assembly', 'advises']],
+    say: { total: [200000, 260000], enslaved: [60000, 100000], vote: [25000, 35000] },
+    changes: ['Democracy returns with an amnesty for what was done under the Thirty.', 'Laws are now made by panels of lawmakers drawn from the jurors; the Assembly votes decrees.', 'Citizens are paid to attend the Assembly (about 400).'],
+    q: [['The restored democracy passed an amnesty: no one could be prosecuted for what they had done under the Thirty.', 'Athenian democracy', 'Restoration']] },
+  { id: 'macedon', title: 'Under Macedon', form: 'oligarchy', client: 'Macedon', from: bce(322), to: bce(318),
+    inst: { assembly: { n: 9000, sub: 'men worth 2,000 drachmas', name: 'Assembly' }, generals: { n: 10, sub: 'Phocion leads' }, council: { n: null, sub: 'smaller, number unknown' }, macedon: { n: null, sub: 'at Munychia' } },
+    links: [['macedon', 'assembly', 'checks', 'watches over'], ['assembly', 'generals', 'elects'], ['council', 'assembly', 'advises']],
+    say: { total: [180000, 260000], enslaved: [60000, 100000], vote: 9000 },
+    changes: ['After the Lamian War, Antipater limits citizenship to men worth 2,000 drachmas: about 9,000 keep it, and more than 12,000 lose it.', 'A Macedonian garrison holds Munychia, the hill above Piraeus.'],
+    q: [['Antipater took citizenship from every Athenian worth less than 2,000 drachmas.', 'Lamian War', 'Aftermath']] },
+];
+const SPARTA = { id: 'sparta431', title: 'Two kings, elders and ephors', form: 'oligarchy', from: bce(431), to: bce(430),
+  inst: { kings: { n: 2, sub: 'by birth, two families' }, ephors: { n: 5, sub: '5, elected yearly' }, gerousia: { n: 30, sub: '28 over sixty, and the kings' }, apella: { n: [3500, 6000], sub: 'Spartiates over thirty' } },
+  links: [['apella', 'ephors', 'elects'], ['apella', 'gerousia', 'elects', 'elects, by shouting'], ['gerousia', 'apella', 'advises'], ['ephors', 'kings', 'checks', 'can arrest a king']],
+  say: { total: [150000, 250000], enslaved: [100000, 160000], vote: [3500, 6000], enslavedLabel: 'helots' } };
+const ATHENS431 = REGIMES.find(r => r.id === 'radical');
+const D0 = bce(700), D1 = bce(300), UNREC = bce(318);
+const SAY_MAX = 350000; // one scale for every bar, so Athens and Sparta compare
+
+// ---------- state ----------
+const S = { T: bce(431) + .5, view: 'time', vd: 'A', playing: false, speed: 1, dwellUntil: 0 };
+const app = $('#app'), device = $('#device'), dbox = $('#dbox'), dsvg = $('#dsvg'), tip = $('#tip');
+const reduced = matchMedia('(prefers-reduced-motion: reduce)');
+const isPhone = () => device.classList.contains('phone') || window.innerWidth <= 720;
+const regimeAt = T => REGIMES.find(r => T >= r.from && T < r.to) || null;
+
+// ---------- layout: institutions as boxes (A) or circles sized by members (B) ----------
+const ctx2d = document.createElement('canvas').getContext('2d');
+const textW = (s, font) => { ctx2d.font = font; return ctx2d.measureText(s).width; };
+const mid = n => n == null ? null : Array.isArray(n) ? (n[0] + n[1]) / 2 : n;
+function layout(reg, W, H, vd, phone) {
+  const nodes = {}, links = [];
+  if (!reg) return { nodes, links, say: null, W, H };
+  const tierY = vd === 'A' ? [.1, .37, .63] : [.13, .39, .64];
+  const baseTop = H - (phone ? 66 : 60);
+  const outW = Object.keys(reg.inst).some(id => INST[id].out) ? (phone ? 92 : 150) : 0;
+  const left = phone ? 8 : 18, right = W - (phone ? 8 : 18) - outW;
+  const fName = phone ? '500 13px Spectral' : '500 14.5px Spectral', fSub = phone ? '10.5px "Public Sans"' : '11px "Public Sans"';
+  const kR = (phone ? .5 : .78);
+  const tiers = [[], [], []];
+  for (const [id, d] of Object.entries(reg.inst)) {
+    const I = INST[id], name = d.name || (phone && I.short) || I.name;
+    const n = { id, name, sub: d.sub, nominal: !!d.nominal, out: !!I.out, members: d.n, tier: I.tier, gk: I.gk };
+    if (vd === 'A') { n.w = Math.max(textW(name, fName), textW(d.sub || '', fSub)) + (phone ? 16 : 24); n.h = phone ? 36 : 42; }
+    else { const m = mid(d.n); n.unknown = m == null; n.r = m == null ? 15 : 4 + Math.sqrt(m) * kR; n.rHi = Array.isArray(d.n) ? 4 + Math.sqrt(d.n[1]) * kR : null; n.w = Math.max(n.r * 2, Math.min(textW(name, fName), 150) + 8); }
+    n.y = H * tierY[I.tier] + (I.out ? 26 : 0);
+    if (I.out) { n.x = W - outW / 2 - (phone ? 4 : 10); nodes[id] = n; continue; }
+    n.x = left + I.slot * (right - left);
+    tiers[I.tier].push(n); nodes[id] = n;
+  }
+  // push apart within a tier, keeping order by slot
+  for (const row of tiers) {
+    row.sort((a, b) => a.x - b.x);
+    const gap = phone ? 10 : 26;
+    for (let pass = 0; pass < 6; pass++) {
+      for (let i = 1; i < row.length; i++) { const need = (row[i - 1].w + row[i].w) / 2 + gap, d = row[i].x - row[i - 1].x; if (d < need) { const push = (need - d) / 2; row[i - 1].x -= push; row[i].x += push; } }
+      for (const n of row) n.x = Math.min(right - n.w / 2, Math.max(left + n.w / 2, n.x));
+    }
+  }
+  for (const [from, to, kind, label] of reg.links) links.push({ key: `${from}>${to}>${kind}`, from, to, kind, label: label || KIND_LABEL[kind] });
+  return { nodes, links, say: reg.say, W, H, baseTop, left, right: W - (phone ? 8 : 18), vd, phone };
+}
+
+// ---------- morph between layouts ----------
+const lerp = (a, b, e) => a + (b - a) * e;
+const ease = e => e < 0 ? 0 : e > 1 ? 1 : 1 - Math.pow(1 - e, 3);
+let shown = null, target = null, morph = null; // morph: { from, to, t0 }
+function mixed(now) {
+  if (!morph) return { a: target, b: target, e: 1 };
+  const e = ease((now - morph.t0) / (reduced.matches ? 1 : 900));
+  return { a: morph.from, b: morph.to, e };
+}
+
+// ---------- drawing ----------
+function edgePoint(n, toward, vd) {
+  if (vd === 'B') { const dx = toward[0] - n.x, dy = toward[1] - n.y, d = Math.hypot(dx, dy) || 1, r = n.r + 3; return [n.x + dx / d * r, n.y + dy / d * r]; }
+  const hw = n.w / 2, hh = n.h / 2, dx = toward[0] - n.x, dy = toward[1] - n.y;
+  if (Math.abs(dy) * hw > Math.abs(dx) * hh) { const s = Math.sign(dy) || 1; return [n.x + Math.max(-hw + 10, Math.min(hw - 10, dx * hh / Math.abs(dy) * .9)), n.y + s * hh]; }
+  const s = Math.sign(dx) || 1; return [n.x + s * hw, n.y + Math.max(-hh + 6, Math.min(hh - 6, dy * hw / Math.abs(dx)))];
+}
+function linkGeom(L, nodes, lay, vd, off = 0) {
+  let A = nodes[L.from], B = nodes[L.to];
+  if (!B) return null;
+  let p0, p3;
+  if (L.from === 'citizens') { p3 = edgePoint(B, [B.x, lay.baseTop], vd); p0 = [B.x, lay.baseTop - 2]; }
+  else { if (!A) return null; p0 = edgePoint(A, [B.x + off, B.y], vd); p3 = edgePoint(B, [A.x + off, A.y], vd); }
+  const dx = p3[0] - p0[0], dy = p3[1] - p0[1];
+  const vertical = Math.abs(dy) > Math.abs(dx) * .4;
+  if (off && vertical) { p0 = [p0[0] + off, p0[1]]; p3 = [p3[0] + off, p3[1]]; }
+  const bow = dx > 0 ? -34 : 34; // same-tier links arc above going right, below going left
+  const c1 = vertical ? [p0[0], p0[1] + dy * .45] : [p0[0] + dx * .35, p0[1] + bow];
+  const c2 = vertical ? [p3[0], p3[1] - dy * .45] : [p3[0] - dx * .35, p3[1] + bow];
+  return { p0, c1, c2, p3 };
+}
+const bez = (g, s) => { const u = 1 - s; return [u * u * u * g.p0[0] + 3 * u * u * s * g.c1[0] + 3 * u * s * s * g.c2[0] + s * s * s * g.p3[0], u * u * u * g.p0[1] + 3 * u * u * s * g.c1[1] + 3 * u * s * s * g.c2[1] + s * s * s * g.p3[1]]; };
+function linkSVG(L, g, op, lp) {
+  if (!g || op <= .01) return '';
+  const f = n => n.toFixed(1);
+  let dx = g.p3[0] - g.c2[0], dy = g.p3[1] - g.c2[1]; const d = Math.hypot(dx, dy) || 1; dx /= d; dy /= d;
+  const tip = g.p3, back = [tip[0] - dx * 8, tip[1] - dy * 8];
+  let head;
+  if (L.kind === 'checks') head = `<path class="lk-head checks" d="M${f(tip[0] - dy * 6)} ${f(tip[1] + dx * 6)}L${f(tip[0] + dy * 6)} ${f(tip[1] - dx * 6)}"/>`;
+  else if (L.kind === 'advises') head = `<path class="lk-head advises" d="M${f(back[0] - dy * 4.5)} ${f(back[1] + dx * 4.5)}L${f(tip[0])} ${f(tip[1])}L${f(back[0] + dy * 4.5)} ${f(back[1] - dx * 4.5)}"/>`;
+  else { const w = L.kind === 'commands' ? 6 : 4.5, b2 = L.kind === 'commands' ? [tip[0] - dx * 10, tip[1] - dy * 10] : back; head = `<path class="lk-head" d="M${f(tip[0])} ${f(tip[1])}L${f(b2[0] - dy * w)} ${f(b2[1] + dx * w)}L${f(b2[0] + dy * w)} ${f(b2[1] - dx * w)}Z"/>`; }
+  const end = L.kind === 'checks' ? tip : back;
+  const m = lp || [bez(g, .5)[0] + 6, bez(g, .5)[1] + 4];
+  return `<g opacity="${op.toFixed(2)}"><path class="lk ${L.kind}" d="M${f(g.p0[0])} ${f(g.p0[1])}C${f(g.c1[0])} ${f(g.c1[1])} ${f(g.c2[0])} ${f(g.c2[1])} ${f(end[0])} ${f(end[1])}"/>${head}<text class="lk-label" x="${f(m[0])}" y="${f(m[1])}">${esc(L.label)}</text></g>`;
+}
+function nodeSVG(n, op, vd, phone) {
+  if (op <= .01) return '';
+  const f = v => v.toFixed(1), cls = n.nominal ? ' nominal' : n.out ? ' out' : '';
+  const sz = phone ? 13 : 14.5;
+  const title = `<title>${esc(n.name)}${n.gk ? ` (${n.gk})` : ''}${n.sub ? ' · ' + esc(n.sub) : ''}</title>`;
+  if (vd === 'A') {
+    return `<g data-node="${n.id}" opacity="${op.toFixed(2)}">${title}<rect class="n-box${cls}" x="${f(n.x - n.w / 2)}" y="${f(n.y - n.h / 2)}" width="${f(n.w)}" height="${f(n.h)}" rx="3"/>
+      <text class="n-name${n.nominal ? ' nominal' : ''}" x="${f(n.x)}" y="${f(n.y - 3)}" text-anchor="middle" style="font-size:${sz}px">${esc(n.name)}</text>
+      <text class="n-sub${n.nominal ? ' nominal' : ''}" x="${f(n.x)}" y="${f(n.y + (phone ? 11 : 13))}" text-anchor="middle" style="font-size:${phone ? 10.5 : 11}px">${esc(n.sub || '')}</text></g>`;
+  }
+  const inside = n.r > 34;
+  const count = n.unknown ? 'number unknown' : Array.isArray(n.members) ? `${fmtN(n.members[0])}–${fmtN(n.members[1])}` : fmtN(n.members);
+  const halo = n.rHi ? `<circle class="n-halo" cx="${f(n.x)}" cy="${f(n.y)}" r="${f(n.rHi)}"/>` : '';
+  const circ = `<circle class="n-circ${cls}${n.unknown ? ' unknown' : ''}" cx="${f(n.x)}" cy="${f(n.y)}" r="${f(n.r)}"/>`;
+  const label = inside
+    ? `<text class="n-name${n.nominal ? ' nominal' : ''}" x="${f(n.x)}" y="${f(n.y - 2)}" text-anchor="middle" style="font-size:${sz}px">${esc(n.name)}</text><text class="n-sub" x="${f(n.x)}" y="${f(n.y + 13)}" text-anchor="middle">${count}</text>`
+    : `<text class="n-name${n.nominal ? ' nominal' : ''}" x="${f(n.x)}" y="${f(n.y + n.r + 15)}" text-anchor="middle" style="font-size:${sz}px">${esc(n.name)}</text><text class="n-sub${n.nominal ? ' nominal' : ''}" x="${f(n.x)}" y="${f(n.y + n.r + 28)}" text-anchor="middle">${n.nominal ? esc(n.sub) : count}</text>`;
+  return `<g data-node="${n.id}" opacity="${op.toFixed(2)}">${title}${halo}${circ}${label}</g>`;
+}
+// who had a say: one bar of the whole population, on one scale
+function saySVG(say, lay, x0, x1, y, op, vd) {
+  if (!say) return '';
+  const f = v => v.toFixed(1), o = [], W = x1 - x0, h = 16, sc = W / SAY_MAX;
+  o.push(`<text class="say-head" x="${f(x0)}" y="${f(y - 8)}">${vd === 'A' ? 'Citizens · ' : ''}Who had a say</text>`);
+  const vote = mid(say.vote), total = mid(say.total), ens = mid(say.enslaved);
+  if (vote == null) {
+    o.push(`<rect class="say-unk" x="${f(x0)}" y="${f(y)}" width="${f(W * .86)}" height="${h}" rx="2"/><text class="say-unk-t" x="${f(x0 + 10)}" y="${f(y + 12)}">${esc(say.note || 'Not known')}</text>`);
+    if (say.power != null || say.powerLabel) o.push(`<text class="say-lbl strong" x="${f(x0)}" y="${f(y + h + 15)}">Power: ${esc(say.powerLabel)}${say.power === 1 ? '' : ''}</text>`);
+    return `<g opacity="${op.toFixed(2)}">${o.join('')}</g>`;
+  }
+  const vw = Math.max(3, vote * sc);
+  if (total == null) {
+    o.push(`<rect x="${f(x0)}" y="${f(y)}" width="${f(vw)}" height="${h}" fill="var(--pol)"/><rect class="say-unk" x="${f(x0 + vw + 2)}" y="${f(y)}" width="${f(W * .86 - vw - 2)}" height="${h}"/><text class="say-unk-t" x="${f(x0 + vw + 12)}" y="${f(y + 12)}">rest of the population not known</text>`);
+    o.push(`<text class="say-lbl strong" x="${f(x0)}" y="${f(y + h + 15)}">About ${fmtN(vote)} could vote</text>`);
+    return `<g opacity="${op.toFixed(2)}">${o.join('')}</g>`;
+  }
+  const tw = total * sc, ew = ens * sc, fw = Math.max(0, tw - vw - ew);
+  const range = (r, xs) => Array.isArray(r) ? `<rect x="${f(xs + r[0] * sc)}" y="${f(y - 3)}" width="${f((r[1] - r[0]) * sc)}" height="${h + 6}" fill="var(--ink)" opacity=".07"/>` : '';
+  o.push(range(say.total, x0));
+  o.push(`<rect x="${f(x0)}" y="${f(y)}" width="${f(vw)}" height="${h}" fill="var(--pol)"${say.voteNominal ? ' opacity=".35"' : ''}/>`);
+  o.push(`<rect x="${f(x0 + vw + 1.5)}" y="${f(y)}" width="${f(Math.max(0, fw - 1.5))}" height="${h}" fill="color-mix(in srgb, var(--pol) 16%, var(--panel))"/>`);
+  o.push(`<rect x="${f(x0 + vw + fw + 1.5)}" y="${f(y)}" width="${f(Math.max(0, ew - 1.5))}" height="${h}" fill="var(--slave)"/>`);
+  const rng = r => Array.isArray(r) ? `${fmtN(r[0])}–${fmtN(r[1])}` : `about ${fmtN(r)}`;
+  if (say.power != null) {
+    o.push(`<rect x="${f(x0)}" y="${f(y - 4)}" width="2.5" height="${h + 8}" fill="var(--ink)"/>`);
+    o.push(`<text class="say-lbl strong" x="${f(x0 + textW('WHO HAD A SAY', '600 10.5px "Public Sans"') * 1.1 + (vd === 'A' ? 70 : 0) + 18)}" y="${f(y - 8)}">Held power: ${esc(say.powerLabel)}, ${fmtN(say.power)}</text>`);
+  }
+  const segs = [
+    [x0, `${say.voteNominal ? 'Could vote, on paper' : 'Could vote'} ${rng(say.vote)}`, true],
+    [x0 + vw + 1.5, 'Free, no vote', false],
+    [x0 + vw + fw + 1.5, `Enslaved${say.enslavedLabel ? ` (${say.enslavedLabel})` : ''} ${rng(say.enslaved)}`, false],
+  ];
+  // rows of labels under the bar (and one above it, after the heading); each label takes the first row where it fits
+  const head = x0 + textW(vd === 'A' ? 'CITIZENS · WHO HAD A SAY' : 'WHO HAD A SAY', '600 10.5px "Public Sans"') * 1.12 + (say.power != null ? textW(`Held power: ${say.powerLabel}, ${fmtN(say.power)}`, '600 11px "Public Sans"') + 30 : 0);
+  const rows = { '-1': [[x0, head]], 0: [], 1: [], 2: [] }, rowY = { '-1': y - 8, 0: y + h + 15, 1: y + h + 29, 2: y + h + 43 };
+  const free = (r, a, b) => a >= x0 - 1 && b <= x1 + 1 && rows[r].every(([p, q]) => b + 10 <= p || a >= q + 10);
+  const put = (text, x, strong, order, anchorEnd) => {
+    const w = textW(text, `${strong ? '600 ' : ''}11px "Public Sans"`), a = anchorEnd ? x - w : x, b = anchorEnd ? x : x + w;
+    for (const r of order) if (free(r, a, b)) { rows[r].push([a, b]); o.push(`<text class="say-lbl${strong ? ' strong' : ''}" x="${f(x)}" y="${f(rowY[r])}"${anchorEnd ? ' text-anchor="end"' : ''}>${esc(text)}</text>`); return; }
+  };
+  for (const [x, text, strong] of segs) put(text, x, strong, [0, 1, 2]);
+  if (Array.isArray(say.total)) put(`all ${rng(say.total)} people`, Math.min(x1, x0 + say.total[1] * sc), false, ['-1', 0, 1, 2], true);
+  return `<g opacity="${op.toFixed(2)}">${o.join('')}</g>`;
+}
+function drawDiagram(svg, a, b, e, vd, phone) {
+  const o = [];
+  const ids = new Set([...Object.keys(a.nodes), ...Object.keys(b.nodes)]);
+  const nodes = {}, ops = {};
+  for (const id of ids) {
+    const p = a.nodes[id], q = b.nodes[id];
+    if (p && q) { nodes[id] = { ...q, x: lerp(p.x, q.x, e), y: lerp(p.y, q.y, e), w: lerp(p.w, q.w, e), h: lerp(p.h ?? 0, q.h ?? 0, e), r: lerp(p.r ?? 0, q.r ?? 0, e), rHi: q.rHi && p.rHi ? lerp(p.rHi, q.rHi, e) : (e > .5 ? q.rHi : p.rHi) }; ops[id] = 1; if (e < .5) Object.assign(nodes[id], { name: p.name, sub: p.sub, nominal: p.nominal, members: p.members, unknown: p.unknown }); }
+    else if (p) { nodes[id] = p; ops[id] = 1 - e; }
+    else { nodes[id] = q; ops[id] = e; }
+  }
+  const lay = e < .5 ? a : b;
+  const baseTop = lerp(a.baseTop ?? b.baseTop, b.baseTop ?? a.baseTop, e);
+  const geomLay = { baseTop };
+  const lkeys = new Map();
+  for (const L of a.links) lkeys.set(L.key, { L, op: 1 - e });
+  for (const L of b.links) { const had = lkeys.get(L.key); lkeys.set(L.key, { L, op: had ? 1 : e }); }
+  // boxes the link labels must stay clear of: every node and its label
+  const rects = [];
+  for (const id of ids) { const n = nodes[id]; if (ops[id] < .3) continue; if (vd === 'A') rects.push([n.x - n.w / 2, n.y - n.h / 2, n.x + n.w / 2, n.y + n.h / 2]); else { rects.push([n.x - n.r, n.y - n.r, n.x + n.r, n.y + n.r]); if (n.r <= 34) rects.push([n.x - n.w / 2, n.y + n.r + 3, n.x + n.w / 2, n.y + n.r + 31]); } }
+  const pairs = {};
+  for (const { L } of lkeys.values()) { const k = [L.from, L.to].sort().join('|'); (pairs[k] = pairs[k] || []).push(L.key); }
+  const hit = (a) => rects.some(b => a[0] < b[2] && a[2] > b[0] && a[1] < b[3] && a[3] > b[1]);
+  for (const { L, op } of lkeys.values()) {
+    const grp = pairs[[L.from, L.to].sort().join('|')], off = grp.length > 1 ? (grp.indexOf(L.key) - (grp.length - 1) / 2) * 22 : 0;
+    const g = linkGeom(L, nodes, geomLay, vd, off); if (!g) continue;
+    const w = textW(L.label, '11px "Public Sans"');
+    let lp = null;
+    for (const s of [.5, .4, .6, .3, .7, .22, .78]) {
+      const m = bez(g, s), box = [m[0] + 4, m[1] - 8, m[0] + 8 + w, m[1] + 5];
+      if (!hit(box)) { lp = [m[0] + 6, m[1] + 4]; rects.push(box); break; }
+    }
+    o.push(linkSVG(L, g, op * Math.min(ops[L.to] ?? 1, L.from === 'citizens' ? 1 : (ops[L.from] ?? 1)), lp));
+  }
+  for (const id of ids) o.push(nodeSVG(nodes[id], ops[id], vd, phone));
+  // the population bar
+  const W = b.W || a.W, x0 = phone ? 10 : 18, x1 = W - (phone ? 10 : 18);
+  if (a.say === b.say) o.push(saySVG(b.say, b, x0, x1, baseTop + 12, 1, vd));
+  else { o.push(saySVG(a.say, a, x0, x1, baseTop + 12, 1 - e, vd)); o.push(saySVG(b.say, b, x0, x1, baseTop + 12, e, vd)); }
+  svg.innerHTML = o.join('');
+}
+
+// ---------- the polity's bar ----------
+const tsvg = $('#tsvg'), track = $('#track');
+const tx = T => (T - D0) / (D1 - D0) * track.clientWidth;
+const fromX = x => D0 + x / track.clientWidth * (D1 - D0);
+function renderTrack() {
+  const o = [], y = 14, h = 20, cur = regimeAt(S.T);
+  for (const r of REGIMES) {
+    let a = tx(r.from), b = tx(r.to);
+    if (b - a < 3) { const c = (a + b) / 2; a = c - 1.5; b = c + 1.5; }
+    o.push(`<rect class="seg-r${r === cur ? ' cur' : ''}" data-reg="${r.id}" x="${a.toFixed(1)}" y="${y}" width="${(b - a).toFixed(1)}" height="${h}" fill="url(#f-${FORM[r.form].pat})"/>`);
+    if (r.client) o.push(`<rect class="client" x="${a.toFixed(1)}" y="${y - 4}" width="${(b - a).toFixed(1)}" height="3"/>`);
+    if (r.approxFrom) o.push(`<path d="M${a.toFixed(1)} ${y - 2}v${h + 4}" stroke="var(--umber)" stroke-width="2" stroke-dasharray="3 2"/>`);
+  }
+  const ua = tx(UNREC), ub = tx(D1);
+  o.push(`<rect class="seg-unrec" x="${(ua + 2).toFixed(1)}" y="${y}" width="${Math.max(0, ub - ua - 3).toFixed(1)}" height="${h}" rx="2"/>`);
+  if (ub - ua > 90) o.push(`<text class="seg-unrec-t" x="${(ua + 8).toFixed(1)}" y="${y + 14}">not read yet</text>`);
+  const hx = tx(S.T).toFixed(1);
+  o.push(`<g class="head"><line x1="${hx}" x2="${hx}" y1="3" y2="54"/><circle cx="${hx}" cy="6" r="5"/></g>`);
+  tsvg.innerHTML = o.join('');
+}
+function renderAxis() {
+  const o = [];
+  for (let Y = 700; Y >= 300; Y -= 50) { const x = tx(bce(Y)); o.push(`<span style="left:${x.toFixed(1)}px${Y === 300 ? ';transform:translateX(-100%)' : Y === 700 ? ';transform:none' : ''}">${Y}</span>`); }
+  $('#axis').innerHTML = o.join('');
+}
+const sw = pat => `<svg width="16" height="12" aria-hidden="true"><rect x=".5" y=".5" width="15" height="11" fill="url(#f-${pat})" stroke="var(--pol)"/></svg>`;
+$('#forms').innerHTML = `<span class="hd">Form of government</span><span>${sw('tyranny')}one ruler</span><span>${sw('oligarchy')}the few</span><span>${sw('timocracy')}by wealth</span><span>${sw('democracy')}the many</span><span><svg width="16" height="12" aria-hidden="true"><rect x=".5" y="4.5" width="15" height="7" fill="none" stroke="var(--pol)"/><rect y="0" width="16" height="3" fill="var(--umber)"/></svg>backed by a foreign power</span><span><svg width="16" height="12" aria-hidden="true"><path d="M1 1v10" stroke="var(--umber)" stroke-width="2" stroke-dasharray="3 2"/></svg>approximate start</span>`;
+$('#lkey').innerHTML = [['elects', 'elects or chooses'], ['advises', 'prepares business for'], ['checks', 'can check or overturn'], ['commands', 'commands']].map(([k, l]) => {
+  const head = k === 'checks' ? '<path d="M27 1v10" stroke="var(--ink)" stroke-width="2"/>' : k === 'advises' ? '<path d="M21 2l6 4-6 4" fill="none" stroke="var(--ink-2)" stroke-width="1.2"/>' : `<path d="M28 6l-8 ${k === 'commands' ? 5 : 4}v${k === 'commands' ? -10 : -8}z" fill="var(--ink-2)"/>`;
+  return `<div><svg width="30" height="12" aria-hidden="true"><path d="M1 6h${k === 'checks' ? 26 : 21}" stroke="var(--${k === 'checks' ? 'ink' : 'ink-2'})" stroke-width="${k === 'commands' ? 2.6 : k === 'advises' ? 1.1 : 1.4}"/>${head}</svg>${l}</div>`;
+}).join('');
+
+// ---------- card ----------
+function renderCard(reg) {
+  const card = $('#card');
+  if (!reg) { card.innerHTML = `<p class="kind">Athens</p><h2>Not read yet</h2><p class="none">Nothing is highlighted about how Athens was governed after 318 BCE.</p>`; return; }
+  const i = REGIMES.indexOf(reg), prev = REGIMES[i - 1];
+  const f = FORM[reg.form];
+  const quotes = reg.q ? reg.q.map(q => `<blockquote>${esc(q[0])}<cite>${esc(q[1])}${q[2] ? ' › ' + esc(q[2]) : ''} · your highlight</cite></blockquote>`).join('') : '<p class="none">Nothing highlighted about this yet.</p>';
+  card.innerHTML = `<p class="kind"><svg width="14" height="14" viewBox="0 0 18 18" aria-hidden="true"><rect x="2.5" y="2.5" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M2.5 15.5l13-13M2.5 9l6.5-6.5M9 15.5l6.5-6.5" stroke="currentColor" stroke-width="1.1"/></svg>Government of Athens</p>
+    <h2>${esc(reg.title)}</h2>
+    <p class="meta">${reg.approxFrom ? 'about ' : ''}${span(reg.from, reg.to)}<span class="formchip">${sw(f.pat)}${FORM_NAME[reg.form]}: ${f.label}</span>${reg.client ? `<span class="formchip"><svg width="16" height="12" aria-hidden="true"><rect y="0" width="16" height="3" fill="var(--umber)"/></svg>backed by ${reg.client}</span>` : ''}</p>
+    <h3>${prev ? 'What changed' : 'How it worked'}</h3><ul class="changes">${reg.changes.map(c => `<li>${esc(c)}</li>`).join('')}</ul>
+    <h3>Your highlights</h3>${quotes}`;
+}
+
+// ---------- compare: Athens and Sparta, 431 BCE ----------
+function renderCompare() {
+  const c = $('#compare'), phone = isPhone();
+  if (!c.dataset.built) {
+    c.innerHTML = `<div class="cmp-col"><h2><span class="pn">Athens</span><span class="rn">${esc(ATHENS431.title)} · ${sw('democracy')}</span></h2><div class="cbox"><svg id="cA" role="img" aria-label="Athens in 431 BCE"></svg></div></div>
+      <div class="cmp-col"><h2><span class="pn">Sparta</span><span class="rn">${esc(SPARTA.title)} · ${sw('oligarchy')}</span></h2><div class="cbox"><svg id="cS" role="img" aria-label="Sparta in 431 BCE"></svg></div></div>
+      <div class="cmp-table">
+        <div class="ch"></div><div class="ch">Athens</div><div class="ch">Sparta</div>
+        <div class="rh">Who could vote</div><div>About 50,000 adult male citizens, rich or poor</div><div>About 5,000 Spartiates over thirty, by shouting</div>
+        <div class="rh">How officials were chosen</div><div>Mostly by lot, for one year; generals by vote</div><div>Kings by birth; elders for life and ephors for a year, by acclaim</div>
+        <div class="rh">Who led the army</div><div>Ten elected generals</div><div>The kings, watched by two ephors</div>
+        <div class="rh">Who could stop a decision</div><div>The people's courts could strike down a decree</div><div>The elders could set aside the Assembly's vote</div>
+      </div>`;
+    c.dataset.built = '1';
+  }
+  for (const [id, reg] of [['cA', ATHENS431], ['cS', SPARTA]]) {
+    const svg = document.getElementById(id), box = svg.parentElement;
+    const L = layout(reg, box.clientWidth, box.clientHeight, S.vd, phone || box.clientWidth < 520);
+    drawDiagram(svg, L, L, 1, S.vd, phone || box.clientWidth < 520);
+  }
+}
+
+// ---------- render loop ----------
+let raf = 0, lastNow = 0;
+const kick = () => { if (!raf) raf = requestAnimationFrame(frame); };
+function currentLayout() { return layout(regimeAt(S.T), dbox.clientWidth, dbox.clientHeight, S.vd, isPhone()); }
+let shownReg;
+function frame(now) {
+  raf = 0;
+  const dt = Math.min(100, lastNow ? now - lastNow : 16); lastNow = now;
+  if (S.playing && now >= S.dwellUntil) {
+    const before = regimeAt(S.T);
+    const next = S.T + 18 * S.speed * dt / 1000;
+    const boundary = REGIMES.find(r => r.from > S.T && r.from <= next);
+    if (boundary && !reduced.matches) { S.T = boundary.from; S.dwellUntil = now + 1500; }
+    else S.T = next;
+    if (S.T >= UNREC) { S.T = UNREC - .01; setPlaying(false); }
+  }
+  syncRegime(now);
+  if (S.view === 'time') {
+    const m = mixed(now);
+    drawDiagram(dsvg, m.a, m.b, m.e, S.vd, isPhone());
+    if (m.e >= 1) morph = null;
+  }
+  renderTrack(); syncHead();
+  if (S.playing || morph) kick(); else lastNow = 0;
+}
+function syncRegime(now) {
+  const reg = regimeAt(S.T);
+  if (reg !== shownReg || !target || target.W !== dbox.clientWidth || target.H !== dbox.clientHeight || target.vd !== S.vd) {
+    const next = currentLayout();
+    if (reg !== shownReg && target && !reduced.matches) {
+      const m = mixed(now);
+      // freeze the current in-between state as the start of the next morph
+      const from = m.e >= 1 ? m.b : snapshot(m);
+      morph = { from, to: next, t0: now };
+    } else morph = null;
+    target = next; shownReg = reg;
+    renderCard(reg);
+  }
+}
+function snapshot(m) { // a layout object for a half-finished morph
+  const nodes = {};
+  for (const id of new Set([...Object.keys(m.a.nodes), ...Object.keys(m.b.nodes)])) {
+    const p = m.a.nodes[id], q = m.b.nodes[id];
+    if (p && q) nodes[id] = { ...(m.e < .5 ? p : q), x: lerp(p.x, q.x, m.e), y: lerp(p.y, q.y, m.e), w: lerp(p.w, q.w, m.e), h: lerp(p.h ?? 0, q.h ?? 0, m.e), r: lerp(p.r ?? 0, q.r ?? 0, m.e) };
+    else if (m.e < .5 && p) nodes[id] = p; else if (m.e >= .5 && q) nodes[id] = q;
+  }
+  return { ...(m.e < .5 ? m.a : m.b), nodes };
+}
+function syncHead() {
+  const reg = regimeAt(S.T);
+  $('#year').textContent = yr(S.T);
+  $('#rname').innerHTML = reg ? `<b>${esc(reg.title)}</b> · ${span(reg.from, reg.to)}` : 'Not read yet';
+  const i = reg ? REGIMES.indexOf(reg) : REGIMES.length;
+  const p = REGIMES[i - 1], n = REGIMES[i + 1];
+  const pb = $('#prev'), nb = $('#next');
+  pb.disabled = !p; nb.disabled = !n;
+  pb.textContent = p ? `‹ ${p.title}` : '‹ Earlier'; nb.textContent = n ? `${n.title} ›` : 'Later ›';
+  pb.title = p ? `Go to ${p.title}` : ''; nb.title = n ? `Go to ${n.title}` : '';
+}
+function goTo(reg) { if (!reg) return; setPlaying(false); S.T = reg.from + Math.min(.5, (reg.to - reg.from) / 2); kick(); }
+$('#prev').addEventListener('click', () => { const r = regimeAt(S.T); goTo(REGIMES[(r ? REGIMES.indexOf(r) : REGIMES.length) - 1]); });
+$('#next').addEventListener('click', () => { const r = regimeAt(S.T); goTo(REGIMES[REGIMES.indexOf(r) + 1]); });
+function setPlaying(on) {
+  if (on && S.T >= UNREC - .5) S.T = D0 + 1;
+  S.playing = on; S.dwellUntil = 0;
+  const b = $('#play');
+  b.setAttribute('aria-label', on ? 'Pause' : 'Play');
+  b.innerHTML = on ? '<svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><rect x="2" y="1.5" width="3" height="9" fill="currentColor"/><rect x="7" y="1.5" width="3" height="9" fill="currentColor"/></svg>' : '<svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M3 1.5v9l7.5-4.5z" fill="currentColor"/></svg>';
+  lastNow = 0; kick();
+}
+$('#play').addEventListener('click', () => { if (S.view !== 'time') setView('time'); setPlaying(!S.playing); });
+const SPEEDS = [[.5, '½×'], [1, '1×'], [2, '2×']];
+$('#speed').addEventListener('click', () => { const i = (SPEEDS.findIndex(s => s[0] === S.speed) + 1) % SPEEDS.length; S.speed = SPEEDS[i][0]; $('#speed').textContent = SPEEDS[i][1]; });
+
+// scrubbing the bar
+let scrub = null;
+track.addEventListener('pointerdown', ev => { if (S.view !== 'time') setView('time'); scrub = true; setPlaying(false); try { track.setPointerCapture(ev.pointerId); } catch {} S.T = Math.min(UNREC - .01, Math.max(D0, fromX(ev.clientX - track.getBoundingClientRect().left))); kick(); });
+track.addEventListener('pointermove', ev => {
+  const x = ev.clientX - track.getBoundingClientRect().left;
+  if (scrub) { S.T = Math.min(D1 - .01, Math.max(D0, fromX(x))); kick(); return; }
+  const T = fromX(x), r = regimeAt(T);
+  const ar = app.getBoundingClientRect();
+  tip.innerHTML = r ? `<b>${esc(r.title)}</b> · ${span(r.from, r.to)}<br>${FORM_NAME[r.form]}: ${FORM[r.form].label}${r.client ? `, backed by ${r.client}` : ''}` : T >= UNREC ? 'Not read yet' : '';
+  tip.hidden = !tip.innerHTML;
+  tip.style.left = Math.min(ar.width - tip.offsetWidth - 8, ev.clientX - ar.left + 12) + 'px'; tip.style.top = (ev.clientY - ar.top - tip.offsetHeight - 12) + 'px';
+});
+track.addEventListener('pointerup', () => { scrub = null; });
+track.addEventListener('pointerleave', () => { tip.hidden = true; });
+document.addEventListener('keydown', ev => {
+  if (ev.target.closest && ev.target.closest('input, textarea')) return;
+  if (ev.key === ' ') { ev.preventDefault(); setPlaying(!S.playing); }
+  else if (ev.key === 'ArrowRight') { ev.preventDefault(); $('#next').click(); }
+  else if (ev.key === 'ArrowLeft') { ev.preventDefault(); $('#prev').click(); }
+});
+
+// ---------- views ----------
+function setView(v) {
+  S.view = v;
+  $('#vTime').setAttribute('aria-pressed', String(v === 'time'));
+  $('#vCmp').setAttribute('aria-pressed', String(v === 'cmp'));
+  $('#compare').hidden = v !== 'cmp';
+  $('#diag').hidden = v === 'cmp'; $('#card').hidden = v === 'cmp';
+  if (v === 'cmp') { setPlaying(false); S.T = bce(431) + .5; requestAnimationFrame(renderCompare); }
+  syncNote(); kick();
+}
+$('#vTime').addEventListener('click', () => setView('time'));
+$('#vCmp').addEventListener('click', () => setView('cmp'));
+
+// ---------- prototype controls ----------
+const NOTES = {
+  A: '<b>A · Chart.</b> Who chooses whom, the way textbooks draw a constitution: offices at the top, councils and courts in the middle, the Assembly below, and the citizens at the base. Arrows say who elects, prepares business for, checks or commands whom.',
+  B: '<b>B · Bodies.</b> Each institution is a circle sized by how many people sat in it, so rule by many and rule by few look different at a glance: the Thirty are a speck beside an Assembly of 6,000. A soft ring shows a range; a dashed circle means the number is unknown.',
+};
+function syncNote() {
+  $('#pnote').innerHTML = NOTES[S.vd] + (S.view === 'cmp'
+    ? '<span class="how">Athens and Sparta in 431 BCE, the year their war began, on the same scale. The bar under each counts everyone who lived there, with the people who could vote in lapis.</span>'
+    : '<span class="how">Press Play to watch the diagram change at each new regime, or drag along the polity’s bar; ← → jump between regimes. The bar’s patterns are the form of government, and the bar under the diagram counts who had a say.</span>');
+}
+function seg(id, cb) {
+  const f = document.getElementById(id);
+  f.addEventListener('click', ev => {
+    const b = ev.target.closest('button[data-v]'); if (!b) return;
+    f.querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+    cb(b.dataset.v);
+  });
+  return f;
+}
+seg('vd', v => { S.vd = v; target = null; morph = null; syncNote(); if (S.view === 'cmp') renderCompare(); kick(); });
+seg('dev', v => { device.classList.toggle('phone', v === 'phone'); });
+const thm = seg('thm', v => { document.documentElement.dataset.theme = v; });
+const darkNow = () => document.documentElement.dataset.theme ? document.documentElement.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+thm.querySelector(`[data-v="${darkNow() ? 'dark' : 'light'}"]`).setAttribute('aria-pressed', 'true');
+
+new ResizeObserver(() => { app.classList.toggle('is-phone', isPhone()); target = null; morph = null; renderAxis(); if (S.view === 'cmp') renderCompare(); kick(); }).observe(app);
+app.classList.toggle('is-phone', isPhone());
+syncNote(); setPlaying(false); renderAxis(); kick();
+document.fonts && document.fonts.ready.then(() => { target = null; morph = null; kick(); if (S.view === 'cmp') renderCompare(); });
+})();
+</script>
