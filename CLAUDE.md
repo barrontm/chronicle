@@ -15,6 +15,7 @@ npm run check         # same, full output: only when debugging a failure
 npm run shots -- --only map --sheet   # screenshots of the views you touched, tiled into one image
 npx playwright test e2e/visual.spec.ts --update-snapshots   # after an intended visual change
 node scripts/check-draft.mjs <file> --bbox …   # check a drafted import file before Bob merges it
+node scripts/sea-route.mjs --stops "lon,lat;…"   # a sea route between ports that never crosses land
 npm run eval:ai -- <feature>   # live AI test cases (costs money: ask first; see the ai-eval skill)
 ```
 
