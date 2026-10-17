@@ -2,7 +2,7 @@
 
 Bob's personal history timeline: a **learning tool** he fills in himself as he studies, a home for his notes, and something fun that sparks curiosity. Ships with no content. Every change should make it easier to record what he learned, connect it, and find it again.
 
-Start from the ticket in `ROADMAP.md`. Read `docs/decisions.md` only when a ticket changes architecture.
+Start from the ticket in `ROADMAP.md`. The redesign direction is `docs/vision.md`; read it for redesign tickets. Read `docs/decisions.md` only when a ticket changes architecture.
 
 ## What exists
 Entries (`event` / `span` / `person`; topics are **categories**, never kinds) · notes linked to anything · sources with citations · connections · trends (`Series`, incl. per-country `regions`) · pictures (Commons, link, upload) · add from Wikipedia · map with territories, pins, choropleth and one shared year · offline PWA (IndexedDB, export/import with merge).
@@ -26,7 +26,7 @@ src/media/   Commons, Wikipedia/Wikidata
 src/ai/      AI drafting (rules in its CLAUDE.md); only client.ts imports the Anthropic SDK
 src/ui/      React; TimelineView = only vis-timeline importer, MapView = only maplibre-gl importer
 e2e/         Playwright specs        tests/fixtures/  TEST DATA ONLY
-docs/        decisions.md, data-model.md, design.md
+docs/        vision.md, decisions.md, data-model.md, design.md, references.md
 ```
 Folder notes load automatically: `src/ui/CLAUDE.md`, `src/model/CLAUDE.md`, `src/ai/CLAUDE.md`, `e2e/CLAUDE.md`.
 

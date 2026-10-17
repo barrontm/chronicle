@@ -1,0 +1,976 @@
+<title>Chronicle era overview</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600&family=Spectral+SC:wght@500;600&family=Spectral:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+<style>
+/* Layout: a quiet desk holding one device (laptop or phone); inside it, Chronicle's own tokens from src/ui/styles.css. */
+:root {
+  --desk: #dfe3dc; --desk-ink: #35424d; --frame: #1d2b3a;
+  --bg: #eef0ec; --panel: #fbfbf8; --ink: #1d2b3a; --ink-2: #4d5b66; --muted: #74808a;
+  --rule: #cfd4cc; --rule-soft: #e1e4dd; --focus: #2f5da8;
+  --band: #e2e6df; --band-edge: #c3c9c0;
+  --pol: #2f5da8; --eco: #b8860b; --soc: #a33b6b; --tec: #2e8b74; --int: #4b3f8c; --rel: #c23b22; --umber: #7a5a3a;
+  --font-read: 'Spectral', Georgia, serif;
+  --font-sc: 'Spectral SC', 'Spectral', Georgia, serif;
+  --font-ui: 'Public Sans', system-ui, sans-serif;
+  --motion-quick: 150ms; --motion-move: 400ms; --ease: cubic-bezier(.2,.7,.2,1);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --desk: #0b1116; --desk-ink: #b7bfbf; --frame: #2a3540;
+    --bg: #131b23; --panel: #1a242e; --ink: #e3e6e0; --ink-2: #b7bfbf; --muted: #8a959b;
+    --rule: #33414d; --rule-soft: #26323d; --focus: #7fa3e0;
+    --band: #1e2832; --band-edge: #36444f;
+    --pol: #6f93d6; --eco: #dcae45; --soc: #d06d9a; --tec: #58b89d; --int: #9184d6; --rel: #e0664c; --umber: #b9936b;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --desk: #0b1116; --desk-ink: #b7bfbf; --frame: #2a3540;
+  --bg: #131b23; --panel: #1a242e; --ink: #e3e6e0; --ink-2: #b7bfbf; --muted: #8a959b;
+  --rule: #33414d; --rule-soft: #26323d; --focus: #7fa3e0;
+  --band: #1e2832; --band-edge: #36444f;
+  --pol: #6f93d6; --eco: #dcae45; --soc: #d06d9a; --tec: #58b89d; --int: #9184d6; --rel: #e0664c; --umber: #b9936b;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--desk); color: var(--ink); font-family: var(--font-ui); }
+button { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+/* ---------- prototype chrome (outside the device) ---------- */
+.proto { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 14px 28px; display: grid; gap: 12px; }
+.pbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; color: var(--desk-ink); }
+.pbar h1 { font: 600 15px/1.2 var(--font-ui); margin: 0; letter-spacing: .01em; }
+.pbar h1 span { font-weight: 400; color: var(--muted); margin-left: 6px; }
+.controls { display: flex; flex-wrap: wrap; gap: 8px 14px; margin-left: auto; }
+.seg { display: inline-flex; align-items: center; gap: 6px; border: 0; padding: 0; margin: 0; }
+.seg legend { float: left; font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin-right: 4px; padding: 0; }
+.seg .opts { display: inline-flex; border: 1px solid var(--band-edge); border-radius: 6px; overflow: hidden; background: var(--panel); }
+.seg button { border: 0; background: none; padding: 5px 10px; font-size: 12.5px; cursor: pointer; color: var(--ink-2); }
+.seg button + button { border-left: 1px solid var(--band-edge); }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--panel); }
+.pnote { margin: 0; font: 14px/1.5 var(--font-read); color: var(--desk-ink); max-width: 80ch; min-height: 3em; }
+.pnote b { font-weight: 600; }
+.pnote .how { display: block; font: 12.5px/1.5 var(--font-ui); color: var(--muted); margin-top: 2px; }
+.stage { display: flex; justify-content: center; min-width: 0; }
+
+.device { position: relative; width: min(1240px, 100%); height: 760px; border: 1px solid var(--band-edge); border-radius: 10px; overflow: hidden; background: var(--bg); box-shadow: 0 18px 50px -24px rgb(0 0 0 / .35); }
+.device.phone { width: 412px; max-width: 100%; height: 860px; border: 9px solid var(--frame); border-radius: 34px; }
+@media (max-width: 720px) {
+  .seg.device-seg { display: none; }
+  .device, .device.phone { width: 100%; height: 82vh; min-height: 640px; border: 1px solid var(--band-edge); border-radius: 12px; }
+}
+
+/* ---------- the app inside ---------- */
+.app { position: absolute; inset: 0; display: flex; flex-direction: column; background: var(--bg); color: var(--ink); }
+.topbar { display: flex; align-items: center; gap: 12px; height: 46px; padding: 0 14px; border-bottom: 1px solid var(--rule); background: var(--panel); flex: none; }
+.crumbs { display: flex; align-items: baseline; gap: 6px; min-width: 0; font: 15px/1 var(--font-read); white-space: nowrap; overflow: hidden; }
+.crumbs button { border: 0; background: none; padding: 4px 0; cursor: pointer; font: inherit; color: var(--ink-2); }
+.crumbs button:hover { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
+.crumbs .here { font: 600 15px/1 var(--font-sc); letter-spacing: .05em; color: var(--ink); }
+.crumbs .sep { color: var(--muted); }
+.crumbs .cd { font-size: 13px; color: var(--muted); font-variant-numeric: oldstyle-nums; }
+.zoomstops { margin-left: auto; display: inline-flex; border: 1px solid var(--rule); border-radius: 6px; overflow: hidden; flex: none; }
+.zoomstops button { border: 0; background: none; padding: 5px 10px; font-size: 12px; cursor: pointer; color: var(--ink-2); }
+.zoomstops button + button { border-left: 1px solid var(--rule); }
+.zoomstops button[aria-pressed="true"] { background: var(--rule-soft); color: var(--ink); font-weight: 600; }
+.zoomstops button:disabled { cursor: default; color: var(--muted); opacity: .6; }
+
+.canvas { position: relative; flex: 1; min-height: 0; overflow: hidden; }
+.l0, .l1 { position: absolute; inset: 0; }
+.l0 { overflow-x: hidden; overflow-y: auto; touch-action: pan-y; cursor: grab; }
+.l0.dragging { cursor: grabbing; }
+.l0 .streams { position: absolute; left: 0; top: 0; pointer-events: none; }
+.l0-spacer { position: absolute; left: 0; top: 0; width: 1px; }
+.row { position: absolute; left: 0; right: 0; transition: opacity var(--motion-quick) linear; }
+.row-label { position: absolute; left: 0; top: 0; bottom: 0; width: 124px; padding: 10px 10px 0 14px; background: var(--bg); z-index: 2; display: flex; flex-direction: column; gap: 3px; border-right: 1px solid var(--rule-soft); }
+.rname { font: 600 13px/1.1 var(--font-sc); letter-spacing: .12em; color: var(--ink-2); }
+.rcount { font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.is-phone .row-label { bottom: auto; width: auto; flex-direction: row; align-items: baseline; gap: 8px; padding: 4px 12px 0; background: none; border: 0; }
+
+.band { position: absolute; display: flex; flex-direction: column; gap: 2px; padding: 6px 8px 11px; background: var(--panel); border: 1px solid var(--band-edge); border-radius: 3px; cursor: zoom-in; overflow: hidden; text-align: left; transition: border-color var(--motion-quick), box-shadow var(--motion-quick); }
+.band:hover { border-color: var(--ink-2); box-shadow: 0 1px 0 var(--band-edge); }
+.band.approx-from { border-left-style: dashed; border-left-color: var(--umber); }
+.band.approx-to { border-right-style: dashed; border-right-color: var(--umber); }
+.era-name { font: 600 15px/1.15 var(--font-sc); letter-spacing: .05em; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.era-dates { font: 12.5px/1.2 var(--font-read); color: var(--muted); font-variant-numeric: oldstyle-nums; white-space: nowrap; }
+.chips { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 3px; }
+.chip { display: inline-flex; align-items: center; gap: 5px; max-width: 100%; padding: 1px 6px 1px 5px; border: 1px solid var(--rule); border-radius: 3px; background: var(--bg); font: 12.5px/1.3 var(--font-read); color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
+.chip i { flex: none; width: 7px; height: 7px; background: var(--c); border-radius: 1px; }
+.chip em { font: normal 10.5px/1 var(--font-ui); color: var(--muted); font-variant-numeric: tabular-nums; }
+.chip:hover { border-color: var(--c); }
+.chip.more { color: var(--muted); font-style: italic; }
+.mix { position: absolute; left: 0; right: 0; bottom: 0; height: 5px; display: flex; }
+.mix i { display: block; height: 100%; }
+
+/* B · streams: the band is a transparent window on the stream drawn in SVG */
+.v0-B .band { background: transparent; border-color: transparent; border-radius: 0; padding: 5px 9px; }
+.v0-B .band:hover { border-color: transparent; box-shadow: none; background: color-mix(in srgb, var(--ink) 5%, transparent); }
+.v0-B .band .era-dates { display: none; }
+.v0-B .band .mix { display: none; }
+.v0-B .band.thin .chips { display: none; }
+.era-n { display: none; margin-left: 6px; font: 500 10.5px/1 var(--font-ui); letter-spacing: 0; color: var(--muted); font-variant-numeric: tabular-nums; }
+.v0-B .era-n { display: inline; }
+.streams path.stream { fill: var(--band); stroke: var(--band-edge); stroke-width: 1; }
+.streams path.seam { stroke: var(--bg); stroke-width: 2; fill: none; }
+
+/* level 1 */
+.l1 { display: flex; flex-direction: column; background: var(--bg); overflow: hidden; }
+.l1[hidden] { display: none !important; }
+.l1-head { flex: none; display: flex; align-items: center; gap: 10px; padding: 8px 14px 8px 14px; border-bottom: 1px solid var(--rule-soft); }
+.l1-head .lbl { flex: none; width: 110px; font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+.l1-head .chips { margin: 0; flex: 1; min-width: 0; }
+.l1-head .chip { font-size: 13.5px; padding: 2px 7px 2px 6px; }
+.l1-head .chip[aria-pressed="true"] { border-color: var(--c); background: color-mix(in srgb, var(--c) 14%, var(--panel)); }
+.l1-head .note { font: italic 13px/1.3 var(--font-read); color: var(--muted); }
+.lanes { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.lane { position: relative; flex: 1 1 0; min-height: 0; border-bottom: 1px solid var(--rule-soft); background: color-mix(in srgb, var(--c) 4%, var(--bg)); }
+.lane:last-child { border-bottom: 0; }
+.lane-label { position: absolute; left: 0; top: 0; bottom: 0; width: 124px; padding: 10px 10px 0 14px; z-index: 2; background: var(--bg); border-right: 1px solid var(--rule-soft); display: flex; flex-direction: column; gap: 3px; }
+.lane-label .dname { display: flex; align-items: center; gap: 7px; font: 600 12px/1.1 var(--font-ui); letter-spacing: .06em; text-transform: uppercase; color: var(--ink); }
+.lane-label .dname i { width: 9px; height: 9px; background: var(--c); border-radius: 1px; flex: none; }
+.lane-label .dcount { font-size: 11px; color: var(--muted); padding-left: 16px; font-variant-numeric: tabular-nums; }
+.track { position: absolute; inset: 0; }
+.phase { position: absolute; height: 20px; display: flex; align-items: center; padding: 0 7px; background: color-mix(in srgb, var(--c) 16%, var(--panel)); border: 1px solid color-mix(in srgb, var(--c) 60%, transparent); border-radius: 2px; cursor: pointer; transition: opacity var(--motion-quick); }
+.phase.approx { border-style: dashed; }
+.phase:hover { background: color-mix(in srgb, var(--c) 26%, var(--panel)); }
+.phase span { min-width: 0; font: 13px/1 var(--font-read); color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.phase.out span { position: absolute; left: calc(100% + 6px); color: var(--ink-2); overflow: visible; }
+.phase.nolabel span { display: none; }
+.moment { position: absolute; top: 7px; display: flex; align-items: center; gap: 5px; height: 14px; cursor: pointer; white-space: nowrap; transition: opacity var(--motion-quick); }
+.moment i { width: 9px; height: 9px; background: var(--c); transform: rotate(45deg); flex: none; border: 1.5px solid var(--bg); box-sizing: content-box; margin-left: -6px; }
+.moment span { font: 11.5px/1 var(--font-ui); color: var(--ink-2); }
+.moment.flip { flex-direction: row-reverse; }
+.moment.flip i { margin-left: 0; margin-right: -6px; }
+.moment.nolabel span { display: none; }
+.is-phone .moment span, .is-phone .phase span { display: none; }
+.is-phone .phase { background: color-mix(in srgb, var(--c) 30%, var(--panel)); }
+.is-phone .crumbs .cd, .is-phone .crumbs .sep { display: none; }
+.is-phone .zoomstops button { padding: 5px 7px; font-size: 11.5px; }
+.moment:hover span { color: var(--ink); text-decoration: underline; text-underline-offset: 2px; }
+.pulse { position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
+.pulse .area { fill: color-mix(in srgb, var(--c) 24%, transparent); stroke: var(--c); stroke-width: 1.5; }
+.pulse .base { stroke: color-mix(in srgb, var(--c) 40%, transparent); stroke-width: 1; }
+.peak { position: absolute; transform: translate(-50%, -100%); font: italic 13px/1.1 var(--font-read); color: var(--ink); white-space: nowrap; cursor: pointer; padding: 1px 3px; background: color-mix(in srgb, var(--bg) 70%, transparent); border-radius: 2px; transition: opacity var(--motion-quick); }
+.peak:hover { text-decoration: underline; text-underline-offset: 2px; }
+.empty { position: absolute; left: 140px; top: 50%; transform: translateY(-50%); margin: 0; font: italic 14px/1.3 var(--font-read); color: var(--muted); }
+.l1.focusing .phase:not(.in), .l1.focusing .moment:not(.in), .l1.focusing .peak:not(.in) { opacity: .22; }
+.l1.focusing .phase.in { box-shadow: 0 0 0 2px var(--c); }
+.tip { position: absolute; z-index: 5; pointer-events: none; padding: 4px 7px; background: var(--ink); color: var(--panel); font-size: 11.5px; border-radius: 3px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+/* phone level 1: lanes become a scrolling list */
+.is-phone .l1-head { flex-wrap: wrap; padding: 8px 12px; }
+.is-phone .l1-head .lbl { width: auto; }
+.is-phone .l1-head .chips { flex-basis: 100%; }
+.is-phone .lanes { overflow-y: auto; display: block; }
+.is-phone .lane { flex: none; padding-bottom: 8px; }
+.is-phone .lane-label { position: static; width: auto; flex-direction: row; align-items: baseline; gap: 8px; padding: 10px 12px 2px; background: none; border: 0; }
+.is-phone .lane-label .dcount { padding: 0; }
+.is-phone .track { position: relative; inset: auto; height: 80px; }
+.is-phone .empty { position: static; transform: none; padding: 0 12px 6px; font-size: 13.5px; }
+.lane-list { list-style: none; margin: 2px 0 0; padding: 0 12px; display: grid; gap: 1px; }
+.lane-list button { display: grid; grid-template-columns: 74px 1fr; gap: 8px; width: 100%; border: 0; background: none; padding: 5px 0; text-align: left; cursor: pointer; font: 14px/1.3 var(--font-read); color: var(--ink); }
+.lane-list .ly { font: 11.5px/1.6 var(--font-ui); color: var(--muted); font-variant-numeric: tabular-nums; }
+.lane-list .m::before { content: ''; display: inline-block; width: 7px; height: 7px; background: var(--c); transform: rotate(45deg); margin-right: 7px; vertical-align: 1px; }
+
+.axis { position: relative; flex: none; height: 30px; border-top: 1px solid var(--rule); background: var(--panel); overflow: hidden; }
+.tick { position: absolute; top: 0; height: 100%; padding-top: 7px; font: 12.5px/1 var(--font-read); color: var(--ink-2); font-variant-numeric: oldstyle-nums; white-space: nowrap; transform: translateX(-50%); }
+.tick::before { content: ''; position: absolute; left: 50%; top: 0; height: 4px; border-left: 1px solid var(--rule); }
+.axis.l1ticks .tick { font: 11px/1 var(--font-ui); font-variant-numeric: tabular-nums; padding-top: 9px; }
+
+.panel { position: absolute; top: 46px; right: 0; bottom: 30px; width: 360px; z-index: 6; background: var(--panel); border-left: 1px solid var(--rule); box-shadow: -14px 0 30px -22px rgb(0 0 0 / .4); padding: 18px 20px; overflow-y: auto; transform: translateX(105%); visibility: hidden; transition: transform var(--motion-move) var(--ease), visibility 0s linear var(--motion-move); }
+.panel.open { transform: none; visibility: visible; transition: transform var(--motion-move) var(--ease), visibility 0s; }
+.is-phone .panel { top: auto; left: 0; width: auto; max-height: 64%; bottom: 0; border-left: 0; border-top: 1px solid var(--rule); border-radius: 14px 14px 0 0; transform: translateY(105%); box-shadow: 0 -14px 30px -22px rgb(0 0 0 / .4); padding-top: 22px; }
+.is-phone .panel.open { transform: none; }
+.is-phone .panel::before { content: ''; position: absolute; top: 8px; left: 50%; width: 36px; height: 4px; margin-left: -18px; border-radius: 2px; background: var(--rule); }
+.panel .close { position: absolute; top: 10px; right: 10px; width: 32px; height: 32px; border: 0; background: none; font-size: 22px; line-height: 1; color: var(--muted); cursor: pointer; border-radius: 4px; }
+.panel .close:hover { background: var(--rule-soft); color: var(--ink); }
+.panel h2 { font: 500 22px/1.2 var(--font-read); margin: 0 30px 6px 0; text-wrap: balance; }
+.panel .meta { display: flex; align-items: center; gap: 7px; font-size: 12.5px; color: var(--ink-2); margin: 0 0 14px; }
+.panel .meta i { width: 9px; height: 9px; background: var(--c); border-radius: 1px; }
+.panel .count { font-size: 12px; color: var(--muted); margin: 0 0 8px; text-transform: uppercase; letter-spacing: .06em; }
+.panel blockquote { margin: 0 0 12px; padding: 2px 0 2px 12px; border-left: 2px solid var(--c); font: 16px/1.5 var(--font-read); }
+.panel cite { display: block; margin-top: 4px; font: normal 11.5px/1.3 var(--font-ui); color: var(--muted); }
+.panel .more { font: italic 14px/1.4 var(--font-read); color: var(--muted); margin: 0 0 16px; }
+.panel .actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.panel .actions button { border: 1px solid var(--rule); background: var(--bg); padding: 6px 11px; border-radius: 4px; font-size: 12.5px; }
+.panel .actions button:disabled { color: var(--muted); }
+.panel .fine { font-size: 11.5px; color: var(--muted); margin: 8px 0 0; }
+.panel ul { list-style: none; padding: 0; margin: 0 0 14px; display: grid; gap: 2px; }
+.panel li button { display: grid; grid-template-columns: 12px 1fr auto; align-items: baseline; gap: 8px; width: 100%; padding: 6px 4px; border: 0; background: none; text-align: left; cursor: pointer; border-radius: 3px; }
+.panel li button:hover { background: var(--rule-soft); }
+.panel li i { width: 8px; height: 8px; background: var(--c); border-radius: 1px; }
+.panel li .t { font: 15px/1.3 var(--font-read); }
+.panel li .y { font-size: 11.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition-duration: 0s !important; animation-duration: 0s !important; } }
+</style>
+
+<div class="proto">
+  <header class="pbar">
+    <h1>Era overview <span>Phase 0 prototype · sample data</span></h1>
+    <div class="controls">
+      <fieldset class="seg" id="v0"><legend>Eras</legend><span class="opts"><button data-v="A" aria-pressed="true">A · Bands</button><button data-v="B" aria-pressed="false">B · Streams</button></span></fieldset>
+      <fieldset class="seg" id="v1"><legend>Dimensions</legend><span class="opts"><button data-v="A" aria-pressed="true">A · Phases</button><button data-v="B" aria-pressed="false">B · Pulse</button></span></fieldset>
+      <fieldset class="seg device-seg" id="dev"><legend>Device</legend><span class="opts"><button data-v="laptop" aria-pressed="true">Laptop</button><button data-v="phone" aria-pressed="false">Phone</button></span></fieldset>
+      <fieldset class="seg" id="thm"><legend>Theme</legend><span class="opts"><button data-v="light" aria-pressed="false">Light</button><button data-v="dark" aria-pressed="false">Dark</button></span></fieldset>
+    </div>
+  </header>
+  <p class="pnote" id="pnote"></p>
+  <main class="stage">
+    <div class="device" id="device">
+      <div class="app" id="app">
+        <div class="topbar">
+          <nav class="crumbs" aria-label="Where you are">
+            <button id="crumbHome" type="button">All eras</button>
+            <span id="crumbEra" hidden><span class="sep">›</span> <span class="here" id="crumbName"></span> <span class="cd" id="crumbDates"></span></span>
+          </nav>
+          <div class="zoomstops" role="group" aria-label="Zoom level">
+            <button id="zEras" type="button" aria-pressed="true">Eras</button>
+            <button id="zDims" type="button" aria-pressed="false" disabled title="Pick an era first">Dimensions</button>
+            <button id="zEntries" type="button" aria-pressed="false" disabled title="Entries are the next level in; not part of this prototype">Entries</button>
+          </div>
+        </div>
+        <div class="canvas" id="canvas">
+          <div class="l0" id="l0"></div>
+          <div class="l1" id="l1" hidden></div>
+          <div class="tip" id="tip" hidden></div>
+        </div>
+        <div class="axis" id="axis"></div>
+        <aside class="panel" id="panel" aria-label="Details">
+          <button class="close" id="pclose" type="button" aria-label="Close">×</button>
+          <div id="pbody"></div>
+        </aside>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+(() => {
+'use strict';
+// ---------- dates: astronomical years, as in src/model/dates.ts (431 BCE = -430) ----------
+const bce = n => 1 - n;
+const fmtY = y => y <= 0 ? `${1 - y} BCE` : `${y} CE`;
+const fmtRange = (a, b) => b == null ? fmtY(a)
+  : (a <= 0 && b <= 0) ? `${1 - a}–${1 - b} BCE`
+  : a > 0 ? `${a}–${b} CE` : `${fmtY(a)} – ${fmtY(b)}`;
+const fmtShort = (a, b) => b == null ? String(a <= 0 ? 1 - a : a) : `${a <= 0 ? 1 - a : a}–${b <= 0 ? 1 - b : b}`;
+
+const DIMS = [
+  { id: 'pol', name: 'Political' }, { id: 'eco', name: 'Economic' }, { id: 'soc', name: 'Social' },
+  { id: 'tec', name: 'Technological' }, { id: 'int', name: 'Intellectual' }, { id: 'rel', name: 'Religious' },
+];
+const DIM = Object.fromEntries(DIMS.map(d => [d.id, d]));
+
+// ---------- sample data: what Bob might have highlighted while reading about Classical Greece ----------
+// Spans have from/to; moments have y. n = number of highlights behind it. q = one sample highlight [text, article, section].
+const ITEMS = [
+  { id: 'delian', dim: 'pol', label: 'Delian League becomes an empire', from: bce(478), to: bce(431), n: 6, q: ['Founded in 478 BC, the league moved its treasury from Delos to Athens in 454 BC.', 'Delian League', 'Treasury'] },
+  { id: 'democracy', dim: 'pol', label: 'Athenian democracy', from: bce(462), to: bce(323), n: 12, q: ["Ephialtes' reforms of 462 BC took most of the Areopagus's powers and gave them to the Council, the Assembly and the courts.", 'Athenian democracy', 'History'] },
+  { id: 'pelwar', dim: 'pol', label: 'Peloponnesian War', from: bce(431), to: bce(404), n: 14, q: ['Athens surrendered in 404 BC, and its Long Walls were pulled down.', 'Peloponnesian War', 'Aftermath'] },
+  { id: 'sparta', dim: 'pol', label: 'Spartan supremacy', from: bce(404), to: bce(371), n: 4, q: ['Sparta was the leading power in Greece from 404 BC until Thebes defeated it at Leuctra in 371 BC.', 'Spartan hegemony', ''] },
+  { id: 'thebes', dim: 'pol', label: 'Theban supremacy', from: bce(371), to: bce(362), n: 2, q: ['Theban supremacy ended when Epaminondas was killed at Mantinea in 362 BC.', 'Theban hegemony', ''] },
+  { id: 'macedon', dim: 'pol', label: 'Macedon rises', from: bce(359), to: bce(323), n: 6, q: ['Philip II became king of Macedon in 359 BC and rebuilt its army.', 'Philip II of Macedon', 'Reign'] },
+  { id: 'salamis', dim: 'pol', label: 'Salamis', y: bce(480), n: 2, q: ['The Greek fleet defeated the Persians in the straits of Salamis in 480 BC.', 'Battle of Salamis', ''] },
+  { id: 'thirty', dim: 'pol', label: 'The Thirty', y: bce(404), n: 2, q: ['A pro-Spartan oligarchy, the Thirty Tyrants, ruled Athens for about eight months in 404–403 BC.', 'Thirty Tyrants', ''] },
+  { id: 'chaeronea', dim: 'pol', label: 'Chaeronea', y: bce(338), n: 2, q: ["At Chaeronea in 338 BC Philip's army defeated Athens and Thebes; his son Alexander led the cavalry.", 'Battle of Chaeronea (338 BC)', ''] },
+
+  { id: 'silver', dim: 'eco', label: 'Silver and tribute fund Athens', from: bce(480), to: bce(404), n: 3, q: ['A rich vein of silver found at Laurion in 483 BC paid for the fleet that fought at Salamis.', 'Laurion', 'History'] },
+  { id: 'grain', dim: 'eco', label: 'Black Sea grain feeds Athens', from: bce(480), to: bce(323), n: 3, q: ['Athens relied on grain shipped from the Black Sea through the Bosporus and the Hellespont.', 'Economy of ancient Greece', 'Trade'] },
+  { id: 'bankers', dim: 'eco', label: 'Bankers in Athens', from: bce(400), to: bce(330), approx: true, n: 2, q: ['Pasion, a freed slave, became the richest banker in Athens in the early 4th century BC.', 'Pasion', ''] },
+  { id: 'decelea', dim: 'eco', label: 'Slaves flee at Decelea', y: bce(413), n: 2, q: ['Thucydides says more than 20,000 slaves deserted to the Spartans at Decelea.', 'Decelea', ''] },
+  { id: 'treasure', dim: 'eco', label: 'Persian treasure seized', y: bce(330), n: 2, q: ['Alexander took the royal treasuries at Susa and Persepolis in 331–330 BC.', 'Alexander the Great', 'Persia'] },
+
+  { id: 'citizens', dim: 'soc', label: 'Citizens, metics and slaves', from: bce(480), to: bce(323), n: 4, q: ['Only adult male citizens could take part; women, metics and slaves could not.', 'Athenian democracy', 'Participation'] },
+  { id: 'plague', dim: 'soc', label: 'Plague of Athens', from: bce(430), to: bce(426), n: 3, q: ["The plague killed perhaps a quarter of Athens' people. Pericles died of it in 429 BC.", 'Plague of Athens', ''] },
+  { id: 'oliganthropia', dim: 'soc', label: 'Sparta runs short of citizens', from: bce(400), to: bce(323), approx: true, n: 2, q: ["Full Spartan citizens fell from about 8,000 in 480 BC to fewer than a thousand in Aristotle's day.", 'Sparta', 'Society'] },
+  { id: 'citlaw', dim: 'soc', label: 'Citizenship law', y: bce(451), n: 2, q: ["Pericles' law of 451 BC limited citizenship to children of an Athenian father and mother.", 'Pericles', 'Citizenship law'] },
+
+  { id: 'triremes', dim: 'tec', label: 'Trireme fleets', from: bce(480), to: bce(404), n: 3, q: ['A trireme was rowed by about 170 oarsmen sitting in three banks.', 'Trireme', ''] },
+  { id: 'longwalls', dim: 'tec', label: 'Long Walls', from: bce(461), to: bce(456), approx: true, n: 1, q: ['The Long Walls, built around 461–456 BC, joined Athens to its harbour at Piraeus.', 'Long Walls', ''] },
+  { id: 'sarissa', dim: 'tec', label: "Philip's pike phalanx", from: bce(359), to: bce(336), n: 2, q: ['Philip armed his infantry with the sarissa, a pike some 5 to 6 metres long.', 'Sarissa', ''] },
+  { id: 'catapult', dim: 'tec', label: 'First catapults', y: bce(399), n: 2, q: ['Engineers working for Dionysius I of Syracuse built the first catapults around 399 BC.', 'Catapult', 'History'] },
+
+  { id: 'tragedy', dim: 'int', label: 'Aeschylus, Sophocles, Euripides', from: bce(472), to: bce(406), n: 5, q: ['Aeschylus, Sophocles and Euripides are the three tragedians whose plays survive.', 'Greek tragedy', ''] },
+  { id: 'sophists', dim: 'int', label: 'Sophists and Socrates', from: bce(450), to: bce(399), approx: true, n: 4, q: ['Sophists such as Protagoras taught rhetoric for a fee.', 'Sophist', ''] },
+  { id: 'history', dim: 'int', label: 'Herodotus and Thucydides', from: bce(440), to: bce(400), approx: true, n: 3, q: ['Herodotus is often called the father of history.', 'Herodotus', ''] },
+  { id: 'academy', dim: 'int', label: "Plato's Academy, Aristotle's Lyceum", from: bce(387), to: bce(323), n: 6, q: ['Plato founded the Academy around 387 BC; Aristotle studied there for twenty years.', 'Plato', 'Academy'] },
+  { id: 'trial', dim: 'int', label: 'Trial of Socrates', y: bce(399), n: 2, q: ['Socrates was tried in 399 BC for impiety and corrupting the young, and sentenced to death.', 'Socrates', 'Trial'] },
+  { id: 'lyceum', dim: 'int', label: 'Lyceum opens', y: bce(335), n: 2, q: ['Aristotle opened his school at the Lyceum in Athens in 335 BC.', 'Aristotle', ''] },
+
+  { id: 'festivals', dim: 'rel', label: 'Panathenaia and Dionysia', from: bce(480), to: bce(323), n: 2, q: ['The City Dionysia, a festival of Dionysus, held the tragedy competitions.', 'Dionysia', ''] },
+  { id: 'parthenon', dim: 'rel', label: 'Parthenon built', from: bce(447), to: bce(432), n: 3, q: ['The Parthenon was built between 447 and 432 BC as a temple of Athena.', 'Parthenon', ''] },
+  { id: 'sacredwar', dim: 'rel', label: 'Sacred War over Delphi', from: bce(356), to: bce(346), n: 1, q: ['The Third Sacred War began in 356 BC when Phocis seized the sanctuary at Delphi.', 'Third Sacred War', ''] },
+  { id: 'herms', dim: 'rel', label: 'Herms mutilated', y: bce(415), n: 2, q: ['In 415 BC, just before the Sicilian Expedition sailed, the herms of Athens were mutilated in one night.', 'Hermai', ''] },
+];
+const ITEM = Object.fromEntries(ITEMS.map(i => [i.id, i]));
+// Bob's themes for Classical Greece: groups of his highlights, labelled by him (AI may only suggest).
+const CLASSICAL_THEMES = [
+  { id: 't-war', label: 'Peloponnesian War', items: ['pelwar', 'decelea', 'plague', 'herms', 'thirty'] },
+  { id: 't-dem', label: 'Athenian democracy', items: ['democracy', 'citizens', 'citlaw'] },
+  { id: 't-emp', label: 'Delian League', items: ['delian', 'silver', 'triremes', 'longwalls', 'salamis'] },
+  { id: 't-phil', label: 'Socrates, Plato, Aristotle', items: ['sophists', 'trial', 'academy', 'lyceum'] },
+  { id: 't-mac', label: 'Philip and Alexander', items: ['macedon', 'chaeronea', 'sarissa', 'treasure'] },
+  { id: 't-thea', label: 'Tragedy and history', items: ['tragedy', 'history', 'festivals'] },
+  { id: 't-heg', label: 'Sparta and Thebes', items: ['sparta', 'thebes', 'oliganthropia', 'sacredwar'] },
+  { id: 't-parth', label: 'The Parthenon', items: ['parthenon'] },
+];
+const T = (label, dim, n) => ({ label, dim, n });
+const REGIONS = [
+  { id: 'greece', name: 'Greece', eras: [
+    { id: 'archaic', name: 'Archaic Greece', from: bce(800), to: bce(480), approxFrom: true, themes: [T('Colonies from Sicily to the Black Sea', 'eco', 7), T('Solon and Cleisthenes', 'pol', 6), T('Tyrants', 'pol', 5), T('Homer and Hesiod', 'int', 4), T('Hoplites', 'tec', 3), T('Delphi and Olympia', 'rel', 3), T('Persian Wars begin', 'pol', 3)] },
+    { id: 'classical', name: 'Classical Greece', from: bce(480), to: bce(323), detail: true },
+    { id: 'hellenistic', name: 'Hellenistic period', from: bce(323), to: bce(31), themes: [T("Alexander's successors", 'pol', 4), T('Library of Alexandria', 'int', 3), T('Euclid and Archimedes', 'tec', 3), T('Stoics and Epicureans', 'int', 2), T('Rome takes Greece', 'pol', 2)] },
+  ] },
+  { id: 'persia', name: 'Persia', eras: [
+    { id: 'achaemenid', name: 'Achaemenid Empire', from: bce(550), to: bce(330), themes: [T('Cyrus the Great', 'pol', 3), T('Wars with Greece', 'pol', 3), T('Satrapies', 'pol', 2), T('Royal Road', 'eco', 2), T('Zoroastrianism', 'rel', 1)] },
+  ] },
+  { id: 'rome', name: 'Rome', eras: [
+    { id: 'kingdom', name: 'Roman Kingdom', from: bce(753), to: bce(509), approxFrom: true, approxTo: true, themes: [T('Seven kings', 'pol', 2)] },
+    { id: 'republic', name: 'Roman Republic', from: bce(509), to: bce(27), approxFrom: true, themes: [T('Consuls and the Senate', 'pol', 3), T('Punic Wars', 'pol', 3), T('Conquest of Greece', 'pol', 2)] },
+  ] },
+  { id: 'egypt', name: 'Egypt', eras: [
+    { id: 'late', name: 'Late Period', from: bce(664), to: bce(332), themes: [T('Greek traders at Naukratis', 'eco', 2), T('Persian rule', 'pol', 1)] },
+    { id: 'ptolemaic', name: 'Ptolemaic Egypt', from: bce(305), to: bce(30), themes: [T('Alexandria', 'int', 3), T('Cleopatra', 'pol', 2)] },
+  ] },
+  { id: 'china', name: 'China', eras: [
+    { id: 'springautumn', name: 'Spring and Autumn', from: bce(770), to: bce(481), themes: [T('Confucius', 'int', 3), T('Iron tools', 'tec', 1)] },
+    { id: 'warring', name: 'Warring States', from: bce(475), to: bce(221), themes: [T('Hundred Schools of Thought', 'int', 4), T('Crossbows and iron', 'tec', 2), T('Qin unifies China', 'pol', 2)] },
+    { id: 'han', name: 'Han dynasty', from: bce(202), to: 220, themes: [T('Silk Road', 'eco', 2)] },
+  ] },
+];
+const ERA = {};
+for (const r of REGIONS) for (const e of r.eras) {
+  ERA[e.id] = e; e.region = r;
+  e.mix = Object.fromEntries(DIMS.map(d => [d.id, 0]));
+  if (e.detail) {
+    for (const i of ITEMS) e.mix[i.dim] += i.n;
+    e.themeList = CLASSICAL_THEMES.map(t => {
+      const by = {}; let n = 0;
+      for (const id of t.items) { const it = ITEM[id]; by[it.dim] = (by[it.dim] || 0) + it.n; n += it.n; }
+      const dim = Object.entries(by).sort((a, b) => b[1] - a[1])[0][0];
+      return { ...t, n, dim };
+    });
+  } else {
+    e.themeList = e.themes.map((t, k) => ({ ...t, id: `${e.id}-${k}` }));
+    for (const t of e.themes) e.mix[t.dim] += t.n;
+  }
+  e.total = Object.values(e.mix).reduce((a, b) => a + b, 0);
+  e.th = Math.round(34 + 1.3 * e.total); // B: stream thickness grows with highlights
+}
+for (const r of REGIONS) r.total = r.eras.reduce((a, e) => a + e.total, 0);
+
+// ---------- state ----------
+const $ = s => document.querySelector(s);
+const el = (tag, cls, html) => { const n = document.createElement(tag); if (cls) n.className = cls; if (html != null) n.innerHTML = html; return n; };
+const device = $('#device'), app = $('#app'), canvas = $('#canvas'), l0 = $('#l0'), l1 = $('#l1'), axis = $('#axis'), tip = $('#tip');
+const panel = $('#panel'), pbody = $('#pbody');
+const S = { level: 0, era: null, focus: null, v0: 'A', v1: 'A', dom: null, anim: 0, busy: false };
+const reduced = matchMedia('(prefers-reduced-motion: reduce)');
+const DUR = () => reduced.matches ? 0 : 400;
+
+const isPhone = () => app.clientWidth < 600;
+function geom() {
+  const w = canvas.clientWidth, h = canvas.clientHeight, phone = isPhone();
+  return { w, h, phone, x0: phone ? 12 : 134, x1: w - (phone ? 12 : 18) };
+}
+const X = (y, d, g) => g.x0 + (y - d[0]) / (d[1] - d[0]) * (g.x1 - g.x0);
+const homeDomain = () => isPhone() ? [bce(578), bce(300)] : [bce(820), 40];
+const eraDomain = e => { const pad = (e.to - e.from) * 0.035; return [e.from - pad, e.to + pad]; };
+const LIMITS = [bce(900), 260];
+
+// cubic-bezier(.2,.7,.2,1), the --ease token
+const ease = (() => {
+  const x1 = .2, y1 = .7, x2 = .2, y2 = 1;
+  const bx = t => 3 * (1 - t) * (1 - t) * t * x1 + 3 * (1 - t) * t * t * x2 + t * t * t;
+  const by = t => 3 * (1 - t) * (1 - t) * t * y1 + 3 * (1 - t) * t * t * y2 + t * t * t;
+  return x => { let lo = 0, hi = 1, t = x; for (let i = 0; i < 24; i++) { t = (lo + hi) / 2; if (bx(t) < x) lo = t; else hi = t; } return by(t); };
+})();
+function tween(dur, frame, done) {
+  cancelAnimationFrame(S.anim);
+  if (!dur) { frame(1); done && done(); return; }
+  const t0 = performance.now();
+  const step = now => { const t = Math.min(1, (now - t0) / dur); frame(ease(t)); if (t < 1) S.anim = requestAnimationFrame(step); else done && done(); };
+  S.anim = requestAnimationFrame(step);
+}
+const lerp = (a, b, t) => a + (b - a) * t;
+const lerpD = (a, b, t) => [lerp(a[0], b[0], t), lerp(a[1], b[1], t)];
+
+// text widths for label fitting
+const ctx = document.createElement('canvas').getContext('2d');
+const widthCache = new Map();
+function textW(s, font) { const k = font + s; if (!widthCache.has(k)) { ctx.font = font; widthCache.set(k, ctx.measureText(s).width); } return widthCache.get(k); }
+
+// ---------- level 0: eras ----------
+function chipHTML(t) { return `<span class="chip" data-theme="${t.id}" style="--c:var(--${t.dim})" title="${t.label}: ${t.n} highlights"><i></i>${t.label}<em>${t.n}</em></span>`; }
+function mixHTML(e) { return DIMS.filter(d => e.mix[d.id]).map(d => `<i style="flex:${e.mix[d.id]};background:var(--${d.id})" title="${d.name}: ${e.mix[d.id]}"></i>`).join(''); }
+function buildL0() {
+  l0.innerHTML = '<svg class="streams" id="streams" aria-hidden="true"></svg><div class="l0-spacer"></div>';
+  for (const r of REGIONS) {
+    const row = el('div', 'row'); row.dataset.region = r.id;
+    row.append(el('div', 'row-label', `<span class="rname">${r.name}</span><span class="rcount">${r.total} highlights</span>`));
+    for (const e of r.eras) {
+      const b = el('div', 'band');
+      b.tabIndex = 0; b.setAttribute('role', 'button'); b.dataset.era = e.id;
+      b.setAttribute('aria-label', `Zoom into ${e.name}, ${fmtRange(e.from, e.to)}`);
+      if (e.approxFrom) b.classList.add('approx-from');
+      if (e.approxTo) b.classList.add('approx-to');
+      b.innerHTML = `<span class="era-name">${e.name}<span class="era-n">${e.total}</span></span><span class="era-dates">${fmtRange(e.from, e.to)}</span><span class="chips">${e.themeList.map(chipHTML).join('')}</span><span class="mix">${mixHTML(e)}</span>`;
+      row.append(b); e.el = b;
+    }
+    l0.append(row); r.el = row;
+  }
+}
+function layoutL0(d, measure) {
+  const g = geom(), B = S.v0 === 'B';
+  const labelH = g.phone ? 22 : 0, pad = 6, gap = 4;
+  let y = 6;
+  for (const r of REGIONS) {
+    for (const e of r.eras) {
+      const L = X(e.from, d, g), R = X(e.to, d, g);
+      e.el.style.left = (L + 1.5) + 'px';
+      e.el.style.width = Math.max(0, R - L - 3) + 'px';
+    }
+    if (measure) {
+      if (B) {
+        r.inner = Math.max(...r.eras.map(e => e.th));
+      } else {
+        let m = 0;
+        for (const e of r.eras) {
+          e.el.querySelector('.chip.more')?.remove();
+          e.el.querySelectorAll('.chip').forEach(c => { c.hidden = false; });
+          e.el.style.height = 'auto'; m = Math.max(m, e.el.offsetHeight);
+        }
+        r.inner = m;
+      }
+      r.h = r.inner + pad * 2 + labelH;
+    }
+    r.top = y; y += r.h + gap;
+    r.el.style.top = r.top + 'px'; r.el.style.height = r.h + 'px';
+    for (const e of r.eras) {
+      const h = B ? e.th : r.inner;
+      e.el.style.top = (labelH + pad + (r.inner - h) / 2) + 'px';
+      e.el.style.height = h + 'px';
+      e.el.classList.toggle('thin', B && e.th < 50);
+    }
+  }
+  S.l0h = y;
+  l0.querySelector('.l0-spacer').style.height = y + 'px';
+  if (B && measure) fitChips();
+  drawStreams(d, g);
+}
+function fitChips() { // B only: thin streams fold extra chips into "+n"
+  for (const r of REGIONS) for (const e of r.eras) {
+    const box = e.el, chips = [...box.querySelectorAll('.chip:not(.more)')];
+    box.querySelector('.chip.more')?.remove();
+    chips.forEach(c => { c.hidden = false; });
+    if (box.classList.contains('thin')) continue;
+    const limit = box.clientHeight - 4;
+    let hidden = chips.filter(c => c.offsetTop + c.offsetHeight > limit);
+    if (!hidden.length) continue;
+    hidden.forEach(c => { c.hidden = true; });
+    const more = el('span', 'chip more'); box.querySelector('.chips').append(more);
+    let k = hidden.length;
+    const visible = chips.filter(c => !c.hidden);
+    more.textContent = `+${k} more`;
+    while (more.offsetTop + more.offsetHeight > limit && visible.length) { visible.pop().hidden = true; k++; more.textContent = `+${k} more`; }
+    if (more.offsetTop + more.offsetHeight > limit) more.remove();
+  }
+}
+const smooth = t => t <= 0 ? 0 : t >= 1 ? 1 : t * t * (3 - 2 * t);
+function thickness(r, yr) {
+  const es = r.eras, TR = 9;
+  for (let i = 0; i < es.length; i++) {
+    const e = es[i], prev = es[i - 1], next = es[i + 1];
+    if (yr < e.from || yr > e.to) continue;
+    let h = e.th;
+    const joinPrev = prev && e.from - prev.to <= 1, joinNext = next && next.from - e.to <= 1;
+    if (joinPrev && yr < e.from + TR) h = lerp(prev.th, e.th, smooth((yr - (e.from - TR)) / (2 * TR)));
+    else if (!joinPrev) h *= smooth((yr - e.from) / (e.approxFrom ? 30 : 5)); // approximate starts fade in
+    if (joinNext && yr > e.to - TR) h = lerp(e.th, next.th, smooth((yr - (e.to - TR)) / (2 * TR)));
+    else if (!joinNext) h *= smooth((e.to - yr) / (e.approxTo ? 30 : 5));
+    return Math.max(h, 2);
+  }
+  for (let i = 0; i < es.length - 1; i++) if (yr > es[i].to && yr < es[i + 1].from) return 2;
+  return 0;
+}
+function drawStreams(d, g) {
+  const svg = $('#streams');
+  svg.setAttribute('width', g.w); svg.setAttribute('height', S.l0h); svg.setAttribute('viewBox', `0 0 ${g.w} ${S.l0h}`);
+  svg.style.width = g.w + 'px'; svg.style.height = S.l0h + 'px';
+  if (S.v0 !== 'B') { svg.innerHTML = ''; return; }
+  const labelH = g.phone ? 22 : 0, pad = 6;
+  let out = '';
+  const a = d[0], b = d[1], n = Math.ceil(g.w / 3), step = (b - a) / n;
+  for (const r of REGIONS) {
+    const cy = r.top + labelH + pad + r.inner / 2;
+    let top = [], bot = [];
+    const flush = () => { if (top.length > 1) out += `<path class="stream" d="M${top.join('L')}L${bot.reverse().join('L')}Z"/>`; top = []; bot = []; };
+    for (let i = -2; i <= n + 2; i++) {
+      const yr = a + i * step, h = thickness(r, yr);
+      if (h <= 0) { flush(); continue; }
+      const x = X(yr, d, g).toFixed(1);
+      top.push(`${x} ${(cy - h / 2).toFixed(1)}`); bot.push(`${x} ${(cy + h / 2).toFixed(1)}`);
+    }
+    flush();
+    for (let i = 1; i < r.eras.length; i++) {
+      const e = r.eras[i], p = r.eras[i - 1];
+      if (e.from - p.to > 1) continue;
+      const x = X(e.from, d, g), h = thickness(r, e.from);
+      out += `<path class="seam" d="M${x.toFixed(1)} ${(cy - h / 2 + 1).toFixed(1)}V${(cy + h / 2 - 1).toFixed(1)}"/>`;
+    }
+  }
+  svg.innerHTML = out;
+}
+
+// ---------- level 1: six dimension lanes ----------
+function assignRows(spans) {
+  const ends = [];
+  for (const s of [...spans].sort((a, b) => a.from - b.from)) {
+    let r = ends.findIndex(e => e <= s.from);
+    if (r < 0) { r = ends.length; ends.push(0); }
+    ends[r] = s.to; s.row = r;
+  }
+  return Math.max(1, ends.length);
+}
+function binsFor(items, era) {
+  const W = 5, n = Math.ceil((era.to - era.from) / W), bins = new Array(n).fill(0);
+  const put = y => { const k = Math.min(n - 1, Math.max(0, Math.floor((y - era.from) / W))); bins[k]++; };
+  for (const it of items) {
+    if (it.y != null) { for (let i = 0; i < it.n; i++) put(it.y); continue; }
+    for (let i = 0; i < it.n; i++) put(it.from + (i + .5) * (it.to - it.from) / it.n);
+  }
+  return bins.map((v, i) => .25 * (bins[i - 1] || 0) + .5 * v + .25 * (bins[i + 1] || 0));
+}
+function buildL1(era) {
+  const g = geom();
+  l1.innerHTML = '';
+  l1.classList.toggle('v1-B', S.v1 === 'B');
+  const head = el('div', 'l1-head');
+  head.append(el('span', 'lbl', 'Themes'));
+  const chips = el('div', 'chips');
+  for (const t of era.themeList) {
+    const c = el('button', 'chip', `<i></i>${t.label}<em>${t.n}</em>`);
+    c.type = 'button'; c.style.setProperty('--c', `var(--${t.dim})`); c.dataset.theme = t.id;
+    c.setAttribute('aria-pressed', String(S.focus === t.id));
+    chips.append(c);
+  }
+  head.append(chips);
+  if (!era.detail) head.append(el('span', 'note', 'Sample detail exists only for Classical Greece.'));
+  l1.append(head);
+
+  const lanes = el('div', 'lanes');
+  era.lanes = [];
+  const all = era.detail ? ITEMS : [];
+  era.bins = {}; let max = 1;
+  for (const dim of DIMS) {
+    const items = all.filter(i => i.dim === dim.id);
+    const spans = items.filter(i => i.y == null), moments = items.filter(i => i.y != null);
+    const rows = assignRows(spans);
+    const count = items.reduce((a, i) => a + i.n, 0);
+    const lane = el('section', 'lane');
+    lane.style.setProperty('--c', `var(--${dim.id})`);
+    lane.style.flex = `${1 + (S.v1 === 'A' ? rows * .8 : 1.2)} 1 0`;
+    lane.innerHTML = `<header class="lane-label"><span class="dname"><i></i>${dim.name}</span><span class="dcount">${count ? count + ' highlights' : ''}</span></header>`;
+    const track = el('div', 'track');
+    lane.append(track);
+    const L = { dim, lane, track, rows, spans, moments, els: [] };
+    if (!items.length) {
+      lane.append(el('p', 'empty', `Nothing ${dim.name.toLowerCase()} highlighted here yet.`));
+    }
+    if (S.v1 === 'A') {
+      for (const s of spans) {
+        const p = el('div', 'phase' + (s.approx ? ' approx' : ''), `<span>${s.label}</span>`);
+        p.dataset.item = s.id; p.title = `${s.label} · ${fmtRange(s.from, s.to)} · ${s.n} highlights`;
+        track.append(p); L.els.push([s, p]);
+      }
+    } else if (items.length) {
+      const bins = binsFor(items, era); era.bins[dim.id] = bins; max = Math.max(max, ...bins);
+      track.insertAdjacentHTML('beforeend', '<svg class="pulse" aria-hidden="true"><path class="base"/><path class="area"/></svg>');
+      for (const s of [...spans].sort((a, b) => b.n - a.n)) {
+        if (s.n < 3) continue;
+        const p = el('div', 'peak', s.label); p.dataset.item = s.id; p.title = `${s.label} · ${fmtRange(s.from, s.to)} · ${s.n} highlights`;
+        track.append(p); L.els.push([s, p]);
+      }
+    }
+    for (const m of moments) {
+      const p = el('div', 'moment', `<i></i><span>${m.label}</span>`);
+      p.dataset.item = m.id; p.title = `${m.label} · ${fmtY(m.y)} · ${m.n} highlights`;
+      track.append(p); L.els.push([m, p]);
+    }
+    if (g.phone && items.length) {
+      const list = el('ul', 'lane-list');
+      const shown = S.v1 === 'A' ? items : items.filter(i => i.y != null || i.n >= 3);
+      for (const it of [...shown].sort((a, b) => (a.from ?? a.y) - (b.from ?? b.y))) {
+        list.append(el('li', '', `<button type="button" data-item="${it.id}"><span class="ly">${it.y != null ? fmtShort(it.y) : fmtShort(it.from, it.to)}</span><span class="${it.y != null ? 'm' : ''}">${it.label}</span></button>`));
+      }
+      lane.append(list);
+    }
+    lanes.append(lane); era.lanes.push(L);
+  }
+  era.max = max;
+  l1.append(lanes);
+  applyFocus();
+}
+function measureL1(era) {
+  const g = geom();
+  for (const L of era.lanes) {
+    if (g.phone) L.track.style.height = (S.v1 === 'A' ? 30 + L.rows * 24 : 30 + 58) + 'px';
+    const th = L.track.clientHeight;
+    L.th = th;
+    L.rowH = Math.max(20, Math.min(28, (th - 34) / L.rows));
+  }
+}
+function renderL1(d) {
+  const era = S.era && ERA[S.era]; if (!era || !era.lanes) return;
+  const g = geom();
+  for (const L of era.lanes) {
+    if (S.v1 === 'A') {
+      // span rows and label fitting
+      const byRow = {};
+      for (const [s] of L.els) if (s.y == null) (byRow[s.row] ||= []).push(s);
+      for (const [s, node] of L.els) {
+        if (s.y != null) continue;
+        const a = X(s.from, d, g), b = X(s.to, d, g), w = Math.max(3, b - a - 2);
+        node.style.left = a + 1 + 'px'; node.style.width = w + 'px';
+        node.style.top = (30 + s.row * L.rowH) + 'px'; node.style.height = (L.rowH - 5) + 'px';
+        const lw = textW(s.label, '13px Spectral');
+        const nxt = byRow[s.row].filter(o => o.from >= s.to).sort((p, q) => p.from - q.from)[0];
+        const room = (nxt ? X(nxt.from, d, g) : g.x1 + 12) - b;
+        const fits = lw + 14 <= w, out = !fits && lw + 12 < room;
+        node.classList.toggle('out', out);
+        node.classList.toggle('nolabel', !fits && !out && w < 48);
+      }
+    } else if (era.bins[L.dim.id]) {
+      const bins = era.bins[L.dim.id], base = L.th - 5, amp = L.th - 36;
+      const pts = bins.map((v, i) => [X(era.from + (i + .5) * 5, d, g), base - v / era.max * amp]);
+      pts.unshift([X(era.from, d, g), base]); pts.push([X(era.to, d, g), base]);
+      let path = `M${pts[0][0]} ${base}`;
+      for (let i = 0; i < pts.length - 1; i++) {
+        const p0 = pts[i - 1] || pts[i], p1 = pts[i], p2 = pts[i + 1], p3 = pts[i + 2] || p2;
+        const c1 = [p1[0] + (p2[0] - p0[0]) / 6, Math.min(base, p1[1] + (p2[1] - p0[1]) / 6)];
+        const c2 = [p2[0] - (p3[0] - p1[0]) / 6, Math.min(base, p2[1] - (p3[1] - p1[1]) / 6)];
+        path += `C${c1[0].toFixed(1)} ${c1[1].toFixed(1)} ${c2[0].toFixed(1)} ${c2[1].toFixed(1)} ${p2[0].toFixed(1)} ${p2[1].toFixed(1)}`;
+      }
+      const svg = L.track.querySelector('.pulse');
+      svg.querySelector('.area').setAttribute('d', path + 'Z');
+      svg.querySelector('.base').setAttribute('d', `M${X(era.from, d, g)} ${base}H${X(era.to, d, g)}`);
+      L.curve = { pts, base };
+      const taken = [];
+      for (const [s, node] of L.els) {
+        if (s.y != null) continue;
+        const mid = (s.from + s.to) / 2, x = X(mid, d, g);
+        const k = Math.max(0, Math.min(bins.length - 1, Math.floor((mid - era.from) / 5)));
+        const y = Math.max(30, base - bins[k] / era.max * amp - 3);
+        const w = textW(s.label, 'italic 13px Spectral') + 8;
+        const box = [x - w / 2, x + w / 2, y - 18, y];
+        const clash = taken.some(t => box[0] < t[1] && box[1] > t[0] && box[2] < t[3] && box[3] > t[2]);
+        node.hidden = clash || box[0] < g.x0 - 4 || box[1] > g.w;
+        if (!clash) taken.push(box);
+        node.style.left = x + 'px'; node.style.top = y + 'px';
+      }
+    }
+    let lastRight = -Infinity;
+    for (const [m, node] of L.els.filter(([m]) => m.y != null).sort((a, b) => a[0].y - b[0].y)) {
+      const x = X(m.y, d, g);
+      const lw = textW(m.label, '11.5px "Public Sans"');
+      const flip = x + lw + 12 > g.x1;
+      const left = flip ? x - lw - 9 : x - 6, right = flip ? x + 6 : x + lw + 12;
+      node.classList.toggle('flip', flip);
+      node.classList.toggle('nolabel', left < lastRight + 6);
+      if (!(left < lastRight + 6)) lastRight = right;
+      node.style.left = (flip ? x - lw - 9 : x) + 'px';
+    }
+  }
+}
+function applyFocus() {
+  const era = S.era && ERA[S.era];
+  const t = era && era.themeList.find(t => t.id === S.focus);
+  l1.classList.toggle('focusing', !!(t && t.items));
+  const set = new Set(t && t.items || []);
+  l1.querySelectorAll('[data-item]').forEach(n => n.classList.toggle('in', set.has(n.dataset.item)));
+  l1.querySelectorAll('.l1-head .chip').forEach(c => c.setAttribute('aria-pressed', String(c.dataset.theme === S.focus)));
+}
+
+// ---------- axis ----------
+function renderAxis(d) {
+  const g = geom(), span = d[1] - d[0];
+  const pxPerYear = (g.x1 - g.x0) / span;
+  const step = [10, 25, 50, 100, 200, 500].find(s => s * pxPerYear >= (g.phone ? 64 : 78)) || 1000;
+  axis.classList.toggle('l1ticks', S.level === 1 && !S.busy);
+  // ticks at round BCE/CE years: 500 BCE is astronomical -499
+  const ticks = [];
+  for (let n = Math.ceil((1 - d[1]) / step) * step; n <= 1 - d[0] + step; n += step) if (n >= 1) ticks.push(bce(n));
+  for (let n = Math.max(step, Math.ceil(d[0] / step) * step); n <= d[1]; n += step) ticks.push(n);
+  if (d[0] < 1 && d[1] > 1 && !ticks.includes(1)) ticks.push(1);
+  ticks.sort((a, b) => a - b);
+  let first = true, html = '';
+  for (const y of ticks) {
+    const x = X(y, d, g);
+    if (x < g.x0 - 2 || x > g.x1 + 2) continue;
+    const bc = y <= 0, n = bc ? 1 - y : y;
+    const label = first || y === 1 ? `${n} ${bc ? 'BCE' : 'CE'}` : String(n);
+    first = false;
+    html += `<span class="tick" style="left:${x.toFixed(1)}px">${label}</span>`;
+  }
+  axis.innerHTML = html;
+}
+
+// ---------- rendering at rest and zooming ----------
+function renderRest() {
+  const g = geom();
+  app.classList.toggle('is-phone', g.phone);
+  app.classList.toggle('v0-B', S.v0 === 'B');
+  if (S.level === 0) {
+    S.dom = S.dom || homeDomain();
+    l0.hidden = false; l1.hidden = true;
+    REGIONS.forEach(r => { r.el.style.opacity = 1; });
+    layoutL0(S.dom, true);
+  } else {
+    const era = ERA[S.era];
+    S.dom = eraDomain(era);
+    l0.hidden = true; l1.hidden = false; l1.style.clipPath = 'none'; l1.style.opacity = 1;
+    buildL1(era); measureL1(era); renderL1(S.dom);
+  }
+  renderAxis(S.dom);
+  syncChrome();
+}
+function syncChrome() {
+  const era = S.era && ERA[S.era];
+  $('#crumbEra').hidden = S.level !== 1;
+  const back = isPhone() && S.level === 1;
+  $('#crumbHome').textContent = back ? '‹' : 'All eras';
+  $('#crumbHome').setAttribute('aria-label', back ? 'Back to all eras' : 'All eras');
+  if (era) { $('#crumbName').textContent = era.name; $('#crumbDates').textContent = fmtRange(era.from, era.to); }
+  $('#zEras').setAttribute('aria-pressed', String(S.level === 0));
+  $('#zDims').setAttribute('aria-pressed', String(S.level === 1));
+  $('#zDims').disabled = S.level === 0;
+  const how = S.level === 0
+    ? (isPhone() ? 'Tap an era to zoom in. Drag sideways to move through time.' : 'Click an era to zoom in. Drag or scroll to move through time.')
+    : (isPhone() ? 'Tap a theme or a line to see the highlights behind it.' : 'Click a theme or a span to see the highlights behind it. Esc zooms out.');
+  const notes = {
+    0: {
+      A: '<b>A · Bands.</b> Each era is a block holding your theme chips. Every chip always shows, so an era you read a lot about grows taller. The strip along the bottom is the mix of dimensions in your highlights.',
+      B: '<b>B · Streams.</b> In the spirit of the 1931 Histomap: a stream is as thick as the number of things you highlighted there, so the gaps in your reading show. Thin eras fold extra chips into “+n more”. Approximate dates fade in.',
+    },
+    1: {
+      A: '<b>A · Phases.</b> Each dimension shows its stretches of change as named spans, with key moments as diamonds. Click a theme above to see which spans it ties together.',
+      B: '<b>B · Pulse.</b> Each dimension shows how much you highlighted, five years at a time, on one scale for all six lanes. Only the biggest stretches and key moments are named.',
+    },
+  };
+  $('#pnote').innerHTML = notes[S.level][S.level === 0 ? S.v0 : S.v1] + `<span class="how">${how}${S.level === 0 ? ' Classical Greece has the most sample detail.' : ''}</span>`;
+}
+function bandRect(e) {
+  const c = canvas.getBoundingClientRect(), b = e.el.getBoundingClientRect();
+  return { top: b.top - c.top, bottom: b.bottom - c.top };
+}
+function zoomIn(id, focus) {
+  if (S.level !== 0 || S.busy) return;
+  closePanel();
+  const era = ERA[id], g = geom(), d0 = S.dom, d1 = eraDomain(era);
+  const br = bandRect(era);
+  S.era = id; S.focus = focus || null; S.busy = true;
+  l1.hidden = false; l1.style.opacity = 0;
+  buildL1(era); measureL1(era);
+  const others = REGIONS.filter(r => r !== era.region);
+  tween(DUR(), e => {
+    const d = lerpD(d0, d1, e);
+    layoutL0(d, false); renderL1(d); renderAxis(d);
+    const left = lerp(X(era.from, d, g), 0, e), right = lerp(X(era.to, d, g), g.w, e);
+    const top = lerp(br.top, 0, e), bottom = lerp(br.bottom, g.h, e);
+    l1.style.clipPath = `inset(${top}px ${g.w - right}px ${g.h - bottom}px ${left}px round ${lerp(3, 0, e)}px)`;
+    l1.style.opacity = Math.min(1, e * 1.6);
+    others.forEach(r => { r.el.style.opacity = 1 - e; });
+  }, () => {
+    S.level = 1; S.busy = false; S.dom = d1;
+    l0.hidden = true; l1.style.clipPath = 'none';
+    renderAxis(d1); syncChrome(); applyFocus();
+    if (focus) openTheme(era.themeList.find(t => t.id === focus));
+    l1.querySelector('.l1-head .chip')?.focus({ preventScroll: true });
+  });
+}
+function zoomOut() {
+  if (S.level !== 1 || S.busy) return;
+  closePanel();
+  const era = ERA[S.era], g = geom(), d0 = S.dom, d1 = S.home || homeDomain();
+  S.busy = true;
+  l0.hidden = false;
+  REGIONS.forEach(r => { r.el.style.opacity = r === era.region ? 1 : 0; });
+  layoutL0(d1, true);
+  const br = bandRect(era);
+  const others = REGIONS.filter(r => r !== era.region);
+  tween(DUR(), e => {
+    const d = lerpD(d0, d1, e);
+    layoutL0(d, false); renderL1(d); renderAxis(d);
+    const left = lerp(0, X(era.from, d, g), e), right = lerp(g.w, X(era.to, d, g), e);
+    const top = lerp(0, br.top, e), bottom = lerp(g.h, br.bottom, e);
+    l1.style.clipPath = `inset(${top}px ${g.w - right}px ${g.h - bottom}px ${left}px round ${lerp(0, 3, e)}px)`;
+    l1.style.opacity = Math.max(0, 1 - e * 1.4);
+    others.forEach(r => { r.el.style.opacity = e; });
+  }, () => {
+    S.level = 0; S.busy = false; S.dom = d1; S.focus = null;
+    l1.hidden = true; l1.style.clipPath = 'none';
+    layoutL0(d1, true); renderAxis(d1); syncChrome();
+    era.el.focus({ preventScroll: true });
+  });
+}
+
+// ---------- detail panel ----------
+function openItem(id) {
+  const it = ITEM[id]; if (!it) return;
+  panel.style.setProperty('--c', `var(--${it.dim})`);
+  const when = it.y != null ? fmtY(it.y) : fmtRange(it.from, it.to) + (it.approx ? ' (approximate)' : '');
+  const [text, art, sec] = it.q;
+  pbody.innerHTML = `<h2>${it.label}</h2>
+    <p class="meta"><i></i>${DIM[it.dim].name} · ${when}</p>
+    <p class="count">${it.n} highlight${it.n > 1 ? 's' : ''} from your reading</p>
+    <blockquote>${text}<cite>${art}${sec ? ' › ' + sec : ''}</cite></blockquote>
+    ${it.n > 1 ? `<p class="more">and ${it.n - 1} more</p>` : ''}
+    <div class="actions"><button type="button" disabled>Show the entries</button><button type="button" disabled>Open ${art}</button></div>
+    <p class="fine">Entries and the reader aren’t part of this prototype.</p>`;
+  showPanel();
+}
+function openTheme(t) {
+  if (!t) return;
+  panel.style.setProperty('--c', `var(--${t.dim})`);
+  if (!t.items) {
+    pbody.innerHTML = `<h2>${t.label}</h2><p class="meta"><i></i>Theme · ${t.n} highlights</p><p class="more">Sample detail exists only for Classical Greece.</p>`;
+    return showPanel();
+  }
+  const dims = new Set(t.items.map(id => ITEM[id].dim));
+  pbody.innerHTML = `<h2>${t.label}</h2>
+    <p class="meta"><i></i>Your theme · ${t.n} highlights across ${dims.size} dimension${dims.size > 1 ? 's' : ''}</p>
+    <ul>${t.items.map(id => { const it = ITEM[id]; return `<li><button type="button" data-item="${id}" style="--c:var(--${it.dim})"><i></i><span class="t">${it.label}</span><span class="y">${it.y != null ? fmtShort(it.y) : fmtShort(it.from, it.to)}</span></button></li>`; }).join('')}</ul>
+    <div class="actions"><button type="button" disabled>Rename theme</button><button type="button" disabled>Show the entries</button></div>`;
+  showPanel();
+}
+function showPanel() { panel.classList.add('open'); }
+function closePanel() { panel.classList.remove('open'); }
+
+// ---------- input ----------
+let drag = null;
+l0.addEventListener('pointerdown', ev => {
+  if (S.level !== 0 || S.busy || ev.button !== 0) return;
+  drag = { x: ev.clientX, d: S.dom.slice(), moved: false, id: ev.pointerId };
+});
+l0.addEventListener('pointermove', ev => {
+  if (!drag || ev.pointerId !== drag.id) return;
+  const dx = ev.clientX - drag.x;
+  if (!drag.moved && Math.abs(dx) < 5) return;
+  if (!drag.moved) { drag.moved = true; l0.setPointerCapture(ev.pointerId); l0.classList.add('dragging'); }
+  const g = geom(), k = (drag.d[1] - drag.d[0]) / (g.x1 - g.x0);
+  panTo([drag.d[0] - dx * k, drag.d[1] - dx * k]);
+});
+const endDrag = () => { if (drag && drag.moved) { S.suppressClick = true; setTimeout(() => { S.suppressClick = false; }, 0); } drag = null; l0.classList.remove('dragging'); };
+l0.addEventListener('pointerup', endDrag);
+l0.addEventListener('pointercancel', endDrag);
+function panTo(d) {
+  const span = d[1] - d[0];
+  if (d[0] < LIMITS[0]) d = [LIMITS[0], LIMITS[0] + span];
+  if (d[1] > LIMITS[1]) d = [LIMITS[1] - span, LIMITS[1]];
+  S.dom = d; S.home = d;
+  layoutL0(d, false); renderAxis(d);
+}
+canvas.addEventListener('wheel', ev => {
+  if (S.busy) return;
+  if (ev.ctrlKey || ev.metaKey) { // pinch or Ctrl/⌘ + wheel: zoom between levels
+    ev.preventDefault();
+    if (S.level === 1 && ev.deltaY > 0) zoomOut();
+    else if (S.level === 0 && ev.deltaY < 0) { const b = ev.target.closest('.band'); if (b) zoomIn(b.dataset.era); }
+    return;
+  }
+  if (S.level !== 0) return;
+  const delta = Math.abs(ev.deltaX) > Math.abs(ev.deltaY) ? ev.deltaX : (ev.shiftKey || isPhone() ? 0 : ev.deltaY);
+  if (!delta) return;
+  ev.preventDefault();
+  const g = geom(), k = (S.dom[1] - S.dom[0]) / (g.x1 - g.x0);
+  panTo([S.dom[0] + delta * k, S.dom[1] + delta * k]);
+}, { passive: false });
+l0.addEventListener('click', ev => {
+  if (S.suppressClick) return;
+  const band = ev.target.closest('.band'); if (!band) return;
+  const chip = ev.target.closest('.chip[data-theme]');
+  zoomIn(band.dataset.era, chip ? chip.dataset.theme : null);
+});
+l0.addEventListener('keydown', ev => {
+  const band = ev.target.closest('.band');
+  if (band && (ev.key === 'Enter' || ev.key === ' ')) { ev.preventDefault(); zoomIn(band.dataset.era); }
+});
+l1.addEventListener('click', ev => {
+  const chip = ev.target.closest('.l1-head .chip');
+  if (chip) {
+    const era = ERA[S.era];
+    S.focus = S.focus === chip.dataset.theme ? null : chip.dataset.theme;
+    applyFocus();
+    if (S.focus) openTheme(era.themeList.find(t => t.id === S.focus)); else closePanel();
+    return;
+  }
+  const item = ev.target.closest('[data-item]');
+  if (item) openItem(item.dataset.item);
+});
+l1.addEventListener('mousemove', ev => {
+  if (S.v1 !== 'B' || S.level !== 1) return;
+  const era = ERA[S.era], track = ev.target.closest('.track');
+  if (!track || !era.detail || ev.target.closest('[data-item]')) { tip.hidden = true; return; }
+  const L = era.lanes.find(l => l.track === track), bins = era.bins[L.dim.id];
+  if (!bins) { tip.hidden = true; return; }
+  const g = geom(), c = canvas.getBoundingClientRect(), x = ev.clientX - c.left;
+  const yr = S.dom[0] + (x - g.x0) / (g.x1 - g.x0) * (S.dom[1] - S.dom[0]);
+  const k = Math.floor((yr - era.from) / 5);
+  if (k < 0 || k >= bins.length) { tip.hidden = true; return; }
+  const a = era.from + k * 5, raw = countIn(L, a, a + 5);
+  tip.textContent = `${fmtShort(a, a + 5)} BCE · ${raw} highlight${raw === 1 ? '' : 's'}`;
+  tip.hidden = false;
+  tip.style.left = Math.min(g.w - tip.offsetWidth - 6, x + 12) + 'px';
+  tip.style.top = (ev.clientY - c.top - 30) + 'px';
+});
+l1.addEventListener('mouseleave', () => { tip.hidden = true; });
+function countIn(L, a, b) {
+  let n = 0;
+  for (const it of L.spans) for (let i = 0; i < it.n; i++) { const y = it.from + (i + .5) * (it.to - it.from) / it.n; if (y >= a && y < b) n++; }
+  for (const m of L.moments) if (m.y >= a && m.y < b) n += m.n;
+  return n;
+}
+pbody.addEventListener('click', ev => { const b = ev.target.closest('[data-item]'); if (b) openItem(b.dataset.item); });
+$('#pclose').addEventListener('click', closePanel);
+$('#crumbHome').addEventListener('click', () => (S.level === 1 ? zoomOut() : null));
+$('#zEras').addEventListener('click', () => (S.level === 1 ? zoomOut() : null));
+document.addEventListener('keydown', ev => {
+  if (ev.key !== 'Escape') return;
+  if (panel.classList.contains('open')) closePanel(); else zoomOut();
+});
+
+// ---------- prototype controls ----------
+function seg(id, cb) {
+  const f = document.getElementById(id);
+  f.addEventListener('click', ev => {
+    const b = ev.target.closest('button[data-v]'); if (!b) return;
+    f.querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+    cb(b.dataset.v);
+  });
+  return f;
+}
+seg('v0', v => { S.v0 = v; app.classList.toggle('v0-B', v === 'B'); if (S.level === 0) layoutL0(S.dom, true); syncChrome(); });
+seg('v1', v => { S.v1 = v; if (S.level === 1) renderRest(); else syncChrome(); });
+seg('dev', v => { device.classList.toggle('phone', v === 'phone'); S.home = null; if (S.level === 0) S.dom = homeDomain(); closePanel(); renderRest(); });
+const thm = seg('thm', v => { document.documentElement.dataset.theme = v; });
+const darkNow = () => document.documentElement.dataset.theme ? document.documentElement.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+thm.querySelector(`[data-v="${darkNow() ? 'dark' : 'light'}"]`).setAttribute('aria-pressed', 'true');
+
+let lastW = 0;
+new ResizeObserver(() => {
+  const w = canvas.clientWidth; if (!w || w === lastW || S.busy) return;
+  const wasPhone = app.classList.contains('is-phone');
+  lastW = w;
+  if (wasPhone !== isPhone()) { S.home = null; if (S.level === 0) S.dom = homeDomain(); }
+  renderRest();
+}).observe(canvas);
+
+buildL0();
+renderRest();
+document.fonts && document.fonts.ready.then(() => { widthCache.clear(); renderRest(); });
+})();
+</script>
