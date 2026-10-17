@@ -8,6 +8,7 @@ import { useDoc } from '../DocContext';
 import { Field } from '../fields';
 import { CaptureTray } from './CaptureTray';
 import { HighlightTool, HighlightsForScreenReaders } from './HighlightTool';
+import { InfoboxFold } from './Infobox';
 import { useHighlighting } from './useHighlighting';
 import { useSubject, type SubjectState } from './useSubject';
 
@@ -244,6 +245,7 @@ function Article({ article, onOpen, onOpenRecord, onDraft }: {
       {!data && !error && <div className="notice" role="status">Opening…</div>}
       {/* Sanitized by sanitizeParsoid: an allowlist rebuild, so nothing active survives. */}
       {data && <div ref={body} className="reader-text" onClick={onClick} onPointerDown={marks.onPointerDown} dangerouslySetInnerHTML={{ __html: data.html }} />}
+      {data && <InfoboxFold body={body} html={data.html} />}
       {data && <HighlightTool marks={marks} />}
       {data && <HighlightsForScreenReaders marks={marks} />}
       {marks.lost > 0 && (

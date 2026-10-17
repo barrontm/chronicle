@@ -201,6 +201,61 @@ test('highlights a passage, keeps it after a reload, and removes it @phone', asy
   await expect(page.getByRole('tab', { name: 'Sources (1)' })).toBeVisible();
 });
 
+test.describe('the infobox', () => {
+  // The service worker serves Commons pictures itself, out of reach of page.route.
+  test.use({ serviceWorkers: 'block' });
+
+  test('starts folded, so the text starts near the top, and opens to its rows @phone', async ({ page }, info) => {
+    const phone = info.project.name.includes('phone');
+    await mockArticles(page);
+    const rows = ['Born', 'Died', 'Office', 'Partner', 'Children', 'Parents', 'Allegiance', 'Rank', 'Battles', 'Known for', 'Era', 'Tribe']
+      .map((k, i) => `<tr><th scope="row" class="infobox-label">${k}</th><td class="infobox-data">${k} detail ${i + 1}, set out at some length</td></tr>`).join('');
+    await page.route('https://en.wikipedia.org/w/rest.php/v1/page/Pericles/html', (route) => route.fulfill({
+      headers: { ...cors, 'Content-Type': 'text/html' },
+      body: '<!DOCTYPE html><html about="https://en.wikipedia.org/wiki/Special:Redirect/revision/42"><head><title>Pericles</title></head><body>' +
+        '<section data-mw-section-id="0"><table class="infobox vcard"><tbody><tr><th colspan="2" class="infobox-above">Pericles</th></tr>' +
+        '<tr><td colspan="2" class="infobox-image"><span typeof="mw:File"><a href="./File:Pericles.jpg" class="mw-file-description">' +
+        '<img src="//upload.wikimedia.org/wikipedia/commons/thumb/4/4b/Pericles.jpg/250px-Pericles.jpg" width="250" height="379"/></a></span>' +
+        '<div class="infobox-caption">Bust of Pericles, a Roman copy</div></td></tr>' + rows + '</tbody></table>' +
+        '<p>Pericles led Athens in the early years of the war. He died of the plague in 429 BC.</p></section></body></html>',
+    }));
+    await page.route('https://upload.wikimedia.org/**', (route) => route.fulfill({ headers: cors, contentType: 'image/png',
+      body: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==', 'base64') }));
+    await open(page);
+    await page.getByRole('button', { name: 'More' }).click();
+    await page.getByRole('menuitemcheckbox', { name: 'Try the new layout' }).click();
+    await search(page, 'pericles', 'Pericles');
+
+    // Folded: one line, and the first paragraph is in view.
+    const reader = page.getByTestId('reader');
+    const head = reader.getByRole('button', { name: /Infobox/ });
+    await expect(head).toHaveText(/Infobox · picture and 12 rows\s*Show/);
+    await expect(head).toHaveAttribute('aria-expanded', 'false');
+    await expect(reader.getByText('Born detail 1')).toBeHidden();
+    await expect(reader.getByText('Pericles led Athens')).toBeInViewport();
+
+    // Open, its rows show, and the choice is remembered on this device.
+    await head.click();
+    await expect(head).toHaveAttribute('aria-expanded', 'true');
+    await expect(head).toContainText('Hide');
+    await expect(reader.getByText('Tribe detail 12, set out at some length')).toBeVisible();
+    await expect(reader.getByText('Bust of Pericles, a Roman copy')).toBeVisible();
+    await page.reload();
+    await expect(reader.getByRole('button', { name: /Infobox/ })).toHaveAttribute('aria-expanded', 'true');
+    await expect(reader.getByText('Born detail 1')).toBeVisible();
+
+    // A row can be highlighted, and the header isn't part of the article's text.
+    await findText(page, 'Office detail 3', true);
+    if (phone) await page.getByRole('button', { name: 'Highlight' }).click();
+    else {
+      await expect(page.getByRole('button', { name: 'Highlight' })).toBeVisible();
+      await page.keyboard.press('h');
+    }
+    await expect.poll(() => marks(page)).toEqual(['chronicle-mark-umber-open: Office detail 3']);
+    await expect(page.getByTestId('capture-tray')).toContainText('Office detail 3');
+  });
+});
+
 test('the reader says what an article is about, and when it is already in Chronicle @phone', async ({ page }) => {
   await mockArticles(page);
   await open(page);

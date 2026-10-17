@@ -243,6 +243,14 @@ async function reader(p, prefix) {
   await p.getByTestId('article').locator('.reader-text').waitFor();
   await p.waitForTimeout(800);
   await shot(p, `${prefix}-reader`);
+  if (any(`${prefix}-reader-infobox`)) {
+    // Opened, then folded again so the next shots start as Bob first sees the article.
+    const head = p.getByTestId('article').getByRole('button', { name: /Infobox/ });
+    await head.click();
+    await p.waitForTimeout(500);
+    await shot(p, `${prefix}-reader-infobox`);
+    await head.click();
+  }
   if (any(`${prefix}-reader-highlight`) || any(`${prefix}-reader-tray`)) await readerHighlight(p, prefix);
 }
 
