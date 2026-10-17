@@ -227,6 +227,13 @@ async function reader(p, prefix) {
   // A real article (CC BY-SA, saved by the reader spike) so the shot shows true Wikipedia content.
   const html = gunzipSync(readFileSync(fileURLToPath(new URL('../tests/fixtures/articles/Peloponnesian_War.html.gz', import.meta.url)))).toString('utf8');
   await p.route('https://en.wikipedia.org/w/rest.php/v1/page/*/html', (r) => r.fulfill({ headers: { ...cors, 'Content-Type': 'text/html' }, body: html }));
+  // What the article is about, recorded from Wikidata (no class walk needed for a war).
+  const subject = JSON.parse(readFileSync(fileURLToPath(new URL('../tests/fixtures/subjects/Peloponnesian_War.json', import.meta.url)), 'utf8'));
+  await p.route('https://www.wikidata.org/w/api.php**', (r) => {
+    const ids = new URL(r.request().url()).searchParams.get('ids');
+    if (!ids) return r.fulfill({ headers: cors, json: subject.entity });
+    return r.fulfill({ headers: cors, json: { entities: Object.fromEntries(ids.split('|').map((q) => [q, { id: q, labels: subject.labels[q] ? { en: { value: subject.labels[q] } } : {} }])) } });
+  });
   await withFixture(p);
   await p.getByRole('button', { name: 'More' }).click();
   await p.getByRole('menuitemcheckbox', { name: 'Try the new layout' }).click();

@@ -1,3 +1,4 @@
+import { readFileSync, readdirSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
 
 const cors = { 'Access-Control-Allow-Origin': '*' };
@@ -7,7 +8,32 @@ async function open(page: Page) {
   await expect(page.getByTestId('save-state')).toHaveText('Saved on this device');
 }
 
+/** Wikidata, answered from the recordings in tests/fixtures/subjects (`scripts/record-subjects.mjs`). */
+async function mockWikidata(page: Page) {
+  const dir = new URL('../tests/fixtures/subjects/', import.meta.url);
+  const recs = readdirSync(dir).map((f) => JSON.parse(readFileSync(new URL(f, dir), 'utf8')) as
+    { title: string; entity: unknown; parents: Record<string, string[]>; labels: Record<string, string> });
+  const parents = Object.assign({}, ...recs.map((r) => r.parents)) as Record<string, string[]>;
+  const labels = Object.assign({}, ...recs.map((r) => r.labels)) as Record<string, string>;
+  await page.route('https://www.wikidata.org/w/api.php**', (route) => {
+    const u = new URL(route.request().url());
+    const title = u.searchParams.get('titles');
+    if (title) {
+      const r = recs.find((x) => x.title === title);
+      return route.fulfill({ headers: cors, json: r ? r.entity : { entities: { '-1': { site: 'enwiki', title, missing: '' } } } });
+    }
+    const ids = (u.searchParams.get('ids') ?? '').split('|');
+    return route.fulfill({ headers: cors, json: { entities: Object.fromEntries(ids.map((q) => [q, { id: q, labels: labels[q] ? { en: { value: labels[q] } } : {} }])) } });
+  });
+  await page.route('https://query.wikidata.org/sparql**', (route) => {
+    const ids = [...(new URL(route.request().url()).searchParams.get('query') ?? '').matchAll(/wd:(Q\d+)/g)].map((m) => m[1]);
+    const entity = (q: string) => ({ value: `http://www.wikidata.org/entity/${q}` });
+    return route.fulfill({ headers: cors, json: { results: { bindings: ids.flatMap((c) => (parents[c] ?? []).map((p) => ({ c: entity(c), p: entity(p) }))) } } });
+  });
+}
+
 async function mockArticles(page: Page) {
+  await mockWikidata(page);
   await page.route('https://en.wikipedia.org/w/rest.php/v1/search/page**', (route) =>
     route.fulfill({ headers: cors, json: { pages: [
       { key: 'Peloponnesian_War', title: 'Peloponnesian War', description: 'War between Athens and Sparta (431–404 BC)', thumbnail: null },
@@ -158,4 +184,36 @@ test('highlights a passage, keeps it after a reload, and removes it @phone', asy
   // The page stays in the Library as a source.
   await page.getByRole('button', { name: 'Library' }).click();
   await expect(page.getByRole('tab', { name: 'Sources (1)' })).toBeVisible();
+});
+
+test('the reader says what an article is about, and when it is already in Chronicle @phone', async ({ page }) => {
+  await mockArticles(page);
+  await open(page);
+  // A timeline that already has Pericles, matched by his Wikidata id.
+  const doc = JSON.parse(readFileSync(new URL('../tests/fixtures/sample-history.json', import.meta.url), 'utf8'));
+  const socrates = doc.items.find((i: { title: string }) => i.title === 'Socrates');
+  doc.items.push({ ...socrates, id: 'pericles', title: 'Pericles', wikidataId: 'Q80398', start: { y: -493 }, end: { y: -428 } });
+  await page.getByTestId('import-input').setInputFiles({ name: 'mine.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(doc)) });
+  await expect(page.locator('.vis-item', { hasText: 'Pericles' })).toBeVisible();
+
+  await page.getByRole('button', { name: 'More' }).click();
+  await page.getByRole('menuitemcheckbox', { name: 'Try the new layout' }).click();
+  const reader = page.getByTestId('reader');
+  await search(page, 'peloponnesian', 'Peloponnesian War');
+  const subject = reader.getByTestId('article-subject');
+  await expect(subject).toHaveText('War · 431 BCE – 25 Apr 404 BCE · part of Peloponnesian Wars');
+  await expect(subject).toHaveAttribute('data-kind', 'war');
+
+  await reader.getByRole('link', { name: 'Pericles' }).click();
+  await expect(subject).toHaveText('Person · 494–429 BCE · Already in Chronicle');
+
+  // Known on this device, so it still shows offline.
+  await page.context().setOffline(true);
+  await reader.getByRole('button', { name: 'Back' }).click();
+  await expect(subject).toHaveText('War · 431 BCE – 25 Apr 404 BCE · part of Peloponnesian Wars');
+  await page.context().setOffline(false);
+  await page.getByRole('navigation', { name: 'Reading trail' }).getByRole('button', { name: 'Pericles' }).click();
+
+  await subject.getByRole('button', { name: 'Already in Chronicle' }).click();
+  await expect(page.getByTestId('item-view')).toContainText('Pericles');
 });

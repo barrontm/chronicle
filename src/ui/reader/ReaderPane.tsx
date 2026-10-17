@@ -2,9 +2,15 @@ import { useEffect, useRef, useState } from 'react';
 import { articleCache } from '../../data/articleCache';
 import { fetchArticle, type Article as ArticleData } from '../../media/article';
 import { searchWikipedia, type WikiSearchResult } from '../../media/wikipedia';
+import { KIND_LABEL, findInChronicle, subjectPartOf, subjectWhen } from '../../model/subjects';
+import { useDoc } from '../DocContext';
 import { Field } from '../fields';
 import { HighlightTool, HighlightsForScreenReaders } from './HighlightTool';
 import { useHighlighting } from './useHighlighting';
+import { useSubject } from './useSubject';
+
+/** An entry or territory Bob already has, to open from the reader. */
+export type RecordRef = { type: 'item' | 'territory'; id: string };
 
 /** A page Bob has opened in the reader. */
 export interface ArticleRef {
@@ -20,8 +26,10 @@ const OFFLINE_READ = 'You’re offline, and this article isn’t saved on this d
  * The reader column of the new layout: search Wikipedia and read the article
  * that's open. Opening and the reading trail are owned by the caller.
  */
-export function ReaderPane({ article, searching, onOpen, onSearching, onBack, onShowMap }: {
+export function ReaderPane({ article, searching, onOpen, onSearching, onBack, onShowMap, onOpenRecord }: {
   article: ArticleRef | null;
+  /** Open what Bob already has for the article's subject. */
+  onOpenRecord?: (r: RecordRef) => void;
   /** Go back along the reading trail, when there is somewhere to go. */
   onBack?: () => void;
   /** True while the "Open an article" search is showing. */
@@ -45,7 +53,7 @@ export function ReaderPane({ article, searching, onOpen, onSearching, onBack, on
         </div>
       )}
       {(searching || !article) && <ArticleSearch hasArticle={!!article} onOpen={onOpen} onCancel={() => onSearching(false)} />}
-      {article && !searching && <Article key={article.key} article={article} onOpen={onOpen} />}
+      {article && !searching && <Article key={article.key} article={article} onOpen={onOpen} onOpenRecord={onOpenRecord} />}
     </section>
   );
 }
@@ -114,7 +122,42 @@ function ArticleSearch({ hasArticle, onOpen, onCancel }: { hasArticle: boolean; 
   );
 }
 
-function Article({ article, onOpen }: { article: ArticleRef; onOpen: (a: ArticleRef) => void }) {
+/** Under the title: what the article is about (kind, dates, what it was part of) and whether Bob already has it. */
+function SubjectLine({ articleKey, onOpenRecord }: { articleKey: string; onOpenRecord?: (r: RecordRef) => void }) {
+  const state = useSubject(articleKey);
+  const { doc } = useDoc();
+  if (state.status === 'offline') {
+    return <p className="reader-sub" data-testid="article-subject">You’re offline. What this article is about will show when you’re back online.</p>;
+  }
+  if (state.status !== 'ready') return <p className="reader-sub" data-testid="article-subject" aria-busy={state.status === 'loading'} />;
+  const s = state.subject;
+  const item = findInChronicle(doc.items, s.qid);
+  const territory = item ? undefined : findInChronicle(doc.territories, s.qid);
+  const have = item ?? territory;
+  const color = have && doc.categories.find((c) => c.id === have.categoryId)?.color;
+  const partOf = subjectPartOf(s);
+  const parts = [s.kind && KIND_LABEL[s.kind], subjectWhen(s), partOf && `part of ${partOf}`].filter(Boolean);
+  return (
+    <p className="reader-sub" data-testid="article-subject" data-kind={s.kind}>
+      {parts.join(' · ')}
+      {have && (
+        <>
+          {parts.length > 0 && ' · '}
+          <button
+            className="in-chronicle"
+            style={color ? ({ '--c': color } as React.CSSProperties) : undefined}
+            onClick={() => onOpenRecord?.({ type: item ? 'item' : 'territory', id: have.id })}
+            disabled={!onOpenRecord}
+          >
+            Already in Chronicle
+          </button>
+        </>
+      )}
+    </p>
+  );
+}
+
+function Article({ article, onOpen, onOpenRecord }: { article: ArticleRef; onOpen: (a: ArticleRef) => void; onOpenRecord?: (r: RecordRef) => void }) {
   const [data, setData] = useState<ArticleData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const body = useRef<HTMLDivElement>(null);
@@ -158,6 +201,7 @@ function Article({ article, onOpen }: { article: ArticleRef; onOpen: (a: Article
   return (
     <article className="reader-article" data-testid="article" data-revision={data?.revisionId ?? undefined}>
       <h1 className="reader-title">{data?.title ?? article.title}</h1>
+      <SubjectLine articleKey={article.key} onOpenRecord={onOpenRecord} />
       {error && <div className="notice bad" role="alert">{error}</div>}
       {!data && !error && <div className="notice" role="status">Opening…</div>}
       {/* Sanitized by sanitizeParsoid: an allowlist rebuild, so nothing active survives. */}

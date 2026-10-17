@@ -2,6 +2,9 @@
 
 A log of choices that shouldn't be re-litigated every session. Newest first. To change a decision, add a new entry that supersedes the old one.
 
+## 2026-10-17 — Subjects: nearest class wins, walked with the query service
+`src/model/subjects.ts` classifies an article's Wikidata item by its own classes (P31, plus P279 for types of thing like the trireme), walking P279 up at most four levels. The nearest class Chronicle knows wins; ties go by a fixed order (person, battle, war, migration, polity, period, event, technology, idea, economy, work, place), so a polis that is also an archaeological site is a polity. Wikidata's upper classes are tangled (modern Athens is a "free city", hence a state), so the anchor table lists a few direct classes ("big city") alongside broad ones. Parents come from `query.wikidata.org` (one small SPARQL query per level, usually none), because the API would send each class's every claim. Subjects are cached in the article cache, not the doc. Alliances (the Delian League) are polities until Phase 5 gives them their own kind. Fixtures are recorded with `scripts/record-subjects.mjs`; Wikidata rate-limits fast, so it pauses between requests.
+
 ## 2026-10-17 — Phase 0 checkpoint: six reader tickets, themes in v6, a bridge to records
 Phase 1 is six serial build tickets: layout shell, articles and cache, schema v6, highlighting, subject recognition, capture tray. v6 includes `themes` on periods as the vision has it, so Phase 4 needs no bump of its own. Until Phase 2 turns highlights into records, the capture tray's "Add to map and timeline" adds only the article's own subject, through today's Wikipedia prefill, so the new layout is never a dead end. The inbox was empty.
 

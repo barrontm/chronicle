@@ -88,6 +88,9 @@ describe('articles', () => {
     await cache.put(a);
     expect((await cache.get('Pericles'))?.html).toContain('Greek statesman');
     expect(await cache.keys()).toEqual(['Pericles']);
+    await cache.putSubject({ key: 'Pericles', subject: { qid: 'Q80398', kind: 'person', facts: { partOf: [], follows: [], followedBy: [], participants: [], locations: [], government: [] }, labels: {} }, fetchedAt: 1000 });
+    expect((await cache.getSubject('Pericles'))?.subject?.kind).toBe('person');
+    expect(await cache.getSubject('Athens')).toBeUndefined();
   });
 });
 

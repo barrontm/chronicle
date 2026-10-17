@@ -1,0 +1,301 @@
+{
+ "key": "Sparta",
+ "title": "Sparta",
+ "entity": {
+  "entities": {
+   "Q5690": {
+    "id": "Q5690",
+    "labels": {
+     "en": {
+      "language": "en",
+      "value": "Sparta"
+     }
+    },
+    "claims": {
+     "P31": [
+      {
+       "mainsnak": {
+        "snaktype": "value",
+        "property": "P31",
+        "hash": "635d5ad896b402ade22ccbf034877598cf7beb66",
+        "datavalue": {
+         "value": {
+          "entity-type": "item",
+          "numeric-id": 15661340,
+          "id": "Q15661340"
+         },
+         "type": "wikibase-entityid"
+        },
+        "datatype": "wikibase-item"
+       },
+       "rank": "normal"
+      },
+      {
+       "mainsnak": {
+        "snaktype": "value",
+        "property": "P31",
+        "hash": "7a809d7b80764a8b91f7697deea21b4152b57091",
+        "datavalue": {
+         "value": {
+          "entity-type": "item",
+          "numeric-id": 148837,
+          "id": "Q148837"
+         },
+         "type": "wikibase-entityid"
+        },
+        "datatype": "wikibase-item"
+       },
+       "rank": "normal"
+      },
+      {
+       "mainsnak": {
+        "snaktype": "value",
+        "property": "P31",
+        "hash": "703e4a0f5aa1ad14ee7f05e84b1199a73f32209e",
+        "datavalue": {
+         "value": {
+          "entity-type": "item",
+          "numeric-id": 93342462,
+          "id": "Q93342462"
+         },
+         "type": "wikibase-entityid"
+        },
+        "datatype": "wikibase-item"
+       },
+       "rank": "normal"
+      }
+     ],
+     "P571": [
+      {
+       "mainsnak": {
+        "snaktype": "value",
+        "property": "P571",
+        "hash": "9f0b28df1ae0ef59327bdd3a4c86a6d883b21932",
+        "datavalue": {
+         "value": {
+          "time": "-0900-00-00T00:00:00Z",
+          "timezone": 0,
+          "before": 0,
+          "after": 0,
+          "precision": 8,
+          "calendarmodel": "http://www.wikidata.org/entity/Q1985786"
+         },
+         "type": "time"
+        },
+        "datatype": "time"
+       },
+       "rank": "normal"
+      }
+     ],
+     "P576": [
+      {
+       "mainsnak": {
+        "snaktype": "value",
+        "property": "P576",
+        "hash": "999eea1f2f0d9e9ec57bb209a9a24693795956d3",
+        "datavalue": {
+         "value": {
+          "time": "-0192-01-01T00:00:00Z",
+          "timezone": 0,
+          "before": 0,
+          "after": 0,
+          "precision": 9,
+          "calendarmodel": "http://www.wikidata.org/entity/Q1985727"
+         },
+         "type": "time"
+        },
+        "datatype": "time"
+       },
+       "rank": "normal"
+      }
+     ],
+     "P625": [
+      {
+       "mainsnak": {
+        "snaktype": "value",
+        "property": "P625",
+        "hash": "8226a9ecd663f374635cbd922f4d5b559b71d2fa",
+        "datavalue": {
+         "value": {
+          "latitude": 37.081944444444,
+          "longitude": 22.423611111111,
+          "altitude": null,
+          "precision": null,
+          "globe": "http://www.wikidata.org/entity/Q2"
+         },
+         "type": "globecoordinate"
+        },
+        "datatype": "globe-coordinate"
+       },
+       "rank": "normal"
+      },
+      {
+       "mainsnak": {
+        "snaktype": "value",
+        "property": "P625",
+        "hash": "8b12ff2aebd744c0c1c09d2dc81aee5675b81811",
+        "datavalue": {
+         "value": {
+          "latitude": 37.073678,
+          "longitude": 22.430937,
+          "altitude": null,
+          "precision": 0.000001,
+          "globe": "http://www.wikidata.org/entity/Q2"
+         },
+         "type": "globecoordinate"
+        },
+        "datatype": "globe-coordinate"
+       },
+       "rank": "normal"
+      }
+     ],
+     "P122": [
+      {
+       "mainsnak": {
+        "snaktype": "value",
+        "property": "P122",
+        "hash": "6ad74dc1f5e49489f9439caaad0560d08dcc737d",
+        "datavalue": {
+         "value": {
+          "entity-type": "item",
+          "numeric-id": 79751,
+          "id": "Q79751"
+         },
+         "type": "wikibase-entityid"
+        },
+        "datatype": "wikibase-item"
+       },
+       "rank": "normal"
+      },
+      {
+       "mainsnak": {
+        "snaktype": "value",
+        "property": "P122",
+        "hash": "0e36b9a7d650428c679b352580f29822db835518",
+        "datavalue": {
+         "value": {
+          "entity-type": "item",
+          "numeric-id": 7270,
+          "id": "Q7270"
+         },
+         "type": "wikibase-entityid"
+        },
+        "datatype": "wikibase-item"
+       },
+       "rank": "normal"
+      }
+     ]
+    }
+   }
+  }
+ },
+ "parents": {
+  "Q15661340": [
+   "Q515",
+   "Q839954",
+   "Q22674925"
+  ],
+  "Q148837": [
+   "Q133442",
+   "Q15661340"
+  ],
+  "Q93342462": [
+   "Q839954"
+  ],
+  "Q515": [
+   "Q56061",
+   "Q7930989",
+   "Q124250988"
+  ],
+  "Q839954": [
+   "Q115385481"
+  ],
+  "Q22674925": [
+   "Q486972",
+   "Q96088545"
+  ],
+  "Q133442": [
+   "Q515",
+   "Q7275",
+   "Q1063239",
+   "Q13218276"
+  ],
+  "Q56061": [
+   "Q141104744"
+  ],
+  "Q7930989": [
+   "Q3257686",
+   "Q124250988"
+  ],
+  "Q124250988": [
+   "Q486972"
+  ],
+  "Q115385481": [
+   "Q53617407",
+   "Q141158989"
+  ],
+  "Q486972": [
+   "Q2221906"
+  ],
+  "Q96088545": [
+   "Q15893266"
+  ],
+  "Q7275": [
+   "Q155076",
+   "Q1048835",
+   "Q1896989",
+   "Q96196009"
+  ],
+  "Q1063239": [
+   "Q7210356"
+  ],
+  "Q13218276": [
+   "Q515",
+   "Q836915"
+  ],
+  "Q141104744": [
+   "Q141104747"
+  ],
+  "Q3257686": [
+   "Q486972",
+   "Q2221906",
+   "Q48907157"
+  ],
+  "Q53617407": [
+   "Q53617489"
+  ],
+  "Q141158989": [
+   "Q141156557"
+  ],
+  "Q2221906": [
+   "Q27096213",
+   "Q141149247"
+  ],
+  "Q15893266": [
+   "Q35120"
+  ],
+  "Q155076": [
+   "Q3778211",
+   "Q61964280"
+  ],
+  "Q1048835": [
+   "Q56061"
+  ],
+  "Q1896989": [
+   "Q3778211"
+  ],
+  "Q96196009": [
+   "Q1063239"
+  ],
+  "Q7210356": [
+   "Q43229"
+  ],
+  "Q836915": [
+   "Q7275"
+  ]
+ },
+ "labels": {
+  "Q79751": "oligarchy",
+  "Q7270": "republic"
+ }
+}

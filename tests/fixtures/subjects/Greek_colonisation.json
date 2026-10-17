@@ -1,0 +1,81 @@
+{
+ "key": "Greek_colonisation",
+ "title": "Greek colonisation",
+ "entity": {
+  "entities": {
+   "Q828047": {
+    "id": "Q828047",
+    "labels": {
+     "en": {
+      "language": "en",
+      "value": "Greek colonization"
+     }
+    },
+    "claims": {
+     "P31": [
+      {
+       "mainsnak": {
+        "snaktype": "value",
+        "property": "P31",
+        "hash": "738d119011a142a7ba225e978679c291cdedceb5",
+        "datavalue": {
+         "value": {
+          "entity-type": "item",
+          "numeric-id": 815962,
+          "id": "Q815962"
+         },
+         "type": "wikibase-entityid"
+        },
+        "datatype": "wikibase-item"
+       },
+       "rank": "normal"
+      }
+     ]
+    }
+   }
+  }
+ },
+ "parents": {
+  "Q815962": [
+   "Q2041929",
+   "Q3075355"
+  ],
+  "Q2041929": [
+   "Q105197917"
+  ],
+  "Q3075355": [
+   "Q1190554",
+   "Q11398090"
+  ],
+  "Q105197917": [
+   "Q2996394"
+  ],
+  "Q1190554": [
+   "Q67518978",
+   "Q140451665"
+  ],
+  "Q11398090": [
+   "Q52948"
+  ],
+  "Q2996394": [
+   "Q13878858",
+   "Q17320256",
+   "Q64732777",
+   "Q141435481"
+  ],
+  "Q67518978": [
+   "Q136433660"
+  ],
+  "Q140451665": [
+   "Q141204674",
+   "Q141257229",
+   "Q141750035",
+   "Q141751599"
+  ],
+  "Q52948": [
+   "Q3249551",
+   "Q141641947"
+  ]
+ },
+ "labels": {}
+}

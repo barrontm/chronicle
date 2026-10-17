@@ -1,0 +1,204 @@
+{
+ "key": "Trireme",
+ "title": "Trireme",
+ "entity": {
+  "entities": {
+   "Q208420": {
+    "id": "Q208420",
+    "labels": {
+     "en": {
+      "language": "en",
+      "value": "trireme"
+     }
+    },
+    "claims": {
+     "P31": [
+      {
+       "mainsnak": {
+        "snaktype": "value",
+        "property": "P31",
+        "hash": "f5c2ca680c47d37fa48f584089eaba87bc3315db",
+        "datavalue": {
+         "value": {
+          "entity-type": "item",
+          "numeric-id": 2235308,
+          "id": "Q2235308"
+         },
+         "type": "wikibase-entityid"
+        },
+        "datatype": "wikibase-item"
+       },
+       "rank": "normal"
+      }
+     ],
+     "P279": [
+      {
+       "mainsnak": {
+        "snaktype": "value",
+        "property": "P279",
+        "hash": "4520c814121a6f9203ebcbf9f5c202a7ba58096a",
+        "datavalue": {
+         "value": {
+          "entity-type": "item",
+          "numeric-id": 188924,
+          "id": "Q188924"
+         },
+         "type": "wikibase-entityid"
+        },
+        "datatype": "wikibase-item"
+       },
+       "rank": "normal"
+      },
+      {
+       "mainsnak": {
+        "snaktype": "value",
+        "property": "P279",
+        "hash": "c5900d5503321360a54f24f95ae6543cf0cf7f17",
+        "datavalue": {
+         "value": {
+          "entity-type": "item",
+          "numeric-id": 2171942,
+          "id": "Q2171942"
+         },
+         "type": "wikibase-entityid"
+        },
+        "datatype": "wikibase-item"
+       },
+       "rank": "normal"
+      }
+     ],
+     "P571": [
+      {
+       "mainsnak": {
+        "snaktype": "value",
+        "property": "P571",
+        "hash": "337fd9027358f036fd6b3cfee1b89ce85ff8fa5c",
+        "datavalue": {
+         "value": {
+          "time": "-0700-00-00T00:00:00Z",
+          "timezone": 0,
+          "before": 0,
+          "after": 0,
+          "precision": 7,
+          "calendarmodel": "http://www.wikidata.org/entity/Q1985786"
+         },
+         "type": "time"
+        },
+        "datatype": "time"
+       },
+       "rank": "normal"
+      }
+     ],
+     "P155": [
+      {
+       "mainsnak": {
+        "snaktype": "value",
+        "property": "P155",
+        "hash": "a5e8493994187e53e7f6dedb8aab8b4ed2d76ce4",
+        "datavalue": {
+         "value": {
+          "entity-type": "item",
+          "numeric-id": 629990,
+          "id": "Q629990"
+         },
+         "type": "wikibase-entityid"
+        },
+        "datatype": "wikibase-item"
+       },
+       "rank": "normal"
+      }
+     ],
+     "P156": [
+      {
+       "mainsnak": {
+        "snaktype": "value",
+        "property": "P156",
+        "hash": "80e32f852707279858597937147f72b18000c373",
+        "datavalue": {
+         "value": {
+          "entity-type": "item",
+          "numeric-id": 340066,
+          "id": "Q340066"
+         },
+         "type": "wikibase-entityid"
+        },
+        "datatype": "wikibase-item"
+       },
+       "rank": "normal"
+      }
+     ]
+    }
+   }
+  }
+ },
+ "parents": {
+  "Q2235308": [
+   "Q16335899"
+  ],
+  "Q188924": [
+   "Q11446"
+  ],
+  "Q2171942": [
+   "Q11446"
+  ],
+  "Q16335899": [
+   "Q111360549",
+   "Q124315169",
+   "Q140424465"
+  ],
+  "Q11446": [
+   "Q1229765",
+   "Q16391167",
+   "Q20980497"
+  ],
+  "Q111360549": [
+   "Q96251598",
+   "Q98119401"
+  ],
+  "Q124315169": [
+   "Q123035442",
+   "Q140424465"
+  ],
+  "Q140424465": [
+   "Q96251598",
+   "Q111360549"
+  ],
+  "Q1229765": [
+   "Q16391167"
+  ],
+  "Q16391167": [
+   "Q42889"
+  ],
+  "Q20980497": [
+   "Q42889",
+   "Q8205328"
+  ],
+  "Q96251598": [
+   "Q21146257",
+   "Q141445193"
+  ],
+  "Q98119401": [
+   "Q99527517"
+  ],
+  "Q123035442": [
+   "Q111360549"
+  ],
+  "Q42889": [
+   "Q223557",
+   "Q811367",
+   "Q106839123",
+   "Q115797408"
+  ],
+  "Q8205328": [
+   "Q223557",
+   "Q386724",
+   "Q16686448",
+   "Q136490012",
+   "Q141756646"
+  ]
+ },
+ "labels": {
+  "Q629990": "bireme",
+  "Q340066": "quadrireme"
+ }
+}

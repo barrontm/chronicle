@@ -1,0 +1,97 @@
+{
+ "key": "Republic_(Plato)",
+ "title": "Republic (Plato)",
+ "entity": {
+  "entities": {
+   "Q123397": {
+    "id": "Q123397",
+    "labels": {
+     "en": {
+      "language": "en",
+      "value": "The Republic"
+     }
+    },
+    "claims": {
+     "P31": [
+      {
+       "mainsnak": {
+        "snaktype": "value",
+        "property": "P31",
+        "hash": "5963e3cad5eee4ae1cffbefbac15327800b9a7e6",
+        "datavalue": {
+         "value": {
+          "entity-type": "item",
+          "numeric-id": 7725634,
+          "id": "Q7725634"
+         },
+         "type": "wikibase-entityid"
+        },
+        "datatype": "wikibase-item"
+       },
+       "rank": "normal"
+      }
+     ],
+     "P571": [
+      {
+       "mainsnak": {
+        "snaktype": "value",
+        "property": "P571",
+        "hash": "b195c39cd62d30b9845e81beef50f3d46420087b",
+        "datavalue": {
+         "value": {
+          "time": "-0379-00-00T00:00:00Z",
+          "timezone": 0,
+          "before": 0,
+          "after": 0,
+          "precision": 8,
+          "calendarmodel": "http://www.wikidata.org/entity/Q1985786"
+         },
+         "type": "time"
+        },
+        "datatype": "time"
+       },
+       "rank": "normal"
+      }
+     ]
+    }
+   }
+  }
+ },
+ "parents": {
+  "Q7725634": [
+   "Q838948",
+   "Q47461344"
+  ],
+  "Q838948": [
+   "Q16686448",
+   "Q17537576"
+  ],
+  "Q47461344": [
+   "Q15621286"
+  ],
+  "Q16686448": [
+   "Q488383",
+   "Q141756664"
+  ],
+  "Q17537576": [
+   "Q15621286",
+   "Q141524128"
+  ],
+  "Q15621286": [
+   "Q386724"
+  ],
+  "Q488383": [
+   "Q141751599"
+  ],
+  "Q141756664": [
+   "Q141756883"
+  ],
+  "Q141524128": [
+   "Q141250146"
+  ],
+  "Q386724": [
+   "Q16686448"
+  ]
+ },
+ "labels": {}
+}

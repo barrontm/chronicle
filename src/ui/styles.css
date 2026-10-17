@@ -113,7 +113,9 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .reader-tools { display: flex; justify-content: flex-end; margin: -8px -8px 8px 0; }
 .reader-search, .reader-article { max-width: 34em; margin: 0 auto; }
 .reader-title { font-family: var(--font-read); font-size: 30px; line-height: 1.15; font-weight: 600; margin: 0 0 6px; }
-.reader-sub { color: var(--muted); margin: 0 0 20px; font-size: 14px; }
+.reader-sub { color: var(--muted); margin: 0 0 20px; font-size: 14px; min-height: 1.4em; }
+.reader-sub .in-chronicle { font: inherit; color: var(--ink); background: none; border: 0; padding: 0; cursor: pointer; text-decoration: underline; text-decoration-color: var(--c, var(--ink-2)); text-decoration-thickness: 2px; text-underline-offset: 0.2em; }
+.reader-sub .in-chronicle:disabled { cursor: default; }
 .reader-text { font-family: var(--font-read); font-size: 18px; line-height: 1.65; color: var(--ink); }
 .reader-text p { margin: 0 0 1em; }
 .reader-credit { color: var(--muted); font-size: 12px; margin-top: 24px; }

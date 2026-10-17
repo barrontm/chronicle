@@ -1,0 +1,268 @@
+{
+ "key": "Battle_of_Salamis",
+ "title": "Battle of Salamis",
+ "entity": {
+  "entities": {
+   "Q178850": {
+    "id": "Q178850",
+    "labels": {
+     "en": {
+      "language": "en",
+      "value": "Battle of Salamis"
+     }
+    },
+    "claims": {
+     "P31": [
+      {
+       "mainsnak": {
+        "snaktype": "value",
+        "property": "P31",
+        "hash": "2f3a4fbd562cdefff5e16b8bb567ee5dd616f44a",
+        "datavalue": {
+         "value": {
+          "entity-type": "item",
+          "numeric-id": 1261499,
+          "id": "Q1261499"
+         },
+         "type": "wikibase-entityid"
+        },
+        "datatype": "wikibase-item"
+       },
+       "rank": "normal"
+      }
+     ],
+     "P585": [
+      {
+       "mainsnak": {
+        "snaktype": "value",
+        "property": "P585",
+        "hash": "8297bdc1d1e9ed3908f3e54f3e5abeb42621b892",
+        "datavalue": {
+         "value": {
+          "time": "-0480-09-29T00:00:00Z",
+          "timezone": 0,
+          "before": 0,
+          "after": 0,
+          "precision": 11,
+          "calendarmodel": "http://www.wikidata.org/entity/Q1985786"
+         },
+         "type": "time"
+        },
+        "datatype": "time"
+       },
+       "rank": "preferred"
+      },
+      {
+       "mainsnak": {
+        "snaktype": "value",
+        "property": "P585",
+        "hash": "c026ef61ef83c437b08f61eba7c45f0102b53b49",
+        "datavalue": {
+         "value": {
+          "time": "-0480-09-27T00:00:00Z",
+          "timezone": 0,
+          "before": 0,
+          "after": 0,
+          "precision": 11,
+          "calendarmodel": "http://www.wikidata.org/entity/Q1985786"
+         },
+         "type": "time"
+        },
+        "datatype": "time"
+       },
+       "rank": "normal"
+      }
+     ],
+     "P625": [
+      {
+       "mainsnak": {
+        "snaktype": "value",
+        "property": "P625",
+        "hash": "f32f3180bdd9af75cafdd6fb76c72dac03c76bf2",
+        "datavalue": {
+         "value": {
+          "latitude": 37.95138889,
+          "longitude": 23.56666667,
+          "altitude": null,
+          "precision": 0.00027777777777778,
+          "globe": "http://www.wikidata.org/entity/Q2"
+         },
+         "type": "globecoordinate"
+        },
+        "datatype": "globe-coordinate"
+       },
+       "rank": "normal"
+      }
+     ],
+     "P361": [
+      {
+       "mainsnak": {
+        "snaktype": "value",
+        "property": "P361",
+        "hash": "a07106adad53353d99366e41909e9c180548695e",
+        "datavalue": {
+         "value": {
+          "entity-type": "item",
+          "numeric-id": 1122337,
+          "id": "Q1122337"
+         },
+         "type": "wikibase-entityid"
+        },
+        "datatype": "wikibase-item"
+       },
+       "rank": "normal"
+      }
+     ],
+     "P710": [
+      {
+       "mainsnak": {
+        "snaktype": "value",
+        "property": "P710",
+        "hash": "2c7f5906ee70d12f2a44ea3c08298ece5f9d96f0",
+        "datavalue": {
+         "value": {
+          "entity-type": "item",
+          "numeric-id": 389688,
+          "id": "Q389688"
+         },
+         "type": "wikibase-entityid"
+        },
+        "datatype": "wikibase-item"
+       },
+       "rank": "normal"
+      },
+      {
+       "mainsnak": {
+        "snaktype": "value",
+        "property": "P710",
+        "hash": "f0b0686c4db215255c22f36160b4d1a4a8340091",
+        "datavalue": {
+         "value": {
+          "entity-type": "item",
+          "numeric-id": 25688688,
+          "id": "Q25688688"
+         },
+         "type": "wikibase-entityid"
+        },
+        "datatype": "wikibase-item"
+       },
+       "rank": "normal"
+      }
+     ],
+     "P276": [
+      {
+       "mainsnak": {
+        "snaktype": "value",
+        "property": "P276",
+        "hash": "1124802be7626a04535b1b85e67330118301018c",
+        "datavalue": {
+         "value": {
+          "entity-type": "item",
+          "numeric-id": 202422,
+          "id": "Q202422"
+         },
+         "type": "wikibase-entityid"
+        },
+        "datatype": "wikibase-item"
+       },
+       "rank": "normal",
+       "qualifiers": {
+        "P1480": [
+         {
+          "snaktype": "value",
+          "property": "P1480",
+          "hash": "f89fd04e48d8e638afa968c5b5b44e66db781634",
+          "datavalue": {
+           "value": {
+            "entity-type": "item",
+            "numeric-id": 21818619,
+            "id": "Q21818619"
+           },
+           "type": "wikibase-entityid"
+          },
+          "datatype": "wikibase-item"
+         }
+        ]
+       }
+      }
+     ]
+    }
+   }
+  }
+ },
+ "parents": {
+  "Q1261499": [
+   "Q178561",
+   "Q113782315"
+  ],
+  "Q178561": [
+   "Q350604",
+   "Q645883",
+   "Q650711",
+   "Q13418847",
+   "Q123349687"
+  ],
+  "Q113782315": [
+   "Q645883"
+  ],
+  "Q350604": [
+   "Q71266556"
+  ],
+  "Q645883": [
+   "Q1190554",
+   "Q15835236"
+  ],
+  "Q650711": [
+   "Q9332",
+   "Q124490",
+   "Q180684",
+   "Q1931388"
+  ],
+  "Q13418847": [
+   "Q110227435"
+  ],
+  "Q123349687": [
+   "Q1190554",
+   "Q123349660"
+  ],
+  "Q71266556": [
+   "Q1920219",
+   "Q24902509",
+   "Q115431196"
+  ],
+  "Q1190554": [
+   "Q67518978",
+   "Q140451665"
+  ],
+  "Q15835236": [
+   "Q2423459"
+  ],
+  "Q9332": [
+   "Q1914636",
+   "Q2083958"
+  ],
+  "Q124490": [
+   "Q191797",
+   "Q1914636"
+  ],
+  "Q180684": [
+   "Q839578",
+   "Q86923152"
+  ],
+  "Q1931388": [
+   "Q2574811"
+  ],
+  "Q110227435": [
+   "Q1190554"
+  ],
+  "Q123349660": [
+   "Q35120"
+  ]
+ },
+ "labels": {
+  "Q1122337": "Second Persian invasion of Greece",
+  "Q389688": "Achaemenid Empire",
+  "Q25688688": "ancient Greeks",
+  "Q202422": "Salamis Island"
+ }
+}
