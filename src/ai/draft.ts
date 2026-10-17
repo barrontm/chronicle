@@ -1,5 +1,5 @@
 import { upsert } from '../model/doc';
-import type { Highlight, Provenance, Relation, Source, TimelineDoc, TimelineItem } from '../model/types';
+import type { Dimension, Highlight, Provenance, Relation, Source, TimelineDoc, TimelineItem } from '../model/types';
 
 /**
  * A set of AI-drafted records waiting for Bob. Nothing here is in the doc
@@ -18,11 +18,15 @@ export interface DraftEntry {
   why: string;
   /** Problems that stop it being accepted as it is (e.g. no date on Wikidata). */
   problems: string[];
+  /** Words of Bob's highlight (or its section) that the entry rests on, shown while reviewing. */
+  quote?: string;
   status: DraftStatus;
 }
 
 export interface DraftConnection {
   relation: Relation;
+  /** Words of Bob's highlight (or its section) that the connection rests on. */
+  quote?: string;
   status: DraftStatus;
 }
 
@@ -30,6 +34,10 @@ export interface DraftSet {
   feature: string;
   request: string;
   provenance: Provenance;
+  /** Drafted from this highlight: accepted records join its `usedBy`, and connections cite it. */
+  highlightId?: string;
+  /** The dimension Claude suggests for the highlight, with the words it rests on. Bob takes it only by picking it. */
+  dimension?: { value: Dimension; quote: string };
   entries: DraftEntry[];
   connections: DraftConnection[];
   /** What the validator left out, in Bob's words. */

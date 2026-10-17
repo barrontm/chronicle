@@ -1,0 +1,1326 @@
+{
+  "case": "plague-of-athens",
+  "model": "claude-opus-5-5",
+  "prompt": "highlight@1",
+  "handmade": true,
+  "note": "Written by hand as test data before the first live run: Wikipedia and Wikidata answers are real, Claude’s answer is made up to exercise the validator.",
+  "exchanges": [
+    {
+      "url": "https://www.wikidata.org/w/api.php?action=wbgetentities&sites=enwiki&titles=Peloponnesian+War&normalize=1&props=claims%7Clabels&languages=en&format=json&origin=*",
+      "status": 200,
+      "body": {
+        "entities": {
+          "Q33745": {
+            "type": "item",
+            "id": "Q33745",
+            "labels": {
+              "en": {
+                "language": "en",
+                "value": "Peloponnesian War"
+              }
+            },
+            "claims": {
+              "P580": [
+                {
+                  "mainsnak": {
+                    "snaktype": "value",
+                    "property": "P580",
+                    "hash": "81be94ceec1045913a06776f9020b49830cde5e8",
+                    "datavalue": {
+                      "value": {
+                        "time": "-0431-00-00T00:00:00Z",
+                        "timezone": 0,
+                        "before": 0,
+                        "after": 0,
+                        "precision": 9,
+                        "calendarmodel": "http://www.wikidata.org/entity/Q1985786"
+                      },
+                      "type": "time"
+                    },
+                    "datatype": "time"
+                  },
+                  "type": "statement",
+                  "id": "Q33745$4534e899-42fb-7d62-d82d-82cec58324f5",
+                  "rank": "normal"
+                }
+              ],
+              "P31": [
+                {
+                  "mainsnak": {
+                    "snaktype": "value",
+                    "property": "P31",
+                    "hash": "9565c30f04dc02f1cfff5baa28b89ddc708fc7fa",
+                    "datavalue": {
+                      "value": {
+                        "entity-type": "item",
+                        "numeric-id": 198,
+                        "id": "Q198"
+                      },
+                      "type": "wikibase-entityid"
+                    },
+                    "datatype": "wikibase-item"
+                  },
+                  "type": "statement",
+                  "id": "Q33745$8472d36c-4a88-b5b9-d348-f4f0e1921fb3",
+                  "rank": "normal"
+                }
+              ],
+              "P582": [
+                {
+                  "mainsnak": {
+                    "snaktype": "value",
+                    "property": "P582",
+                    "hash": "8d06bc49a86f1a6e66f299aa6e2628a837041183",
+                    "datavalue": {
+                      "value": {
+                        "time": "-0404-04-25T00:00:00Z",
+                        "timezone": 0,
+                        "before": 0,
+                        "after": 0,
+                        "precision": 11,
+                        "calendarmodel": "http://www.wikidata.org/entity/Q1985786"
+                      },
+                      "type": "time"
+                    },
+                    "datatype": "time"
+                  },
+                  "type": "statement",
+                  "qualifiers": {
+                    "P3005": [
+                      {
+                        "snaktype": "value",
+                        "property": "P3005",
+                        "hash": "e4379dfc00f0b6f979f9fe7099d98f9e1fb8767e",
+                        "datavalue": {
+                          "value": {
+                            "entity-type": "item",
+                            "numeric-id": 712144,
+                            "id": "Q712144"
+                          },
+                          "type": "wikibase-entityid"
+                        },
+                        "datatype": "wikibase-item"
+                      }
+                    ]
+                  },
+                  "qualifiers-order": [
+                    "P3005"
+                  ],
+                  "id": "Q33745$8bf36bb0-4ac0-c4f1-98e9-7eda7e7433ba",
+                  "rank": "normal"
+                }
+              ],
+              "P361": [
+                {
+                  "mainsnak": {
+                    "snaktype": "value",
+                    "property": "P361",
+                    "hash": "d4e499b85305038c32f714e209b898a8191e4b02",
+                    "datavalue": {
+                      "value": {
+                        "entity-type": "item",
+                        "numeric-id": 29788594,
+                        "id": "Q29788594"
+                      },
+                      "type": "wikibase-entityid"
+                    },
+                    "datatype": "wikibase-item"
+                  },
+                  "type": "statement",
+                  "id": "Q33745$ee9b63fe-4733-6f74-81ce-5c0f3236c08b",
+                  "rank": "normal"
+                }
+              ],
+              "P710": [
+                {
+                  "mainsnak": {
+                    "snaktype": "value",
+                    "property": "P710",
+                    "hash": "b72320ccace46c93060ed75c71be2c59345b117c",
+                    "datavalue": {
+                      "value": {
+                        "entity-type": "item",
+                        "numeric-id": 193235,
+                        "id": "Q193235"
+                      },
+                      "type": "wikibase-entityid"
+                    },
+                    "datatype": "wikibase-item"
+                  },
+                  "type": "statement",
+                  "id": "Q33745$f2632435-4c84-ae9d-faf5-7837ea3be1bc",
+                  "rank": "normal"
+                },
+                {
+                  "mainsnak": {
+                    "snaktype": "value",
+                    "property": "P710",
+                    "hash": "417827792ce2c7cd49edcc7717f85396749dd681",
+                    "datavalue": {
+                      "value": {
+                        "entity-type": "item",
+                        "numeric-id": 208742,
+                        "id": "Q208742"
+                      },
+                      "type": "wikibase-entityid"
+                    },
+                    "datatype": "wikibase-item"
+                  },
+                  "type": "statement",
+                  "id": "Q33745$915ae8cb-41dc-5a21-9b32-2fe1aa65bc36",
+                  "rank": "normal"
+                },
+                {
+                  "mainsnak": {
+                    "snaktype": "value",
+                    "property": "P710",
+                    "hash": "2c7f5906ee70d12f2a44ea3c08298ece5f9d96f0",
+                    "datavalue": {
+                      "value": {
+                        "entity-type": "item",
+                        "numeric-id": 389688,
+                        "id": "Q389688"
+                      },
+                      "type": "wikibase-entityid"
+                    },
+                    "datatype": "wikibase-item"
+                  },
+                  "type": "statement",
+                  "id": "Q33745$f6f8ca28-499b-9702-30b4-c62db50aa66c",
+                  "rank": "normal"
+                }
+              ],
+              "P276": [
+                {
+                  "mainsnak": {
+                    "snaktype": "value",
+                    "property": "P276",
+                    "hash": "779caa4f70aa3be23fe182f5e992a60a310f0e72",
+                    "datavalue": {
+                      "value": {
+                        "entity-type": "item",
+                        "numeric-id": 11772,
+                        "id": "Q11772"
+                      },
+                      "type": "wikibase-entityid"
+                    },
+                    "datatype": "wikibase-item"
+                  },
+                  "type": "statement",
+                  "id": "Q33745$428025de-4f63-d5ad-bf3f-e99aa543dd43",
+                  "rank": "normal"
+                },
+                {
+                  "mainsnak": {
+                    "snaktype": "value",
+                    "property": "P276",
+                    "hash": "5ba421bbef46bd46f60f3708a08732880edd4d40",
+                    "datavalue": {
+                      "value": {
+                        "entity-type": "item",
+                        "numeric-id": 34575,
+                        "id": "Q34575"
+                      },
+                      "type": "wikibase-entityid"
+                    },
+                    "datatype": "wikibase-item"
+                  },
+                  "type": "statement",
+                  "id": "Q33745$b4e947fa-4f1f-a305-1def-9f577f3ddc84",
+                  "rank": "normal",
+                  "references": [
+                    {
+                      "hash": "bcfed61dcac5a22117dc4c9052f6880a6a38fb88",
+                      "snaks": {
+                        "P143": [
+                          {
+                            "snaktype": "value",
+                            "property": "P143",
+                            "hash": "4a713f1b9c73c024784e593b0da93f2244c86d3f",
+                            "datavalue": {
+                              "value": {
+                                "entity-type": "item",
+                                "numeric-id": 58251,
+                                "id": "Q58251"
+                              },
+                              "type": "wikibase-entityid"
+                            },
+                            "datatype": "wikibase-item"
+                          }
+                        ],
+                        "P4656": [
+                          {
+                            "snaktype": "value",
+                            "property": "P4656",
+                            "hash": "adef9c886d9c2631f21bc5304aa81b2f5052f88f",
+                            "datavalue": {
+                              "value": "https://az.wikipedia.org/?oldid=5546365",
+                              "type": "string"
+                            },
+                            "datatype": "url"
+                          }
+                        ]
+                      },
+                      "snaks-order": [
+                        "P143",
+                        "P4656"
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "mainsnak": {
+                    "snaktype": "value",
+                    "property": "P276",
+                    "hash": "b49110bd5dd18993d46097f93b203204239255d9",
+                    "datavalue": {
+                      "value": {
+                        "entity-type": "item",
+                        "numeric-id": 51614,
+                        "id": "Q51614"
+                      },
+                      "type": "wikibase-entityid"
+                    },
+                    "datatype": "wikibase-item"
+                  },
+                  "type": "statement",
+                  "id": "Q33745$2e763f94-4356-21d5-a1be-a30449ae684a",
+                  "rank": "normal",
+                  "references": [
+                    {
+                      "hash": "bcfed61dcac5a22117dc4c9052f6880a6a38fb88",
+                      "snaks": {
+                        "P143": [
+                          {
+                            "snaktype": "value",
+                            "property": "P143",
+                            "hash": "4a713f1b9c73c024784e593b0da93f2244c86d3f",
+                            "datavalue": {
+                              "value": {
+                                "entity-type": "item",
+                                "numeric-id": 58251,
+                                "id": "Q58251"
+                              },
+                              "type": "wikibase-entityid"
+                            },
+                            "datatype": "wikibase-item"
+                          }
+                        ],
+                        "P4656": [
+                          {
+                            "snaktype": "value",
+                            "property": "P4656",
+                            "hash": "adef9c886d9c2631f21bc5304aa81b2f5052f88f",
+                            "datavalue": {
+                              "value": "https://az.wikipedia.org/?oldid=5546365",
+                              "type": "string"
+                            },
+                            "datatype": "url"
+                          }
+                        ]
+                      },
+                      "snaks-order": [
+                        "P143",
+                        "P4656"
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "mainsnak": {
+                    "snaktype": "value",
+                    "property": "P276",
+                    "hash": "2fe19048ad06e9461de46aee8e9cdb95b6a2dc94",
+                    "datavalue": {
+                      "value": {
+                        "entity-type": "item",
+                        "numeric-id": 4951156,
+                        "id": "Q4951156"
+                      },
+                      "type": "wikibase-entityid"
+                    },
+                    "datatype": "wikibase-item"
+                  },
+                  "type": "statement",
+                  "id": "Q33745$080983e5-426e-fa08-e890-443ecfe3ded8",
+                  "rank": "normal",
+                  "references": [
+                    {
+                      "hash": "bcfed61dcac5a22117dc4c9052f6880a6a38fb88",
+                      "snaks": {
+                        "P143": [
+                          {
+                            "snaktype": "value",
+                            "property": "P143",
+                            "hash": "4a713f1b9c73c024784e593b0da93f2244c86d3f",
+                            "datavalue": {
+                              "value": {
+                                "entity-type": "item",
+                                "numeric-id": 58251,
+                                "id": "Q58251"
+                              },
+                              "type": "wikibase-entityid"
+                            },
+                            "datatype": "wikibase-item"
+                          }
+                        ],
+                        "P4656": [
+                          {
+                            "snaktype": "value",
+                            "property": "P4656",
+                            "hash": "adef9c886d9c2631f21bc5304aa81b2f5052f88f",
+                            "datavalue": {
+                              "value": "https://az.wikipedia.org/?oldid=5546365",
+                              "type": "string"
+                            },
+                            "datatype": "url"
+                          }
+                        ]
+                      },
+                      "snaks-order": [
+                        "P143",
+                        "P4656"
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "mainsnak": {
+                    "snaktype": "value",
+                    "property": "P276",
+                    "hash": "783358436ce2fdb3a1ef668bfaaad1a0c1ea8924",
+                    "datavalue": {
+                      "value": {
+                        "entity-type": "item",
+                        "numeric-id": 1460,
+                        "id": "Q1460"
+                      },
+                      "type": "wikibase-entityid"
+                    },
+                    "datatype": "wikibase-item"
+                  },
+                  "type": "statement",
+                  "id": "Q33745$2185914e-4842-db6d-bb4c-d1441cd4f83c",
+                  "rank": "normal",
+                  "references": [
+                    {
+                      "hash": "3b6c38a58413bcd2678e9b001d4e7edf2f048f19",
+                      "snaks": {
+                        "P4656": [
+                          {
+                            "snaktype": "value",
+                            "property": "P4656",
+                            "hash": "1a9c0da9dec0a589c6fa33c5e106a31ae23796a6",
+                            "datavalue": {
+                              "value": "https://az.m.wikipedia.org/?oldid=7294820",
+                              "type": "string"
+                            },
+                            "datatype": "url"
+                          }
+                        ]
+                      },
+                      "snaks-order": [
+                        "P4656"
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "P18": [
+                {
+                  "mainsnak": {
+                    "snaktype": "value",
+                    "property": "P18",
+                    "hash": "3058bed523650ffcf44214d0ee28c146ffb1ba68",
+                    "datavalue": {
+                      "value": "Map Peloponnesian War 431 BC-en.svg",
+                      "type": "string"
+                    },
+                    "datatype": "commonsMedia"
+                  },
+                  "type": "statement",
+                  "qualifiers": {
+                    "P2096": [
+                      {
+                        "snaktype": "value",
+                        "property": "P2096",
+                        "hash": "45efe473bd7b56f0182ced3bcbffe468fa34e759",
+                        "datavalue": {
+                          "value": {
+                            "text": "E.ə. 431-ci ildə Peloponnes müharibəsi ərəfəsindəki Qədim Yunanıstanın xəritəsi",
+                            "language": "az"
+                          },
+                          "type": "monolingualtext"
+                        },
+                        "datatype": "monolingualtext"
+                      }
+                    ]
+                  },
+                  "qualifiers-order": [
+                    "P2096"
+                  ],
+                  "id": "Q33745$0bb582b7-4754-1453-5156-7ee348f21bd5",
+                  "rank": "normal",
+                  "references": [
+                    {
+                      "hash": "3b6c38a58413bcd2678e9b001d4e7edf2f048f19",
+                      "snaks": {
+                        "P4656": [
+                          {
+                            "snaktype": "value",
+                            "property": "P4656",
+                            "hash": "1a9c0da9dec0a589c6fa33c5e106a31ae23796a6",
+                            "datavalue": {
+                              "value": "https://az.m.wikipedia.org/?oldid=7294820",
+                              "type": "string"
+                            },
+                            "datatype": "url"
+                          }
+                        ]
+                      },
+                      "snaks-order": [
+                        "P4656"
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        },
+        "success": 1
+      }
+    },
+    {
+      "url": "https://www.wikidata.org/w/api.php?action=wbgetentities&ids=Q29788594%7CQ193235%7CQ208742%7CQ389688%7CQ11772%7CQ34575%7CQ51614%7CQ4951156%7CQ1460&props=labels&languages=en&format=json&origin=*",
+      "status": 200,
+      "body": {
+        "entities": {
+          "Q29788594": {
+            "type": "item",
+            "id": "Q29788594",
+            "labels": {
+              "en": {
+                "language": "en",
+                "value": "Peloponnesian Wars"
+              }
+            }
+          },
+          "Q193235": {
+            "type": "item",
+            "id": "Q193235",
+            "labels": {
+              "en": {
+                "language": "en",
+                "value": "Delian League"
+              }
+            }
+          },
+          "Q208742": {
+            "type": "item",
+            "id": "Q208742",
+            "labels": {
+              "en": {
+                "language": "en",
+                "value": "Peloponnesian League"
+              }
+            }
+          },
+          "Q389688": {
+            "type": "item",
+            "id": "Q389688",
+            "labels": {
+              "en": {
+                "language": "en",
+                "value": "Achaemenid Empire"
+              }
+            }
+          },
+          "Q11772": {
+            "type": "item",
+            "id": "Q11772",
+            "labels": {
+              "en": {
+                "language": "en",
+                "value": "Ancient Greece"
+              }
+            }
+          },
+          "Q34575": {
+            "type": "item",
+            "id": "Q34575",
+            "labels": {
+              "en": {
+                "language": "en",
+                "value": "Aegean Sea"
+              }
+            }
+          },
+          "Q51614": {
+            "type": "item",
+            "id": "Q51614",
+            "labels": {
+              "en": {
+                "language": "en",
+                "value": "Anatolia"
+              }
+            }
+          },
+          "Q4951156": {
+            "type": "item",
+            "id": "Q4951156",
+            "labels": {
+              "en": {
+                "language": "en",
+                "value": "Sicily"
+              }
+            }
+          },
+          "Q1460": {
+            "type": "item",
+            "id": "Q1460",
+            "labels": {
+              "en": {
+                "language": "en",
+                "value": "Sicily"
+              }
+            }
+          }
+        },
+        "success": 1
+      }
+    },
+    {
+      "url": "https://www.wikidata.org/w/api.php?action=wbgetentities&sites=enwiki&titles=Plague+of+Athens&normalize=1&props=claims%7Clabels&languages=en&format=json&origin=*",
+      "status": 200,
+      "body": {
+        "entities": {
+          "Q758173": {
+            "type": "item",
+            "id": "Q758173",
+            "labels": {
+              "en": {
+                "language": "en",
+                "value": "Plague of Athens"
+              }
+            },
+            "claims": {
+              "P580": [
+                {
+                  "mainsnak": {
+                    "snaktype": "value",
+                    "property": "P580",
+                    "hash": "eaa635727c72607c0366b41a68acacc6a651a1c8",
+                    "datavalue": {
+                      "value": {
+                        "time": "-0430-01-01T00:00:00Z",
+                        "timezone": 0,
+                        "before": 0,
+                        "after": 0,
+                        "precision": 9,
+                        "calendarmodel": "http://www.wikidata.org/entity/Q1985727"
+                      },
+                      "type": "time"
+                    },
+                    "datatype": "time"
+                  },
+                  "type": "statement",
+                  "qualifiers": {
+                    "P31": [
+                      {
+                        "snaktype": "value",
+                        "property": "P31",
+                        "hash": "d5ac6d02e7a8948b72184d9e39cf10acbc5e61ed",
+                        "datavalue": {
+                          "value": {
+                            "entity-type": "item",
+                            "numeric-id": 26961029,
+                            "id": "Q26961029"
+                          },
+                          "type": "wikibase-entityid"
+                        },
+                        "datatype": "wikibase-item"
+                      }
+                    ]
+                  },
+                  "qualifiers-order": [
+                    "P31"
+                  ],
+                  "id": "Q758173$e5d26845-4dbe-2e02-446a-27ea98a8097a",
+                  "rank": "normal"
+                }
+              ],
+              "P31": [
+                {
+                  "mainsnak": {
+                    "snaktype": "value",
+                    "property": "P31",
+                    "hash": "71c9eb61e560e83319f8a820c7f4d30a1d4eae05",
+                    "datavalue": {
+                      "value": {
+                        "entity-type": "item",
+                        "numeric-id": 44512,
+                        "id": "Q44512"
+                      },
+                      "type": "wikibase-entityid"
+                    },
+                    "datatype": "wikibase-item"
+                  },
+                  "type": "statement",
+                  "id": "Q758173$9fec671d-40f1-843a-f5fc-76c0cd0730cd",
+                  "rank": "normal"
+                }
+              ],
+              "P582": [
+                {
+                  "mainsnak": {
+                    "snaktype": "value",
+                    "property": "P582",
+                    "hash": "8f70c04fd363c4ec15e70ae06268670597995edf",
+                    "datavalue": {
+                      "value": {
+                        "time": "-0426-01-01T00:00:00Z",
+                        "timezone": 0,
+                        "before": 0,
+                        "after": 0,
+                        "precision": 9,
+                        "calendarmodel": "http://www.wikidata.org/entity/Q1985727"
+                      },
+                      "type": "time"
+                    },
+                    "datatype": "time"
+                  },
+                  "type": "statement",
+                  "qualifiers": {
+                    "P31": [
+                      {
+                        "snaktype": "value",
+                        "property": "P31",
+                        "hash": "d5ac6d02e7a8948b72184d9e39cf10acbc5e61ed",
+                        "datavalue": {
+                          "value": {
+                            "entity-type": "item",
+                            "numeric-id": 26961029,
+                            "id": "Q26961029"
+                          },
+                          "type": "wikibase-entityid"
+                        },
+                        "datatype": "wikibase-item"
+                      }
+                    ]
+                  },
+                  "qualifiers-order": [
+                    "P31"
+                  ],
+                  "id": "Q758173$da829112-4483-32f7-ce24-0f0f94d12a2a",
+                  "rank": "normal"
+                }
+              ],
+              "P276": [
+                {
+                  "mainsnak": {
+                    "snaktype": "value",
+                    "property": "P276",
+                    "hash": "852617d082690e11a21909e8a6326637a3193a62",
+                    "datavalue": {
+                      "value": {
+                        "entity-type": "item",
+                        "numeric-id": 844930,
+                        "id": "Q844930"
+                      },
+                      "type": "wikibase-entityid"
+                    },
+                    "datatype": "wikibase-item"
+                  },
+                  "type": "statement",
+                  "id": "Q758173$c897206c-4005-ae04-e848-f5834b41de90",
+                  "rank": "normal"
+                }
+              ],
+              "P18": [
+                {
+                  "mainsnak": {
+                    "snaktype": "value",
+                    "property": "P18",
+                    "hash": "a7249cc07fd2b0882f39cade92634c0bb9a17e71",
+                    "datavalue": {
+                      "value": "Plague in an Ancient City LACMA AC1997.10.1 (1 of 2).jpg",
+                      "type": "string"
+                    },
+                    "datatype": "commonsMedia"
+                  },
+                  "type": "statement",
+                  "qualifiers": {
+                    "P2096": [
+                      {
+                        "snaktype": "value",
+                        "property": "P2096",
+                        "hash": "edd661ab1d5799136b48ad12c93fe79c33d0259a",
+                        "datavalue": {
+                          "value": {
+                            "text": "''The Plague of Athens'', [[Michiel Sweerts]], c. 1652–1654",
+                            "language": "sv"
+                          },
+                          "type": "monolingualtext"
+                        },
+                        "datatype": "monolingualtext"
+                      },
+                      {
+                        "snaktype": "value",
+                        "property": "P2096",
+                        "hash": "33fb8dc6a0fc098eca9df5978c561283648c75e5",
+                        "datavalue": {
+                          "value": {
+                            "text": "''The Plague of Athens'', [[Michiel Sweerts]], c. 1652–1654",
+                            "language": "en"
+                          },
+                          "type": "monolingualtext"
+                        },
+                        "datatype": "monolingualtext"
+                      },
+                      {
+                        "snaktype": "value",
+                        "property": "P2096",
+                        "hash": "ffb7e450bb0d370614b20ae4d341fd1908a165c3",
+                        "datavalue": {
+                          "value": {
+                            "text": "Афинська моровиця. [[Міхель Свертс]] (1652—1654)",
+                            "language": "uk"
+                          },
+                          "type": "monolingualtext"
+                        },
+                        "datatype": "monolingualtext"
+                      }
+                    ]
+                  },
+                  "qualifiers-order": [
+                    "P2096"
+                  ],
+                  "id": "Q758173$a1a5f6f7-457a-9b09-db6d-c6c4574ccedf",
+                  "rank": "normal"
+                }
+              ]
+            }
+          }
+        },
+        "success": 1
+      }
+    },
+    {
+      "url": "https://www.wikidata.org/w/api.php?action=wbgetentities&ids=Q844930&props=labels&languages=en&format=json&origin=*",
+      "status": 200,
+      "body": {
+        "entities": {
+          "Q844930": {
+            "type": "item",
+            "id": "Q844930",
+            "labels": {
+              "en": {
+                "language": "en",
+                "value": "Classical Athens"
+              }
+            }
+          }
+        },
+        "success": 1
+      }
+    },
+    {
+      "url": "https://api.anthropic.com/v1/messages?beta=true",
+      "body": {
+        "id": "msg_hand_1",
+        "type": "message",
+        "role": "assistant",
+        "model": "claude-opus-5-5",
+        "content": [
+          {
+            "type": "tool_use",
+            "id": "toolu_1",
+            "name": "propose_from_highlight",
+            "input": {
+              "dimension": {
+                "value": "social",
+                "quote": "The plague wiped out over 30,000 citizens, sailors and soldiers"
+              },
+              "entries": [],
+              "connections": [
+                {
+                  "from": "Plague_of_Athens",
+                  "to": "i_pericles",
+                  "type": "caused",
+                  "effect": "killed",
+                  "quote": "including Pericles and his sons"
+                },
+                {
+                  "from": "Plague_of_Athens",
+                  "to": "i_pelop",
+                  "type": "influenced",
+                  "effect": "weakened",
+                  "quote": "was a significant cause of its final defeat"
+                }
+              ]
+            }
+          }
+        ],
+        "stop_reason": "tool_use",
+        "stop_sequence": null,
+        "usage": {
+          "input_tokens": 1,
+          "output_tokens": 1
+        }
+      }
+    },
+    {
+      "url": "https://en.wikipedia.org/api/rest_v1/page/summary/Plague_of_Athens",
+      "status": 200,
+      "body": {
+        "type": "standard",
+        "title": "Plague of Athens",
+        "displaytitle": "<span lang=\"en\" dir=\"ltr\"><span class=\"mw-page-title-main\">Plague of Athens</span></span>",
+        "namespace": {
+          "id": 0,
+          "text": ""
+        },
+        "wikibase_item": "Q758173",
+        "titles": {
+          "canonical": "Plague_of_Athens",
+          "normalized": "Plague of Athens",
+          "display": "<span lang=\"en\" dir=\"ltr\"><span class=\"mw-page-title-main\">Plague of Athens</span></span>"
+        },
+        "pageid": 1858051,
+        "thumbnail": {
+          "source": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/66/Plague_in_an_Ancient_City_LACMA_AC1997.10.1_%281_of_2%29.jpg/330px-Plague_in_an_Ancient_City_LACMA_AC1997.10.1_%281_of_2%29.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail",
+          "width": 330,
+          "height": 229
+        },
+        "originalimage": {
+          "source": "https://upload.wikimedia.org/wikipedia/commons/6/66/Plague_in_an_Ancient_City_LACMA_AC1997.10.1_%281_of_2%29.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail_unscaled",
+          "width": 2100,
+          "height": 1459
+        },
+        "lang": "en",
+        "dir": "ltr",
+        "revision": "1376295871",
+        "tid": "66681c02-b724-11f1-a3e8-70c25d365b72",
+        "timestamp": "2026-09-23T07:57:19Z",
+        "description": "430 BC epidemic in Greece",
+        "description_source": "local",
+        "content_urls": {
+          "desktop": {
+            "page": "https://en.wikipedia.org/wiki/Plague_of_Athens",
+            "revisions": "https://en.wikipedia.org/wiki/Plague_of_Athens?action=history",
+            "edit": "https://en.wikipedia.org/wiki/Plague_of_Athens?action=edit",
+            "talk": "https://en.wikipedia.org/wiki/Talk:Plague_of_Athens"
+          },
+          "mobile": {
+            "page": "https://en.wikipedia.org/wiki/Plague_of_Athens",
+            "revisions": "https://en.wikipedia.org/wiki/Special:History/Plague_of_Athens",
+            "edit": "https://en.wikipedia.org/wiki/Plague_of_Athens?action=edit",
+            "talk": "https://en.wikipedia.org/wiki/Talk:Plague_of_Athens"
+          }
+        },
+        "extract": "The Plague of Athens was an epidemic that devastated the city-state of Athens in ancient Greece during the second year of the Peloponnesian War when an Athenian victory still seemed within reach. The plague killed an estimated 75,000 to 100,000 people, around 25% of the population, and is believed to have entered Athens through Piraeus, the city's port and sole source of food and supplies. Thucydides, an Athenian survivor, wrote that much of the eastern Mediterranean also saw an outbreak of the disease, albeit with less impact.",
+        "extract_html": "<p>The <b>Plague of Athens</b> was an epidemic that devastated the city-state of Athens in ancient Greece during the second year of the Peloponnesian War when an Athenian victory still seemed within reach. The plague killed an estimated 75,000 to 100,000 people, around 25% of the population, and is believed to have entered Athens through Piraeus, the city's port and sole source of food and supplies. Thucydides, an Athenian survivor, wrote that much of the eastern Mediterranean also saw an outbreak of the disease, albeit with less impact.</p>"
+      }
+    },
+    {
+      "url": "https://www.wikidata.org/w/api.php?action=wbgetentities&ids=Q758173&props=claims&format=json&origin=*",
+      "status": 200,
+      "body": {
+        "entities": {
+          "Q758173": {
+            "type": "item",
+            "id": "Q758173",
+            "claims": {
+              "P580": [
+                {
+                  "mainsnak": {
+                    "snaktype": "value",
+                    "property": "P580",
+                    "hash": "eaa635727c72607c0366b41a68acacc6a651a1c8",
+                    "datavalue": {
+                      "value": {
+                        "time": "-0430-01-01T00:00:00Z",
+                        "timezone": 0,
+                        "before": 0,
+                        "after": 0,
+                        "precision": 9,
+                        "calendarmodel": "http://www.wikidata.org/entity/Q1985727"
+                      },
+                      "type": "time"
+                    },
+                    "datatype": "time"
+                  },
+                  "type": "statement",
+                  "qualifiers": {
+                    "P31": [
+                      {
+                        "snaktype": "value",
+                        "property": "P31",
+                        "hash": "d5ac6d02e7a8948b72184d9e39cf10acbc5e61ed",
+                        "datavalue": {
+                          "value": {
+                            "entity-type": "item",
+                            "numeric-id": 26961029,
+                            "id": "Q26961029"
+                          },
+                          "type": "wikibase-entityid"
+                        },
+                        "datatype": "wikibase-item"
+                      }
+                    ]
+                  },
+                  "qualifiers-order": [
+                    "P31"
+                  ],
+                  "id": "Q758173$e5d26845-4dbe-2e02-446a-27ea98a8097a",
+                  "rank": "normal"
+                }
+              ],
+              "P31": [
+                {
+                  "mainsnak": {
+                    "snaktype": "value",
+                    "property": "P31",
+                    "hash": "71c9eb61e560e83319f8a820c7f4d30a1d4eae05",
+                    "datavalue": {
+                      "value": {
+                        "entity-type": "item",
+                        "numeric-id": 44512,
+                        "id": "Q44512"
+                      },
+                      "type": "wikibase-entityid"
+                    },
+                    "datatype": "wikibase-item"
+                  },
+                  "type": "statement",
+                  "id": "Q758173$9fec671d-40f1-843a-f5fc-76c0cd0730cd",
+                  "rank": "normal"
+                }
+              ],
+              "P582": [
+                {
+                  "mainsnak": {
+                    "snaktype": "value",
+                    "property": "P582",
+                    "hash": "8f70c04fd363c4ec15e70ae06268670597995edf",
+                    "datavalue": {
+                      "value": {
+                        "time": "-0426-01-01T00:00:00Z",
+                        "timezone": 0,
+                        "before": 0,
+                        "after": 0,
+                        "precision": 9,
+                        "calendarmodel": "http://www.wikidata.org/entity/Q1985727"
+                      },
+                      "type": "time"
+                    },
+                    "datatype": "time"
+                  },
+                  "type": "statement",
+                  "qualifiers": {
+                    "P31": [
+                      {
+                        "snaktype": "value",
+                        "property": "P31",
+                        "hash": "d5ac6d02e7a8948b72184d9e39cf10acbc5e61ed",
+                        "datavalue": {
+                          "value": {
+                            "entity-type": "item",
+                            "numeric-id": 26961029,
+                            "id": "Q26961029"
+                          },
+                          "type": "wikibase-entityid"
+                        },
+                        "datatype": "wikibase-item"
+                      }
+                    ]
+                  },
+                  "qualifiers-order": [
+                    "P31"
+                  ],
+                  "id": "Q758173$da829112-4483-32f7-ce24-0f0f94d12a2a",
+                  "rank": "normal"
+                }
+              ],
+              "P276": [
+                {
+                  "mainsnak": {
+                    "snaktype": "value",
+                    "property": "P276",
+                    "hash": "852617d082690e11a21909e8a6326637a3193a62",
+                    "datavalue": {
+                      "value": {
+                        "entity-type": "item",
+                        "numeric-id": 844930,
+                        "id": "Q844930"
+                      },
+                      "type": "wikibase-entityid"
+                    },
+                    "datatype": "wikibase-item"
+                  },
+                  "type": "statement",
+                  "id": "Q758173$c897206c-4005-ae04-e848-f5834b41de90",
+                  "rank": "normal"
+                }
+              ],
+              "P18": [
+                {
+                  "mainsnak": {
+                    "snaktype": "value",
+                    "property": "P18",
+                    "hash": "a7249cc07fd2b0882f39cade92634c0bb9a17e71",
+                    "datavalue": {
+                      "value": "Plague in an Ancient City LACMA AC1997.10.1 (1 of 2).jpg",
+                      "type": "string"
+                    },
+                    "datatype": "commonsMedia"
+                  },
+                  "type": "statement",
+                  "qualifiers": {
+                    "P2096": [
+                      {
+                        "snaktype": "value",
+                        "property": "P2096",
+                        "hash": "edd661ab1d5799136b48ad12c93fe79c33d0259a",
+                        "datavalue": {
+                          "value": {
+                            "text": "''The Plague of Athens'', [[Michiel Sweerts]], c. 1652–1654",
+                            "language": "sv"
+                          },
+                          "type": "monolingualtext"
+                        },
+                        "datatype": "monolingualtext"
+                      },
+                      {
+                        "snaktype": "value",
+                        "property": "P2096",
+                        "hash": "33fb8dc6a0fc098eca9df5978c561283648c75e5",
+                        "datavalue": {
+                          "value": {
+                            "text": "''The Plague of Athens'', [[Michiel Sweerts]], c. 1652–1654",
+                            "language": "en"
+                          },
+                          "type": "monolingualtext"
+                        },
+                        "datatype": "monolingualtext"
+                      },
+                      {
+                        "snaktype": "value",
+                        "property": "P2096",
+                        "hash": "ffb7e450bb0d370614b20ae4d341fd1908a165c3",
+                        "datavalue": {
+                          "value": {
+                            "text": "Афинська моровиця. [[Міхель Свертс]] (1652—1654)",
+                            "language": "uk"
+                          },
+                          "type": "monolingualtext"
+                        },
+                        "datatype": "monolingualtext"
+                      }
+                    ]
+                  },
+                  "qualifiers-order": [
+                    "P2096"
+                  ],
+                  "id": "Q758173$a1a5f6f7-457a-9b09-db6d-c6c4574ccedf",
+                  "rank": "normal"
+                }
+              ]
+            }
+          }
+        },
+        "success": 1
+      }
+    },
+    {
+      "url": "https://www.wikidata.org/w/api.php?action=wbgetentities&ids=Q844930&props=labels&languages=en&format=json&origin=*",
+      "status": 200,
+      "body": {
+        "entities": {
+          "Q844930": {
+            "type": "item",
+            "id": "Q844930",
+            "labels": {
+              "en": {
+                "language": "en",
+                "value": "Classical Athens"
+              }
+            }
+          }
+        },
+        "success": 1
+      }
+    },
+    {
+      "url": "https://www.wikidata.org/w/api.php?action=wbgetclaims&entity=Q844930&property=P625&format=json&origin=*",
+      "status": 200,
+      "body": {
+        "claims": {
+          "P625": [
+            {
+              "mainsnak": {
+                "snaktype": "value",
+                "property": "P625",
+                "hash": "1210883e6f1658ea061964433a19c22923501052",
+                "datavalue": {
+                  "value": {
+                    "latitude": 37.97222222222222,
+                    "longitude": 23.72222222222222,
+                    "altitude": null,
+                    "precision": 0.0002777777777777778,
+                    "globe": "http://www.wikidata.org/entity/Q2"
+                  },
+                  "type": "globecoordinate"
+                },
+                "datatype": "globe-coordinate"
+              },
+              "type": "statement",
+              "id": "Q844930$0CC07867-F09D-40D4-BA93-65DDE623F561",
+              "rank": "normal",
+              "references": [
+                {
+                  "hash": "60cce5d0acf0cc060796196012001192a048d885",
+                  "snaks": {
+                    "P143": [
+                      {
+                        "snaktype": "value",
+                        "property": "P143",
+                        "hash": "390e3b73e7cd926978cab220968d0e3451cfb814",
+                        "datavalue": {
+                          "value": {
+                            "entity-type": "item",
+                            "numeric-id": 199698,
+                            "id": "Q199698"
+                          },
+                          "type": "wikibase-entityid"
+                        },
+                        "datatype": "wikibase-item"
+                      }
+                    ]
+                  },
+                  "snaks-order": [
+                    "P143"
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "url": "https://commons.wikimedia.org/w/api.php?action=query&format=json&origin=*&titles=File%3APlague+in+an+Ancient+City+LACMA+AC1997.10.1+%281+of+2%29.jpg&prop=imageinfo&iiprop=url%7Cextmetadata%7Cmime&iiurlwidth=640",
+      "status": 200,
+      "body": {
+        "continue": {
+          "iistart": "2013-07-11T18:39:49Z",
+          "continue": "||"
+        },
+        "query": {
+          "pages": {
+            "27201183": {
+              "pageid": 27201183,
+              "ns": 6,
+              "title": "File:Plague in an Ancient City LACMA AC1997.10.1 (1 of 2).jpg",
+              "imagerepository": "local",
+              "imageinfo": [
+                {
+                  "thumburl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/66/Plague_in_an_Ancient_City_LACMA_AC1997.10.1_%281_of_2%29.jpg/960px-Plague_in_an_Ancient_City_LACMA_AC1997.10.1_%281_of_2%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+                  "thumbwidth": 640,
+                  "thumbheight": 445,
+                  "responsiveUrls": {
+                    "2": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/66/Plague_in_an_Ancient_City_LACMA_AC1997.10.1_%281_of_2%29.jpg/1280px-Plague_in_an_Ancient_City_LACMA_AC1997.10.1_%281_of_2%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
+                  },
+                  "thumbattribs": {
+                    "src": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/66/Plague_in_an_Ancient_City_LACMA_AC1997.10.1_%281_of_2%29.jpg/960px-Plague_in_an_Ancient_City_LACMA_AC1997.10.1_%281_of_2%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+                    "decoding": "async",
+                    "loading": "lazy",
+                    "width": 640,
+                    "height": 445,
+                    "srcset": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/66/Plague_in_an_Ancient_City_LACMA_AC1997.10.1_%281_of_2%29.jpg/1280px-Plague_in_an_Ancient_City_LACMA_AC1997.10.1_%281_of_2%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail 2x"
+                  },
+                  "url": "https://upload.wikimedia.org/wikipedia/commons/6/66/Plague_in_an_Ancient_City_LACMA_AC1997.10.1_%281_of_2%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+                  "descriptionurl": "https://commons.wikimedia.org/wiki/File:Plague_in_an_Ancient_City_LACMA_AC1997.10.1_(1_of_2).jpg",
+                  "descriptionshorturl": "https://commons.wikimedia.org/w/index.php?curid=27201183",
+                  "extmetadata": {
+                    "DateTime": {
+                      "value": "2021-03-16 14:42:07",
+                      "source": "mediawiki-metadata",
+                      "hidden": ""
+                    },
+                    "ObjectName": {
+                      "value": "<div class=\"fn\">\nPlague in an Ancient City (image 1 of 2)</div>",
+                      "source": "commons-desc-page"
+                    },
+                    "CommonsMetadataExtension": {
+                      "value": 1.2,
+                      "source": "extension",
+                      "hidden": ""
+                    },
+                    "Categories": {
+                      "value": "Artworks with Wikidata item|Artworks with known accession number|Images from LACMA uploaded by Fæ|Public domain images from the Los Angeles County Museum of Art|Artworks with Wikidata item missing genre|Plague in an Ancient City by Michiel Sweerts|Artworks digital representation of 2D work",
+                      "source": "commons-categories",
+                      "hidden": ""
+                    },
+                    "Assessments": {
+                      "value": "",
+                      "source": "commons-categories",
+                      "hidden": ""
+                    },
+                    "Artist": {
+                      "value": "<bdi><a href=\"https://en.wikipedia.org/wiki/en:Michiel_Sweerts\" class=\"extiw\" title=\"w:en:Michiel Sweerts\"><span title=\"Flemish painter and printmaker (1618–1664)\">Michiel Sweerts</span></a></bdi>",
+                      "source": "commons-desc-page"
+                    },
+                    "ImageDescription": {
+                      "value": "<div class=\"description\">\n<dl><dd>Gift of The Ahmanson Foundation (AC1997.10.1)</dd>\n<dd><a rel=\"nofollow\" class=\"external text\" href=\"http://www.lacma.org/art/collection/european-painting\">European Painting</a></dd>\n<dd>Currently on public view: Ahmanson Building, floor 3</dd></dl>\nThe painting is believed to be referring to the plague of Athens or have elements from it (i.e. as per <a rel=\"nofollow\" class=\"external text\" href=\"http://www.hektoeninternational.org/index.php?option=com_content&amp;view=article&amp;id=296\">Plague in an Ancient City, by Michael Sweerts, circa 1652, represents the Plague of Athens</a>, <a rel=\"nofollow\" class=\"external text\" href=\"https://books.google.co.uk/books?id=0lgv82UzKcoC&amp;pg=PA239&amp;lpg=PA239&amp;dq=plague+in+an+ancient+city+athens+sweerts&amp;source=bl&amp;ots=5xFKiD3yUC&amp;sig=XVN7x3PGoWSVmuq-gniN-rlebwE&amp;hl=en&amp;sa=X&amp;ei=cHZrVZaOHovg7QaHsID4Bg&amp;ved=0CEMQ6AEwCA#v=onepage&amp;q=plague%20in%20an%20ancient%20city%20athens%20sweerts&amp;f=false\">Thucicydes and the Plague of Athens</a>),</div>",
+                      "source": "commons-desc-page"
+                    },
+                    "DateTimeOriginal": {
+                      "value": "between circa 1652 and circa 1654<div style=\"display: none;\">date QS:P571,+1652-00-00T00:00:00Z/8,P1319,+1652-00-00T00:00:00Z/9,P1326,+1654-00-00T00:00:00Z/9,P1480,Q5727902</div>",
+                      "source": "commons-desc-page"
+                    },
+                    "Credit": {
+                      "value": "<ul><li>Image: <a rel=\"nofollow\" class=\"external free\" href=\"http://collections.lacma.org/sites/default/files/remote_images/piction/ma-31770455-O3.jpg\">http://collections.lacma.org/sites/default/files/remote_images/piction/ma-31770455-O3.jpg</a></li>\n<li>Gallery: <a rel=\"nofollow\" class=\"external free\" href=\"http://collections.lacma.org/node/183358\">http://collections.lacma.org/node/183358</a> <bdi lang=\"en\" dir=\"ltr\" title=\"archived on 4 December 2014 at the Wayback Machine\"><a rel=\"nofollow\" class=\"external text\" href=\"https://web.archive.org/web/20141204024659/http%3A//collections.lacma.org%3A80/node/183358\">archive copy</a> at the <span lang=\"en\" dir=\"ltr\"><a href=\"https://en.wikipedia.org/wiki/Wayback_Machine\" class=\"extiw\" title=\"en:Wayback Machine\"><span lang=\"en\" dir=\"ltr\">Wayback Machine</span></a></span></bdi></li></ul>",
+                      "source": "commons-desc-page"
+                    },
+                    "LicenseShortName": {
+                      "value": "Public domain",
+                      "source": "commons-desc-page",
+                      "hidden": ""
+                    },
+                    "UsageTerms": {
+                      "value": "Public domain",
+                      "source": "commons-desc-page"
+                    },
+                    "AttributionRequired": {
+                      "value": "false",
+                      "source": "commons-desc-page",
+                      "hidden": ""
+                    },
+                    "Copyrighted": {
+                      "value": "False",
+                      "source": "commons-desc-page",
+                      "hidden": ""
+                    },
+                    "Restrictions": {
+                      "value": "",
+                      "source": "commons-desc-page",
+                      "hidden": ""
+                    },
+                    "License": {
+                      "value": "pd",
+                      "source": "commons-templates",
+                      "hidden": ""
+                    }
+                  },
+                  "mime": "image/jpeg"
+                }
+              ]
+            }
+          }
+        }
+      }
+    }
+  ]
+}

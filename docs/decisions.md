@@ -2,6 +2,9 @@
 
 A log of choices that shouldn't be re-litigated every session. Newest first. To change a decision, add a new entry that supersedes the old one.
 
+## 2026-10-17 — Drafting from a highlight: quotes checked in code, the article cached
+The 🤖 `highlight` feature (`src/ai/highlight/`) makes one request with one strict tool and no lookups. The prompt and the whole article are two cached system blocks (`client.ts` takes a `context`), so a second highlight in the same article is cheap. Everything else is facts gathered before the call: the candidates' Wikidata subjects and the entries Bob has that they name or the passage mentions. Claude never gives coordinates (places go by name to `lookUpPlace`) or facts about linked pages (`draftFromWikipedia` drafts those when a connection needs one). The validator, not the prompt, is the guarantee. Every claim carries a quote that must be in the highlight or its section. Dates go through `parseHistDate`, and their years must be stated there. A title or effect with a number the passage lacks is dropped. A connection end must be one of Bob's entries, a candidate or a drafted entry, and polities, places and ideas can't be ends until they can be added (the tray's `CANT_ADD`, now in `passage.ts`). The eval harness now runs every feature through `tests/ai-evals/<feature>/run.ts`, so a case can set up a highlight on a recorded article as the app would.
+
 ## 2026-10-17 — Every kind of thing is drawn on both the map and the timeline
 Bob wants polities, ideas and every other kind of thing to have a representation of its own on the map **and** on the timeline. No kind is timeline-only or map-only. The representations table in `docs/vision.md` now has a row for every kind `subjects.ts` knows, adding works, places, plain events and battles, with a map and a timeline column filled in for each. A new kind needs both columns before it gets a row.
 

@@ -11,10 +11,11 @@ AI output varies from run to run, so `check:quiet` (which must stay free, offlin
 ```
 tests/ai-evals/<feature>/
   cases.yaml        requests plus properties that must hold (Promptfoo format)
+  run.ts            runCase(vars, opts) → { doc, output }: runs one case through the feature's own code
   results.json      the committed baseline: score per case, model, prompt version
   recordings/       raw responses from passing runs; unit and e2e tests replay these
 ```
-Prompts live in `src/ai/<feature>/prompt.md` with a version line at the top.
+Prompts live in `src/ai/<feature>/prompt.md` with a version line at the top. The `highlight` cases also keep their recorded articles in `articles/` (as the reader's text model sees them; re-record with `node scripts/record-article-text.mjs <Key>`) and the doc they run on in `doc.json`.
 
 ## 1. Run
 Costs money and needs a network, so it is never in `check:quiet` and never auto-allowed: confirm with Bob before the first run in a session.
