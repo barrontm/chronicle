@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import {
-  classesToFetch, classify, findInChronicle, linkedIds, parseClassParents, parseSubjectEntity, subjectPartOf, subjectWhen, toSubject,
+  classesToFetch, classify, findInChronicle, linkedIds, parseClassParents, parseSubjectEntity, subjectFacts, subjectPartOf, subjectWhen, toSubject,
   type ClassParents, type Subject,
 } from './subjects';
 
@@ -68,6 +68,28 @@ describe('facts', () => {
   it('gives a polity’s founding and end', () => {
     const s = subjectOf('Delian_League');
     expect(subjectWhen(s)).toBe('478–403 BCE');
+  });
+});
+
+describe('the tray’s facts', () => {
+  it('starts with when, where and part of, naming each item', () => {
+    const lines = subjectFacts(subjectOf('Battle_of_Salamis'));
+    expect(lines.map((l) => l.label).slice(0, 1)).toEqual(['When']);
+    const where = lines.find((l) => l.label === 'Where')!;
+    expect(where.pin).toBe(true);
+    const partOf = lines.find((l) => l.label === 'Part of')!;
+    expect(partOf.values[0]).toMatchObject({ text: expect.stringMatching(/Persian/), qid: expect.stringMatching(/^Q\d+$/) });
+  });
+
+  it('keeps long lists short', () => {
+    const war = subjectFacts(subjectOf('Peloponnesian_War'), 2);
+    const who = war.find((l) => l.label === 'Who took part')!;
+    expect(who.values).toHaveLength(2);
+  });
+
+  it('shows coordinates when Wikidata names no place', () => {
+    const s: Subject = { qid: 'Q1', kind: 'place', labels: {}, facts: { coords: { lat: 37.97, lon: -23.72 }, partOf: [], follows: [], followedBy: [], participants: [], locations: [], government: [] } };
+    expect(subjectFacts(s)).toEqual([{ label: 'Where', values: [{ text: '37.97° N, 23.72° W' }], pin: true }]);
   });
 });
 

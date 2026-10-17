@@ -6,6 +6,10 @@
 :root {
   --bg: #eef0ec;          /* limestone */
   --panel: #fbfbf8;
+  /* Motion (docs/design.md): only change over time animates. */
+  --motion-quick: 150ms;
+  --motion-move: 400ms;
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
   --ink: #1d2b3a;         /* slate ink */
   --ink-2: #4d5b66;
   --muted: #74808a;
@@ -171,6 +175,36 @@ button, input, select, textarea { font: inherit; color: inherit; }
 /* Docked at the bottom, clear of the phone's own selection menu near the text. */
 .highlight-tool.docked { left: 50%; top: auto; bottom: calc(16px + env(safe-area-inset-bottom)); transform: translateX(-50%); }
 .highlight-tool.docked .btn { padding: 10px 22px; font-size: 16px; }
+/* The capture tray: sticks to the bottom of the reader, the full width of its column. */
+/* Sticky offsets count from inside the reader's padding, so `bottom` cancels it. */
+.tray { position: sticky; bottom: -48px; z-index: 5; margin: 24px -32px -48px; background: var(--panel); border-top: 1px solid var(--rule); box-shadow: 0 -12px 28px -20px rgb(0 0 0 / 0.35); font-family: var(--font-ui); }
+.tray-bar { display: flex; align-items: center; gap: 10px; padding: 10px 32px; min-height: 44px; font-size: 13px; color: var(--ink-2); }
+.tray-bar .msg { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tray-card { --c: var(--pig-umber); padding: 14px 32px 16px; max-height: min(420px, 55vh); overflow-y: auto; font-size: 13px; animation: tray-rise var(--motion-move) var(--ease); }
+@keyframes tray-rise { from { transform: translateY(24px); opacity: 0; } }
+.tray-card .q { margin: 0; padding: 0 0 0 10px; border-left: 3px solid var(--c); font: italic 15px/1.45 var(--font-read); color: var(--ink); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.tray-card .src { margin: 4px 0 10px 13px; font-size: 11.5px; color: var(--muted); }
+.tray-card .becomes { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; align-items: start; gap: 8px; padding: 9px 0 8px; border-top: 1px solid var(--rule-soft); }
+.tray-card .glyph { width: 18px; height: 18px; color: var(--c); display: block; margin-top: 2px; }
+.tray-card .becomes .kind { display: block; font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); }
+.tray-card .becomes strong { display: block; font: 500 17px/1.25 var(--font-read); }
+.tray-card .tag { font: 500 10px/1 var(--font-ui); letter-spacing: 0.04em; padding: 3px 5px; border-radius: 3px; white-space: nowrap; color: var(--ink-2); border: 1px solid var(--rule); }
+.tray-card .tag.have { background: var(--rule-soft); border-color: transparent; }
+.tray-card .facts { margin: 0 0 8px; display: grid; gap: 3px; }
+.tray-card .fact { display: grid; grid-template-columns: 92px minmax(0, 1fr); gap: 8px; align-items: baseline; }
+.tray-card .fact dt { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+.tray-card .fact dd { margin: 0; font: 15px/1.35 var(--font-read); min-width: 0; }
+.tray-card .fact .have { text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--c) 60%, transparent); text-underline-offset: 3px; }
+.tray-card .fact .pin { color: var(--muted); font: 11.5px var(--font-ui); }
+.tray-note { margin: 0 0 10px; font: italic 13.5px/1.4 var(--font-read); color: var(--muted); }
+.dimpick { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; padding: 8px 0 10px; border-top: 1px solid var(--rule-soft); }
+.dimpick .lbl { width: 100%; font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+.dimpick button { width: 28px; height: 28px; padding: 0; border: 1px solid var(--rule); background: var(--panel); border-radius: 4px; cursor: pointer; display: grid; place-items: center; }
+.dimpick button i { width: 14px; height: 14px; background: var(--d); border-radius: 2px; }
+.dimpick button[aria-pressed='true'] { border-color: var(--d); box-shadow: 0 0 0 1px var(--d); }
+.dimpick .dn { margin-left: 6px; font-size: 12.5px; color: var(--ink-2); }
+.cardacts { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.cardacts .link { border: 0; background: none; color: var(--muted); padding: 7px 4px; margin-left: auto; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; font: inherit; }
 .trail { display: flex; align-items: center; gap: 2px; min-width: 0; overflow: hidden; font-size: 13px; }
 .trail-step { border: 0; background: none; color: var(--muted); padding: 2px 4px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 18ch; border-radius: var(--radius-s); }
 .trail-step + .trail-step::before { content: '›'; margin-right: 6px; color: var(--muted); }
@@ -183,6 +217,10 @@ button, input, select, textarea { font: inherit; color: inherit; }
   .reader { border-right: 0; padding: 16px 16px 96px; } /* room below the text for the docked Highlight button */
   .reader-title { font-size: 26px; }
   .reader-text { font-size: 17px; }
+  .tray { bottom: -96px; margin: 24px -16px -96px; border-radius: 14px 14px 0 0; padding-bottom: env(safe-area-inset-bottom); }
+  .tray::before { content: ''; display: block; width: 36px; height: 4px; margin: 6px auto 0; border-radius: 2px; background: var(--rule); }
+  .tray-bar, .tray-card { padding-left: 16px; padding-right: 16px; }
+  .tray-card { max-height: 58vh; }
   .trail { order: 10; width: 100%; }
 }
 
@@ -357,6 +395,10 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .figure figcaption a { color: inherit; }
 .linklist { list-style: none; margin: 0; padding: 0; }
 .linklist li { border-top: 1px solid var(--rule-soft); }
+.linklist strong.quote { font: italic 400 15px/1.4 var(--font-read); }
+.highlight-group h3 { margin: 14px 0 2px; }
+.highlight-group h3 button { background: none; border: 0; padding: 0; font: inherit; color: inherit; cursor: pointer; text-align: left; }
+.highlight-group h3 button:hover { text-decoration: underline; }
 .linklist li:first-child { border-top: 0; }
 .linklist button, .linklist .static { display: block; width: 100%; text-align: left; background: none; border: 0; padding: 7px 0; cursor: pointer; }
 .linklist button:hover strong { text-decoration: underline; }

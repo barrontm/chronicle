@@ -243,7 +243,7 @@ async function reader(p, prefix) {
   await p.getByTestId('article').locator('.reader-text').waitFor();
   await p.waitForTimeout(800);
   await shot(p, `${prefix}-reader`);
-  if (any(`${prefix}-reader-highlight`)) await readerHighlight(p, prefix);
+  if (any(`${prefix}-reader-highlight`) || any(`${prefix}-reader-tray`)) await readerHighlight(p, prefix);
 }
 
 // Highlighting: one kept highlight, one just made, and (on the laptop) a selection with its button.
@@ -277,8 +277,13 @@ async function readerHighlight(p, prefix) {
   await p.keyboard.press('Escape');
   await highlight('Initially inconclusive', 'Initially inconclusive');
   if (prefix !== 'phone') await where('allowed the Spartan', 'allowed the Spartan', true);
-  await p.waitForTimeout(300);
+  await p.waitForTimeout(600); // the tray's card rises in over 400 ms
   await shot(p, `${prefix}-reader-highlight`);
+  // The capture tray with a dimension picked, and no selection.
+  await p.evaluate(() => getSelection().removeAllRanges());
+  await p.getByTestId('capture-tray').getByRole('button', { name: 'Political' }).click();
+  await p.waitForTimeout(500);
+  await shot(p, `${prefix}-reader-tray`);
 }
 if (any('desktop-reader')) await reader(await page('desktop-reader', desktop), 'desktop');
 if (any('dark-reader')) await reader(await page('dark-reader', { ...desktop, colorScheme: 'dark' }), 'dark');
