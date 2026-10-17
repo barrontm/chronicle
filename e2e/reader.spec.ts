@@ -48,7 +48,9 @@ async function mockArticles(page: Page) {
     const key = decodeURIComponent(new URL(route.request().url()).pathname.split('/').at(-2) ?? '');
     const title = key.replace(/_/g, ' ');
     const body = key === 'Pericles'
-      ? '<p>Pericles led Athens in the early years of the war. He died of the plague in 429 BC.</p>'
+      ? '<p>Pericles led Athens in the early years of the war. He died of the plague in 429 BC.</p>' +
+        '<p>He took Athens into the <a rel="mw:WikiLink" href="./Peloponnesian_War" title="Peloponnesian War">Peloponnesian War</a> ' +
+        'against <a rel="mw:WikiLink" href="./Sparta" title="Sparta">Sparta</a>.</p>'
       : '<p>The war was fought between <a rel="mw:WikiLink" href="./Pericles" title="Pericles">Pericles</a>’ Athens and Sparta, ' +
         'and among the allies of the <a rel="mw:WikiLink" href="./Delian_League" title="Delian League">Delian League</a>.' +
         '<sup class="mw-ref reference"><a href="./Peloponnesian_War#cite_note-1"><span class="mw-reflink-text">[1]</span></a></sup></p>' +
@@ -59,13 +61,15 @@ async function mockArticles(page: Page) {
   });
 }
 
+const QIDS: Record<string, string> = { Pericles: 'Q80398', Peloponnesian_War: 'Q33745', Sparta: 'Q5690' };
+
 /** The page summaries "Add to map and timeline" starts from. */
 async function mockSummaries(page: Page) {
   await page.route('https://en.wikipedia.org/api/rest_v1/page/summary/**', (route) => {
     const key = decodeURIComponent(new URL(route.request().url()).pathname.split('/').at(-1) ?? '');
     return route.fulfill({ headers: cors, json: {
-      title: key.replace(/_/g, ' '), wikibase_item: key === 'Pericles' ? 'Q80398' : undefined,
-      extract: 'Pericles was a Greek statesman.', content_urls: { desktop: { page: `https://en.wikipedia.org/wiki/${key}` } },
+      title: key.replace(/_/g, ' '), wikibase_item: QIDS[key],
+      extract: `${key.replace(/_/g, ' ')} is in the Greek past.`, content_urls: { desktop: { page: `https://en.wikipedia.org/wiki/${key}` } },
     } });
   });
 }
@@ -315,7 +319,8 @@ test('the capture tray keeps a highlight, gives it a dimension, and adds the art
   // The tray says what the article is, with its facts.
   const tray = page.getByTestId('capture-tray');
   await expect(tray.getByRole('blockquote')).toHaveText(`“${quote}”`);
-  await expect(tray).toContainText('Becomes · Person');
+  await expect(tray).toContainText('Becomes · the article’s subject');
+  await expect(tray.getByRole('radio', { name: /Pericles/ })).toContainText('This article · Person');
   await expect(tray).toContainText('494–429 BCE');
 
   // A dimension recolors the mark; keeping it closes the card and leaves a kept mark.
@@ -342,7 +347,7 @@ test('the capture tray keeps a highlight, gives it a dimension, and adds the art
   await expect(entry.getByTestId('excerpt')).toContainText('Political');
   // The card now says it's on the entry; closing it leaves an added mark.
   if (phone) await page.getByRole('button', { name: 'Close panel' }).click(); // the entry's sheet covers the reader
-  await expect(tray).toContainText('Already in Chronicle · Person');
+  await expect(tray.getByRole('radio', { name: /Pericles/ })).toContainText('Linked');
   await tray.getByRole('button', { name: 'Done' }).click();
   await expect.poll(() => marks(page)).toEqual([`chronicle-mark-lapis-added: ${quote}`]);
   await expect(tray.getByRole('status')).toHaveText('1 highlight in this article · 1 on your map and timeline');
@@ -354,4 +359,82 @@ test('the capture tray keeps a highlight, gives it a dimension, and adds the art
   const group = page.getByTestId('highlight-group');
   await expect(group.getByRole('heading')).toHaveText('Pericles');
   await expect(group).toContainText('Political · on Pericles');
+});
+
+test('a highlight becomes a page its passage links: pick the war, add it, and see the highlight on it @phone', async ({ page }, info) => {
+  const phone = info.project.name.includes('phone');
+  await mockArticles(page);
+  await mockSummaries(page);
+  await open(page);
+  await page.getByRole('button', { name: 'More' }).click();
+  await page.getByRole('menuitemcheckbox', { name: 'Try the new layout' }).click();
+  await search(page, 'pericles', 'Pericles');
+  const reader = page.getByTestId('reader');
+  await expect(reader.getByRole('link', { name: 'Peloponnesian War' })).toBeVisible();
+
+  const quote = 'He took Athens into the Peloponnesian War against Sparta.';
+  const highlight = async () => {
+    const at = await findText(page, 'took Athens');
+    if (phone) { await page.touchscreen.tap(at.x, at.y); return; }
+    await page.evaluate(() => {
+      const p = [...document.querySelectorAll('.reader-text p')].find((x) => x.textContent!.includes('took Athens'))!;
+      const r = document.createRange();
+      r.selectNodeContents(p);
+      getSelection()!.removeAllRanges();
+      getSelection()!.addRange(r);
+    });
+    await expect(page.getByRole('button', { name: 'Highlight' })).toBeVisible();
+    await page.keyboard.press('h');
+  };
+  await highlight();
+
+  // The article's subject first, then the pages the passage links; the war is chosen first.
+  const tray = page.getByTestId('capture-tray');
+  await expect(tray.getByRole('blockquote')).toHaveText(`“${quote}”`);
+  await expect(tray).toContainText('Becomes · 3 in this passage, pick one');
+  const radios = tray.getByRole('radio');
+  await expect(radios).toHaveCount(3);
+  await expect(radios.nth(0)).toContainText('PericlesThis article · Person');
+  await expect(radios.nth(1)).toContainText('Peloponnesian WarWar');
+  await expect(radios.nth(2)).toContainText('SpartaPolity');
+  const war = tray.getByRole('radio', { name: /Peloponnesian War/ });
+  await expect(war).toHaveAttribute('aria-checked', 'true');
+  await expect(tray).toContainText('431 BCE – 25 Apr 404 BCE');
+
+  // Sparta is a polity: it can't be added from here, and the card says why.
+  await tray.getByRole('radio', { name: /Sparta/ }).click();
+  await expect(tray).toContainText('Polities come from the territory tools');
+  await expect(tray.getByRole('button', { name: 'Add to map and timeline' })).toHaveCount(0);
+
+  // Back to the war: it's added, quoting the highlight and citing the article Bob read.
+  await war.click();
+  await tray.getByRole('button', { name: 'Add to map and timeline' }).click();
+  const editor = page.getByTestId('item-editor');
+  await expect(editor.getByLabel('Title')).toHaveValue('Peloponnesian War');
+  await expect(editor.getByTestId('excerpt')).toContainText(quote);
+  await editor.getByRole('button', { name: 'Add to timeline' }).click();
+  const entry = page.getByTestId('item-view');
+  await expect(entry.getByRole('heading', { name: 'Peloponnesian War' })).toBeVisible();
+  await expect(entry.getByTestId('excerpt')).toContainText(quote);
+  if (phone) await page.getByRole('button', { name: 'Close panel' }).click();
+  await expect(war).toContainText('Linked');
+  await tray.getByRole('button', { name: 'Done' }).click();
+
+  // Offline after a reload, the candidates still say what they are, and the war keeps the highlight.
+  await expect(page.getByTestId('save-state')).toHaveText('Saved on this device');
+  await page.reload();
+  await expect(reader.getByText('Pericles led Athens')).toBeVisible();
+  await page.context().setOffline(true);
+  const at = await findText(page, 'took Athens');
+  if (phone) await page.touchscreen.tap(at.x, at.y);
+  else await page.mouse.click(at.x, at.y);
+  await expect(tray.getByRole('radio', { name: /Sparta/ })).toContainText('Polity');
+  await expect(war).toHaveAttribute('aria-checked', 'true');
+  await expect(war).toContainText('Linked');
+  await page.context().setOffline(false);
+
+  // The Library lists it on the war.
+  await page.getByRole('button', { name: 'Library' }).click();
+  await page.getByRole('tab', { name: /Highlights/ }).click();
+  await expect(page.getByTestId('highlight-group')).toContainText('on Peloponnesian War');
 });

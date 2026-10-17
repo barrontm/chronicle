@@ -211,19 +211,28 @@ button, input, select, textarea { font: inherit; color: inherit; }
 @keyframes tray-rise { from { transform: translateY(24px); opacity: 0; } }
 .tray-card .q { margin: 0; padding: 0 0 0 10px; border-left: 3px solid var(--c); font: italic 15px/1.45 var(--font-read); color: var(--ink); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 .tray-card .src { margin: 4px 0 10px 13px; font-size: 11.5px; color: var(--muted); }
-.tray-card .becomes { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; align-items: start; gap: 8px; padding: 9px 0 8px; border-top: 1px solid var(--rule-soft); }
-.tray-card .glyph { width: 18px; height: 18px; color: var(--c); display: block; margin-top: 2px; }
-.tray-card .becomes .kind { display: block; font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); }
-.tray-card .becomes strong { display: block; font: 500 17px/1.25 var(--font-read); }
+.tray-card .becomes { padding: 9px 0 0; border-top: 1px solid var(--rule-soft); }
+.tray-card .becomes > .lbl { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); margin-bottom: 6px; }
+.tray-card .becomes > .lbl span { text-transform: none; letter-spacing: 0; font-size: 11.5px; }
+.tray-card .cands { display: grid; gap: 2px; margin: 0 -8px 8px -6px; }
+.tray-card .cand { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; align-items: center; gap: 8px; width: 100%; min-height: 34px; text-align: left; border: 1px solid transparent; background: none; border-radius: 5px; padding: 4px 8px 4px 6px; color: inherit; font: inherit; cursor: pointer; }
+.tray-card .cand:hover { background: color-mix(in srgb, var(--ink) 4%, transparent); }
+.tray-card .cand[aria-checked="true"] { border-color: color-mix(in srgb, var(--c) 50%, var(--rule)); background: color-mix(in srgb, var(--c) 7%, var(--panel)); }
+.tray-card .cand .line { display: block; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tray-card .cand .ct { font: 500 15.5px/1.4 var(--font-read); }
+.tray-card .cand .ck { font-size: 11.5px; color: var(--muted); margin-left: 6px; }
+.tray-card .glyph { width: 18px; height: 18px; color: var(--c); display: block; }
+.tray-card .tag.linked { background: var(--ink); border-color: var(--ink); color: var(--panel); }
 .tray-card .tag { font: 500 10px/1 var(--font-ui); letter-spacing: 0.04em; padding: 3px 5px; border-radius: 3px; white-space: nowrap; color: var(--ink-2); border: 1px solid var(--rule); }
 .tray-card .tag.have { background: var(--rule-soft); border-color: transparent; }
-.tray-card .facts { margin: 0 0 8px; display: grid; gap: 3px; }
+.tray-card .facts { margin: 0 0 8px 30px; display: grid; gap: 3px; }
 .tray-card .fact { display: grid; grid-template-columns: 92px minmax(0, 1fr); gap: 8px; align-items: baseline; }
 .tray-card .fact dt { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
 .tray-card .fact dd { margin: 0; font: 15px/1.35 var(--font-read); min-width: 0; }
 .tray-card .fact .have { text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--c) 60%, transparent); text-underline-offset: 3px; }
 .tray-card .fact .pin { color: var(--muted); font: 11.5px var(--font-ui); }
 .tray-note { margin: 0 0 10px; font: italic 13.5px/1.4 var(--font-read); color: var(--muted); }
+.tray-card .becomes .tray-note { margin-left: 30px; }
 .dimpick { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; padding: 8px 0 10px; border-top: 1px solid var(--rule-soft); }
 .dimpick .lbl { width: 100%; font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
 .dimpick button { width: 28px; height: 28px; padding: 0; border: 1px solid var(--rule); background: var(--panel); border-radius: 4px; cursor: pointer; display: grid; place-items: center; }

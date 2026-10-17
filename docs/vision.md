@@ -24,14 +24,20 @@ Nothing appears until Bob has read and highlighted it. The app still ships no co
 ## Representations
 One module per subject type in `src/ui/representations/`, each declaring its timeline glyph, map layers and animation.
 
+Every kind of thing has a representation on both the timeline and the map (Bob, 2026-10-17). A kind needs both columns filled in before it gets a row.
+
 | Subject | Timeline | Map | Animation |
 |---|---|---|---|
 | Era/period | band with theme chips | tinted extent | crossfade between eras |
 | Polity | lifespan bar, split by regime | territory, styled by regime | border morph; power-structure diagram morphs between regimes |
 | Economy | economic lane as a sector streamgraph | production sites, trade flows of goods | sectors grow and shrink; goods flow |
 | War | span with battle ticks | campaign routes, battle pins | routes draw in, battles pulse |
+| Battle | tick on its war's span (a point of its own when it has no war) | battle pin | pulses in its year |
+| Event | point, or a short span | pin at its place | a ring when its year arrives |
 | Person | lifeline | born/died/active pins | none |
 | Technology | point, tech tree | diffusion pins | spread wave as the year plays |
+| Work (book, play, artwork, building) | point at its making, linked to its maker's lifeline | pin where it was made or stands | none |
+| Place (city, site, region) | lifespan bar from founding to abandonment, when known | pin or outline | fades in when founded, out when abandoned |
 | Migration | span | flow arrows | moving dashes |
 | Movement/idea | span; reception threads per region (thin where lost, bright where revived) | influence arcs; regions tinted by reception; transmission arrows | arcs spread outward; threads brighten on revival |
 | Institution (school, university) | lifespan bar, split by structure | pin | structure diagram morphs between snapshots |

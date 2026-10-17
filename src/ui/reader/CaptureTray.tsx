@@ -1,5 +1,6 @@
 import { useLayoutEffect, useRef, useState } from 'react';
-import { KIND_LABEL, findInChronicle, subjectFacts } from '../../model/subjects';
+import { firstChoice } from '../../model/passage';
+import { KIND_LABEL, findInChronicle, subjectFacts, type Subject, type SubjectKind } from '../../model/subjects';
 import { DIMENSIONS, type Dimension, type Highlight } from '../../model/types';
 import { useDoc } from '../DocContext';
 import { DIMENSION_LABEL } from '../util';
@@ -10,20 +11,42 @@ import type { SubjectState } from './useSubject';
 
 type Marks = ReturnType<typeof useHighlighting>;
 
+interface Row {
+  key: string;
+  state: SubjectState;
+  subject?: Subject;
+  /** The article's own subject. */
+  own: boolean;
+  have?: { id: string; title: string };
+  ref?: RecordRef;
+  /** This highlight is already on the record Bob has. */
+  linked: boolean;
+  title: string;
+}
+
+/** Kinds that can't be drawn from Wikipedia yet, and why (docs/design.md, Becomes). */
+const CANT_ADD: Partial<Record<SubjectKind, string>> = {
+  place: 'A place on its own isn’t an event. Keep the highlight, or highlight what happened there.',
+  idea: 'Ideas can’t be drawn on the map and timeline yet. Keep the highlight.',
+  polity: 'Polities come from the territory tools for now. Keep the highlight.',
+};
+
 const pigment = (d?: Dimension) => `var(--pig-${PIGMENT[d ?? 'none']})`;
 
 /**
  * The capture tray under the reader's text. With a highlight open it shows
- * the card: the quote, what the article is, its facts, a dimension and what
- * to do with it. Otherwise one line counts the article's highlights. Closing
+ * the card: the quote, what it could become (the article's subject and the
+ * pages the passage links, one chosen), the chosen one's facts, a dimension
+ * and what to do with it. Otherwise one line counts the article's highlights. Closing
  * the card, or moving on, keeps the highlight as it is.
  */
-export function CaptureTray({ marks, subject, articleTitle, onAdd, onOpenRecord }: {
+export function CaptureTray({ marks, candidates, articleTitle, onAdd, onOpenRecord }: {
   marks: Marks;
-  subject: SubjectState;
+  /** What the open highlight could become: the article's subject first, then the pages its passage links. */
+  candidates: { key: string; state: SubjectState }[];
   articleTitle: string;
-  /** Draft the article's subject as an entry citing this highlight. Throws with a message Bob can read. */
-  onAdd: (h: Highlight) => Promise<void>;
+  /** Draft a page as an entry citing this highlight. Throws with a message Bob can read. */
+  onAdd: (h: Highlight, key: string) => Promise<void>;
   onOpenRecord?: (r: RecordRef) => void;
 }) {
   const { doc } = useDoc();
@@ -31,6 +54,8 @@ export function CaptureTray({ marks, subject, articleTitle, onAdd, onOpenRecord 
   const [flash, setFlash] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  /** The candidate Bob picked, per highlight, this session. */
+  const [picked, setPicked] = useState<Record<string, string>>({});
   const open = marks.open;
   const openId = open?.highlight.id;
 
@@ -76,42 +101,62 @@ export function CaptureTray({ marks, subject, articleTitle, onAdd, onOpenRecord 
   const h = open.highlight;
   const section = h.anchor?.section;
   const done = (msg: string) => { setFlash(msg); marks.keep(); };
+  const inChronicle = (qid?: string) => !!qid && !!(findInChronicle(doc.items, qid) ?? findInChronicle(doc.territories, qid));
 
-  let body: React.ReactNode;
+  // Each candidate, with what Bob already has for it.
+  const rows: Row[] = candidates.map(({ key, state }, i) => {
+    const s = state.status === 'ready' ? state.subject : undefined;
+    const item = s && findInChronicle(doc.items, s.qid);
+    const territory = s && !item ? findInChronicle(doc.territories, s.qid) : undefined;
+    const have = item ?? territory;
+    return {
+      key, state, subject: s, own: i === 0, have,
+      ref: have && { type: item ? 'item' : 'territory', id: have.id },
+      linked: !!have && h.usedBy.includes(have.id),
+      title: s?.label ?? key.replace(/_/g, ' '),
+    };
+  });
+  const used = h.usedBy.length > 0;
+  const chosenKey = picked[h.id]
+    ?? rows.find((r) => r.linked)?.key
+    ?? rows.find((r, i) => i > 0 && r.subject && r.subject.qid === h.subjectQid)?.key
+    ?? rows[firstChoice(rows.map((r) => r.subject?.kind))]?.key;
+  const chosen = rows.find((r) => r.key === chosenKey) ?? rows[0];
+
+  const choose = (r: Row) => {
+    setPicked((p) => ({ ...p, [h.id]: r.key }));
+    setError(null);
+    if (r.subject) marks.setSubject(r.subject.qid);
+  };
+
+  let body: React.ReactNode = null;
   let actions: React.ReactNode;
-  const keepOnly = <button type="button" className="btn primary" onClick={() => done('Kept as a highlight.')}>Keep the highlight</button>;
-  const justKeep = <button type="button" className="btn" onClick={() => done('Kept as a highlight.')}>Just keep the highlight</button>;
+  const keepOnly = used
+    ? <button type="button" className="btn primary" onClick={() => marks.keep()}>Done</button>
+    : <button type="button" className="btn primary" onClick={() => done('Kept as a highlight.')}>Keep the highlight</button>;
+  const justKeep = used
+    ? <button type="button" className="btn" onClick={() => marks.keep()}>Done</button>
+    : <button type="button" className="btn" onClick={() => done('Kept as a highlight.')}>Just keep the highlight</button>;
+  const named = chosen?.have?.title ?? chosen?.title ?? articleTitle;
 
-  if (subject.status !== 'ready') {
+  if (!chosen || !chosen.subject) {
+    const status = chosen?.state.status ?? 'loading';
+    const what = chosen?.own ? 'this article' : named;
     body = (
-      <p className="tray-note" aria-busy={subject.status === 'loading'}>
-        {subject.status === 'loading' && 'Looking up what this article is about…'}
-        {subject.status === 'offline' && 'You’re offline. What this article is about will show when you’re back online. Your highlight is saved.'}
-        {subject.status === 'unknown' && 'Wikidata doesn’t say what this article is about, so there’s nothing to add to the map from it. Your highlight is saved.'}
+      <p className="tray-note" aria-busy={status === 'loading'}>
+        {status === 'loading' && `Looking up what ${what} is about…`}
+        {status === 'offline' && `You’re offline. What ${what} is about will show when you’re back online. Your highlight is saved.`}
+        {status === 'unknown' && `Wikidata doesn’t say what ${what} is about, so there’s nothing to add to the map from it. Your highlight is saved.`}
       </p>
     );
     actions = keepOnly;
   } else {
-    const s = subject.subject;
-    const item = findInChronicle(doc.items, s.qid);
-    const territory = item ? undefined : findInChronicle(doc.territories, s.qid);
-    const have = item ?? territory;
-    const ref: RecordRef | undefined = have && { type: item ? 'item' : 'territory', id: have.id };
-    const linked = !!have && h.usedBy.includes(have.id);
-    const title = have?.title ?? s.label ?? articleTitle;
+    const s = chosen.subject;
+    const { have, ref, linked } = chosen;
     const facts = subjectFacts(s);
-    const inChronicle = (qid?: string) => !!qid && !!(findInChronicle(doc.items, qid) ?? findInChronicle(doc.territories, qid));
-    const kind = s.kind ? KIND_LABEL[s.kind] : 'Not sure what kind';
+    const cantAdd = !have && (!s.kind || CANT_ADD[s.kind]);
     body = (
       <>
-        <div className="becomes" data-kind={s.kind}>
-          <Glyph kind={s.kind} />
-          <div>
-            <span className="kind">{have ? 'Already in Chronicle' : 'Becomes'} · {kind}</span>
-            <strong>{title}</strong>
-          </div>
-          <span className={`tag ${have ? 'have' : ''}`}>{have ? 'In Chronicle' : 'Wikidata'}</span>
-        </div>
         {facts.length > 0 && (
           <dl className="facts">
             {facts.map((f) => (
@@ -128,8 +173,8 @@ export function CaptureTray({ marks, subject, articleTitle, onAdd, onOpenRecord 
           </dl>
         )}
         <p className="tray-note">
-          {linked ? `This highlight is on ${title}.`
-            : s.kind === 'place' && !have ? 'A place on its own isn’t an event. Keep the highlight, or highlight what happened there.'
+          {linked ? `This highlight is on ${named}.`
+            : cantAdd && s.kind ? CANT_ADD[s.kind]
             : facts.length ? `All of this comes from Wikidata${facts.some((f) => f.values.some((v) => inChronicle(v.qid))) ? '; underlined names are already in Chronicle' : ''}.`
             : 'Wikidata gives no dates or places for this.'}
         </p>
@@ -138,24 +183,25 @@ export function CaptureTray({ marks, subject, articleTitle, onAdd, onOpenRecord 
     if (linked) {
       actions = (
         <>
-          {ref && onOpenRecord && <button type="button" className="btn primary" onClick={() => onOpenRecord(ref)}>Open {title}</button>}
+          {ref && onOpenRecord && <button type="button" className="btn primary" onClick={() => onOpenRecord(ref)}>Open {named}</button>}
           <button type="button" className="btn" onClick={() => marks.keep()}>Done</button>
         </>
       );
     } else if (have) {
       actions = (
         <>
-          <button type="button" className="btn primary" onClick={() => { marks.link(have.id); done(`Linked to ${title}.`); }}>Link to {title}</button>
+          <button type="button" className="btn primary" onClick={() => { marks.setSubject(s.qid); marks.link(have.id); done(`Linked to ${named}.`); }}>Link to {named}</button>
           {justKeep}
         </>
       );
-    } else if (!s.kind || s.kind === 'place') {
+    } else if (cantAdd) {
       actions = keepOnly;
     } else {
       const add = async () => {
         setBusy(true);
         setError(null);
-        try { await onAdd(h); } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
+        marks.setSubject(s.qid);
+        try { await onAdd({ ...h, subjectQid: s.qid }, chosen.key); } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
       };
       actions = (
         <>
@@ -166,12 +212,50 @@ export function CaptureTray({ marks, subject, articleTitle, onAdd, onOpenRecord 
     }
   }
 
+  const n = rows.length;
+  const becomes = (
+    <div className="becomes">
+      <div className="lbl">Becomes <span>· {n === 1 ? 'the article’s subject' : `${n} in this passage, pick one`}</span></div>
+      <div className="cands" role="radiogroup" aria-label="Becomes">
+        {rows.map((r) => {
+          const kind = r.subject?.kind;
+          const what = r.state.status === 'loading' ? 'Looking up…'
+            : r.state.status === 'offline' ? 'Needs a connection'
+            : kind ? KIND_LABEL[kind] : 'Not sure what kind';
+          const there = r.have && (r.ref?.type === 'territory' ? ' · in Chronicle as a territory' : r.have.title !== r.title ? ` · in Chronicle as ${r.have.title}` : '');
+          const line = `${r.own ? `This article · ${what}` : what}${there || ''}`;
+          return (
+            <button
+              type="button"
+              key={r.key}
+              className="cand"
+              role="radio"
+              aria-checked={r === chosen}
+              aria-label={`${r.have?.title ?? r.title}, ${line}${r.linked ? ', linked' : r.have ? ', in Chronicle' : ''}`}
+              data-kind={kind}
+              disabled={marks.readOnly}
+              onClick={() => choose(r)}
+            >
+              <Glyph kind={kind} />
+              <span className="line">
+                <span className="ct">{r.have?.title ?? r.title}</span>
+                <span className="ck">{line}</span>
+              </span>
+              {r.linked ? <span className="tag linked">Linked</span> : r.have ? <span className="tag have">In Chronicle</span> : null}
+            </button>
+          );
+        })}
+      </div>
+      {body}
+    </div>
+  );
+
   return (
     <div ref={tray} className="tray" data-testid="capture-tray">
       <article className="tray-card" aria-label="Highlight" style={{ '--c': pigment(h.dimension) } as React.CSSProperties}>
         <blockquote className="q">“{h.text}”</blockquote>
         <p className="src">{articleTitle}{section ? ` › ${section}` : ''}</p>
-        {body}
+        {becomes}
         <div className="dimpick" role="group" aria-label="Dimension">
           <span className="lbl">Dimension</span>
           {DIMENSIONS.map((d) => (
