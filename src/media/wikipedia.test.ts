@@ -106,15 +106,16 @@ describe('buildDraft', () => {
   const facts = parseEntity(entity('Q33', { P585: [time('-0490-00-00T00:00:00Z')] }), 'Q33');
 
   it('prefills an entry that cites a new Wikipedia source and quotes the intro', () => {
-    const { item, newSources } = buildDraft({ summary, facts, existingSources: [], categoryId: 'war', today: '2026-10-15' });
+    const { item, newSources, highlight } = buildDraft({ summary, facts, existingSources: [], categoryId: 'war', today: '2026-10-15' });
     expect(newSources).toHaveLength(1);
     const src = newSources[0];
     expect(src).toMatchObject({ kind: 'web', title: 'Battle of Marathon', authors: 'Wikipedia contributors', publisher: 'Wikipedia', url: 'https://en.wikipedia.org/wiki/Battle_of_Marathon', accessed: '2026-10-15' });
     expect(item).toMatchObject({
       kind: 'event', title: 'Battle of Marathon', start: { y: -489 }, categoryId: 'war', description: 'Battle in 490 BC', wikidataId: 'Q33',
-      citations: [{ sourceId: src.id }], excerpt: { text: 'The Battle of Marathon took place in 490 BC.', sourceId: src.id },
+      citations: [{ sourceId: src.id }],
       places: [{ name: 'Battle of Marathon', lat: 38.1, lon: 23.9, role: 'site' }],
     });
+    expect(highlight).toMatchObject({ text: 'The Battle of Marathon took place in 490 BC.', sourceId: src.id, usedBy: [item.id] });
   });
 
   it('reuses a source already in the bibliography', () => {

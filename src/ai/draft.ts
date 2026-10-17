@@ -1,5 +1,5 @@
 import { upsert } from '../model/doc';
-import type { Provenance, Relation, Source, TimelineDoc, TimelineItem } from '../model/types';
+import type { Highlight, Provenance, Relation, Source, TimelineDoc, TimelineItem } from '../model/types';
 
 /**
  * A set of AI-drafted records waiting for Bob. Nothing here is in the doc
@@ -12,6 +12,8 @@ export interface DraftEntry {
   item: TimelineItem;
   /** Sources the entry cites that aren't saved yet (its Wikipedia page). */
   newSources: Source[];
+  /** The page's intro, quoted; saved with the entry as a highlight. */
+  highlight?: Highlight;
   /** Claude's one-line reason, shown while reviewing and never saved. */
   why: string;
   /** Problems that stop it being accepted as it is (e.g. no date on Wikidata). */
@@ -38,7 +40,8 @@ export interface DraftSet {
 export function acceptEntry(doc: TimelineDoc, entry: DraftEntry, now = Date.now()): TimelineDoc {
   let d = doc;
   for (const s of entry.newSources) if (!d.sources.some((x) => x.id === s.id)) d = upsert(d, 'sources', s, now);
-  return upsert(d, 'items', entry.item, now);
+  d = upsert(d, 'items', entry.item, now);
+  return entry.highlight ? upsert(d, 'highlights', { ...entry.highlight, usedBy: [entry.item.id] }, now) : d;
 }
 
 /** A connection can be accepted once both its ends are on the timeline. */

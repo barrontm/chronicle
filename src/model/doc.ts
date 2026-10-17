@@ -1,8 +1,11 @@
 import { isArea, labelPoint } from '../data/geo';
 import { isValidHistDate, compareHistDate } from './dates';
 import {
+  DIMENSIONS,
   SCHEMA_VERSION,
   type Citation,
+  type Excerpt,
+  type Highlight,
   type Flow,
   type FlowCause,
   type FlowEnd,
@@ -47,6 +50,7 @@ export function createEmptyDoc(title = 'My history'): TimelineDoc {
     series: [],
     territories: [],
     flows: [],
+    highlights: [],
     notes: [],
     sources: [],
     relations: [],
@@ -83,7 +87,11 @@ export function validateItem(item: TimelineItem, categoryIds: Set<string>): stri
   for (const pl of item.places ?? []) {
     if (!Number.isFinite(pl.lat) || !Number.isFinite(pl.lon) || Math.abs(pl.lat) > 90 || Math.abs(pl.lon) > 180) p.push(`${name} has a place with invalid coordinates`);
   }
-  if (item.excerpt && !item.excerpt.text?.trim()) p.push(`${name} has an empty excerpt`);
+  if (item.dimension !== undefined && !DIMENSIONS.includes(item.dimension)) p.push(`${name} has unknown dimension "${item.dimension}"`);
+  for (const t of item.themes ?? []) {
+    if (!t.label?.trim()) p.push(`${name} has a theme with no label`);
+    if (!Array.isArray(t.highlightIds)) p.push(`${name} has a theme with malformed highlights`);
+  }
   return p;
 }
 
@@ -180,9 +188,14 @@ export function validateDoc(doc: TimelineDoc): string[] {
   const checkCitations = (owner: string, cites?: Citation[]) => {
     for (const c of cites ?? []) if (!sourceIds.has(c.sourceId)) p.push(`${owner} cites unknown source "${c.sourceId}"`);
   };
-  for (const it of doc.items) {
-    checkCitations(`"${it.title}"`, it.citations);
-    if (it.excerpt) checkCitations(`the excerpt on "${it.title}"`, [{ sourceId: it.excerpt.sourceId }]);
+  for (const it of doc.items) checkCitations(`"${it.title}"`, it.citations);
+  for (const h of doc.highlights) {
+    checkUnique(h.id);
+    if (!h.text?.trim()) p.push(`highlight ${h.id} is empty`);
+    if (!sourceIds.has(h.sourceId)) p.push(`highlight ${h.id} quotes unknown source "${h.sourceId}"`);
+    if (!Array.isArray(h.usedBy)) p.push(`highlight ${h.id} has malformed links`);
+    if (h.dimension !== undefined && !DIMENSIONS.includes(h.dimension)) p.push(`highlight ${h.id} has unknown dimension "${h.dimension}"`);
+    if (h.anchor !== undefined && typeof h.anchor?.exact !== 'string') p.push(`highlight ${h.id} has a malformed anchor`);
   }
   for (const n of doc.notes) {
     checkUnique(n.id);
@@ -204,6 +217,7 @@ export function validateDoc(doc: TimelineDoc): string[] {
     checkDrafted(`connection ${r.id}`, r.drafted);
     if (!RELATION_TYPES.includes(r.type)) p.push(`connection ${r.id} has unknown type "${r.type}"`);
     if (r.fromId === r.toId) p.push(`connection ${r.id} links an item to itself`);
+    if (r.highlightIds !== undefined && !Array.isArray(r.highlightIds)) p.push(`connection ${r.id} has malformed evidence`);
   }
   return p;
 }
@@ -230,6 +244,7 @@ export function parseDoc(json: string): TimelineDoc {
   if (r.schemaVersion === 2) r = migrate2to3(r);
   if (r.schemaVersion === 3) r = migrate3to4(r);
   if (r.schemaVersion === 4) r = migrate4to5(r);
+  if (r.schemaVersion === 5) r = migrate5to6(r);
   const doc: TimelineDoc = {
     schemaVersion: SCHEMA_VERSION,
     id: r.id ?? newId('doc'),
@@ -242,6 +257,7 @@ export function parseDoc(json: string): TimelineDoc {
     notes: r.notes ?? [],
     sources: r.sources ?? [],
     relations: r.relations ?? [],
+    highlights: r.highlights ?? [],
     deleted: r.deleted ?? {},
     updatedAt: r.updatedAt ?? Date.now(),
   };
@@ -297,6 +313,24 @@ function migrate4to5(r: Partial<TimelineDoc>): Partial<TimelineDoc> {
   return { ...r, schemaVersion: 5 };
 }
 
+/**
+ * v6 adds highlights (and dimensions, period themes, connection effects and
+ * evidence, all optional). Each entry's quoted excerpt becomes a highlight used
+ * by that entry. Its id comes from the entry's, so two devices that upgrade
+ * the same timeline make the same highlight and merging doesn't double it.
+ */
+function migrate5to6(r: Partial<TimelineDoc>): Partial<TimelineDoc> {
+  const highlights: Highlight[] = [...(r.highlights ?? [])];
+  const items = (r.items ?? []).map((it) => {
+    const { excerpt, ...rest } = it as typeof it & { excerpt?: Excerpt };
+    if (excerpt?.text?.trim() && excerpt.sourceId) {
+      highlights.push({ id: `h_${it.id}`, sourceId: excerpt.sourceId, text: excerpt.text, usedBy: [it.id], updatedAt: it.updatedAt });
+    }
+    return rest;
+  });
+  return { ...r, schemaVersion: 6, items, highlights };
+}
+
 export function serializeDoc(doc: TimelineDoc): string {
   return JSON.stringify(doc, null, 2);
 }
@@ -304,7 +338,7 @@ export function serializeDoc(doc: TimelineDoc): string {
 // ---------- Mutations (pure; return a new doc) ----------
 
 /** The collections of id'd, timestamped records inside a doc. */
-export type Collection = 'items' | 'series' | 'territories' | 'flows' | 'notes' | 'sources' | 'relations';
+export type Collection = 'items' | 'series' | 'territories' | 'flows' | 'notes' | 'sources' | 'relations' | 'highlights';
 type RecordOf<C extends Collection> = {
   items: TimelineItem;
   series: Series;
@@ -313,6 +347,7 @@ type RecordOf<C extends Collection> = {
   notes: Note;
   sources: Source;
   relations: Relation;
+  highlights: Highlight;
 }[C];
 
 export function upsert<C extends Collection>(doc: TimelineDoc, collection: C, record: RecordOf<C>, now = Date.now()): TimelineDoc {
@@ -331,6 +366,9 @@ export function upsert<C extends Collection>(doc: TimelineDoc, collection: C, re
  *  - deleting a source removes citations of it
  *  - deleting an entry unlinks its migrations; deleting a territory turns
  *    route ends there into named points, so the routes stay on the map
+ *  - deleting a record unlinks its highlights (they stay, as quotes from their source)
+ *  - deleting a source deletes the highlights quoted from it (an unattributed quote is worse than none)
+ *  - deleting a highlight drops it from connections' evidence and periods' themes
  * Notes themselves are never deleted as a side effect; your writing is kept.
  */
 export function remove(doc: TimelineDoc, collection: Collection, id: string, now = Date.now()): TimelineDoc {
@@ -368,15 +406,21 @@ export function remove(doc: TimelineDoc, collection: Collection, id: string, now
   if (collection === 'sources') {
     const strip = <T extends { citations?: Citation[]; updatedAt: number }>(r: T): T =>
       r.citations?.some((c) => c.sourceId === id) ? { ...r, citations: r.citations.filter((c) => c.sourceId !== id), updatedAt: now } : r;
-    // A quoted excerpt without its source is unattributed text, so it goes with the source.
-    const dropExcerpt = (it: TimelineItem): TimelineItem => {
-      if (it.excerpt?.sourceId !== id) return it;
-      const { excerpt: _excerpt, ...rest } = it;
-      return { ...rest, updatedAt: now };
-    };
-    next = { ...next, items: next.items.map((it) => dropExcerpt(strip(it))), notes: next.notes.map(strip) };
+    next = { ...next, items: next.items.map(strip), notes: next.notes.map(strip) };
+    for (const h of next.highlights.filter((x) => x.sourceId === id)) next = remove(next, 'highlights', h.id, now);
   }
-  return next;
+  if (collection === 'highlights') {
+    next = {
+      ...next,
+      relations: next.relations.map((r) => (r.highlightIds?.includes(id) ? { ...r, highlightIds: r.highlightIds.filter((x) => x !== id), updatedAt: now } : r)),
+      items: next.items.map((it) => (it.themes?.some((t) => t.highlightIds.includes(id))
+        ? { ...it, themes: it.themes.map((t) => ({ ...t, highlightIds: t.highlightIds.filter((x) => x !== id) })), updatedAt: now }
+        : it)),
+    };
+  } else {
+    next = { ...next, highlights: next.highlights.map((h) => (h.usedBy.includes(id) ? { ...h, usedBy: h.usedBy.filter((x) => x !== id), updatedAt: now } : h)) };
+  }
+  return { ...next, deleted: { ...next.deleted, ...deleted } };
 }
 
 /** Route ends at a deleted territory become named points where its latest borders were labeled. */
@@ -388,6 +432,11 @@ function detachTerritory(f: Flow, t: Territory | undefined, now: number): Flow {
 }
 
 // ---------- Queries ----------
+
+/** Highlights behind a record: the quotes that justify it. */
+export function highlightsFor(doc: TimelineDoc, id: string): Highlight[] {
+  return doc.highlights.filter((h) => h.usedBy.includes(id));
+}
 
 export function notesFor(doc: TimelineDoc, id: string): Note[] {
   return doc.notes.filter((n) => n.linkedIds.includes(id));
@@ -522,6 +571,7 @@ export function mergeDocs(a: TimelineDoc, b: TimelineDoc): TimelineDoc {
     notes: mergeList(a.notes, b.notes, deleted),
     sources: mergeList(a.sources, b.sources, deleted),
     relations: mergeList(a.relations, b.relations, deleted),
+    highlights: mergeList(a.highlights ?? [], b.highlights ?? [], deleted),
     deleted,
     updatedAt: Math.max(a.updatedAt, b.updatedAt),
   };

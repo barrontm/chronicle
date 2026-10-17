@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { bibliographyFor, describeRelation, newId, notesFor, relationsFor, remove, upsert, RELATION_TYPES } from '../../model/doc';
+import { bibliographyFor, describeRelation, highlightsFor, newId, notesFor, relationsFor, remove, upsert, RELATION_TYPES } from '../../model/doc';
 import { compareHistDate, formatRange, formatHistDate, toDecimalYear } from '../../model/dates';
 import type { ItemDraft } from '../../media/wikipedia';
-import type { Citation, HistDate, ItemKind, MediaRef, Relation, RelationType, Source, TimelineItem } from '../../model/types';
+import type { Citation, Highlight, HistDate, ItemKind, MediaRef, Relation, RelationType, Source, TimelineItem } from '../../model/types';
 import { useDoc } from '../DocContext';
 import { CitationsEditor, DateField, Field, RecordPicker } from '../fields';
 import { ImagePicker } from '../ImagePicker';
@@ -71,7 +71,7 @@ export function ItemView({ id, nav }: { id: string; nav: Nav }) {
       </div>
       {item.description && <p className="prose">{item.description}</p>}
       {item.places && item.places.length > 0 && <p className="meta" data-testid="item-places">{item.places.map(placeLabel).join(' · ')}</p>}
-      {item.excerpt && <Excerpt excerpt={item.excerpt} source={sources.get(item.excerpt.sourceId)} />}
+      {highlightsFor(doc, id).map((h) => <Excerpt key={h.id} excerpt={h} source={sources.get(h.sourceId)} />)}
       {item.drafted && (
         <p className="meta" data-testid="item-drafted">
           Drafted with AI ({item.drafted.model}, {item.drafted.prompt}) on {new Date(item.drafted.draftedAt).toLocaleDateString()} and accepted by you. The facts come from its sources.
@@ -209,11 +209,8 @@ export function ItemEditor({ id, init, draft: prefill, nav }: {
   const [quickSource, setQuickSource] = useState(false);
 
   const set = <K extends keyof TimelineItem>(k: K, v: TimelineItem[K]) => setDraft((d) => ({ ...d, [k]: v }));
-  const setExcerpt = (e: TimelineItem['excerpt']) => setDraft((d) => {
-    if (e) return { ...d, excerpt: e };
-    const { excerpt: _excerpt, ...rest } = d;
-    return rest;
-  });
+  // A Wikipedia draft quotes the page's intro; it's saved as a highlight unless Bob removes it.
+  const [quote, setQuote] = useState<Highlight | undefined>(prefill?.highlight);
   const needsEnd = draft.kind === 'span';
   const endBeforeStart = draft.start && draft.end && compareHistDate(draft.end, draft.start) < 0;
   const canSave = draft.title.trim() && valid.start && draft.start && valid.end && (!needsEnd || draft.end) && !endBeforeStart;
@@ -221,11 +218,12 @@ export function ItemEditor({ id, init, draft: prefill, nav }: {
   const save = () => {
     const item: TimelineItem = { ...draft, title: draft.title.trim(), end: draft.kind === 'event' ? undefined : draft.end };
     const keep = new Set(relations.map((r) => r.id));
-    const cited = new Set([...(item.citations ?? []).map((c) => c.sourceId), item.excerpt?.sourceId]);
+    const cited = new Set([...(item.citations ?? []).map((c) => c.sourceId), quote?.sourceId]);
     update((d) => {
       let next = d;
       for (const s of newSources) if (cited.has(s.id) && !next.sources.some((x) => x.id === s.id)) next = upsert(next, 'sources', s);
       next = upsert(next, 'items', item);
+      if (quote) next = upsert(next, 'highlights', { ...quote, usedBy: [item.id] });
       for (const r of initialRelations) if (!keep.has(r.id)) next = remove(next, 'relations', r.id);
       for (const r of relations) if (!initialRelations.includes(r)) next = upsert(next, 'relations', r);
       return next;
@@ -271,11 +269,11 @@ export function ItemEditor({ id, init, draft: prefill, nav }: {
         <textarea value={draft.description ?? ''} onChange={(e) => set('description', e.target.value || undefined)} rows={3} />
       </Field>
 
-      {draft.excerpt && (
+      {quote && (
         <>
           <h3>From the source</h3>
-          <Excerpt excerpt={draft.excerpt} source={doc.sources.find((x) => x.id === draft.excerpt!.sourceId)} />
-          <button type="button" className="btn small quiet" onClick={() => setExcerpt(undefined)}>Remove quote</button>
+          <Excerpt excerpt={quote} source={doc.sources.find((x) => x.id === quote.sourceId) ?? newSources.find((x) => x.id === quote.sourceId)} />
+          <button type="button" className="btn small quiet" onClick={() => setQuote(undefined)}>Remove quote</button>
         </>
       )}
 

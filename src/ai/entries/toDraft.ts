@@ -47,12 +47,12 @@ export async function toDraft(args: {
       dropped.push(`“${doc.items.find((it) => it.id === r.duplicateOf)?.title ?? name}”: already on your timeline.`);
       return;
     }
-    const { item, newSources } = r.draft;
+    const { item, newSources, highlight } = r.draft;
     if (item.wikidataId && qids.has(item.wikidataId)) { dropped.push(`“${item.title}”: the same thing as another entry in this draft.`); return; }
     if (item.wikidataId) qids.add(item.wikidataId);
     item.drafted = provenance;
     pageToId.set(e.page, item.id);
-    entries.push({ item, newSources, why: e.why, problems: problemsOf(item, catIds), status: 'pending' });
+    entries.push({ item, newSources, ...(highlight ? { highlight } : {}), why: e.why, problems: problemsOf(item, catIds), status: 'pending' });
   });
 
   const connections: DraftConnection[] = [];

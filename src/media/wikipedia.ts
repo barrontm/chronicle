@@ -1,6 +1,6 @@
 import { compareHistDate, fromWikidataTime } from '../model/dates';
 import { newId } from '../model/doc';
-import type { HistDate, ItemKind, Place, Relation, Source, TimelineItem } from '../model/types';
+import type { Highlight, HistDate, ItemKind, Place, Relation, Source, TimelineItem } from '../model/types';
 import { fetchCommonsFile, resultToMedia } from './commons';
 
 /**
@@ -62,6 +62,8 @@ export interface ItemDraft {
   newSources: Source[];
   /** Connections to entries already on the timeline, suggested by Wikidata. */
   relations?: Relation[];
+  /** The page's intro, quoted, saved as a highlight used by the entry. */
+  highlight?: Highlight;
 }
 
 export function buildSearchUrl(query: string, limit = 10): string {
@@ -282,12 +284,14 @@ export function buildDraft(args: {
     categoryId,
     description: capitalize(summary.description),
     citations: [{ sourceId: source.id }],
-    ...(summary.extract ? { excerpt: { text: summary.extract, sourceId: source.id } } : {}),
     ...(places ? { places } : {}),
     ...(summary.qid ? { wikidataId: summary.qid } : {}),
     updatedAt: 0,
   };
-  return { item, newSources: reused ? [] : [source] };
+  const highlight: Highlight | undefined = summary.extract
+    ? { id: newId('h'), sourceId: source.id, text: summary.extract, ...(summary.qid ? { subjectQid: summary.qid } : {}), usedBy: [item.id], updatedAt: 0 }
+    : undefined;
+  return { item, newSources: reused ? [] : [source], ...(highlight ? { highlight } : {}) };
 }
 
 // ---------- Network ----------

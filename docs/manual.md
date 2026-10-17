@@ -58,6 +58,8 @@ The new layout is unfinished. Everything you've saved stays the same whichever l
 
 **Add → From Wikipedia…** searches Wikipedia. Pick a page and you get a new entry filled in: kind and dates from Wikidata, places for the map, a picture with its credit, the intro as a quotation, and the page as a source. Nothing is saved until you check it and press **Add to timeline**. If you already have that entry, Chronicle tells you.
 
+The intro is kept as a **highlight**: a passage quoted from its source, shown on the entry and never mixed with your own notes. Quotes saved by earlier versions of Chronicle become highlights too when you open or import them.
+
 This needs a connection.
 
 ## Drafting with AI

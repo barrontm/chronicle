@@ -486,7 +486,7 @@ test('“How drawing works” opens the manual at territories', async ({ page })
 
 // ---------- Carrying data into later versions ----------
 
-const FIXTURE_V4 = fileURLToPath(new URL('../tests/fixtures/sample-history-v4.json', import.meta.url));
+const FIXTURE_V5 = fileURLToPath(new URL('../tests/fixtures/sample-history-v5.json', import.meta.url));
 
 /** Replace the saved doc in IndexedDB, as an older or newer version of the app would have left it. */
 async function seedSavedDoc(page: Page, doc: Record<string, unknown>) {
@@ -520,11 +520,14 @@ async function savedState(page: Page) {
 test('a timeline saved by an older version opens upgraded, with a copy kept', async ({ page }) => {
   await open(page);
   const { readFileSync } = await import('node:fs');
-  await seedSavedDoc(page, JSON.parse(readFileSync(FIXTURE_V4, 'utf8')));
+  await seedSavedDoc(page, JSON.parse(readFileSync(FIXTURE_V5, 'utf8')));
   await page.reload();
   await expect(page.getByTestId('save-state')).toHaveText('Saved on this device');
   await expect(page.locator('.vis-item', { hasText: 'Aristotle' })).toBeVisible();
-  await expect.poll(() => savedState(page)).toMatchObject({ schemaVersion: 5, backups: 1 });
+  await expect.poll(() => savedState(page)).toMatchObject({ schemaVersion: 6, backups: 1 });
+  // The v5 excerpt is now a highlight, still shown on its entry.
+  await page.locator('.vis-item', { hasText: 'Magna Carta' }).click();
+  await expect(page.getByTestId('item-view').getByTestId('excerpt')).toContainText('royal charter of rights');
 });
 
 test('an older copy of the app never overwrites data from a newer one', async ({ page }) => {

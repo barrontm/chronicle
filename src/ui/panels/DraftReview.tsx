@@ -145,7 +145,7 @@ export function DraftReview({ nav, draft, onDraft }: { nav: Nav; draft: DraftSet
                     {status === 'pending' && (
                       <>
                         {!e.problems.length && <button className="btn small primary" onClick={() => update((d) => acceptEntry(d, e))}>Accept</button>}
-                        <button className="btn small" onClick={() => nav.open({ type: 'new-item', draft: { item, newSources: e.newSources } })}>Edit first</button>
+                        <button className="btn small" onClick={() => nav.open({ type: 'new-item', draft: { item, newSources: e.newSources, highlight: e.highlight } })}>Edit first</button>
                         <button className="btn small quiet" onClick={() => setEntry(item.id, 'rejected')}>Reject</button>
                       </>
                     )}
