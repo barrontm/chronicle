@@ -24,7 +24,7 @@ Each phase ends with a **checkpoint** session (sonnet): triage the inbox, reorde
    Done when: Bob has chosen a direction for each.
 4. ✅ **Spikes** · M · opus to brief, three background sonnet agents in worktrees. (a) A custom timeline renderer with 2,000 items and the three zoom levels; (b) the reader: Parsoid HTML, DOMPurify, highlight anchoring that survives a revision, on phone and desktop; (c) border morph (flubber) and progressive route drawing on MapLibre. Each returns a short report, its numbers and a demo; nothing is merged.
    Done when: decisions on the renderer, the reader and the animation approach are in `docs/decisions.md`.
-5. **Rich fixture and gallery** · M · sonnet. A Classical Greece fixture (test data only, about 150 entries: eras, themes, highlights, territories, a war, a migration, Athens' and Sparta's regimes, an Athenian economy) built with the `draft-map-data` skill; a dev-only `/#gallery` route; `npm run shots -- --filmstrip <view>` and `--video`.
+5. ✅ **Rich fixture and gallery** · M · sonnet. A Classical Greece fixture (test data only, about 150 entries: eras, themes, highlights, territories, a war, a migration, Athens' and Sparta's regimes, an Athenian economy) built with the `draft-map-data` skill; a dev-only `/#gallery` route; `npm run shots -- --filmstrip <view>` and `--video`.
    Done when: the gallery shows the existing representations from the fixture and a filmstrip of the map playing 480→400 BCE renders as one image.
 
 ### Phase 1 — Reader

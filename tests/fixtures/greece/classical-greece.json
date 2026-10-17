@@ -1,0 +1,5691 @@
+{
+ "schemaVersion": 5,
+ "id": "doc_classical_greece",
+ "title": "Classical Greece (test fixture)",
+ "updatedAt": 1760000000000,
+ "categories": [
+  {
+   "id": "politics",
+   "label": "Politics & government",
+   "color": "var(--pig-lapis)"
+  },
+  {
+   "id": "war",
+   "label": "War & conflict",
+   "color": "var(--pig-cinnabar)"
+  },
+  {
+   "id": "ideas",
+   "label": "Philosophy & religion",
+   "color": "var(--pig-umber)"
+  },
+  {
+   "id": "science",
+   "label": "Science",
+   "color": "var(--pig-verdigris)"
+  },
+  {
+   "id": "technology",
+   "label": "Technology",
+   "color": "var(--pig-ochre)"
+  },
+  {
+   "id": "society",
+   "label": "Society & economy",
+   "color": "var(--pig-madder)"
+  },
+  {
+   "id": "arts",
+   "label": "Art & literature",
+   "color": "var(--pig-indigo)"
+  }
+ ],
+ "items": [
+  {
+   "id": "i_archaic",
+   "kind": "span",
+   "title": "Archaic Greece",
+   "start": {
+    "y": -799,
+    "approx": true
+   },
+   "categoryId": "politics",
+   "updatedAt": 1760000000000,
+   "end": {
+    "y": -479
+   },
+   "description": "City-states, colonies, tyrants and the alphabet.",
+   "tags": [
+    "era",
+    "political"
+   ]
+  },
+  {
+   "id": "i_classical",
+   "kind": "span",
+   "title": "Classical Greece",
+   "start": {
+    "y": -479
+   },
+   "categoryId": "politics",
+   "updatedAt": 1760000000000,
+   "end": {
+    "y": -322
+   },
+   "description": "From Salamis to the death of Alexander.",
+   "citations": [
+    {
+     "sourceId": "s_wp_classical_greece"
+    }
+   ],
+   "tags": [
+    "era",
+    "political"
+   ]
+  },
+  {
+   "id": "i_pentecontaetia",
+   "kind": "span",
+   "title": "The Fifty Years",
+   "start": {
+    "y": -478
+   },
+   "categoryId": "politics",
+   "updatedAt": 1760000000000,
+   "end": {
+    "y": -430
+   },
+   "description": "Athens grows from leader of an alliance into an empire.",
+   "tags": [
+    "era",
+    "political"
+   ]
+  },
+  {
+   "id": "i_hegemonies",
+   "kind": "span",
+   "title": "Spartan and Theban supremacy",
+   "start": {
+    "y": -403
+   },
+   "categoryId": "politics",
+   "updatedAt": 1760000000000,
+   "end": {
+    "y": -361
+   },
+   "tags": [
+    "era",
+    "political"
+   ]
+  },
+  {
+   "id": "i_macedon_rises",
+   "kind": "span",
+   "title": "Macedon rises",
+   "start": {
+    "y": -358
+   },
+   "categoryId": "politics",
+   "updatedAt": 1760000000000,
+   "end": {
+    "y": -322
+   },
+   "tags": [
+    "era",
+    "political"
+   ]
+  },
+  {
+   "id": "i_hellenistic",
+   "kind": "span",
+   "title": "Hellenistic period",
+   "start": {
+    "y": -322
+   },
+   "categoryId": "politics",
+   "updatedAt": 1760000000000,
+   "end": {
+    "y": -30
+   },
+   "tags": [
+    "era",
+    "political"
+   ]
+  },
+  {
+   "id": "i_persian",
+   "kind": "span",
+   "title": "Greco-Persian Wars",
+   "start": {
+    "y": -498
+   },
+   "categoryId": "war",
+   "updatedAt": 1760000000000,
+   "end": {
+    "y": -448
+   },
+   "description": "Persia against the Greek cities, first in Ionia and then in Greece itself.",
+   "citations": [
+    {
+     "sourceId": "s_hdt"
+    },
+    {
+     "sourceId": "s_wp_greco_persian_wars"
+    }
+   ],
+   "tags": [
+    "political"
+   ]
+  },
+  {
+   "id": "i_ionian",
+   "kind": "span",
+   "title": "Ionian Revolt",
+   "start": {
+    "y": -498
+   },
+   "categoryId": "war",
+   "updatedAt": 1760000000000,
+   "end": {
+    "y": -492
+   },
+   "citations": [
+    {
+     "sourceId": "s_wp_ionian_revolt"
+    }
+   ],
+   "places": [
+    {
+     "name": "Miletus",
+     "lat": 37.53,
+     "lon": 27.28,
+     "role": "site"
+    }
+   ],
+   "tags": [
+    "political"
+   ]
+  },
+  {
+   "id": "i_lade",
+   "kind": "event",
+   "title": "Battle of Lade",
+   "start": {
+    "y": -493
+   },
+   "categoryId": "war",
+   "updatedAt": 1760000000000,
+   "citations": [
+    {
+     "sourceId": "s_wp_battle_of_lade"
+    }
+   ],
+   "places": [
+    {
+     "name": "Lade",
+     "lat": 37.5,
+     "lon": 27.3,
+     "role": "site"
+    }
+   ],
+   "tags": [
+    "political"
+   ]
+  },
+  {
+   "id": "i_marathon",
+   "kind": "event",
+   "title": "Battle of Marathon",
+   "start": {
+    "y": -489
+   },
+   "categoryId": "war",
+   "updatedAt": 1760000000000,
+   "description": "Athenians and Plataeans beat the first Persian landing.",
+   "citations": [
+    {
+     "sourceId": "s_hdt"
+    },
+    {
+     "sourceId": "s_wp_battle_of_marathon"
+    }
+   ],
+   "places": [
+    {
+     "name": "Marathon",
+     "lat": 38.117,
+     "lon": 23.96,
+     "role": "site"
+    }
+   ],
+   "tags": [
+    "political"
+   ]
+  },
+  {
+   "id": "i_darius",
+   "kind": "person",
+   "title": "Darius I",
+   "start": {
+    "y": -549
+   },
+   "categoryId": "politics",
+   "updatedAt": 1760000000000,
+   "end": {
+    "y": -485
+   },
+   "citations": [
+    {
+     "sourceId": "s_wp_darius_the_great"
+    }
+   ],
+   "tags": [
+    "political"
+   ]
+  },
+  {
+   "id": "i_xerxes",
+   "kind": "person",
+   "title": "Xerxes I",
+   "start": {
+    "y": -517
+   },
+   "categoryId": "politics",
+   "updatedAt": 1760000000000,
+   "end": {
+    "y": -464
+   },
+   "citations": [
+    {
+     "sourceId": "s_wp_xerxes_i"
+    }
+   ],
+   "tags": [
+    "political"
+   ]
+  },
+  {
+   "id": "i_xerxes_invasion",
+   "kind": "span",
+   "title": "Xerxes’ invasion",
+   "start": {
+    "y": -479
+   },
+   "categoryId": "war",
+   "updatedAt": 1760000000000,
+   "end": {
+    "y": -478
+   },
+   "description": "A great army and fleet cross the Hellespont.",
+   "citations": [
+    {
+     "sourceId": "s_hdt"
+    }
+   ],
+   "tags": [
+    "political"
+   ]
+  },
+  {
+   "id": "i_thermopylae",
+   "kind": "event",
+   "title": "Battle of Thermopylae",
+   "start": {
+    "y": -479
+   },
+   "categoryId": "war",
+   "updatedAt": 1760000000000,
+   "citations": [
+    {
+     "sourceId": "s_hdt"
+    },
+    {
+     "sourceId": "s_wp_battle_of_thermopylae"
+    }
+   ],
+   "places": [
+    {
+     "name": "Thermopylae",
+     "lat": 38.797,
+     "lon": 22.536,
+     "role": "site"
+    }
+   ],
+   "tags": [
+    "political"
+   ]
+  },
+  {
+   "id": "i_artemisium",
+   "kind": "event",
+   "title": "Battle of Artemisium",
+   "start": {
+    "y": -479
+   },
+   "categoryId": "war",
+   "updatedAt": 1760000000000,
+   "citations": [
+    {
+     "sourceId": "s_wp_battle_of_artemisium"
+    }
+   ],
+   "places": [
+    {
+     "name": "Cape Artemisium",
+     "lat": 39.05,
+     "lon": 23.2,
+     "role": "site"
+    }
+   ],
+   "tags": [
+    "political"
+   ]
+  },
+  {
+   "id": "i_salamis",
+   "kind": "event",
+   "title": "Battle of Salamis",
+   "start": {
+    "y": -479
+   },
+   "categoryId": "war",
+   "updatedAt": 1760000000000,
+   "description": "The Greek fleet wins in the narrow strait.",
+   "citations": [
+    {
+     "sourceId": "s_hdt"
+    },
+    {
+     "sourceId": "s_wp_battle_of_salamis"
+    }
+   ],
+   "places": [
+    {
+     "name": "Salamis",
+     "lat": 37.95,
+     "lon": 23.5,
+     "role": "site"
+    }
+   ],
+   "tags": [
+    "political"
+   ]
+  },
+  {
+   "id": "i_plataea",
+   "kind": "event",
+   "title": "Battle of Plataea",
+   "start": {
+    "y": -478
+   },
+   "categoryId": "war",
+   "updatedAt": 1760000000000,
+   "citations": [
+    {
+     "sourceId": "s_hdt"
+    },
+    {
+     "sourceId": "s_wp_battle_of_plataea"
+    }
+   ],
+   "places": [
+    {
+     "name": "Plataea",
+     "lat": 38.215,
+     "lon": 23.27,
+     "role": "site"
+    }
+   ],
+   "tags": [
+    "political"
+   ]
+  },
+  {
+   "id": "i_mycale",
+   "kind": "event",
+   "title": "Battle of Mycale",
+   "start": {
+    "y": -478
+   },
+   "categoryId": "war",
+   "updatedAt": 1760000000000,
+   "citations": [
+    {
+     "sourceId": "s_wp_battle_of_mycale"
+    }
+   ],
+   "places": [
+    {
+     "name": "Mycale",
+     "lat": 37.68,
+     "lon": 27.15,
+     "role": "site"
+    }
+   ],
+   "tags": [
+    "political"
+   ]
+  },
+  {
+   "id": "i_delian_founded",
+   "kind": "event",
+   "title": "Delian League founded",
+   "start": {
+    "y": -477
+   },
+   "categoryId": "politics",
+   "updatedAt": 1760000000000,
+   "description": "Greek cities pool ships and money against Persia, with Athens in the lead.",
+   "citations": [
+    {
+     "sourceId": "s_thuc"
+    },
+    {
+     "sourceId": "s_wp_delian_league"
+    }
+   ],
+   "places": [
+    {
+     "name": "Delos",
+     "lat": 37.4,
+     "lon": 25.27,
+     "role": "site"
+    }
+   ],
+   "tags": [
+    "political"
+   ]
+  },
+  {
+   "id": "i_themistocles_ostracised",
+   "kind": "event",
+   "title": "Themistocles ostracised",
+   "start": {
+    "y": -470,
+    "approx": true
+   },
+   "categoryId": "politics",
+   "updatedAt": 1760000000000,
+   "places": [
+    {
+     "name": "Athens",
+     "lat": 37.972,
+     "lon": 23.727,
+     "role": "site"
+    }
+   ],
+   "tags": [
+    "political"
+   ]
+  },
+  {
+   "id": "i_eurymedon",
+   "kind": "event",
+   "title": "Battle of the Eurymedon",
+   "start": {
+    "y": -465,
+    "approx": true
+   },
+   "categoryId": "war",
+   "updatedAt": 1760000000000,
+   "citations": [
+    {
+     "sourceId": "s_wp_battle_of_the_eurymedon"
+    }
+   ],
+   "places": [
+    {
+     "name": "Eurymedon river",
+     "lat": 36.9,
+     "lon": 31.1,
+     "role": "site"
+    }
+   ],
+   "tags": [
+    "political"
+   ]
+  },
+  {
+   "id": "i_sparta_quake",
+   "kind": "event",
+   "title": "Earthquake at Sparta",
+   "start": {
+    "y": -463,
+    "approx": true
+   },
+   "categoryId": "society",
+   "updatedAt": 1760000000000,
+   "places": [
+    {
+     "name": "Sparta",
+     "lat": 37.075,
+     "lon": 22.43,
+     "role": "site"
+    }
+   ],
+   "tags": [
+    "social"
+   ]
+  },
+  {
+   "id": "i_helot_revolt",
+   "kind": "span",
+   "title": "Helot revolt in Messenia",
+   "start": {
+    "y": -463
+   },
+   "categoryId": "society",
+   "updatedAt": 1760000000000,
+   "end": {
+    "y": -459
+   },
+   "description": "The helots rise after the earthquake; Sparta asks Athens for help, then sends it home.",
+   "places": [
+    {
+     "name": "Mount Ithome",
+     "lat": 37.18,
+     "lon": 21.92,
+     "role": "site"
+    }
+   ],
+   "tags": [
+    "social"
+   ]
+  },
+  {
+   "id": "i_ephialtes",
+   "kind": "event",
+   "title": "Ephialtes’ reforms",
+   "start": {
+    "y": -461
+   },
+   "categoryId": "politics",
+   "updatedAt": 1760000000000,
+   "description": "The Areopagus loses most of its powers to the Council, the Assembly and the courts.",
+   "citations": [
+    {
+     "sourceId": "s_ath"
+    },
+    {
+     "sourceId": "s_wp_athenian_democracy"
+    }
+   ],
+   "places": [
+    {
+     "name": "Athens",
+     "lat": 37.972,
+     "lon": 23.727,
+     "role": "site"
+    }
+   ],
+   "tags": [
+    "political"
+   ]
+  },
+  {
+   "id": "i_cimon_ostracised",
+   "kind": "event",
+   "title": "Cimon ostracised",
+   "start": {
+    "y": -460
+   },
+   "categoryId": "politics",
+   "updatedAt": 1760000000000,
+   "tags": [
+    "political"
+   ]
+  },
+  {
+   "id": "i_long_walls",
+   "kind": "span",
+   "title": "Long Walls built",
+   "start": {
+    "y": -460,
+    "approx": true
+   },
+   "categoryId": "technology",
+   "updatedAt": 1760000000000,
+   "end": {
+    "y": -455,
+    "approx": true
+   },
+   "description": "Walls join Athens to its harbour at Piraeus.",
+   "citations": [
+    {
+     "sourceId": "s_wp_long_walls"
+    }
+   ],
+   "places": [
+    {
+     "name": "Piraeus",
+     "lat": 37.942,
+     "lon": 23.636,
+     "role": "site"
+    }
+   ],
+   "tags": [
+    "technological"
+   ]
+  },
+  {
+   "id": "i_egypt_expedition",
+   "kind": "span",
+   "title": "Athenian expedition to Egypt",
+   "start": {
+    "y": -459,
+    "approx": true
+   },
+   "categoryId": "war",
+   "updatedAt": 1760000000000,
+   "end": {
+    "y": -453
+   },
+   "description": "A fleet sent to help an Egyptian revolt is destroyed.",
+   "citations": [
+    {
+     "sourceId": "s_thuc"
+    }
+   ],
+   "tags": [
+    "political"
+   ]
+  },
+  {
+   "id": "i_tanagra",
+   "kind": "event",
+   "title": "Battle of Tanagra",
+   "start": {
+    "y": -456
+   },
+   "categoryId": "war",
+   "updatedAt": 1760000000000,
+   "places": [
+    {
+     "name": "Tanagra",
+     "lat": 38.32,
+     "lon": 23.53,
+     "role": "site"
+    }
+   ],
+   "tags": [
+    "political"
+   ]
+  },
+  {
+   "id": "i_treasury_moved",
+   "kind": "event",
+   "title": "League treasury moves to Athens",
+   "start": {
+    "y": -453
+   },
+   "categoryId": "politics",
+   "updatedAt": 1760000000000,
+   "description": "The money moves from Delos to the Acropolis, and the alliance becomes an empire.",
+   "citations": [
+    {
+     "sourceId": "s_lecture"
+    }
+   ],
+   "places": [
+    {
+     "name": "Athens",
+     "lat": 37.972,
+     "lon": 23.727,
+     "role": "site"
+    }
+   ],
+   "tags": [
+    "economic"
+   ]
+  },
+  {
+   "id": "i_citizenship_law",
+   "kind": "event",
+   "title": "Pericles’ citizenship law",
+   "start": {
+    "y": -450
+   },
+   "categoryId": "society",
+   "updatedAt": 1760000000000,
+   "description": "Citizenship needs an Athenian mother as well as father.",
+   "citations": [
+    {
+     "sourceId": "s_ath"
+    }
+   ],
+   "tags": [
+    "social"
+   ]
+  },
+  {
+   "id": "i_callias",
+   "kind": "event",
+   "title": "Peace of Callias",
+   "start": {
+    "y": -448,
+    "approx": true
+   },
+   "categoryId": "politics",
+   "updatedAt": 1760000000000,
+   "description": "A peace with Persia, if it happened; ancient writers disagree.",
+   "citations": [
+    {
+     "sourceId": "s_wp_peace_of_callias"
+    }
+   ],
+   "tags": [
+    "political"
+   ]
+  },
+  {
+   "id": "i_juror_pay",
+   "kind": "span",
+   "title": "Pay for jurors begins",
+   "start": {
+    "y": -449,
+    "approx": true
+   },
+   "categoryId": "society",
+   "updatedAt": 1760000000000,
+   "end": {
+    "y": -448,
+    "approx": true
+   },
+   "description": "Poorer citizens can afford to sit on juries.",
+   "tags": [
+    "social"
+   ]
+  },
+  {
+   "id": "i_parthenon_built",
+   "kind": "span",
+   "title": "Parthenon built",
+   "start": {
+    "y": -446
+   },
+   "categoryId": "arts",
+   "updatedAt": 1760000000000,
+   "end": {
+    "y": -431
+   },
+   "description": "A marble temple to Athena, paid for from the empire’s tribute.",
+   "citations": [
+    {
+     "sourceId": "s_ober"
+    },
+    {
+     "sourceId": "s_wp_parthenon"
+    }
+   ],
+   "places": [
+    {
+     "name": "Acropolis",
+     "lat": 37.9715,
+     "lon": 23.7257,
+     "role": "site"
+    }
+   ],
+   "tags": [
+    "religious"
+   ]
+  },
+  {
+   "id": "i_propylaea",
+   "kind": "span",
+   "title": "Propylaea built",
+   "start": {
+    "y": -436
+   },
+   "categoryId": "arts",
+   "updatedAt": 1760000000000,
+   "end": {
+    "y": -431
+   },
+   "places": [
+    {
+     "name": "Acropolis",
+     "lat": 37.9715,
+     "lon": 23.7257,
+     "role": "site"
+    }
+   ],
+   "tags": [
+    "religious"
+   ]
+  },
+  {
+   "id": "i_thirty_years_peace",
+   "kind": "event",
+   "title": "Thirty Years’ Peace",
+   "start": {
+    "y": -445
+   },
+   "categoryId": "politics",
+   "updatedAt": 1760000000000,
+   "tags": [
+    "political"
+   ]
+  },
+  {
+   "id": "i_thurii",
+   "kind": "event",
+   "title": "Thurii founded",
+   "start": {
+    "y": -443
+   },
+   "categoryId": "politics",
+   "updatedAt": 1760000000000,
+   "description": "A panhellenic colony in southern Italy.",
+   "citations": [
+    {
+     "sourceId": "s_wp_thurii"
+    }
+   ],
+   "places": [
+    {
+     "name": "Thurii",
+     "lat": 39.72,
+     "lon": 16.48,
+     "role": "site"
+    }
+   ],
+   "tags": [
+    "economic"
+   ]
+  },
+  {
+   "id": "i_samian_war",
+   "kind": "span",
+   "title": "Samian War",
+   "start": {
+    "y": -439
+   },
+   "categoryId": "war",
+   "updatedAt": 1760000000000,
+   "end": {
+    "y": -438
+   },
+   "places": [
+    {
+     "name": "Samos",
+     "lat": 37.69,
+     "lon": 26.94,
+     "role": "site"
+    }
+   ],
+   "tags": [
+    "political"
+   ]
+  },
+  {
+   "id": "i_corcyra",
+   "kind": "event",
+   "title": "Dispute over Epidamnus and Corcyra",
+   "start": {
+    "y": -434
+   },
+   "categoryId": "politics",
+   "updatedAt": 1760000000000,
+   "tags": [
+    "political"
+   ]
+  },
+  {
+   "id": "i_sybota",
+   "kind": "event",
+   "title": "Battle of Sybota",
+   "start": {
+    "y": -432
+   },
+   "categoryId": "war",
+   "updatedAt": 1760000000000,
+   "places": [
+    {
+     "name": "Sybota",
+     "lat": 39.45,
+     "lon": 20.25,
+     "role": "site"
+    }
+   ],
+   "tags": [
+    "political"
+   ]
+  },
+  {
+   "id": "i_potidaea_revolt",
+   "kind": "event",
+   "title": "Potidaea revolts",
+   "start": {
+    "y": -431
+   },
+   "categoryId": "war",
+   "updatedAt": 1760000000000,
+   "places": [
+    {
+     "name": "Potidaea",
+     "lat": 40.195,
+     "lon": 23.33,
+     "role": "site"
+    }
+   ],
+   "tags": [
+    "political"
+   ]
+  },
+  {
+   "id": "i_megarian_decree",
+   "kind": "event",
+   "title": "Megarian decree",
+   "start": {
+    "y": -431
+   },
+   "categoryId": "politics",
+   "updatedAt": 1760000000000,
+   "description": "Megarian merchants are shut out of Athens’ harbours and markets.",
+   "tags": [
+    "economic"
+   ]
+  },
+  {
+   "id": "i_pelop",
+   "kind": "span",
+   "title": "Peloponnesian War",
+   "start": {
+    "y": -430
+   },
+   "categoryId": "war",
+   "updatedAt": 1760000000000,
+   "end": {
+    "y": -403
+   },
+   "description": "Athens and its empire against Sparta and the Peloponnesian League.",
+   "citations": [
+    {
+     "sourceId": "s_thuc"
+    },
+    {
+     "sourceId": "s_wp_peloponnesian_war"
+    }
+   ],
+   "tags": [
+    "political"
+   ]
+  },
+  {
+   "id": "i_archidamian",
+   "kind": "span",
+   "title": "Archidamian War",
+   "start": {
+    "y": -430
+   },
+   "categoryId": "war",
+   "updatedAt": 1760000000000,
+   "end": {
+    "y": -420
+   },
+   "description": "Sparta invades Attica each summer; Athens raids the coast.",
+   "tags": [
+    "political"
+   ]
+  },
+  {
+   "id": "i_peace_nicias",
+   "kind": "event",
+   "title": "Peace of Nicias",
+   "start": {
+    "y": -420
+   },
+   "categoryId": "politics",
+   "updatedAt": 1760000000000,
+   "citations": [
+    {
+     "sourceId": "s_thuc"
+    },
+    {
+     "sourceId": "s_wp_peace_of_nicias"
+    }
+   ],
+   "tags": [
+    "political"
+   ]
+  },
+  {
+   "id": "i_sicilian",
+   "kind": "span",
+   "title": "Sicilian Expedition",
+   "start": {
+    "y": -414
+   },
+   "categoryId": "war",
+   "updatedAt": 1760000000000,
+   "end": {
+    "y": -412
+   },
+   "description": "The greatest fleet Athens ever sent out is lost at Syracuse.",
+   "citations": [
+    {
+     "sourceId": "s_thuc"
+    },
+    {
+     "sourceId": "s_wp_sicilian_expedition"
+    }
+   ],
+   "tags": [
+    "political"
+   ]
+  },
+  {
+   "id": "i_decelean",
+   "kind": "span",
+   "title": "Decelean War",
+   "start": {
+    "y": -412
+   },
+   "categoryId": "war",
+   "updatedAt": 1760000000000,
+   "end": {
+    "y": -403
+   },
+   "tags": [
+    "political"
+   ]
+  },
+  {
+   "id": "i_funeral_oration",
+   "kind": "event",
+   "title": "Pericles’ funeral oration",
+   "start": {
+    "y": -430
+   },
+   "categoryId": "ideas",
+   "updatedAt": 1760000000000,
+   "description": "A speech over the first year’s dead, praising Athens and its way of life.",
+   "citations": [
+    {
+     "sourceId": "s_thuc"
+    }
+   ],
+   "places": [
+    {
+     "name": "Athens",
+     "lat": 37.972,
+     "lon": 23.727,
+     "role": "site"
+    }
+   ],
+   "tags": [
+    "political"
+   ]
+  },
+  {
+   "id": "i_plague",
+   "kind": "span",
+   "title": "Plague of Athens",
+   "start": {
+    "y": -429
+   },
+   "categoryId": "society",
+   "updatedAt": 1760000000000,
+   "end": {
+    "y": -425
+   },
+   "description": "Crowded behind the walls, perhaps a quarter of the people die.",
+   "citations": [
+    {
+     "sourceId": "s_thuc"
+    },
+    {
+     "sourceId": "s_wp_plague_of_athens"
+    }
+   ],
+   "places": [
+    {
+     "name": "Athens",
+     "lat": 37.972,
+     "lon": 23.727,
+     "role": "site"
+    }
+   ],
+   "tags": [
+    "social"
+   ]
+  },
+  {
+   "id": "i_herms",
+   "kind": "event",
+   "title": "Herms mutilated",
+   "start": {
+    "y": -414
+   },
+   "categoryId": "ideas",
+   "updatedAt": 1760000000000,
+   "description": "In one night the stone herms of Athens are defaced, just before the fleet sails.",
+   "places": [
+    {
+     "name": "Athens",
+     "lat": 37.972,
+     "lon": 23.727,
+     "role": "site"
+    }
+   ],
+   "tags": [
+    "religious"
+   ]
+  },
+  {
+   "id": "i_alcibiades_defects",
+   "kind": "event",
+   "title": "Alcibiades defects to Sparta",
+   "start": {
+    "y": -414
+   },
+   "categoryId": "politics",
+   "updatedAt": 1760000000000,
+   "tags": [
+    "political"
+   ]
+  },
+  {
+   "id": "i_four_hundred",
+   "kind": "event",
+   "title": "Rule of the Four Hundred",
+   "start": {
+    "y": -410
+   },
+   "categoryId": "politics",
+   "updatedAt": 1760000000000,
+   "description": "An oligarchic coup replaces the democracy for a few months.",
+   "citations": [
+    {
+     "sourceId": "s_ath"
+    }
+   ],
+   "places": [
+    {
+     "name": "Athens",
+     "lat": 37.972,
+     "lon": 23.727,
+     "role": "site"
+    }
+   ],
+   "tags": [
+    "political"
+   ]
+  },
+  {
+   "id": "i_arginusae_trial",
+   "kind": "event",
+   "title": "Trial of the generals",
+   "start": {
+    "y": -405
+   },
+   "categoryId": "politics",
+   "updatedAt": 1760000000000,
+   "description": "Six victorious generals are executed together for not rescuing the sailors.",
+   "places": [
+    {
+     "name": "Athens",
+     "lat": 37.972,
+     "lon": 23.727,
+     "role": "site"
+    }
+   ],
+   "tags": [
+    "social"
+   ]
+  },
+  {
+   "id": "i_thirty",
+   "kind": "event",
+   "title": "The Thirty take power",
+   "start": {
+    "y": -403
+   },
+   "categoryId": "politics",
+   "updatedAt": 1760000000000,
+   "description": "A pro-Spartan oligarchy rules for about eight months.",
+   "citations": [
+    {
+     "sourceId": "s_xen"
+    },
+    {
+     "sourceId": "s_wp_thirty_tyrants"
+    }
+   ],
+   "places": [
+    {
+     "name": "Athens",
+     "lat": 37.972,
+     "lon": 23.727,
+     "role": "site"
+    }
+   ],
+   "tags": [
+    "political"
+   ]
+  },
+  {
+   "id": "i_democracy_restored",
+   "kind": "event",
+   "title": "Democracy restored",
+   "start": {
+    "y": -402
+   },
+   "categoryId": "politics",
+   "updatedAt": 1760000000000,
+   "description": "Thrasybulus leads exiles back from Phyle; an amnesty follows.",
+   "citations": [
+    {
+     "sourceId": "s_ath"
+    }
+   ],
+   "places": [
+    {
+     "name": "Piraeus",
+     "lat": 37.942,
+     "lon": 23.636,
+     "role": "site"
+    }
+   ],
+   "tags": [
+    "political"
+   ]
+  },
+  {
+   "id": "i_b_plataea431",
+   "kind": "event",
+   "title": "Theban attack on Plataea",
+   "start": {
+    "y": -430
+   },
+   "categoryId": "war",
+   "updatedAt": 1760000000000,
+   "description": "Plataean victory. About 300 Thebans got in by night; most were killed or taken.",
+   "citations": [
+    {
+     "sourceId": "s_thuc"
+    }
+   ],
+   "places": [
+    {
+     "name": "Theban attack on Plataea",
+     "lat": 38.215,
+     "lon": 23.27,
+     "role": "site"
+    }
+   ],
+   "tags": [
+    "political"
+   ],
+   "excerpt": {
+    "text": "In March 431 BC a Theban force slipped into Plataea at night; the Plataeans rallied and killed or captured them.",
+    "sourceId": "s_wp_siege_of_plataea"
+   }
+  },
+  {
+   "id": "i_b_potidaea",
+   "kind": "event",
+   "title": "Potidaea surrenders",
+   "start": {
+    "y": -429
+   },
+   "categoryId": "war",
+   "updatedAt": 1760000000000,
+   "description": "Athenian victory. After a siege of more than two years.",
+   "citations": [
+    {
+     "sourceId": "s_thuc"
+    }
+   ],
+   "places": [
+    {
+     "name": "Potidaea surrenders",
+     "lat": 40.195,
+     "lon": 23.33,
+     "role": "site"
+    }
+   ],
+   "tags": [
+    "political"
+   ]
+  },
+  {
+   "id": "i_b_naupactus",
+   "kind": "event",
+   "title": "Phormio's victories",
+   "start": {
+    "y": -428
+   },
+   "categoryId": "war",
+   "updatedAt": 1760000000000,
+   "description": "Athenian victory. 20 Athenian ships against 47, then 77.",
+   "citations": [
+    {
+     "sourceId": "s_thuc"
+    }
+   ],
+   "places": [
+    {
+     "name": "Phormio's victories",
+     "lat": 38.33,
+     "lon": 21.74,
+     "role": "site"
+    }
+   ],
+   "tags": [
+    "political"
+   ],
+   "excerpt": {
+    "text": "With only twenty ships, Phormio beat a Peloponnesian fleet of forty-seven, then won again off Naupactus.",
+    "sourceId": "s_wp_battle_of_naupactus"
+   }
+  },
+  {
+   "id": "i_b_mytilene",
+   "kind": "event",
+   "title": "Mytilene surrenders",
+   "start": {
+    "y": -426
+   },
+   "categoryId": "war",
+   "updatedAt": 1760000000000,
+   "description": "Athenian victory. The Assembly voted to kill every man, then changed its mind the next day.",
+   "citations": [
+    {
+     "sourceId": "s_thuc"
+    }
+   ],
+   "places": [
+    {
+     "name": "Mytilene surrenders",
+     "lat": 39.105,
+     "lon": 26.555,
+     "role": "site"
+    }
+   ],
+   "tags": [
+    "political"
+   ],
+   "excerpt": {
+    "text": "A second trireme, sent a day later, arrived just in time to stop the killing at Mytilene.",
+    "sourceId": "s_wp_mytilenean_revolt"
+   }
+  },
+  {
+   "id": "i_b_plataea427",
+   "kind": "event",
+   "title": "Plataea falls",
+   "start": {
+    "y": -426
+   },
+   "categoryId": "war",
+   "updatedAt": 1760000000000,
+   "description": "Spartan and Theban victory. The defenders who were left were put to death.",
+   "citations": [
+    {
+     "sourceId": "s_thuc"
+    }
+   ],
+   "places": [
+    {
+     "name": "Plataea falls",
+     "lat": 38.215,
+     "lon": 23.27,
+     "role": "site"
+    }
+   ],
+   "tags": [
+    "political"
+   ]
+  },
+  {
+   "id": "i_b_sphacteria",
+   "kind": "event",
+   "title": "Pylos and Sphacteria",
+   "start": {
+    "y": -424
+   },
+   "categoryId": "war",
+   "updatedAt": 1760000000000,
+   "description": "Athenian victory. 292 Spartans surrendered, 120 of them full citizens.",
+   "citations": [
+    {
+     "sourceId": "s_thuc"
+    }
+   ],
+   "places": [
+    {
+     "name": "Pylos and Sphacteria",
+     "lat": 36.935,
+     "lon": 21.665,
+     "role": "site"
+    }
+   ],
+   "tags": [
+    "political"
+   ],
+   "excerpt": {
+    "text": "The surrender of 292 Spartans on Sphacteria shocked Greece; Spartans were not expected to give up.",
+    "sourceId": "s_wp_battle_of_sphacteria"
+   }
+  },
+  {
+   "id": "i_b_delium",
+   "kind": "event",
+   "title": "Delium",
+   "start": {
+    "y": -423
+   },
+   "categoryId": "war",
+   "updatedAt": 1760000000000,
+   "description": "Boeotian victory. Socrates was among the hoplites in the retreat.",
+   "citations": [
+    {
+     "sourceId": "s_thuc"
+    }
+   ],
+   "places": [
+    {
+     "name": "Delium",
+     "lat": 38.355,
+     "lon": 23.62,
+     "role": "site"
+    }
+   ],
+   "tags": [
+    "political"
+   ],
+   "excerpt": {
+    "text": "At Delium the Boeotians routed the Athenians; Socrates was among the hoplites who fell back in good order.",
+    "sourceId": "s_wp_battle_of_delium"
+   }
+  },
+  {
+   "id": "i_b_amph424",
+   "kind": "event",
+   "title": "Amphipolis taken",
+   "start": {
+    "y": -423
+   },
+   "categoryId": "war",
+   "updatedAt": 1760000000000,
+   "description": "Spartan victory. Thucydides, then a general, came too late and was exiled for twenty years.",
+   "citations": [
+    {
+     "sourceId": "s_thuc"
+    }
+   ],
+   "places": [
+    {
+     "name": "Amphipolis taken",
+     "lat": 40.822,
+     "lon": 23.845,
+     "role": "site"
+    }
+   ],
+   "tags": [
+    "political"
+   ],
+   "excerpt": {
+    "text": "The historian Thucydides, then a general, arrived too late to save Amphipolis and was exiled.",
+    "sourceId": "s_wp_thucydides"
+   }
+  },
+  {
+   "id": "i_b_amph422",
+   "kind": "event",
+   "title": "Battle of Amphipolis",
+   "start": {
+    "y": -421
+   },
+   "categoryId": "war",
+   "updatedAt": 1760000000000,
+   "description": "Spartan victory. Cleon and Brasidas were both killed, which opened the way to peace.",
+   "citations": [
+    {
+     "sourceId": "s_thuc"
+    }
+   ],
+   "places": [
+    {
+     "name": "Amphipolis",
+     "lat": 40.86,
+     "lon": 23.9,
+     "role": "site"
+    }
+   ],
+   "tags": [
+    "political"
+   ],
+   "excerpt": {
+    "text": "Cleon and Brasidas, the leading voices for war on each side, were both killed at Amphipolis.",
+    "sourceId": "s_wp_battle_of_amphipolis"
+   }
+  },
+  {
+   "id": "i_b_mantinea",
+   "kind": "event",
+   "title": "Mantinea",
+   "start": {
+    "y": -417
+   },
+   "categoryId": "war",
+   "updatedAt": 1760000000000,
+   "description": "Spartan victory. The largest land battle of the war.",
+   "citations": [
+    {
+     "sourceId": "s_thuc"
+    }
+   ],
+   "places": [
+    {
+     "name": "Mantinea",
+     "lat": 37.617,
+     "lon": 22.393,
+     "role": "site"
+    }
+   ],
+   "tags": [
+    "political"
+   ],
+   "excerpt": {
+    "text": "Mantinea was the largest land battle of the war, and restored Sparta's name after Sphacteria.",
+    "sourceId": "s_wp_battle_of_mantinea_418_bc"
+   }
+  },
+  {
+   "id": "i_b_melos",
+   "kind": "event",
+   "title": "Siege of Melos",
+   "start": {
+    "y": -415
+   },
+   "categoryId": "war",
+   "updatedAt": 1760000000000,
+   "description": "Athenian victory. The men were killed; the women and children were enslaved.",
+   "citations": [
+    {
+     "sourceId": "s_thuc"
+    }
+   ],
+   "places": [
+    {
+     "name": "Siege of Melos",
+     "lat": 36.725,
+     "lon": 24.43,
+     "role": "site"
+    }
+   ],
+   "tags": [
+    "political"
+   ],
+   "excerpt": {
+    "text": "After the siege, the Athenians killed the men of Melos and sold the women and children as slaves.",
+    "sourceId": "s_wp_siege_of_melos"
+   }
+  },
+  {
+   "id": "i_b_syr415",
+   "kind": "event",
+   "title": "First battle at Syracuse",
+   "start": {
+    "y": -414
+   },
+   "categoryId": "war",
+   "updatedAt": 1760000000000,
+   "description": "Athenian victory. Nicias won, but did not begin the siege until spring.",
+   "citations": [
+    {
+     "sourceId": "s_thuc"
+    }
+   ],
+   "places": [
+    {
+     "name": "First battle at Syracuse",
+     "lat": 37.04,
+     "lon": 15.2,
+     "role": "site"
+    }
+   ],
+   "tags": [
+    "political"
+   ]
+  },
+  {
+   "id": "i_b_harbour",
+   "kind": "event",
+   "title": "Battle in the Great Harbour",
+   "start": {
+    "y": -412
+   },
+   "categoryId": "war",
+   "updatedAt": 1760000000000,
+   "description": "Syracusan victory. The Athenian fleet was trapped and beaten.",
+   "citations": [
+    {
+     "sourceId": "s_thuc"
+    }
+   ],
+   "places": [
+    {
+     "name": "Great Harbour",
+     "lat": 37.04,
+     "lon": 15.27,
+     "role": "site"
+    }
+   ],
+   "tags": [
+    "political"
+   ],
+   "excerpt": {
+    "text": "Beaten in the Great Harbour, the Athenians could no longer escape by sea.",
+    "sourceId": "s_wp_sicilian_expedition"
+   }
+  },
+  {
+   "id": "i_b_assinarus",
+   "kind": "event",
+   "title": "Assinarus",
+   "start": {
+    "y": -412
+   },
+   "categoryId": "war",
+   "updatedAt": 1760000000000,
+   "description": "Syracusan victory. Nicias surrendered; the prisoners were sent to the quarries.",
+   "citations": [
+    {
+     "sourceId": "s_thuc"
+    }
+   ],
+   "places": [
+    {
+     "name": "Assinarus",
+     "lat": 36.86,
+     "lon": 15.06,
+     "role": "site"
+    }
+   ],
+   "tags": [
+    "political"
+   ],
+   "excerpt": {
+    "text": "The prisoners were held in the stone quarries of Syracuse, where many died.",
+    "sourceId": "s_wp_sicilian_expedition"
+   }
+  },
+  {
+   "id": "i_b_cynossema",
+   "kind": "event",
+   "title": "Cynossema",
+   "start": {
+    "y": -410
+   },
+   "categoryId": "war",
+   "updatedAt": 1760000000000,
+   "description": "Athenian victory. The first Athenian naval victory after Sicily.",
+   "citations": [
+    {
+     "sourceId": "s_thuc"
+    }
+   ],
+   "places": [
+    {
+     "name": "Cynossema",
+     "lat": 40.14,
+     "lon": 26.36,
+     "role": "site"
+    }
+   ],
+   "tags": [
+    "political"
+   ]
+  },
+  {
+   "id": "i_b_cyzicus",
+   "kind": "event",
+   "title": "Cyzicus",
+   "start": {
+    "y": -409
+   },
+   "categoryId": "war",
+   "updatedAt": 1760000000000,
+   "description": "Athenian victory. The Spartan fleet was destroyed and its admiral Mindarus killed.",
+   "citations": [
+    {
+     "sourceId": "s_thuc"
+    }
+   ],
+   "places": [
+    {
+     "name": "Cyzicus",
+     "lat": 40.37,
+     "lon": 27.84,
+     "role": "site"
+    }
+   ],
+   "tags": [
+    "political"
+   ],
+   "excerpt": {
+    "text": "Sparta's message home after Cyzicus: “Ships lost. Mindarus dead. Men starving. Don't know what to do.”",
+    "sourceId": "s_wp_battle_of_cyzicus"
+   }
+  },
+  {
+   "id": "i_b_notium",
+   "kind": "event",
+   "title": "Notium",
+   "start": {
+    "y": -405
+   },
+   "categoryId": "war",
+   "updatedAt": 1760000000000,
+   "description": "Spartan victory. Alcibiades was away; he never led the fleet again.",
+   "citations": [
+    {
+     "sourceId": "s_thuc"
+    }
+   ],
+   "places": [
+    {
+     "name": "Notium",
+     "lat": 37.98,
+     "lon": 27.16,
+     "role": "site"
+    }
+   ],
+   "tags": [
+    "political"
+   ]
+  },
+  {
+   "id": "i_b_arginusae",
+   "kind": "event",
+   "title": "Arginusae",
+   "start": {
+    "y": -405
+   },
+   "categoryId": "war",
+   "updatedAt": 1760000000000,
+   "description": "Athenian victory. Six of the winning generals were executed for leaving sailors to drown.",
+   "citations": [
+    {
+     "sourceId": "s_thuc"
+    }
+   ],
+   "places": [
+    {
+     "name": "Arginusae",
+     "lat": 39.04,
+     "lon": 26.75,
+     "role": "site"
+    }
+   ],
+   "tags": [
+    "political"
+   ],
+   "excerpt": {
+    "text": "Despite the victory, the Assembly executed six generals for failing to rescue sailors in a storm.",
+    "sourceId": "s_wp_battle_of_arginusae"
+   }
+  },
+  {
+   "id": "i_b_aegospotami",
+   "kind": "event",
+   "title": "Aegospotami",
+   "start": {
+    "y": -404
+   },
+   "categoryId": "war",
+   "updatedAt": 1760000000000,
+   "description": "Spartan victory. Lysander caught the fleet on the beach; about 170 ships were lost.",
+   "citations": [
+    {
+     "sourceId": "s_thuc"
+    }
+   ],
+   "places": [
+    {
+     "name": "Aegospotami",
+     "lat": 40.3,
+     "lon": 26.6,
+     "role": "site"
+    }
+   ],
+   "tags": [
+    "political"
+   ],
+   "excerpt": {
+    "text": "Lysander caught the Athenian fleet drawn up on the beach at Aegospotami and took almost all of it.",
+    "sourceId": "s_wp_battle_of_aegospotami"
+   }
+  },
+  {
+   "id": "i_b_surrender",
+   "kind": "event",
+   "title": "Athens surrenders",
+   "start": {
+    "y": -403
+   },
+   "categoryId": "war",
+   "updatedAt": 1760000000000,
+   "description": "Spartan victory. The Long Walls were pulled down and the fleet cut to twelve ships.",
+   "citations": [
+    {
+     "sourceId": "s_thuc"
+    }
+   ],
+   "places": [
+    {
+     "name": "Athens surrenders",
+     "lat": 37.972,
+     "lon": 23.727,
+     "role": "site"
+    }
+   ],
+   "tags": [
+    "political"
+   ],
+   "excerpt": {
+    "text": "Athens surrendered in 404 BC; its Long Walls were pulled down and its fleet was limited to twelve ships.",
+    "sourceId": "s_wp_peloponnesian_war"
+   }
+  },
+  {
+   "id": "i_anabasis",
+   "kind": "span",
+   "title": "March of the Ten Thousand",
+   "start": {
+    "y": -400
+   },
+   "categoryId": "war",
+   "updatedAt": 1760000000000,
+   "end": {
+    "y": -398
+   },
+   "description": "Greek mercenaries fight their way home from the heart of Persia.",
+   "citations": [
+    {
+     "sourceId": "s_xen"
+    },
+    {
+     "sourceId": "s_wp_anabasis_xenophon"
+    }
+   ],
+   "tags": [
+    "political"
+   ]
+  },
+  {
+   "id": "i_trial_socrates",
+   "kind": "event",
+   "title": "Trial of Socrates",
+   "start": {
+    "y": -398
+   },
+   "categoryId": "ideas",
+   "updatedAt": 1760000000000,
+   "description": "Condemned for impiety and corrupting the young.",
+   "citations": [
+    {
+     "sourceId": "s_wp_trial_of_socrates"
+    }
+   ],
+   "places": [
+    {
+     "name": "Athens",
+     "lat": 37.972,
+     "lon": 23.727,
+     "role": "site"
+    }
+   ],
+   "tags": [
+    "intellectual"
+   ]
+  },
+  {
+   "id": "i_catapult",
+   "kind": "event",
+   "title": "First catapults",
+   "start": {
+    "y": -398
+   },
+   "categoryId": "technology",
+   "updatedAt": 1760000000000,
+   "description": "Engineers working for Dionysius of Syracuse.",
+   "places": [
+    {
+     "name": "Syracuse",
+     "lat": 37.07,
+     "lon": 15.285,
+     "role": "site"
+    }
+   ],
+   "tags": [
+    "technological"
+   ]
+  },
+  {
+   "id": "i_corinthian_war",
+   "kind": "span",
+   "title": "Corinthian War",
+   "start": {
+    "y": -394
+   },
+   "categoryId": "war",
+   "updatedAt": 1760000000000,
+   "end": {
+    "y": -386
+   },
+   "citations": [
+    {
+     "sourceId": "s_wp_corinthian_war"
+    }
+   ],
+   "tags": [
+    "political"
+   ]
+  },
+  {
+   "id": "i_kings_peace",
+   "kind": "event",
+   "title": "The King’s Peace",
+   "start": {
+    "y": -386
+   },
+   "categoryId": "politics",
+   "updatedAt": 1760000000000,
+   "description": "Persia dictates terms to the quarrelling Greek cities.",
+   "citations": [
+    {
+     "sourceId": "s_wp_king_s_peace"
+    }
+   ],
+   "tags": [
+    "political"
+   ]
+  },
+  {
+   "id": "i_academy",
+   "kind": "event",
+   "title": "Plato founds the Academy",
+   "start": {
+    "y": -386
+   },
+   "categoryId": "ideas",
+   "updatedAt": 1760000000000,
+   "citations": [
+    {
+     "sourceId": "s_hansen"
+    }
+   ],
+   "places": [
+    {
+     "name": "Academy",
+     "lat": 37.9925,
+     "lon": 23.7083,
+     "role": "site"
+    }
+   ],
+   "tags": [
+    "intellectual"
+   ]
+  },
+  {
+   "id": "i_cadmea",
+   "kind": "event",
+   "title": "Sparta seizes the Cadmea",
+   "start": {
+    "y": -381
+   },
+   "categoryId": "war",
+   "updatedAt": 1760000000000,
+   "places": [
+    {
+     "name": "Thebes",
+     "lat": 38.32,
+     "lon": 23.32,
+     "role": "site"
+    }
+   ],
+   "tags": [
+    "political"
+   ]
+  },
+  {
+   "id": "i_second_league",
+   "kind": "event",
+   "title": "Second Athenian League",
+   "start": {
+    "y": -377
+   },
+   "categoryId": "politics",
+   "updatedAt": 1760000000000,
+   "tags": [
+    "political"
+   ]
+  },
+  {
+   "id": "i_leuctra",
+   "kind": "event",
+   "title": "Battle of Leuctra",
+   "start": {
+    "y": -370
+   },
+   "categoryId": "war",
+   "updatedAt": 1760000000000,
+   "description": "Thebes breaks Sparta’s army and its reputation.",
+   "citations": [
+    {
+     "sourceId": "s_xen"
+    },
+    {
+     "sourceId": "s_wp_battle_of_leuctra"
+    }
+   ],
+   "places": [
+    {
+     "name": "Leuctra",
+     "lat": 38.19,
+     "lon": 23.18,
+     "role": "site"
+    }
+   ],
+   "tags": [
+    "political"
+   ]
+  },
+  {
+   "id": "i_messene",
+   "kind": "event",
+   "title": "Messene founded",
+   "start": {
+    "y": -368
+   },
+   "categoryId": "politics",
+   "updatedAt": 1760000000000,
+   "description": "The helots are freed; Sparta loses half its land.",
+   "places": [
+    {
+     "name": "Messene",
+     "lat": 37.18,
+     "lon": 21.92,
+     "role": "site"
+    }
+   ],
+   "tags": [
+    "social"
+   ]
+  },
+  {
+   "id": "i_mantinea362",
+   "kind": "event",
+   "title": "Battle of Mantinea (362)",
+   "start": {
+    "y": -361
+   },
+   "categoryId": "war",
+   "updatedAt": 1760000000000,
+   "description": "Thebes wins, but Epaminondas is killed.",
+   "citations": [
+    {
+     "sourceId": "s_wp_battle_of_mantinea_362_bc"
+    }
+   ],
+   "places": [
+    {
+     "name": "Mantinea",
+     "lat": 37.617,
+     "lon": 22.393,
+     "role": "site"
+    }
+   ],
+   "tags": [
+    "political"
+   ]
+  },
+  {
+   "id": "i_social_war",
+   "kind": "span",
+   "title": "Social War",
+   "start": {
+    "y": -356
+   },
+   "categoryId": "war",
+   "updatedAt": 1760000000000,
+   "end": {
+    "y": -354
+   },
+   "description": "Athens’ allies break away.",
+   "tags": [
+    "political"
+   ]
+  },
+  {
+   "id": "i_sacred_war",
+   "kind": "span",
+   "title": "Third Sacred War",
+   "start": {
+    "y": -355
+   },
+   "categoryId": "war",
+   "updatedAt": 1760000000000,
+   "end": {
+    "y": -345
+   },
+   "description": "Phocis seizes the sanctuary at Delphi.",
+   "citations": [
+    {
+     "sourceId": "s_wp_third_sacred_war"
+    }
+   ],
+   "places": [
+    {
+     "name": "Delphi",
+     "lat": 38.482,
+     "lon": 22.501,
+     "role": "site"
+    }
+   ],
+   "tags": [
+    "religious"
+   ]
+  },
+  {
+   "id": "i_philip_king",
+   "kind": "event",
+   "title": "Philip II becomes king",
+   "start": {
+    "y": -358
+   },
+   "categoryId": "politics",
+   "updatedAt": 1760000000000,
+   "places": [
+    {
+     "name": "Pella",
+     "lat": 40.76,
+     "lon": 22.52,
+     "role": "site"
+    }
+   ],
+   "tags": [
+    "political"
+   ]
+  },
+  {
+   "id": "i_amphipolis357",
+   "kind": "event",
+   "title": "Philip takes Amphipolis",
+   "start": {
+    "y": -356
+   },
+   "categoryId": "war",
+   "updatedAt": 1760000000000,
+   "places": [
+    {
+     "name": "Amphipolis",
+     "lat": 40.822,
+     "lon": 23.845,
+     "role": "site"
+    }
+   ],
+   "tags": [
+    "political"
+   ]
+  },
+  {
+   "id": "i_sarissa",
+   "kind": "span",
+   "title": "Philip’s pike phalanx",
+   "start": {
+    "y": -358
+   },
+   "categoryId": "technology",
+   "updatedAt": 1760000000000,
+   "end": {
+    "y": -335
+   },
+   "description": "Infantry with pikes five or six metres long.",
+   "citations": [
+    {
+     "sourceId": "s_wp_sarissa"
+    }
+   ],
+   "tags": [
+    "technological"
+   ]
+  },
+  {
+   "id": "i_olynthus",
+   "kind": "event",
+   "title": "Olynthus destroyed",
+   "start": {
+    "y": -347
+   },
+   "categoryId": "war",
+   "updatedAt": 1760000000000,
+   "citations": [
+    {
+     "sourceId": "s_wp_olynthus"
+    }
+   ],
+   "places": [
+    {
+     "name": "Olynthus",
+     "lat": 40.29,
+     "lon": 23.36,
+     "role": "site"
+    }
+   ],
+   "tags": [
+    "political"
+   ]
+  },
+  {
+   "id": "i_philocrates",
+   "kind": "event",
+   "title": "Peace of Philocrates",
+   "start": {
+    "y": -345
+   },
+   "categoryId": "politics",
+   "updatedAt": 1760000000000,
+   "tags": [
+    "political"
+   ]
+  },
+  {
+   "id": "i_chaeronea",
+   "kind": "event",
+   "title": "Battle of Chaeronea",
+   "start": {
+    "y": -337
+   },
+   "categoryId": "war",
+   "updatedAt": 1760000000000,
+   "description": "Philip beats Athens and Thebes; his son Alexander leads the cavalry.",
+   "citations": [
+    {
+     "sourceId": "s_hansen"
+    },
+    {
+     "sourceId": "s_wp_battle_of_chaeronea_338_bc"
+    }
+   ],
+   "places": [
+    {
+     "name": "Chaeronea",
+     "lat": 38.49,
+     "lon": 22.85,
+     "role": "site"
+    }
+   ],
+   "tags": [
+    "political"
+   ]
+  },
+  {
+   "id": "i_corinth_league",
+   "kind": "event",
+   "title": "League of Corinth",
+   "start": {
+    "y": -336
+   },
+   "categoryId": "politics",
+   "updatedAt": 1760000000000,
+   "places": [
+    {
+     "name": "Corinth",
+     "lat": 37.906,
+     "lon": 22.88,
+     "role": "site"
+    }
+   ],
+   "tags": [
+    "political"
+   ]
+  },
+  {
+   "id": "i_philip_dies",
+   "kind": "event",
+   "title": "Philip II assassinated",
+   "start": {
+    "y": -335
+   },
+   "categoryId": "politics",
+   "updatedAt": 1760000000000,
+   "places": [
+    {
+     "name": "Aigai",
+     "lat": 40.49,
+     "lon": 22.32,
+     "role": "site"
+    }
+   ],
+   "tags": [
+    "political"
+   ]
+  },
+  {
+   "id": "i_lyceum",
+   "kind": "event",
+   "title": "Aristotle opens the Lyceum",
+   "start": {
+    "y": -334
+   },
+   "categoryId": "ideas",
+   "updatedAt": 1760000000000,
+   "places": [
+    {
+     "name": "Lyceum",
+     "lat": 37.975,
+     "lon": 23.745,
+     "role": "site"
+    }
+   ],
+   "tags": [
+    "intellectual"
+   ]
+  },
+  {
+   "id": "i_thebes_destroyed",
+   "kind": "event",
+   "title": "Thebes destroyed",
+   "start": {
+    "y": -334
+   },
+   "categoryId": "war",
+   "updatedAt": 1760000000000,
+   "places": [
+    {
+     "name": "Thebes",
+     "lat": 38.32,
+     "lon": 23.32,
+     "role": "site"
+    }
+   ],
+   "tags": [
+    "political"
+   ]
+  },
+  {
+   "id": "i_alexander_persia",
+   "kind": "span",
+   "title": "Alexander’s conquest of Persia",
+   "start": {
+    "y": -333
+   },
+   "categoryId": "war",
+   "updatedAt": 1760000000000,
+   "end": {
+    "y": -322
+   },
+   "citations": [
+    {
+     "sourceId": "s_wp_wars_of_alexander_the_great"
+    }
+   ],
+   "tags": [
+    "political"
+   ]
+  },
+  {
+   "id": "i_issus",
+   "kind": "event",
+   "title": "Battle of Issus",
+   "start": {
+    "y": -332
+   },
+   "categoryId": "war",
+   "updatedAt": 1760000000000,
+   "places": [
+    {
+     "name": "Issus",
+     "lat": 36.83,
+     "lon": 36.2,
+     "role": "site"
+    }
+   ],
+   "tags": [
+    "political"
+   ]
+  },
+  {
+   "id": "i_gaugamela",
+   "kind": "event",
+   "title": "Battle of Gaugamela",
+   "start": {
+    "y": -330
+   },
+   "categoryId": "war",
+   "updatedAt": 1760000000000,
+   "places": [
+    {
+     "name": "Gaugamela",
+     "lat": 36.55,
+     "lon": 43.4,
+     "role": "site"
+    }
+   ],
+   "tags": [
+    "political"
+   ]
+  },
+  {
+   "id": "i_alexander_dies",
+   "kind": "event",
+   "title": "Alexander dies in Babylon",
+   "start": {
+    "y": -322
+   },
+   "categoryId": "politics",
+   "updatedAt": 1760000000000,
+   "places": [
+    {
+     "name": "Babylon",
+     "lat": 32.54,
+     "lon": 44.42,
+     "role": "site"
+    }
+   ],
+   "tags": [
+    "political"
+   ]
+  },
+  {
+   "id": "i_lamian",
+   "kind": "span",
+   "title": "Lamian War",
+   "start": {
+    "y": -322
+   },
+   "categoryId": "war",
+   "updatedAt": 1760000000000,
+   "end": {
+    "y": -321
+   },
+   "description": "Athens and its allies rise against Macedon and lose.",
+   "citations": [
+    {
+     "sourceId": "s_wp_lamian_war"
+    }
+   ],
+   "tags": [
+    "political"
+   ]
+  },
+  {
+   "id": "i_macedon_garrison",
+   "kind": "event",
+   "title": "Macedonian garrison at Munychia",
+   "start": {
+    "y": -321
+   },
+   "categoryId": "politics",
+   "updatedAt": 1760000000000,
+   "description": "Citizenship is limited to men worth 2,000 drachmas.",
+   "places": [
+    {
+     "name": "Munychia",
+     "lat": 37.935,
+     "lon": 23.65,
+     "role": "site"
+    }
+   ],
+   "tags": [
+    "political"
+   ]
+  },
+  {
+   "id": "i_laurion",
+   "kind": "event",
+   "title": "Silver strike at Laurion",
+   "start": {
+    "y": -482
+   },
+   "categoryId": "society",
+   "updatedAt": 1760000000000,
+   "description": "A rich vein pays for the fleet that wins at Salamis.",
+   "citations": [
+    {
+     "sourceId": "s_ath"
+    },
+    {
+     "sourceId": "s_wp_laurion"
+    }
+   ],
+   "places": [
+    {
+     "name": "Laurion",
+     "lat": 37.72,
+     "lon": 24.05,
+     "role": "site"
+    }
+   ],
+   "tags": [
+    "economic"
+   ]
+  },
+  {
+   "id": "i_owls",
+   "kind": "span",
+   "title": "Athenian silver “owls”",
+   "start": {
+    "y": -509,
+    "approx": true
+   },
+   "categoryId": "society",
+   "updatedAt": 1760000000000,
+   "end": {
+    "y": -321
+   },
+   "description": "Coins stamped with Athena’s owl become a common currency around the Aegean.",
+   "tags": [
+    "economic"
+   ]
+  },
+  {
+   "id": "i_trireme",
+   "kind": "span",
+   "title": "Trireme fleets",
+   "start": {
+    "y": -599
+   },
+   "categoryId": "technology",
+   "updatedAt": 1760000000000,
+   "end": {
+    "y": -321
+   },
+   "description": "A warship with 170 oarsmen in three banks.",
+   "citations": [
+    {
+     "sourceId": "s_wp_trireme"
+    }
+   ],
+   "tags": [
+    "technological"
+   ]
+  },
+  {
+   "id": "i_hoplite",
+   "kind": "span",
+   "title": "Hoplite phalanx",
+   "start": {
+    "y": -699,
+    "approx": true
+   },
+   "categoryId": "technology",
+   "updatedAt": 1760000000000,
+   "end": {
+    "y": -337
+   },
+   "description": "Citizens in bronze armour fighting shoulder to shoulder.",
+   "citations": [
+    {
+     "sourceId": "s_wp_hoplite"
+    }
+   ],
+   "tags": [
+    "technological"
+   ]
+  },
+  {
+   "id": "i_piraeus_plan",
+   "kind": "event",
+   "title": "Piraeus laid out on a grid",
+   "start": {
+    "y": -469,
+    "approx": true
+   },
+   "categoryId": "technology",
+   "updatedAt": 1760000000000,
+   "description": "Planned by Hippodamus of Miletus.",
+   "places": [
+    {
+     "name": "Piraeus",
+     "lat": 37.942,
+     "lon": 23.636,
+     "role": "site"
+    }
+   ],
+   "tags": [
+    "social"
+   ]
+  },
+  {
+   "id": "i_asclepius",
+   "kind": "event",
+   "title": "Cult of Asclepius comes to Athens",
+   "start": {
+    "y": -419
+   },
+   "categoryId": "ideas",
+   "updatedAt": 1760000000000,
+   "places": [
+    {
+     "name": "Athens",
+     "lat": 37.972,
+     "lon": 23.727,
+     "role": "site"
+    }
+   ],
+   "tags": [
+    "religious"
+   ]
+  },
+  {
+   "id": "i_thespis",
+   "kind": "event",
+   "title": "Thespis wins the first tragedy contest",
+   "start": {
+    "y": -533,
+    "approx": true
+   },
+   "categoryId": "arts",
+   "updatedAt": 1760000000000,
+   "places": [
+    {
+     "name": "Athens",
+     "lat": 37.972,
+     "lon": 23.727,
+     "role": "site"
+    }
+   ],
+   "tags": [
+    "intellectual"
+   ]
+  },
+  {
+   "id": "i_oresteia",
+   "kind": "event",
+   "title": "Aeschylus’ Oresteia staged",
+   "start": {
+    "y": -457
+   },
+   "categoryId": "arts",
+   "updatedAt": 1760000000000,
+   "tags": [
+    "intellectual"
+   ]
+  },
+  {
+   "id": "i_medea",
+   "kind": "event",
+   "title": "Euripides’ Medea staged",
+   "start": {
+    "y": -430
+   },
+   "categoryId": "arts",
+   "updatedAt": 1760000000000,
+   "tags": [
+    "intellectual"
+   ]
+  },
+  {
+   "id": "i_oedipus",
+   "kind": "event",
+   "title": "Sophocles’ Oedipus the King",
+   "start": {
+    "y": -428,
+    "approx": true
+   },
+   "categoryId": "arts",
+   "updatedAt": 1760000000000,
+   "tags": [
+    "intellectual"
+   ]
+  },
+  {
+   "id": "i_clouds",
+   "kind": "event",
+   "title": "Aristophanes’ Clouds",
+   "start": {
+    "y": -422
+   },
+   "categoryId": "arts",
+   "updatedAt": 1760000000000,
+   "description": "A comedy that makes fun of Socrates.",
+   "tags": [
+    "intellectual"
+   ]
+  },
+  {
+   "id": "i_histories",
+   "kind": "event",
+   "title": "Herodotus’ Histories",
+   "start": {
+    "y": -429,
+    "approx": true
+   },
+   "categoryId": "arts",
+   "updatedAt": 1760000000000,
+   "description": "The first long prose account of a war and the peoples in it.",
+   "citations": [
+    {
+     "sourceId": "s_hdt"
+    }
+   ],
+   "tags": [
+    "intellectual"
+   ]
+  },
+  {
+   "id": "i_thucydides_history",
+   "kind": "event",
+   "title": "Thucydides begins his History",
+   "start": {
+    "y": -430
+   },
+   "categoryId": "arts",
+   "updatedAt": 1760000000000,
+   "citations": [
+    {
+     "sourceId": "s_thuc"
+    }
+   ],
+   "tags": [
+    "intellectual"
+   ]
+  },
+  {
+   "id": "i_city_dionysia",
+   "kind": "event",
+   "title": "City Dionysia",
+   "start": {
+    "y": -499,
+    "approx": true
+   },
+   "categoryId": "ideas",
+   "updatedAt": 1760000000000,
+   "description": "The spring festival where tragedies and comedies compete.",
+   "tags": [
+    "religious"
+   ]
+  },
+  {
+   "id": "i_cleisthenes",
+   "kind": "person",
+   "title": "Cleisthenes",
+   "start": {
+    "y": -569,
+    "approx": true
+   },
+   "categoryId": "politics",
+   "updatedAt": 1760000000000,
+   "end": {
+    "y": -507,
+    "approx": true
+   },
+   "description": "His reforms of 508 BCE founded Athenian democracy.",
+   "citations": [
+    {
+     "sourceId": "s_wp_cleisthenes"
+    }
+   ],
+   "tags": [
+    "political"
+   ]
+  },
+  {
+   "id": "i_themistocles",
+   "kind": "person",
+   "title": "Themistocles",
+   "start": {
+    "y": -523
+   },
+   "categoryId": "politics",
+   "updatedAt": 1760000000000,
+   "end": {
+    "y": -458
+   },
+   "citations": [
+    {
+     "sourceId": "s_hdt"
+    },
+    {
+     "sourceId": "s_wp_themistocles"
+    }
+   ],
+   "tags": [
+    "political"
+   ]
+  },
+  {
+   "id": "i_aristides",
+   "kind": "person",
+   "title": "Aristides",
+   "start": {
+    "y": -529,
+    "approx": true
+   },
+   "categoryId": "politics",
+   "updatedAt": 1760000000000,
+   "end": {
+    "y": -467
+   },
+   "tags": [
+    "political"
+   ]
+  },
+  {
+   "id": "i_leonidas",
+   "kind": "person",
+   "title": "Leonidas I",
+   "start": {
+    "y": -539,
+    "approx": true
+   },
+   "categoryId": "war",
+   "updatedAt": 1760000000000,
+   "end": {
+    "y": -479
+   },
+   "citations": [
+    {
+     "sourceId": "s_wp_leonidas_i"
+    }
+   ],
+   "tags": [
+    "political"
+   ]
+  },
+  {
+   "id": "i_cimon",
+   "kind": "person",
+   "title": "Cimon",
+   "start": {
+    "y": -509
+   },
+   "categoryId": "politics",
+   "updatedAt": 1760000000000,
+   "end": {
+    "y": -449
+   },
+   "tags": [
+    "political"
+   ]
+  },
+  {
+   "id": "i_pericles",
+   "kind": "person",
+   "title": "Pericles",
+   "start": {
+    "y": -494
+   },
+   "categoryId": "politics",
+   "updatedAt": 1760000000000,
+   "end": {
+    "y": -428
+   },
+   "description": "The leading voice in Athens for thirty years.",
+   "citations": [
+    {
+     "sourceId": "s_thuc"
+    },
+    {
+     "sourceId": "s_wp_pericles"
+    }
+   ],
+   "tags": [
+    "political"
+   ]
+  },
+  {
+   "id": "i_aspasia",
+   "kind": "person",
+   "title": "Aspasia",
+   "start": {
+    "y": -469,
+    "approx": true
+   },
+   "categoryId": "society",
+   "updatedAt": 1760000000000,
+   "end": {
+    "y": -399,
+    "approx": true
+   },
+   "tags": [
+    "social"
+   ]
+  },
+  {
+   "id": "i_phidias",
+   "kind": "person",
+   "title": "Phidias",
+   "start": {
+    "y": -479,
+    "approx": true
+   },
+   "categoryId": "arts",
+   "updatedAt": 1760000000000,
+   "end": {
+    "y": -429,
+    "approx": true
+   },
+   "citations": [
+    {
+     "sourceId": "s_wp_phidias"
+    }
+   ],
+   "tags": [
+    "religious"
+   ]
+  },
+  {
+   "id": "i_anaxagoras",
+   "kind": "person",
+   "title": "Anaxagoras",
+   "start": {
+    "y": -499,
+    "approx": true
+   },
+   "categoryId": "ideas",
+   "updatedAt": 1760000000000,
+   "end": {
+    "y": -427
+   },
+   "tags": [
+    "intellectual"
+   ]
+  },
+  {
+   "id": "i_protagoras",
+   "kind": "person",
+   "title": "Protagoras",
+   "start": {
+    "y": -489,
+    "approx": true
+   },
+   "categoryId": "ideas",
+   "updatedAt": 1760000000000,
+   "end": {
+    "y": -419,
+    "approx": true
+   },
+   "tags": [
+    "intellectual"
+   ]
+  },
+  {
+   "id": "i_herodotus",
+   "kind": "person",
+   "title": "Herodotus",
+   "start": {
+    "y": -483,
+    "approx": true
+   },
+   "categoryId": "arts",
+   "updatedAt": 1760000000000,
+   "end": {
+    "y": -424,
+    "approx": true
+   },
+   "citations": [
+    {
+     "sourceId": "s_wp_herodotus"
+    }
+   ],
+   "tags": [
+    "intellectual"
+   ]
+  },
+  {
+   "id": "i_thucydides",
+   "kind": "person",
+   "title": "Thucydides",
+   "start": {
+    "y": -459,
+    "approx": true
+   },
+   "categoryId": "arts",
+   "updatedAt": 1760000000000,
+   "end": {
+    "y": -399,
+    "approx": true
+   },
+   "description": "General, exile and historian of the war.",
+   "citations": [
+    {
+     "sourceId": "s_wp_thucydides"
+    }
+   ],
+   "tags": [
+    "intellectual"
+   ]
+  },
+  {
+   "id": "i_aeschylus",
+   "kind": "person",
+   "title": "Aeschylus",
+   "start": {
+    "y": -524
+   },
+   "categoryId": "arts",
+   "updatedAt": 1760000000000,
+   "end": {
+    "y": -455
+   },
+   "citations": [
+    {
+     "sourceId": "s_wp_aeschylus"
+    }
+   ],
+   "tags": [
+    "intellectual"
+   ]
+  },
+  {
+   "id": "i_sophocles",
+   "kind": "person",
+   "title": "Sophocles",
+   "start": {
+    "y": -496
+   },
+   "categoryId": "arts",
+   "updatedAt": 1760000000000,
+   "end": {
+    "y": -405
+   },
+   "citations": [
+    {
+     "sourceId": "s_wp_sophocles"
+    }
+   ],
+   "tags": [
+    "intellectual"
+   ]
+  },
+  {
+   "id": "i_euripides",
+   "kind": "person",
+   "title": "Euripides",
+   "start": {
+    "y": -479
+   },
+   "categoryId": "arts",
+   "updatedAt": 1760000000000,
+   "end": {
+    "y": -405
+   },
+   "citations": [
+    {
+     "sourceId": "s_wp_euripides"
+    }
+   ],
+   "tags": [
+    "intellectual"
+   ]
+  },
+  {
+   "id": "i_aristophanes",
+   "kind": "person",
+   "title": "Aristophanes",
+   "start": {
+    "y": -445,
+    "approx": true
+   },
+   "categoryId": "arts",
+   "updatedAt": 1760000000000,
+   "end": {
+    "y": -385,
+    "approx": true
+   },
+   "citations": [
+    {
+     "sourceId": "s_wp_aristophanes"
+    }
+   ],
+   "tags": [
+    "intellectual"
+   ]
+  },
+  {
+   "id": "i_pindar",
+   "kind": "person",
+   "title": "Pindar",
+   "start": {
+    "y": -517,
+    "approx": true
+   },
+   "categoryId": "arts",
+   "updatedAt": 1760000000000,
+   "end": {
+    "y": -437,
+    "approx": true
+   },
+   "tags": [
+    "intellectual"
+   ]
+  },
+  {
+   "id": "i_hippocrates",
+   "kind": "person",
+   "title": "Hippocrates",
+   "start": {
+    "y": -459,
+    "approx": true
+   },
+   "categoryId": "science",
+   "updatedAt": 1760000000000,
+   "end": {
+    "y": -369,
+    "approx": true
+   },
+   "citations": [
+    {
+     "sourceId": "s_wp_hippocrates"
+    }
+   ],
+   "tags": [
+    "intellectual"
+   ]
+  },
+  {
+   "id": "i_democritus",
+   "kind": "person",
+   "title": "Democritus",
+   "start": {
+    "y": -459,
+    "approx": true
+   },
+   "categoryId": "science",
+   "updatedAt": 1760000000000,
+   "end": {
+    "y": -369,
+    "approx": true
+   },
+   "tags": [
+    "intellectual"
+   ]
+  },
+  {
+   "id": "i_hippodamus",
+   "kind": "person",
+   "title": "Hippodamus of Miletus",
+   "start": {
+    "y": -497,
+    "approx": true
+   },
+   "categoryId": "science",
+   "updatedAt": 1760000000000,
+   "end": {
+    "y": -407,
+    "approx": true
+   },
+   "tags": [
+    "technological"
+   ]
+  },
+  {
+   "id": "i_socrates",
+   "kind": "person",
+   "title": "Socrates",
+   "start": {
+    "y": -469,
+    "approx": true
+   },
+   "categoryId": "ideas",
+   "updatedAt": 1760000000000,
+   "end": {
+    "y": -398
+   },
+   "description": "Asked questions in the marketplace until Athens had had enough.",
+   "citations": [
+    {
+     "sourceId": "s_wp_socrates"
+    }
+   ],
+   "places": [
+    {
+     "name": "Athens",
+     "lat": 37.972,
+     "lon": 23.727,
+     "role": "site"
+    }
+   ],
+   "tags": [
+    "intellectual"
+   ]
+  },
+  {
+   "id": "i_plato",
+   "kind": "person",
+   "title": "Plato",
+   "start": {
+    "y": -427,
+    "approx": true
+   },
+   "categoryId": "ideas",
+   "updatedAt": 1760000000000,
+   "end": {
+    "y": -347,
+    "approx": true
+   },
+   "citations": [
+    {
+     "sourceId": "s_wp_plato"
+    }
+   ],
+   "tags": [
+    "intellectual"
+   ]
+  },
+  {
+   "id": "i_aristotle",
+   "kind": "person",
+   "title": "Aristotle",
+   "start": {
+    "y": -383
+   },
+   "categoryId": "ideas",
+   "updatedAt": 1760000000000,
+   "end": {
+    "y": -321
+   },
+   "description": "Student of Plato, tutor of Alexander.",
+   "citations": [
+    {
+     "sourceId": "s_wp_aristotle"
+    }
+   ],
+   "tags": [
+    "intellectual"
+   ]
+  },
+  {
+   "id": "i_gorgias",
+   "kind": "person",
+   "title": "Gorgias",
+   "start": {
+    "y": -482,
+    "approx": true
+   },
+   "categoryId": "ideas",
+   "updatedAt": 1760000000000,
+   "end": {
+    "y": -374,
+    "approx": true
+   },
+   "tags": [
+    "intellectual"
+   ]
+  },
+  {
+   "id": "i_diogenes",
+   "kind": "person",
+   "title": "Diogenes of Sinope",
+   "start": {
+    "y": -411,
+    "approx": true
+   },
+   "categoryId": "ideas",
+   "updatedAt": 1760000000000,
+   "end": {
+    "y": -322
+   },
+   "tags": [
+    "intellectual"
+   ]
+  },
+  {
+   "id": "i_xenophon",
+   "kind": "person",
+   "title": "Xenophon",
+   "start": {
+    "y": -429,
+    "approx": true
+   },
+   "categoryId": "arts",
+   "updatedAt": 1760000000000,
+   "end": {
+    "y": -353,
+    "approx": true
+   },
+   "citations": [
+    {
+     "sourceId": "s_wp_xenophon"
+    }
+   ],
+   "tags": [
+    "intellectual"
+   ]
+  },
+  {
+   "id": "i_alcibiades",
+   "kind": "person",
+   "title": "Alcibiades",
+   "start": {
+    "y": -449
+   },
+   "categoryId": "politics",
+   "updatedAt": 1760000000000,
+   "end": {
+    "y": -403
+   },
+   "description": "Brilliant, vain and loyal to whoever was winning.",
+   "citations": [
+    {
+     "sourceId": "s_thuc"
+    },
+    {
+     "sourceId": "s_wp_alcibiades"
+    }
+   ],
+   "tags": [
+    "political"
+   ]
+  },
+  {
+   "id": "i_nicias",
+   "kind": "person",
+   "title": "Nicias",
+   "start": {
+    "y": -469,
+    "approx": true
+   },
+   "categoryId": "war",
+   "updatedAt": 1760000000000,
+   "end": {
+    "y": -412
+   },
+   "tags": [
+    "political"
+   ]
+  },
+  {
+   "id": "i_lysander",
+   "kind": "person",
+   "title": "Lysander",
+   "start": {
+    "y": -453,
+    "approx": true
+   },
+   "categoryId": "war",
+   "updatedAt": 1760000000000,
+   "end": {
+    "y": -394
+   },
+   "citations": [
+    {
+     "sourceId": "s_wp_lysander"
+    }
+   ],
+   "tags": [
+    "political"
+   ]
+  },
+  {
+   "id": "i_agesilaus",
+   "kind": "person",
+   "title": "Agesilaus II",
+   "start": {
+    "y": -443,
+    "approx": true
+   },
+   "categoryId": "politics",
+   "updatedAt": 1760000000000,
+   "end": {
+    "y": -359
+   },
+   "tags": [
+    "political"
+   ]
+  },
+  {
+   "id": "i_thrasybulus",
+   "kind": "person",
+   "title": "Thrasybulus",
+   "start": {
+    "y": -444,
+    "approx": true
+   },
+   "categoryId": "politics",
+   "updatedAt": 1760000000000,
+   "end": {
+    "y": -387
+   },
+   "tags": [
+    "political"
+   ]
+  },
+  {
+   "id": "i_epaminondas",
+   "kind": "person",
+   "title": "Epaminondas",
+   "start": {
+    "y": -417,
+    "approx": true
+   },
+   "categoryId": "war",
+   "updatedAt": 1760000000000,
+   "end": {
+    "y": -361
+   },
+   "citations": [
+    {
+     "sourceId": "s_wp_epaminondas"
+    }
+   ],
+   "tags": [
+    "political"
+   ]
+  },
+  {
+   "id": "i_pelopidas",
+   "kind": "person",
+   "title": "Pelopidas",
+   "start": {
+    "y": -409,
+    "approx": true
+   },
+   "categoryId": "war",
+   "updatedAt": 1760000000000,
+   "end": {
+    "y": -363
+   },
+   "tags": [
+    "political"
+   ]
+  },
+  {
+   "id": "i_lysias",
+   "kind": "person",
+   "title": "Lysias",
+   "start": {
+    "y": -444,
+    "approx": true
+   },
+   "categoryId": "arts",
+   "updatedAt": 1760000000000,
+   "end": {
+    "y": -379,
+    "approx": true
+   },
+   "tags": [
+    "social"
+   ]
+  },
+  {
+   "id": "i_isocrates",
+   "kind": "person",
+   "title": "Isocrates",
+   "start": {
+    "y": -435
+   },
+   "categoryId": "arts",
+   "updatedAt": 1760000000000,
+   "end": {
+    "y": -337
+   },
+   "tags": [
+    "intellectual"
+   ]
+  },
+  {
+   "id": "i_praxiteles",
+   "kind": "person",
+   "title": "Praxiteles",
+   "start": {
+    "y": -394,
+    "approx": true
+   },
+   "categoryId": "arts",
+   "updatedAt": 1760000000000,
+   "end": {
+    "y": -329,
+    "approx": true
+   },
+   "tags": [
+    "intellectual"
+   ]
+  },
+  {
+   "id": "i_polykleitos",
+   "kind": "person",
+   "title": "Polykleitos",
+   "start": {
+    "y": -479,
+    "approx": true
+   },
+   "categoryId": "arts",
+   "updatedAt": 1760000000000,
+   "end": {
+    "y": -419,
+    "approx": true
+   },
+   "tags": [
+    "intellectual"
+   ]
+  },
+  {
+   "id": "i_dionysius",
+   "kind": "person",
+   "title": "Dionysius I of Syracuse",
+   "start": {
+    "y": -431,
+    "approx": true
+   },
+   "categoryId": "politics",
+   "updatedAt": 1760000000000,
+   "end": {
+    "y": -366
+   },
+   "places": [
+    {
+     "name": "Syracuse",
+     "lat": 37.07,
+     "lon": 15.285,
+     "role": "site"
+    }
+   ],
+   "tags": [
+    "political"
+   ]
+  },
+  {
+   "id": "i_demosthenes",
+   "kind": "person",
+   "title": "Demosthenes",
+   "start": {
+    "y": -383
+   },
+   "categoryId": "politics",
+   "updatedAt": 1760000000000,
+   "end": {
+    "y": -321
+   },
+   "description": "Spent his career warning Athens about Philip.",
+   "citations": [
+    {
+     "sourceId": "s_wp_demosthenes"
+    }
+   ],
+   "tags": [
+    "political"
+   ]
+  },
+  {
+   "id": "i_philip",
+   "kind": "person",
+   "title": "Philip II of Macedon",
+   "start": {
+    "y": -381
+   },
+   "categoryId": "politics",
+   "updatedAt": 1760000000000,
+   "end": {
+    "y": -335
+   },
+   "citations": [
+    {
+     "sourceId": "s_wp_philip_ii_of_macedon"
+    }
+   ],
+   "tags": [
+    "political"
+   ]
+  },
+  {
+   "id": "i_alexander",
+   "kind": "person",
+   "title": "Alexander the Great",
+   "start": {
+    "y": -355
+   },
+   "categoryId": "war",
+   "updatedAt": 1760000000000,
+   "end": {
+    "y": -322
+   },
+   "citations": [
+    {
+     "sourceId": "s_wp_alexander_the_great"
+    }
+   ],
+   "tags": [
+    "political"
+   ]
+  }
+ ],
+ "series": [
+  {
+   "id": "sr_athens_pop",
+   "title": "People living in Athens’ state",
+   "unit": "people",
+   "categoryId": "society",
+   "scale": "linear",
+   "points": [
+    {
+     "x": -599,
+     "v": 90000
+    },
+    {
+     "x": -479,
+     "v": 200000
+    },
+    {
+     "x": -430,
+     "v": 300000
+    },
+    {
+     "x": -409,
+     "v": 220000
+    },
+    {
+     "x": -389,
+     "v": 220000
+    },
+    {
+     "x": -339,
+     "v": 240000
+    }
+   ],
+   "source": {
+    "name": "Midpoints of the ranges in the economy prototype (test data)"
+   },
+   "note": "Ancient population figures are estimates with wide ranges; this plots the middle of each range.",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "sr_spartiates",
+   "title": "Full Spartan citizens",
+   "unit": "men",
+   "categoryId": "war",
+   "scale": "log",
+   "points": [
+    {
+     "x": -479,
+     "v": 8000
+    },
+    {
+     "x": -370,
+     "v": 1500
+    },
+    {
+     "x": -329,
+     "v": 1000
+    }
+   ],
+   "source": {
+    "name": "Round figures from the overview prototype (test data)"
+   },
+   "note": "About 8,000 in 480 BCE, fewer than a thousand in Aristotle’s day.",
+   "updatedAt": 1760000000000
+  }
+ ],
+ "territories": [
+  {
+   "id": "t_athens",
+   "title": "Athens (Attica)",
+   "categoryId": "politics",
+   "itemId": "i_classical",
+   "snapshots": [
+    {
+     "from": {
+      "y": -699
+     },
+     "geometry": {
+      "type": "Polygon",
+      "coordinates": [
+       [
+        [
+         23.35,
+         38.15
+        ],
+        [
+         23.6,
+         38.22
+        ],
+        [
+         23.95,
+         38.25
+        ],
+        [
+         24.05,
+         38.05
+        ],
+        [
+         24.03,
+         37.7
+        ],
+        [
+         23.9,
+         37.65
+        ],
+        [
+         23.6,
+         37.85
+        ],
+        [
+         23.35,
+         37.95
+        ],
+        [
+         23.35,
+         38.15
+        ]
+       ]
+      ]
+     }
+    }
+   ],
+   "source": {
+    "name": "Rough hand-drawn outline (test data), not a historical map"
+   },
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "t_delian",
+   "title": "Delian League (Athenian empire)",
+   "categoryId": "politics",
+   "itemId": "i_delian_founded",
+   "snapshots": [
+    {
+     "from": {
+      "y": -476
+     },
+     "to": {
+      "y": -453
+     },
+     "geometry": {
+      "type": "Polygon",
+      "coordinates": [
+       [
+        [
+         23.5,
+         40.6
+        ],
+        [
+         26,
+         40.9
+        ],
+        [
+         27,
+         40.3
+        ],
+        [
+         27.4,
+         38
+        ],
+        [
+         27,
+         36.9
+        ],
+        [
+         25,
+         36.2
+        ],
+        [
+         23.8,
+         36.6
+        ],
+        [
+         24,
+         37.7
+        ],
+        [
+         24.2,
+         38.3
+        ],
+        [
+         23.5,
+         40.6
+        ]
+       ]
+      ]
+     }
+    },
+    {
+     "from": {
+      "y": -453
+     },
+     "to": {
+      "y": -411
+     },
+     "geometry": {
+      "type": "Polygon",
+      "coordinates": [
+       [
+        [
+         23.3,
+         40.9
+        ],
+        [
+         25.5,
+         41.3
+        ],
+        [
+         28.3,
+         41.2
+        ],
+        [
+         28.2,
+         40.2
+        ],
+        [
+         27.3,
+         39.5
+        ],
+        [
+         27.9,
+         37.1
+        ],
+        [
+         28.3,
+         36.5
+        ],
+        [
+         26.5,
+         35.9
+        ],
+        [
+         24.5,
+         36
+        ],
+        [
+         23.9,
+         36.6
+        ],
+        [
+         24.3,
+         37.7
+        ],
+        [
+         24,
+         38.4
+        ],
+        [
+         23.3,
+         40.9
+        ]
+       ]
+      ]
+     }
+    },
+    {
+     "from": {
+      "y": -411
+     },
+     "to": {
+      "y": -403
+     },
+     "geometry": {
+      "type": "Polygon",
+      "coordinates": [
+       [
+        [
+         23.3,
+         40.9
+        ],
+        [
+         25.5,
+         41.3
+        ],
+        [
+         28,
+         41.1
+        ],
+        [
+         27.6,
+         40.3
+        ],
+        [
+         26.4,
+         40
+        ],
+        [
+         26.7,
+         38.9
+        ],
+        [
+         26.3,
+         38
+        ],
+        [
+         26,
+         36.9
+        ],
+        [
+         24.5,
+         36.2
+        ],
+        [
+         23.9,
+         36.6
+        ],
+        [
+         24.3,
+         37.7
+        ],
+        [
+         24,
+         38.4
+        ],
+        [
+         23.3,
+         40.9
+        ]
+       ]
+      ]
+     }
+    }
+   ],
+   "source": {
+    "name": "Rough hand-drawn outline (test data), not a historical map"
+   },
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "t_sparta",
+   "title": "Sparta (Laconia and Messenia)",
+   "categoryId": "war",
+   "snapshots": [
+    {
+     "from": {
+      "y": -699
+     },
+     "to": {
+      "y": -368
+     },
+     "geometry": {
+      "type": "Polygon",
+      "coordinates": [
+       [
+        [
+         21.65,
+         37.2
+        ],
+        [
+         21.95,
+         37.5
+        ],
+        [
+         22.7,
+         37.5
+        ],
+        [
+         23,
+         37.2
+        ],
+        [
+         23.2,
+         36.45
+        ],
+        [
+         22.5,
+         36.4
+        ],
+        [
+         22.15,
+         36.5
+        ],
+        [
+         21.7,
+         36.8
+        ],
+        [
+         21.65,
+         37.2
+        ]
+       ]
+      ]
+     }
+    },
+    {
+     "from": {
+      "y": -368
+     },
+     "geometry": {
+      "type": "Polygon",
+      "coordinates": [
+       [
+        [
+         22.2,
+         37.45
+        ],
+        [
+         22.7,
+         37.5
+        ],
+        [
+         23,
+         37.2
+        ],
+        [
+         23.2,
+         36.45
+        ],
+        [
+         22.5,
+         36.4
+        ],
+        [
+         22.4,
+         36.8
+        ],
+        [
+         22.1,
+         37
+        ],
+        [
+         22.2,
+         37.45
+        ]
+       ]
+      ]
+     }
+    }
+   ],
+   "source": {
+    "name": "Rough hand-drawn outline (test data), not a historical map"
+   },
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "t_corinth",
+   "title": "Corinth",
+   "categoryId": "politics",
+   "snapshots": [
+    {
+     "from": {
+      "y": -699
+     },
+     "geometry": {
+      "type": "Polygon",
+      "coordinates": [
+       [
+        [
+         22.7,
+         38.05
+        ],
+        [
+         23,
+         38.05
+        ],
+        [
+         23.2,
+         37.95
+        ],
+        [
+         23.05,
+         37.8
+        ],
+        [
+         22.8,
+         37.75
+        ],
+        [
+         22.65,
+         37.9
+        ],
+        [
+         22.7,
+         38.05
+        ]
+       ]
+      ]
+     }
+    }
+   ],
+   "source": {
+    "name": "Rough hand-drawn outline (test data), not a historical map"
+   },
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "t_thebes",
+   "title": "Thebes (Boeotia)",
+   "categoryId": "war",
+   "snapshots": [
+    {
+     "from": {
+      "y": -699
+     },
+     "to": {
+      "y": -334
+     },
+     "geometry": {
+      "type": "Polygon",
+      "coordinates": [
+       [
+        [
+         22.85,
+         38.4
+        ],
+        [
+         23.3,
+         38.5
+        ],
+        [
+         23.9,
+         38.45
+        ],
+        [
+         23.8,
+         38.26
+        ],
+        [
+         23.4,
+         38.22
+        ],
+        [
+         23,
+         38.2
+        ],
+        [
+         22.85,
+         38.4
+        ]
+       ]
+      ]
+     }
+    }
+   ],
+   "source": {
+    "name": "Rough hand-drawn outline (test data), not a historical map"
+   },
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "t_macedon",
+   "title": "Macedon",
+   "categoryId": "politics",
+   "itemId": "i_macedon_rises",
+   "snapshots": [
+    {
+     "from": {
+      "y": -699
+     },
+     "to": {
+      "y": -357
+     },
+     "geometry": {
+      "type": "Polygon",
+      "coordinates": [
+       [
+        [
+         21.7,
+         40.3
+        ],
+        [
+         22.5,
+         40
+        ],
+        [
+         23.4,
+         40.1
+        ],
+        [
+         23.2,
+         40.7
+        ],
+        [
+         22.9,
+         41
+        ],
+        [
+         21.9,
+         40.9
+        ],
+        [
+         21.7,
+         40.3
+        ]
+       ]
+      ]
+     }
+    },
+    {
+     "from": {
+      "y": -357
+     },
+     "to": {
+      "y": -335
+     },
+     "geometry": {
+      "type": "Polygon",
+      "coordinates": [
+       [
+        [
+         20.8,
+         40.2
+        ],
+        [
+         22.4,
+         39.7
+        ],
+        [
+         23.8,
+         40
+        ],
+        [
+         24.8,
+         40.8
+        ],
+        [
+         25.5,
+         41.1
+        ],
+        [
+         24,
+         41.5
+        ],
+        [
+         22.2,
+         41.5
+        ],
+        [
+         20.8,
+         41.2
+        ],
+        [
+         20.8,
+         40.2
+        ]
+       ]
+      ]
+     }
+    },
+    {
+     "from": {
+      "y": -335
+     },
+     "to": {
+      "y": -321
+     },
+     "geometry": {
+      "type": "Polygon",
+      "coordinates": [
+       [
+        [
+         19.5,
+         39
+        ],
+        [
+         22.5,
+         38.4
+        ],
+        [
+         24.2,
+         38.6
+        ],
+        [
+         25.8,
+         40.2
+        ],
+        [
+         26.8,
+         41.6
+        ],
+        [
+         24,
+         42
+        ],
+        [
+         22.2,
+         42.2
+        ],
+        [
+         20,
+         41.8
+        ],
+        [
+         19.5,
+         39
+        ]
+       ]
+      ]
+     }
+    }
+   ],
+   "source": {
+    "name": "Rough hand-drawn outline (test data), not a historical map"
+   },
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "t_syracuse",
+   "title": "Syracuse",
+   "categoryId": "politics",
+   "snapshots": [
+    {
+     "from": {
+      "y": -732
+     },
+     "to": {
+      "y": -404
+     },
+     "geometry": {
+      "type": "Polygon",
+      "coordinates": [
+       [
+        [
+         14.9,
+         37
+        ],
+        [
+         15.3,
+         37.35
+        ],
+        [
+         15.5,
+         37
+        ],
+        [
+         15.1,
+         36.7
+        ],
+        [
+         14.9,
+         37
+        ]
+       ]
+      ]
+     }
+    },
+    {
+     "from": {
+      "y": -404
+     },
+     "to": {
+      "y": -366
+     },
+     "geometry": {
+      "type": "Polygon",
+      "coordinates": [
+       [
+        [
+         14,
+         37.6
+        ],
+        [
+         15.6,
+         37.9
+        ],
+        [
+         15.7,
+         36.7
+        ],
+        [
+         14.4,
+         36.7
+        ],
+        [
+         14,
+         37.6
+        ]
+       ]
+      ]
+     }
+    }
+   ],
+   "source": {
+    "name": "Rough hand-drawn outline (test data), not a historical map"
+   },
+   "updatedAt": 1760000000000
+  }
+ ],
+ "flows": [
+  {
+   "id": "f_colonies",
+   "title": "Greek colonists in Sicily and Italy",
+   "categoryId": "society",
+   "cause": "settlement",
+   "measure": "living",
+   "itemId": "i_archaic",
+   "routes": [
+    {
+     "from": {
+      "name": "Corinth",
+      "lon": 22.88,
+      "lat": 37.906
+     },
+     "to": {
+      "name": "Syracuse",
+      "lon": 15.285,
+      "lat": 37.07
+     },
+     "points": [
+      {
+       "x": -732,
+       "v": 500
+      },
+      {
+       "x": -599,
+       "v": 8000
+      },
+      {
+       "x": -479,
+       "v": 25000
+      }
+     ]
+    },
+    {
+     "from": {
+      "name": "Chalcis",
+      "lon": 23.6,
+      "lat": 38.46
+     },
+     "to": {
+      "name": "Naxos (Sicily)",
+      "lon": 15.28,
+      "lat": 37.82
+     },
+     "points": [
+      {
+       "x": -733,
+       "v": 300
+      },
+      {
+       "x": -599,
+       "v": 4000
+      }
+     ]
+    },
+    {
+     "from": {
+      "name": "Megara",
+      "lon": 23.345,
+      "lat": 37.996
+     },
+     "to": {
+      "name": "Megara Hyblaea",
+      "lon": 15.19,
+      "lat": 37.2
+     },
+     "points": [
+      {
+       "x": -727,
+       "v": 300
+      },
+      {
+       "x": -599,
+       "v": 5000
+      }
+     ]
+    },
+    {
+     "from": {
+      "name": "Athens",
+      "lon": 23.727,
+      "lat": 37.972
+     },
+     "to": {
+      "name": "Thurii",
+      "lon": 16.48,
+      "lat": 39.72
+     },
+     "points": [
+      {
+       "x": -443,
+       "v": 1000
+      },
+      {
+       "x": -429,
+       "v": 4000
+      }
+     ]
+    }
+   ],
+   "source": {
+    "name": "Illustrative values for the fixture, not estimates"
+   },
+   "note": "Numbers are made up to give the arrows widths. The dates are the traditional founding dates.",
+   "updatedAt": 1760000000000
+  }
+ ],
+ "notes": [
+  {
+   "id": "n_why_lost",
+   "title": "Why did Athens lose?",
+   "body": "Thucydides blames the Sicilian Expedition more than anything. But the plague had already cost a quarter of the people, Decelea cut the farms off, and Aegospotami lost the last fleet.\n\nIt wasn’t one defeat. It was the money and the men running out.",
+   "linkedIds": [
+    "i_pelop",
+    "i_sicilian",
+    "i_plague",
+    "i_decelean",
+    "i_b_aegospotami"
+   ],
+   "citations": [
+    {
+     "sourceId": "s_thuc",
+     "locator": "bk. 7–8"
+    }
+   ],
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "n_fleet_money",
+   "title": "Where the fleet’s money came from",
+   "body": "Silver from Laurion paid for the ships at Salamis. After 454 the league’s tribute paid for the Parthenon and for rowers.\n\nSo the same money explains the navy, the temple and the pay for jurors.",
+   "linkedIds": [
+    "i_laurion",
+    "i_salamis",
+    "i_treasury_moved",
+    "i_parthenon_built",
+    "i_juror_pay"
+   ],
+   "citations": [
+    {
+     "sourceId": "s_ober"
+    }
+   ],
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "n_teachers",
+   "title": "Socrates, Plato, Aristotle, Alexander",
+   "body": "Four generations of teacher and student. Socrates wrote nothing; Plato wrote him into dialogues; Aristotle left the Academy and tutored Alexander.",
+   "linkedIds": [
+    "i_socrates",
+    "i_plato",
+    "i_aristotle",
+    "i_alexander"
+   ],
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "n_end_freedom",
+   "title": "How Greece lost its independence",
+   "body": "Demosthenes saw it coming. Chaeronea in 338 ended the argument, and the Lamian War in 322 was the last try.",
+   "linkedIds": [
+    "i_demosthenes",
+    "i_chaeronea",
+    "i_philip",
+    "i_lamian"
+   ],
+   "citations": [
+    {
+     "sourceId": "s_hansen"
+    }
+   ],
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "n_sparta_shrinks",
+   "title": "Sparta ran out of Spartans",
+   "body": "After Leuctra and the loss of Messenia, Sparta had few citizens and no helots to feed them.",
+   "linkedIds": [
+    "sr_spartiates",
+    "t_sparta",
+    "i_leuctra",
+    "i_messene"
+   ],
+   "updatedAt": 1760000000000
+  }
+ ],
+ "sources": [
+  {
+   "id": "s_thuc",
+   "kind": "book",
+   "title": "History of the Peloponnesian War",
+   "authors": "Thucydides; trans. Rex Warner",
+   "year": "1972",
+   "publisher": "Penguin",
+   "remarks": "Our main source for 431–411 BCE; breaks off mid-sentence.",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "s_hdt",
+   "kind": "book",
+   "title": "The Histories",
+   "authors": "Herodotus; trans. Aubrey de Sélincourt",
+   "year": "1954",
+   "publisher": "Penguin",
+   "remarks": "Our main source for the Persian Wars; a good storyteller, not always a careful one.",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "s_xen",
+   "kind": "book",
+   "title": "A History of My Times (Hellenica)",
+   "authors": "Xenophon; trans. Rex Warner",
+   "year": "1966",
+   "publisher": "Penguin",
+   "remarks": "Picks up where Thucydides stops (411) and runs to 362.",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "s_ath",
+   "kind": "book",
+   "title": "The Athenian Constitution",
+   "authors": "Aristotle (attributed); trans. P. J. Rhodes",
+   "year": "1984",
+   "publisher": "Penguin",
+   "remarks": "How Athens’ government changed, from Draco to Aristotle’s day.",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "s_hansen",
+   "kind": "book",
+   "title": "The Athenian Democracy in the Age of Demosthenes",
+   "authors": "Mogens Herman Hansen",
+   "year": "1991",
+   "publisher": "Blackwell",
+   "remarks": "The standard account of how the fourth-century machinery worked.",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "s_ober",
+   "kind": "book",
+   "title": "The Rise and Fall of Classical Greece",
+   "authors": "Josiah Ober",
+   "year": "2015",
+   "publisher": "Princeton University Press",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "s_lecture",
+   "kind": "lecture",
+   "title": "Classical Greece, lecture 6: the Athenian empire",
+   "authors": "A made-up lecture series (test data)",
+   "year": "2026",
+   "remarks": "Stands in for a lecture Bob watched.",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "s_wp_classical_greece",
+   "kind": "web",
+   "title": "Classical Greece",
+   "publisher": "Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Classical_Greece",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "s_wp_greco_persian_wars",
+   "kind": "web",
+   "title": "Greco-Persian Wars",
+   "publisher": "Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Greco-Persian_Wars",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "s_wp_ionian_revolt",
+   "kind": "web",
+   "title": "Ionian Revolt",
+   "publisher": "Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Ionian_Revolt",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "s_wp_battle_of_lade",
+   "kind": "web",
+   "title": "Battle of Lade",
+   "publisher": "Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Battle_of_Lade",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "s_wp_battle_of_marathon",
+   "kind": "web",
+   "title": "Battle of Marathon",
+   "publisher": "Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Battle_of_Marathon",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "s_wp_darius_the_great",
+   "kind": "web",
+   "title": "Darius the Great",
+   "publisher": "Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Darius_the_Great",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "s_wp_xerxes_i",
+   "kind": "web",
+   "title": "Xerxes I",
+   "publisher": "Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Xerxes_I",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "s_wp_battle_of_thermopylae",
+   "kind": "web",
+   "title": "Battle of Thermopylae",
+   "publisher": "Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Battle_of_Thermopylae",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "s_wp_battle_of_artemisium",
+   "kind": "web",
+   "title": "Battle of Artemisium",
+   "publisher": "Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Battle_of_Artemisium",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "s_wp_battle_of_salamis",
+   "kind": "web",
+   "title": "Battle of Salamis",
+   "publisher": "Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Battle_of_Salamis",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "s_wp_battle_of_plataea",
+   "kind": "web",
+   "title": "Battle of Plataea",
+   "publisher": "Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Battle_of_Plataea",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "s_wp_battle_of_mycale",
+   "kind": "web",
+   "title": "Battle of Mycale",
+   "publisher": "Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Battle_of_Mycale",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "s_wp_delian_league",
+   "kind": "web",
+   "title": "Delian League",
+   "publisher": "Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Delian_League",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "s_wp_battle_of_the_eurymedon",
+   "kind": "web",
+   "title": "Battle of the Eurymedon",
+   "publisher": "Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Battle_of_the_Eurymedon",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "s_wp_athenian_democracy",
+   "kind": "web",
+   "title": "Athenian democracy",
+   "publisher": "Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Athenian_democracy",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "s_wp_long_walls",
+   "kind": "web",
+   "title": "Long Walls",
+   "publisher": "Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Long_Walls",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "s_wp_peace_of_callias",
+   "kind": "web",
+   "title": "Peace of Callias",
+   "publisher": "Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Peace_of_Callias",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "s_wp_parthenon",
+   "kind": "web",
+   "title": "Parthenon",
+   "publisher": "Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Parthenon",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "s_wp_thurii",
+   "kind": "web",
+   "title": "Thurii",
+   "publisher": "Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Thurii",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "s_wp_peloponnesian_war",
+   "kind": "web",
+   "title": "Peloponnesian War",
+   "publisher": "Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Peloponnesian_War",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "s_wp_peace_of_nicias",
+   "kind": "web",
+   "title": "Peace of Nicias",
+   "publisher": "Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Peace_of_Nicias",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "s_wp_sicilian_expedition",
+   "kind": "web",
+   "title": "Sicilian Expedition",
+   "publisher": "Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Sicilian_Expedition",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "s_wp_plague_of_athens",
+   "kind": "web",
+   "title": "Plague of Athens",
+   "publisher": "Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Plague_of_Athens",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "s_wp_thirty_tyrants",
+   "kind": "web",
+   "title": "Thirty Tyrants",
+   "publisher": "Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Thirty_Tyrants",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "s_wp_siege_of_plataea",
+   "kind": "web",
+   "title": "Siege of Plataea",
+   "publisher": "Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Siege_of_Plataea",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "s_wp_battle_of_naupactus",
+   "kind": "web",
+   "title": "Battle of Naupactus",
+   "publisher": "Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Battle_of_Naupactus",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "s_wp_mytilenean_revolt",
+   "kind": "web",
+   "title": "Mytilenean revolt",
+   "publisher": "Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Mytilenean_revolt",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "s_wp_battle_of_sphacteria",
+   "kind": "web",
+   "title": "Battle of Sphacteria",
+   "publisher": "Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Battle_of_Sphacteria",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "s_wp_battle_of_delium",
+   "kind": "web",
+   "title": "Battle of Delium",
+   "publisher": "Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Battle_of_Delium",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "s_wp_thucydides",
+   "kind": "web",
+   "title": "Thucydides",
+   "publisher": "Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Thucydides",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "s_wp_battle_of_amphipolis",
+   "kind": "web",
+   "title": "Battle of Amphipolis",
+   "publisher": "Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Battle_of_Amphipolis",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "s_wp_battle_of_mantinea_418_bc",
+   "kind": "web",
+   "title": "Battle of Mantinea (418 BC)",
+   "publisher": "Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Battle_of_Mantinea_(418_BC)",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "s_wp_siege_of_melos",
+   "kind": "web",
+   "title": "Siege of Melos",
+   "publisher": "Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Siege_of_Melos",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "s_wp_battle_of_cyzicus",
+   "kind": "web",
+   "title": "Battle of Cyzicus",
+   "publisher": "Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Battle_of_Cyzicus",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "s_wp_battle_of_arginusae",
+   "kind": "web",
+   "title": "Battle of Arginusae",
+   "publisher": "Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Battle_of_Arginusae",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "s_wp_battle_of_aegospotami",
+   "kind": "web",
+   "title": "Battle of Aegospotami",
+   "publisher": "Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Battle_of_Aegospotami",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "s_wp_anabasis_xenophon",
+   "kind": "web",
+   "title": "Anabasis (Xenophon)",
+   "publisher": "Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Anabasis_(Xenophon)",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "s_wp_trial_of_socrates",
+   "kind": "web",
+   "title": "Trial of Socrates",
+   "publisher": "Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Trial_of_Socrates",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "s_wp_corinthian_war",
+   "kind": "web",
+   "title": "Corinthian War",
+   "publisher": "Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Corinthian_War",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "s_wp_king_s_peace",
+   "kind": "web",
+   "title": "King's Peace",
+   "publisher": "Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/King's_Peace",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "s_wp_battle_of_leuctra",
+   "kind": "web",
+   "title": "Battle of Leuctra",
+   "publisher": "Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Battle_of_Leuctra",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "s_wp_battle_of_mantinea_362_bc",
+   "kind": "web",
+   "title": "Battle of Mantinea (362 BC)",
+   "publisher": "Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Battle_of_Mantinea_(362_BC)",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "s_wp_third_sacred_war",
+   "kind": "web",
+   "title": "Third Sacred War",
+   "publisher": "Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Third_Sacred_War",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "s_wp_sarissa",
+   "kind": "web",
+   "title": "Sarissa",
+   "publisher": "Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Sarissa",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "s_wp_olynthus",
+   "kind": "web",
+   "title": "Olynthus",
+   "publisher": "Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Olynthus",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "s_wp_battle_of_chaeronea_338_bc",
+   "kind": "web",
+   "title": "Battle of Chaeronea (338 BC)",
+   "publisher": "Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Battle_of_Chaeronea_(338_BC)",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "s_wp_wars_of_alexander_the_great",
+   "kind": "web",
+   "title": "Wars of Alexander the Great",
+   "publisher": "Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Wars_of_Alexander_the_Great",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "s_wp_lamian_war",
+   "kind": "web",
+   "title": "Lamian War",
+   "publisher": "Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Lamian_War",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "s_wp_laurion",
+   "kind": "web",
+   "title": "Laurion",
+   "publisher": "Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Laurion",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "s_wp_trireme",
+   "kind": "web",
+   "title": "Trireme",
+   "publisher": "Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Trireme",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "s_wp_hoplite",
+   "kind": "web",
+   "title": "Hoplite",
+   "publisher": "Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Hoplite",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "s_wp_cleisthenes",
+   "kind": "web",
+   "title": "Cleisthenes",
+   "publisher": "Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Cleisthenes",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "s_wp_themistocles",
+   "kind": "web",
+   "title": "Themistocles",
+   "publisher": "Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Themistocles",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "s_wp_leonidas_i",
+   "kind": "web",
+   "title": "Leonidas I",
+   "publisher": "Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Leonidas_I",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "s_wp_pericles",
+   "kind": "web",
+   "title": "Pericles",
+   "publisher": "Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Pericles",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "s_wp_phidias",
+   "kind": "web",
+   "title": "Phidias",
+   "publisher": "Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Phidias",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "s_wp_herodotus",
+   "kind": "web",
+   "title": "Herodotus",
+   "publisher": "Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Herodotus",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "s_wp_aeschylus",
+   "kind": "web",
+   "title": "Aeschylus",
+   "publisher": "Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Aeschylus",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "s_wp_sophocles",
+   "kind": "web",
+   "title": "Sophocles",
+   "publisher": "Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Sophocles",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "s_wp_euripides",
+   "kind": "web",
+   "title": "Euripides",
+   "publisher": "Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Euripides",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "s_wp_aristophanes",
+   "kind": "web",
+   "title": "Aristophanes",
+   "publisher": "Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Aristophanes",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "s_wp_hippocrates",
+   "kind": "web",
+   "title": "Hippocrates",
+   "publisher": "Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Hippocrates",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "s_wp_socrates",
+   "kind": "web",
+   "title": "Socrates",
+   "publisher": "Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Socrates",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "s_wp_plato",
+   "kind": "web",
+   "title": "Plato",
+   "publisher": "Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Plato",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "s_wp_aristotle",
+   "kind": "web",
+   "title": "Aristotle",
+   "publisher": "Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Aristotle",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "s_wp_xenophon",
+   "kind": "web",
+   "title": "Xenophon",
+   "publisher": "Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Xenophon",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "s_wp_alcibiades",
+   "kind": "web",
+   "title": "Alcibiades",
+   "publisher": "Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Alcibiades",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "s_wp_lysander",
+   "kind": "web",
+   "title": "Lysander",
+   "publisher": "Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Lysander",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "s_wp_epaminondas",
+   "kind": "web",
+   "title": "Epaminondas",
+   "publisher": "Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Epaminondas",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "s_wp_demosthenes",
+   "kind": "web",
+   "title": "Demosthenes",
+   "publisher": "Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Demosthenes",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "s_wp_philip_ii_of_macedon",
+   "kind": "web",
+   "title": "Philip II of Macedon",
+   "publisher": "Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Philip_II_of_Macedon",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "s_wp_alexander_the_great",
+   "kind": "web",
+   "title": "Alexander the Great",
+   "publisher": "Wikipedia",
+   "url": "https://en.wikipedia.org/wiki/Alexander_the_Great",
+   "updatedAt": 1760000000000
+  }
+ ],
+ "relations": [
+  {
+   "id": "r_1",
+   "fromId": "i_ionian",
+   "toId": "i_persian",
+   "type": "part-of",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_2",
+   "fromId": "i_lade",
+   "toId": "i_ionian",
+   "type": "part-of",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_3",
+   "fromId": "i_marathon",
+   "toId": "i_persian",
+   "type": "part-of",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_4",
+   "fromId": "i_xerxes_invasion",
+   "toId": "i_persian",
+   "type": "part-of",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_5",
+   "fromId": "i_thermopylae",
+   "toId": "i_xerxes_invasion",
+   "type": "part-of",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_6",
+   "fromId": "i_artemisium",
+   "toId": "i_xerxes_invasion",
+   "type": "part-of",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_7",
+   "fromId": "i_salamis",
+   "toId": "i_xerxes_invasion",
+   "type": "part-of",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_8",
+   "fromId": "i_plataea",
+   "toId": "i_xerxes_invasion",
+   "type": "part-of",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_9",
+   "fromId": "i_mycale",
+   "toId": "i_xerxes_invasion",
+   "type": "part-of",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_10",
+   "fromId": "i_eurymedon",
+   "toId": "i_persian",
+   "type": "part-of",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_11",
+   "fromId": "i_archidamian",
+   "toId": "i_pelop",
+   "type": "part-of",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_12",
+   "fromId": "i_peace_nicias",
+   "toId": "i_pelop",
+   "type": "part-of",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_13",
+   "fromId": "i_sicilian",
+   "toId": "i_pelop",
+   "type": "part-of",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_14",
+   "fromId": "i_decelean",
+   "toId": "i_pelop",
+   "type": "part-of",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_15",
+   "fromId": "i_b_plataea431",
+   "toId": "i_archidamian",
+   "type": "part-of",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_16",
+   "fromId": "i_b_potidaea",
+   "toId": "i_archidamian",
+   "type": "part-of",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_17",
+   "fromId": "i_b_naupactus",
+   "toId": "i_archidamian",
+   "type": "part-of",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_18",
+   "fromId": "i_b_mytilene",
+   "toId": "i_archidamian",
+   "type": "part-of",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_19",
+   "fromId": "i_b_plataea427",
+   "toId": "i_archidamian",
+   "type": "part-of",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_20",
+   "fromId": "i_b_sphacteria",
+   "toId": "i_archidamian",
+   "type": "part-of",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_21",
+   "fromId": "i_b_delium",
+   "toId": "i_archidamian",
+   "type": "part-of",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_22",
+   "fromId": "i_b_amph424",
+   "toId": "i_archidamian",
+   "type": "part-of",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_23",
+   "fromId": "i_b_amph422",
+   "toId": "i_archidamian",
+   "type": "part-of",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_24",
+   "fromId": "i_b_mantinea",
+   "toId": "i_pelop",
+   "type": "part-of",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_25",
+   "fromId": "i_b_melos",
+   "toId": "i_pelop",
+   "type": "part-of",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_26",
+   "fromId": "i_b_syr415",
+   "toId": "i_sicilian",
+   "type": "part-of",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_27",
+   "fromId": "i_b_harbour",
+   "toId": "i_sicilian",
+   "type": "part-of",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_28",
+   "fromId": "i_b_assinarus",
+   "toId": "i_sicilian",
+   "type": "part-of",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_29",
+   "fromId": "i_b_cynossema",
+   "toId": "i_decelean",
+   "type": "part-of",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_30",
+   "fromId": "i_b_cyzicus",
+   "toId": "i_decelean",
+   "type": "part-of",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_31",
+   "fromId": "i_b_notium",
+   "toId": "i_decelean",
+   "type": "part-of",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_32",
+   "fromId": "i_b_arginusae",
+   "toId": "i_decelean",
+   "type": "part-of",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_33",
+   "fromId": "i_b_aegospotami",
+   "toId": "i_decelean",
+   "type": "part-of",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_34",
+   "fromId": "i_b_surrender",
+   "toId": "i_pelop",
+   "type": "part-of",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_35",
+   "fromId": "i_issus",
+   "toId": "i_alexander_persia",
+   "type": "part-of",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_36",
+   "fromId": "i_gaugamela",
+   "toId": "i_alexander_persia",
+   "type": "part-of",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_37",
+   "fromId": "i_socrates",
+   "toId": "i_plato",
+   "type": "influenced",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_38",
+   "fromId": "i_plato",
+   "toId": "i_aristotle",
+   "type": "influenced",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_39",
+   "fromId": "i_aristotle",
+   "toId": "i_alexander",
+   "type": "influenced",
+   "note": "tutored him at Mieza",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_40",
+   "fromId": "i_anaxagoras",
+   "toId": "i_pericles",
+   "type": "influenced",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_41",
+   "fromId": "i_isocrates",
+   "toId": "i_demosthenes",
+   "type": "related",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_42",
+   "fromId": "i_cleisthenes",
+   "toId": "i_ephialtes",
+   "type": "related",
+   "note": "democracy built in two steps",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_43",
+   "fromId": "i_laurion",
+   "toId": "i_salamis",
+   "type": "caused",
+   "note": "the silver built the fleet",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_44",
+   "fromId": "i_laurion",
+   "toId": "i_trireme",
+   "type": "related",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_45",
+   "fromId": "i_salamis",
+   "toId": "i_delian_founded",
+   "type": "caused",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_46",
+   "fromId": "i_delian_founded",
+   "toId": "i_treasury_moved",
+   "type": "caused",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_47",
+   "fromId": "i_treasury_moved",
+   "toId": "i_parthenon_built",
+   "type": "caused",
+   "note": "paid for from the tribute",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_48",
+   "fromId": "i_megarian_decree",
+   "toId": "i_pelop",
+   "type": "caused",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_49",
+   "fromId": "i_plague",
+   "toId": "i_pericles",
+   "type": "caused",
+   "note": "he died of it in 429",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_50",
+   "fromId": "i_herms",
+   "toId": "i_alcibiades_defects",
+   "type": "caused",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_51",
+   "fromId": "i_alcibiades_defects",
+   "toId": "i_decelean",
+   "type": "caused",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_52",
+   "fromId": "i_b_aegospotami",
+   "toId": "i_thirty",
+   "type": "caused",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_53",
+   "fromId": "i_thirty",
+   "toId": "i_democracy_restored",
+   "type": "caused",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_54",
+   "fromId": "i_sicilian",
+   "toId": "i_decelean",
+   "type": "caused",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_55",
+   "fromId": "i_leuctra",
+   "toId": "i_messene",
+   "type": "caused",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_56",
+   "fromId": "i_chaeronea",
+   "toId": "i_corinth_league",
+   "type": "caused",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_57",
+   "fromId": "i_philip",
+   "toId": "i_alexander",
+   "type": "influenced",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_58",
+   "fromId": "i_trial_socrates",
+   "toId": "i_academy",
+   "type": "caused",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_59",
+   "fromId": "i_thucydides",
+   "toId": "i_thucydides_history",
+   "type": "related",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_60",
+   "fromId": "i_herodotus",
+   "toId": "i_histories",
+   "type": "related",
+   "updatedAt": 1760000000000
+  }
+ ],
+ "deleted": {}
+}

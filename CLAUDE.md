@@ -13,6 +13,9 @@ npm run dev           # dev server
 npm run check:quiet   # typecheck + unit + build + e2e, failures only: run before every commit
 npm run check         # same, full output: only when debugging a failure
 npm run shots -- --only map --sheet   # screenshots of the views you touched, tiled into one image
+npm run shots -- --gallery --sheet    # the app on the Classical Greece fixture, one shot per preset (starts a dev server)
+npm run shots -- --filmstrip map      # the map played 480→400 BCE as one image (--video for a .webm; --from/--to/--frames)
+node tests/fixtures/greece/build.mjs  # rebuild the Classical Greece fixture from the prototypes' data
 npx playwright test e2e/visual.spec.ts --update-snapshots   # after an intended visual change
 node scripts/check-draft.mjs <file> --bbox …   # check a drafted import file before Bob merges it
 node scripts/sea-route.mjs --stops "lon,lat;…"   # a sea route between ports that never crosses land
@@ -26,7 +29,8 @@ src/data/    series/OWID parsing, geo.ts, basemaps.ts
 src/media/   Commons, Wikipedia/Wikidata
 src/ai/      AI drafting (rules in its CLAUDE.md); only client.ts imports the Anthropic SDK
 src/ui/      React; TimelineView = only vis-timeline importer, MapView = only maplibre-gl importer
-e2e/         Playwright specs        tests/fixtures/  TEST DATA ONLY
+src/ui/gallery/  dev-only `/#gallery`: the app on the Greece fixture in preset states (not in production builds)
+e2e/         Playwright specs        tests/fixtures/  TEST DATA ONLY (greece/: ~160-entry Classical Greece doc + next.json for shapes the schema lacks)
 docs/        vision.md, decisions.md, data-model.md, design.md, references.md
 ```
 Folder notes load automatically: `src/ui/CLAUDE.md`, `src/model/CLAUDE.md`, `src/ai/CLAUDE.md`, `e2e/CLAUDE.md`.
