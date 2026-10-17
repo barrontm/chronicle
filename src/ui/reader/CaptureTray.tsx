@@ -1,7 +1,8 @@
 import { useLayoutEffect, useRef, useState } from 'react';
 import { firstChoice } from '../../model/passage';
-import { KIND_LABEL, findInChronicle, subjectFacts, type Subject, type SubjectKind } from '../../model/subjects';
-import { DIMENSIONS, type Dimension, type Highlight } from '../../model/types';
+import { describeRelation, upsert } from '../../model/doc';
+import { KIND_LABEL, factRelations, findInChronicle, subjectFacts, type Subject, type SubjectKind } from '../../model/subjects';
+import { DIMENSIONS, type Dimension, type Highlight, type Relation } from '../../model/types';
 import { useDoc } from '../DocContext';
 import { DIMENSION_LABEL } from '../util';
 import { Glyph } from './Glyph';
@@ -49,13 +50,15 @@ export function CaptureTray({ marks, candidates, articleTitle, onAdd, onOpenReco
   onAdd: (h: Highlight, key: string) => Promise<void>;
   onOpenRecord?: (r: RecordRef) => void;
 }) {
-  const { doc } = useDoc();
+  const { doc, update } = useDoc();
   const tray = useRef<HTMLDivElement>(null);
   const [flash, setFlash] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   /** The candidate Bob picked, per highlight, this session. */
   const [picked, setPicked] = useState<Record<string, string>>({});
+  /** Suggested connections Bob unticked, by the other entry's id. */
+  const [unticked, setUnticked] = useState<Set<string>>(new Set());
   const open = marks.open;
   const openId = open?.highlight.id;
 
@@ -155,6 +158,9 @@ export function CaptureTray({ marks, candidates, articleTitle, onAdd, onOpenReco
     const { have, ref, linked } = chosen;
     const facts = subjectFacts(s);
     const cantAdd = !have && (!s.kind || CANT_ADD[s.kind]);
+    // Linking to an entry Bob has: Wikidata's facts may connect it to others he has, with this highlight as evidence.
+    const suggested = have && !linked && ref?.type === 'item' ? factRelations(have.id, s.facts, doc, h.id) : [];
+    const otherOf = (r: Relation) => (r.fromId === have?.id ? r.toId : r.fromId);
     body = (
       <>
         {facts.length > 0 && (
@@ -178,6 +184,24 @@ export function CaptureTray({ marks, candidates, articleTitle, onAdd, onOpenReco
             : facts.length ? `All of this comes from Wikidata${facts.some((f) => f.values.some((v) => inChronicle(v.qid))) ? '; underlined names are already in Chronicle' : ''}.`
             : 'Wikidata gives no dates or places for this.'}
         </p>
+        {suggested.length > 0 && (
+          <div className="suggested" data-testid="suggested-connections">
+            <p className="tray-note">Linking also connects, with this highlight as evidence:</p>
+            {suggested.map((r) => {
+              const other = otherOf(r);
+              const name = `${describeRelation(r.type, r.fromId === have!.id ? 'out' : 'in')} ${doc.items.find((i) => i.id === other)?.title ?? ''}`;
+              return (
+                <label className="check" key={other}>
+                  <input
+                    type="checkbox"
+                    checked={!unticked.has(other)}
+                    onChange={(e) => setUnticked((u) => { const n = new Set(u); if (e.target.checked) n.delete(other); else n.add(other); return n; })}
+                  /> {name}
+                </label>
+              );
+            })}
+          </div>
+        )}
       </>
     );
     if (linked) {
@@ -190,7 +214,13 @@ export function CaptureTray({ marks, candidates, articleTitle, onAdd, onOpenReco
     } else if (have) {
       actions = (
         <>
-          <button type="button" className="btn primary" onClick={() => { marks.setSubject(s.qid); marks.link(have.id); done(`Linked to ${named}.`); }}>Link to {named}</button>
+          <button type="button" className="btn primary" onClick={() => {
+            marks.setSubject(s.qid);
+            marks.link(have.id);
+            const keep = suggested.filter((r) => !unticked.has(otherOf(r)));
+            if (keep.length) update((d) => keep.reduce((next, r) => upsert(next, 'relations', r), d));
+            done(`Linked to ${named}.`);
+          }}>Link to {named}</button>
           {justKeep}
         </>
       );

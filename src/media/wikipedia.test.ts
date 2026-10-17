@@ -1,12 +1,11 @@
 import { readFileSync } from 'node:fs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { Source, TimelineItem } from '../model/types';
+import type { Source } from '../model/types';
 import {
   buildCoordsUrl,
   buildDraft,
   buildEntityUrl,
   buildInfluencedSearchUrl,
-  influenceRelations,
   buildSearchUrl,
   buildSummaryUrl,
   buildPlaceSearchUrl,
@@ -153,17 +152,6 @@ describe('influences', () => {
 
   it('reads English Wikipedia page titles', () => {
     expect(parsePages({ entities: { Q859: { sitelinks: { enwiki: { title: 'Plato' } } }, Q2: { sitelinks: {} } } })).toEqual({ Q859: 'Plato' });
-  });
-
-  it('connects a new person only to people already on the timeline, both ways', () => {
-    const on = (id: string, wikidataId?: string): TimelineItem => ({ id, kind: 'person', title: id, start: { y: -400 }, categoryId: 'c', updatedAt: 1, ...(wikidataId ? { wikidataId } : {}) });
-    const existing = [on('socrates', 'Q913'), on('aristotle', 'Q868'), on('handmade')];
-    const rels = influenceRelations('plato', ['Q913', 'Q999'], ['Q868', 'Q868'], existing);
-    expect(rels.map(({ fromId, toId, type }) => ({ fromId, toId, type }))).toEqual([
-      { fromId: 'socrates', toId: 'plato', type: 'influenced' },
-      { fromId: 'plato', toId: 'aristotle', type: 'influenced' },
-    ]);
-    expect(influenceRelations('plato', [], [], existing)).toEqual([]);
   });
 });
 

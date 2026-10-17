@@ -438,3 +438,59 @@ test('a highlight becomes a page its passage links: pick the war, add it, and se
   await page.getByRole('tab', { name: /Highlights/ }).click();
   await expect(page.getByTestId('highlight-group')).toContainText('on Peloponnesian War');
 });
+
+test('adding a battle connects it to the war already in Chronicle, with the highlight as evidence @phone', async ({ page }, info) => {
+  const phone = info.project.name.includes('phone');
+  await mockArticles(page);
+  QIDS.Battle_of_Salamis = 'Q178850';
+  await mockSummaries(page);
+  await page.route('https://en.wikipedia.org/w/rest.php/v1/search/page**', (route) =>
+    route.fulfill({ headers: cors, json: { pages: [{ key: 'Battle_of_Salamis', title: 'Battle of Salamis', description: 'Naval battle in 480 BC', thumbnail: null }] } }));
+  await page.route('https://en.wikipedia.org/w/rest.php/v1/page/Battle_of_Salamis/html', (route) => route.fulfill({
+    headers: { ...cors, 'Content-Type': 'text/html' },
+    body: '<!DOCTYPE html><html about="https://en.wikipedia.org/wiki/Special:Redirect/revision/7"><head><title>Battle of Salamis</title></head><body>' +
+      '<section data-mw-section-id="0"><p>The Greek fleet met the Persians in the straits. The battle turned the war in 480 BC.</p></section></body></html>',
+  }));
+  await open(page);
+  // A timeline that already has the Persian invasion, matched by its Wikidata id.
+  const doc = JSON.parse(readFileSync(new URL('../tests/fixtures/sample-history.json', import.meta.url), 'utf8'));
+  const any = doc.items[0];
+  doc.items.push({ ...any, id: 'invasion', kind: 'span', title: 'Second Persian invasion of Greece', wikidataId: 'Q1122337', start: { y: -479 }, end: { y: -478 }, places: undefined });
+  await page.getByTestId('import-input').setInputFiles({ name: 'mine.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(doc)) });
+  await expect(page.locator('.vis-item', { hasText: 'Second Persian invasion' })).toBeVisible();
+
+  await page.getByRole('button', { name: 'More' }).click();
+  await page.getByRole('menuitemcheckbox', { name: 'Try the new layout' }).click();
+  await search(page, 'salamis', 'Battle of Salamis');
+  await expect(page.getByTestId('reader').getByText('The battle turned the war')).toBeVisible();
+  const quote = phone ? 'The battle turned the war in 480 BC.' : 'turned the war';
+  if (phone) {
+    const at = await findText(page, 'turned the war');
+    await page.touchscreen.tap(at.x, at.y);
+  } else {
+    await findText(page, 'turned the war', true);
+    await expect(page.getByRole('button', { name: 'Highlight' })).toBeVisible();
+    await page.keyboard.press('h');
+  }
+  const tray = page.getByTestId('capture-tray');
+  await expect(tray.getByRole('blockquote')).toHaveText(`“${quote}”`);
+  await expect(tray.getByRole('radio', { name: /Battle of Salamis/ })).toContainText('This article · Battle');
+  await tray.getByRole('button', { name: 'Add to map and timeline' }).click();
+
+  // The editor suggests "part of" the invasion, ticked, citing the highlight.
+  const editor = page.getByTestId('item-editor');
+  await expect(editor.getByLabel('Title')).toHaveValue('Battle of Salamis');
+  const suggested = editor.getByTestId('suggested-connections');
+  await expect(suggested.getByRole('checkbox', { name: 'Part of Second Persian invasion of Greece' })).toBeChecked();
+  await expect(suggested).toContainText('your highlight as evidence');
+  await editor.getByRole('button', { name: 'Add to timeline' }).click();
+
+  // Saved with the entry: the connection shows on both panels, with the highlight as its evidence.
+  const entry = page.getByTestId('item-view');
+  await expect(entry.getByRole('heading', { name: 'Battle of Salamis' })).toBeVisible();
+  const link = entry.getByRole('button', { name: /Part of\s*Second Persian invasion of Greece/ });
+  await expect(link.getByTestId('evidence')).toHaveText(`Evidence: “${quote}”`);
+  await link.click();
+  await expect(entry.getByRole('heading', { name: 'Second Persian invasion of Greece' })).toBeVisible();
+  await expect(entry.getByTestId('evidence')).toHaveText(`Evidence: “${quote}”`);
+});
