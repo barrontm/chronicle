@@ -18,7 +18,7 @@ export type Panel =
   | { type: 'flow'; id: string; edit?: boolean }
   | { type: 'new-flow'; itemId?: string }
   | { type: 'help'; section?: string }
-  | { type: 'library'; tab: 'notes' | 'sources' | 'trends' | 'territories' | 'migration' };
+  | { type: 'library'; tab: 'notes' | 'highlights' | 'sources' | 'trends' | 'territories' | 'migration' };
 
 export interface Nav {
   /** Open a panel on top of the current one. */

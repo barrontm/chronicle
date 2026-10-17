@@ -2,12 +2,12 @@ import { useState } from 'react';
 import { bibliographyFor, describeRelation, highlightsFor, newId, notesFor, relationsFor, remove, upsert, RELATION_TYPES } from '../../model/doc';
 import { compareHistDate, formatRange, formatHistDate, toDecimalYear } from '../../model/dates';
 import type { ItemDraft } from '../../media/wikipedia';
-import type { Citation, Highlight, HistDate, ItemKind, MediaRef, Relation, RelationType, Source, TimelineItem } from '../../model/types';
+import type { Citation, Dimension, Highlight, HistDate, ItemKind, MediaRef, Relation, RelationType, Source, TimelineItem } from '../../model/types';
 import { useDoc } from '../DocContext';
 import { CitationsEditor, DateField, Field, RecordPicker } from '../fields';
 import { ImagePicker } from '../ImagePicker';
 import type { Nav } from '../nav';
-import { formatCitation, titleOf } from '../util';
+import { DIMENSION_LABEL, formatCitation, titleOf } from '../util';
 import { placeLabel } from '../../model/places';
 import { InfluenceSuggestions } from './Influences';
 import { PlacesEditor } from './PlacesEditor';
@@ -16,13 +16,14 @@ import { QuickSource } from './SourcePanels';
 const KIND_LABEL: Record<ItemKind, string> = { event: 'Event', span: 'Period', person: 'Person' };
 
 /** Quoted reference text, kept visibly apart from Bob's own writing. */
-function Excerpt({ excerpt, source }: { excerpt: { text: string }; source?: Source }) {
+function Excerpt({ excerpt, source }: { excerpt: { text: string; dimension?: Dimension }; source?: Source }) {
   return (
     <blockquote className="excerpt" data-testid="excerpt">
       <p>{excerpt.text}</p>
       <footer>
         From {source?.url ? <a href={source.url} target="_blank" rel="noreferrer">{source.publisher ?? source.title}</a> : (source?.publisher ?? source?.title ?? 'a source')}
         {source?.accessed && <>, read {source.accessed}</>}
+        {excerpt.dimension && <> · {DIMENSION_LABEL[excerpt.dimension]}</>}
       </footer>
     </blockquote>
   );
@@ -223,7 +224,11 @@ export function ItemEditor({ id, init, draft: prefill, nav }: {
       let next = d;
       for (const s of newSources) if (cited.has(s.id) && !next.sources.some((x) => x.id === s.id)) next = upsert(next, 'sources', s);
       next = upsert(next, 'items', item);
-      if (quote) next = upsert(next, 'highlights', { ...quote, usedBy: [item.id] });
+      // A highlight from the reader is already saved, and may be evidence for other records too.
+      if (quote) {
+        const saved = next.highlights.find((h) => h.id === quote.id) ?? quote;
+        next = upsert(next, 'highlights', { ...saved, usedBy: [...new Set([...saved.usedBy, item.id])] });
+      }
       for (const r of initialRelations) if (!keep.has(r.id)) next = remove(next, 'relations', r.id);
       for (const r of relations) if (!initialRelations.includes(r)) next = upsert(next, 'relations', r);
       return next;

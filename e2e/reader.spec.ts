@@ -23,6 +23,10 @@ async function mockWikidata(page: Page) {
       return route.fulfill({ headers: cors, json: r ? r.entity : { entities: { '-1': { site: 'enwiki', title, missing: '' } } } });
     }
     const ids = (u.searchParams.get('ids') ?? '').split('|');
+    // An entity's claims, for "Add to map and timeline".
+    const rec = u.searchParams.get('props') === 'claims' && recs.find((r) => ids[0] in ((r.entity as { entities: object }).entities));
+    if (rec) return route.fulfill({ headers: cors, json: rec.entity });
+    if (u.searchParams.get('action') === 'wbgetclaims') return route.fulfill({ headers: cors, json: { claims: {} } });
     return route.fulfill({ headers: cors, json: { entities: Object.fromEntries(ids.map((q) => [q, { id: q, labels: labels[q] ? { en: { value: labels[q] } } : {} }])) } });
   });
   await page.route('https://query.wikidata.org/sparql**', (route) => {
@@ -52,6 +56,17 @@ async function mockArticles(page: Page) {
     return route.fulfill({ headers: { ...cors, 'Content-Type': 'text/html' }, body:
       `<!DOCTYPE html><html about="https://en.wikipedia.org/wiki/Special:Redirect/revision/42"><head><title>${title}</title>` +
       `<meta property="dc:modified" content="2026-10-01T12:00:00.000Z"/></head><body><section data-mw-section-id="0">${body}</section></body></html>` });
+  });
+}
+
+/** The page summaries "Add to map and timeline" starts from. */
+async function mockSummaries(page: Page) {
+  await page.route('https://en.wikipedia.org/api/rest_v1/page/summary/**', (route) => {
+    const key = decodeURIComponent(new URL(route.request().url()).pathname.split('/').at(-1) ?? '');
+    return route.fulfill({ headers: cors, json: {
+      title: key.replace(/_/g, ' '), wikibase_item: key === 'Pericles' ? 'Q80398' : undefined,
+      extract: 'Pericles was a Greek statesman.', content_urls: { desktop: { page: `https://en.wikipedia.org/wiki/${key}` } },
+    } });
   });
 }
 
@@ -165,7 +180,7 @@ test('highlights a passage, keeps it after a reload, and removes it @phone', asy
   }
   const quote = phone ? 'He died of the plague in 429 BC.' : 'led Athens';
   await expect(page.getByRole('status').filter({ hasText: 'Highlighted' })).toHaveText(`Highlighted: ${quote}`);
-  await expect(page.getByRole('button', { name: 'Remove highlight' })).toBeVisible();
+  await expect(page.getByTestId('capture-tray').getByRole('button', { name: 'Remove' })).toBeVisible();
 
   // Saved the moment it was made: after a reload it's still marked, as a kept highlight.
   await expect(page.getByTestId('save-state')).toHaveText('Saved on this device');
@@ -178,7 +193,7 @@ test('highlights a passage, keeps it after a reload, and removes it @phone', asy
   const at = await findText(page, phone ? 'plague' : 'Athens');
   if (phone) await page.touchscreen.tap(at.x, at.y);
   else await page.mouse.click(at.x, at.y);
-  await page.getByRole('button', { name: 'Remove highlight' }).click();
+  await page.getByTestId('capture-tray').getByRole('button', { name: 'Remove' }).click();
   await expect.poll(() => marks(page)).toEqual([]);
 
   // The page stays in the Library as a source.
@@ -216,4 +231,72 @@ test('the reader says what an article is about, and when it is already in Chroni
 
   await subject.getByRole('button', { name: 'Already in Chronicle' }).click();
   await expect(page.getByTestId('item-view')).toContainText('Pericles');
+});
+
+test('the capture tray keeps a highlight, gives it a dimension, and adds the article to the timeline @phone', async ({ page }, info) => {
+  const phone = info.project.name.includes('phone');
+  await mockArticles(page);
+  await mockSummaries(page);
+  await open(page);
+  await page.getByRole('button', { name: 'More' }).click();
+  await page.getByRole('menuitemcheckbox', { name: 'Try the new layout' }).click();
+  await search(page, 'pericles', 'Pericles');
+  const reader = page.getByTestId('reader');
+  await expect(reader.getByText('Pericles led Athens')).toBeVisible();
+
+  const highlight = async () => {
+    if (phone) {
+      const at = await findText(page, 'plague');
+      await page.touchscreen.tap(at.x, at.y);
+    } else {
+      await findText(page, 'died of the plague', true);
+      await expect(page.getByRole('button', { name: 'Highlight' })).toBeVisible();
+      await page.keyboard.press('h');
+    }
+  };
+  const quote = phone ? 'He died of the plague in 429 BC.' : 'died of the plague';
+  await highlight();
+
+  // The tray says what the article is, with its facts.
+  const tray = page.getByTestId('capture-tray');
+  await expect(tray.getByRole('blockquote')).toHaveText(`“${quote}”`);
+  await expect(tray).toContainText('Becomes · Person');
+  await expect(tray).toContainText('494–429 BCE');
+
+  // A dimension recolors the mark; keeping it closes the card and leaves a kept mark.
+  await tray.getByRole('button', { name: 'Political' }).click();
+  await expect(tray.getByRole('button', { name: 'Political' })).toHaveAttribute('aria-pressed', 'true');
+  await expect.poll(() => marks(page)).toEqual([`chronicle-mark-lapis-open: ${quote}`]);
+  await tray.getByRole('button', { name: 'Just keep the highlight' }).click();
+  await expect(tray.getByRole('status')).toHaveText('Kept as a highlight.');
+  await expect.poll(() => marks(page)).toEqual([`chronicle-mark-lapis-kept: ${quote}`]);
+
+  // Opening it again offers to add the article's subject, citing the highlight.
+  const at = await findText(page, 'plague');
+  if (phone) await page.touchscreen.tap(at.x, at.y);
+  else await page.mouse.click(at.x, at.y);
+  await tray.getByRole('button', { name: 'Add to map and timeline' }).click();
+  const editor = page.getByTestId('item-editor');
+  await expect(editor.getByLabel('Name')).toHaveValue('Pericles');
+  await expect(editor.getByTestId('excerpt')).toContainText(quote);
+  await editor.getByRole('button', { name: 'Add to timeline' }).click();
+
+  const entry = page.getByTestId('item-view');
+  await expect(entry.getByRole('heading', { name: 'Pericles' })).toBeVisible();
+  await expect(entry.getByTestId('excerpt')).toContainText(quote);
+  await expect(entry.getByTestId('excerpt')).toContainText('Political');
+  // The card now says it's on the entry; closing it leaves an added mark.
+  if (phone) await page.getByRole('button', { name: 'Close panel' }).click(); // the entry's sheet covers the reader
+  await expect(tray).toContainText('Already in Chronicle · Person');
+  await tray.getByRole('button', { name: 'Done' }).click();
+  await expect.poll(() => marks(page)).toEqual([`chronicle-mark-lapis-added: ${quote}`]);
+  await expect(tray.getByRole('status')).toHaveText('1 highlight in this article · 1 on your map and timeline');
+
+  // One source for the page, cited by the entry; the Library lists the highlight under it.
+  await page.getByRole('button', { name: 'Library' }).click();
+  await expect(page.getByRole('tab', { name: 'Sources (1)' })).toBeVisible();
+  await page.getByRole('tab', { name: /Highlights/ }).click();
+  const group = page.getByTestId('highlight-group');
+  await expect(group.getByRole('heading')).toHaveText('Pericles');
+  await expect(group).toContainText('Political · on Pericles');
 });

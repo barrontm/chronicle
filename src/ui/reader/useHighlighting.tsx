@@ -17,7 +17,7 @@ import { buildTextModel, indexAtPoint, indicesOf, rangeOf, type TextModel } from
  */
 
 type MarkState = 'open' | 'kept' | 'added';
-const PIGMENT: Record<Dimension | 'none', string> = {
+export const PIGMENT: Record<Dimension | 'none', string> = {
   political: 'lapis', economic: 'ochre', social: 'madder', technological: 'verdigris', intellectual: 'indigo', religious: 'cinnabar', none: 'umber',
 };
 const MARK = 'chronicle-mark';
@@ -36,7 +36,7 @@ export type ToolSpot = { x: number; y: number } | 'docked';
 const isTouchFirst = () => matchMedia('(pointer: coarse)').matches || window.innerWidth < 700;
 const editable = (t: EventTarget | null) => t instanceof HTMLElement && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName));
 
-export function useHighlighting(body: RefObject<HTMLDivElement | null>, article: Article | null) {
+export function useHighlighting(body: RefObject<HTMLDivElement | null>, article: Article | null, subjectQid?: string) {
   const { doc, update, readOnly } = useDoc();
   const [model, setModel] = useState<TextModel | null>(null);
   const [openId, setOpenId] = useState<string | null>(null);
@@ -102,11 +102,12 @@ export function useHighlighting(body: RefObject<HTMLDivElement | null>, article:
     update((d) => {
       const { source: src, isNew } = articleSource(d.sources, article, new Date().toISOString().slice(0, 10));
       const next = isNew ? upsert(d, 'sources', src) : d;
-      return upsert(next, 'highlights', { ...(existing ?? { id, usedBy: [] }), sourceId: src.id, text: anchor.exact, anchor, updatedAt: 0 });
+      const base = existing ?? { id, usedBy: [], ...(subjectQid ? { subjectQid } : {}) };
+      return upsert(next, 'highlights', { ...base, sourceId: src.id, text: anchor.exact, anchor, updatedAt: 0 });
     });
     setOpenId(id);
     setAnnounce(`Highlighted: ${anchor.exact}`);
-  }, [model, article, readOnly, update]);
+  }, [model, article, readOnly, update, subjectQid]);
 
   const highlightSelection = useCallback(() => {
     const sel = getSelection();
@@ -126,6 +127,33 @@ export function useHighlighting(body: RefObject<HTMLDivElement | null>, article:
     setOpenId(null);
     setAnnounce('Highlight removed');
   }, [open, update]);
+
+  /** Close the open highlight's card; the highlight stays as it is. */
+  const keep = useCallback(() => {
+    if (open) setAnnounce('Highlight kept');
+    setOpenId(null);
+  }, [open]);
+
+  const setDimension = useCallback((dimension: Dimension | undefined) => {
+    if (!open || readOnly) return;
+    const id = open.highlight.id;
+    update((d) => {
+      const h = d.highlights.find((x) => x.id === id);
+      if (!h) return d;
+      const { dimension: _, ...rest } = h;
+      return upsert(d, 'highlights', dimension ? { ...rest, dimension } : rest);
+    });
+  }, [open, readOnly, update]);
+
+  /** Make the open highlight evidence for a record Bob already has. */
+  const link = useCallback((recordId: string) => {
+    if (!open || readOnly) return;
+    const id = open.highlight.id;
+    update((d) => {
+      const h = d.highlights.find((x) => x.id === id);
+      return h && !h.usedBy.includes(recordId) ? upsert(d, 'highlights', { ...h, usedBy: [...h.usedBy, recordId] }) : d;
+    });
+  }, [open, readOnly, update]);
 
   // Follow the selection, and where the button goes.
   useEffect(() => {
@@ -189,23 +217,23 @@ export function useHighlighting(body: RefObject<HTMLDivElement | null>, article:
 
   const onPointerDown = useCallback((e: React.PointerEvent) => { lastPointer.current = e.pointerType; }, []);
 
-  const toolSpot = (): ToolSpot | null => {
-    if (selection) return selection.spot;
-    if (!open?.at || !model) return null;
-    if (isTouchFirst()) return 'docked';
-    const r = rangeOf(model, open.at.start, open.at.end).getBoundingClientRect();
-    return { x: r.left + r.width / 2, y: r.top };
-  };
+  /** Where the open highlight is on screen, so the tray can keep it in view. */
+  const openRect = useCallback((): DOMRect | null => (open?.at && model ? rangeOf(model, open.at.start, open.at.end).getBoundingClientRect() : null), [open, model]);
 
   return {
     placed,
     lost: placed.filter((p) => !p.at).length,
     selecting: !!selection,
     open,
-    toolSpot: readOnly ? null : toolSpot(),
+    toolSpot: readOnly || !selection ? null : selection.spot,
     announce,
     highlightSelection,
     removeOpen,
+    keep,
+    setDimension,
+    link,
+    openRect,
+    readOnly: !!readOnly,
     onTextClick,
     onPointerDown,
   };

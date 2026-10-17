@@ -3,9 +3,9 @@ import { formatYear } from '../../model/dates';
 import { useDoc } from '../DocContext';
 import type { Nav } from '../nav';
 import { routeYears } from '../mapData';
-import { titleOf } from '../util';
+import { DIMENSION_LABEL, titleOf } from '../util';
 
-type Tab = 'notes' | 'sources' | 'trends' | 'territories' | 'migration';
+type Tab = 'notes' | 'highlights' | 'sources' | 'trends' | 'territories' | 'migration';
 
 /** Everything that isn't on the timeline itself: your notes, your bibliography, your trends. */
 export function Library({ tab: initial, nav }: { tab: Tab; nav: Nav }) {
@@ -20,12 +20,18 @@ export function Library({ tab: initial, nav }: { tab: Tab; nav: Nav }) {
   const trends = doc.series.filter((s) => match(s.title, s.unit));
   const territories = doc.territories.filter((t) => match(t.title)).sort((a, b) => a.title.localeCompare(b.title));
   const flows = doc.flows.filter((f) => match(f.title, f.note)).sort((a, b) => a.title.localeCompare(b.title));
+  // Highlights by source, newest source first; a source matches if it or any of its highlights does.
+  const bySource = doc.sources
+    .map((s) => ({ source: s, highlights: doc.highlights.filter((h) => h.sourceId === s.id && match(h.text, s.title)) }))
+    .filter((g) => g.highlights.length)
+    .sort((a, b) => Math.max(...b.highlights.map((h) => h.updatedAt)) - Math.max(...a.highlights.map((h) => h.updatedAt)));
 
   return (
     <section data-testid="library">
       <h2>Library</h2>
       <div className="segmented" role="tablist" style={{ marginBottom: 10 }}>
         <button type="button" role="tab" aria-selected={tab === 'notes'} onClick={() => setTab('notes')}>Notes ({doc.notes.length})</button>
+        <button type="button" role="tab" aria-selected={tab === 'highlights'} onClick={() => setTab('highlights')}>Highlights ({doc.highlights.length})</button>
         <button type="button" role="tab" aria-selected={tab === 'sources'} onClick={() => setTab('sources')}>Sources ({doc.sources.length})</button>
         <button type="button" role="tab" aria-selected={tab === 'trends'} onClick={() => setTab('trends')}>Trends ({doc.series.length})</button>
         <button type="button" role="tab" aria-selected={tab === 'territories'} onClick={() => setTab('territories')}>Territories ({doc.territories.length})</button>
@@ -47,6 +53,33 @@ export function Library({ tab: initial, nav }: { tab: Tab; nav: Nav }) {
               </li>
             ))}
           </ul>
+        </>
+      )}
+
+      {tab === 'highlights' && (
+        <>
+          {doc.highlights.length === 0 && <p className="hint" style={{ color: 'var(--muted)' }}>Passages you highlight while reading show up here, under the article or book they came from.</p>}
+          {bySource.map(({ source, highlights }) => (
+            <section key={source.id} className="highlight-group" data-testid="highlight-group">
+              <h3><button className="citation" onClick={() => nav.open({ type: 'source', id: source.id })}>{source.title}</button></h3>
+              <ul className="linklist">
+                {highlights.map((h) => {
+                  const on = h.usedBy.flatMap((id) => { const t = titleOf(doc, id); return t ? [{ id, t }] : []; });
+                  const item = on.find((o) => doc.items.some((i) => i.id === o.id));
+                  return (
+                    <li key={h.id}>
+                      <button onClick={() => nav.open(item ? { type: 'item', id: item.id } : { type: 'source', id: source.id })}>
+                        <strong className="quote">“{h.text}”</strong>
+                        <small>
+                          {[h.dimension && DIMENSION_LABEL[h.dimension], on.length ? `on ${on.map((o) => o.t).join(', ')}` : 'kept as a highlight'].filter(Boolean).join(' · ')}
+                        </small>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            </section>
+          ))}
         </>
       )}
 

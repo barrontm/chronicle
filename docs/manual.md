@@ -60,7 +60,13 @@ The new layout is unfinished. Everything you've saved stays the same whichever l
 - **On a laptop**, select some words and press **Highlight** (it appears just above them) or the **H** key.
 - **On a phone**, select words and press **Highlight** at the bottom of the screen, or just tap a sentence to highlight all of it. Tapping the next sentence adds it to the same highlight.
 - A highlight is saved the moment you make it, and the article becomes one of your sources (**Library → Sources**). Highlights are quotes from the article, kept apart from your own notes.
-- The highlight you just made is shaded darker. Click or tap it again to pick it, and **Remove highlight** takes it away. Press **Esc**, or click elsewhere, to move on; it stays saved.
+- The highlight you just made is shaded darker, and a tray slides up under the text with what you can do with it. The article scrolls so the passage stays above the tray. Click or tap a highlight again to open its tray.
+- The tray shows the quote and its section, what the article is about (**Becomes · War**, or **Already in Chronicle** if you have it), and its facts from Wikidata: when, where, what it was part of, who took part. Underlined names are already in Chronicle.
+- **Dimension**: pick political, economic, social, technological, intellectual or religious. The highlight takes that color; pick it again to clear it.
+- **Add to map and timeline** fills in an entry for the article's subject from Wikipedia, with your highlight as its quote. Check it and press **Add to timeline**. The highlight is then underlined, and it shows on the entry. If you already have the subject, the button says **Link to …** instead and adds the highlight to it straight away.
+- **Just keep the highlight** closes the tray and keeps it as a plain highlight. **Remove** deletes it. Pressing **Esc**, clicking elsewhere or opening another article also keeps it.
+- With nothing open, the tray counts the article's highlights and how many are on your map and timeline.
+- **Library → Highlights** lists all your highlights under the article or book they came from, with their dimension and the entries they're on. An entry's panel shows the highlights behind it.
 - Wikipedia articles change. When you reopen one, Chronicle finds your highlights in the new version, even when the words around them were edited. A dotted underline means it found something close but isn't sure it's the same passage. If a passage was deleted, the article says how many highlights it couldn't find; they're still saved.
 
 ## Adding from Wikipedia

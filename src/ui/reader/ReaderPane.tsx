@@ -1,13 +1,15 @@
 import { useEffect, useRef, useState } from 'react';
 import { articleCache } from '../../data/articleCache';
 import { fetchArticle, type Article as ArticleData } from '../../media/article';
-import { searchWikipedia, type WikiSearchResult } from '../../media/wikipedia';
+import { draftFromWikipedia, searchWikipedia, type ItemDraft, type WikiSearchResult } from '../../media/wikipedia';
 import { KIND_LABEL, findInChronicle, subjectPartOf, subjectWhen } from '../../model/subjects';
+import type { Highlight } from '../../model/types';
 import { useDoc } from '../DocContext';
 import { Field } from '../fields';
+import { CaptureTray } from './CaptureTray';
 import { HighlightTool, HighlightsForScreenReaders } from './HighlightTool';
 import { useHighlighting } from './useHighlighting';
-import { useSubject } from './useSubject';
+import { useSubject, type SubjectState } from './useSubject';
 
 /** An entry or territory Bob already has, to open from the reader. */
 export type RecordRef = { type: 'item' | 'territory'; id: string };
@@ -21,15 +23,18 @@ export interface ArticleRef {
 
 const OFFLINE_SEARCH = 'You’re offline. Searching Wikipedia needs a connection.';
 const OFFLINE_READ = 'You’re offline, and this article isn’t saved on this device yet. Articles you’ve opened before can be read offline.';
+const OFFLINE_ADD = 'You’re offline. Adding to the map and timeline needs a connection; your highlight is saved.';
 
 /**
  * The reader column of the new layout: search Wikipedia and read the article
  * that's open. Opening and the reading trail are owned by the caller.
  */
-export function ReaderPane({ article, searching, onOpen, onSearching, onBack, onShowMap, onOpenRecord }: {
+export function ReaderPane({ article, searching, onOpen, onSearching, onBack, onShowMap, onOpenRecord, onDraft }: {
   article: ArticleRef | null;
   /** Open what Bob already has for the article's subject. */
   onOpenRecord?: (r: RecordRef) => void;
+  /** Open a prefilled entry for Bob to check and add. */
+  onDraft?: (d: ItemDraft) => void;
   /** Go back along the reading trail, when there is somewhere to go. */
   onBack?: () => void;
   /** True while the "Open an article" search is showing. */
@@ -53,7 +58,7 @@ export function ReaderPane({ article, searching, onOpen, onSearching, onBack, on
         </div>
       )}
       {(searching || !article) && <ArticleSearch hasArticle={!!article} onOpen={onOpen} onCancel={() => onSearching(false)} />}
-      {article && !searching && <Article key={article.key} article={article} onOpen={onOpen} onOpenRecord={onOpenRecord} />}
+      {article && !searching && <Article key={article.key} article={article} onOpen={onOpen} onOpenRecord={onOpenRecord} onDraft={onDraft} />}
     </section>
   );
 }
@@ -123,8 +128,7 @@ function ArticleSearch({ hasArticle, onOpen, onCancel }: { hasArticle: boolean; 
 }
 
 /** Under the title: what the article is about (kind, dates, what it was part of) and whether Bob already has it. */
-function SubjectLine({ articleKey, onOpenRecord }: { articleKey: string; onOpenRecord?: (r: RecordRef) => void }) {
-  const state = useSubject(articleKey);
+function SubjectLine({ state, onOpenRecord }: { state: SubjectState; onOpenRecord?: (r: RecordRef) => void }) {
   const { doc } = useDoc();
   if (state.status === 'offline') {
     return <p className="reader-sub" data-testid="article-subject">You’re offline. What this article is about will show when you’re back online.</p>;
@@ -157,11 +161,45 @@ function SubjectLine({ articleKey, onOpenRecord }: { articleKey: string; onOpenR
   );
 }
 
-function Article({ article, onOpen, onOpenRecord }: { article: ArticleRef; onOpen: (a: ArticleRef) => void; onOpenRecord?: (r: RecordRef) => void }) {
+function Article({ article, onOpen, onOpenRecord, onDraft }: {
+  article: ArticleRef;
+  onOpen: (a: ArticleRef) => void;
+  onOpenRecord?: (r: RecordRef) => void;
+  onDraft?: (d: ItemDraft) => void;
+}) {
+  const { doc } = useDoc();
   const [data, setData] = useState<ArticleData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const body = useRef<HTMLDivElement>(null);
-  const marks = useHighlighting(body, data);
+  const subject = useSubject(article.key);
+  const marks = useHighlighting(body, data, subject.status === 'ready' ? subject.subject.qid : undefined);
+
+  /** The article's subject as a prefilled entry, quoting this highlight and citing the article Bob read. */
+  const addSubject = async (h: Highlight) => {
+    if (!navigator.onLine) throw new Error(OFFLINE_ADD);
+    let out;
+    try {
+      out = await draftFromWikipedia(article.key, {
+        existingItems: doc.items,
+        existingSources: doc.sources,
+        categoryId: doc.categories[0]?.id ?? '',
+        today: new Date().toISOString().slice(0, 10),
+      });
+    } catch (e) {
+      throw navigator.onLine ? e : new Error(OFFLINE_ADD);
+    }
+    if ('duplicateOf' in out) { onOpenRecord?.({ type: 'item', id: out.duplicateOf }); return; }
+    const { draft } = out;
+    // The page Bob highlighted is already a source; cite that rather than a second copy of it.
+    const page = new Set(draft.newSources.map((s) => s.id));
+    const citations = draft.item.citations?.map((c) => (page.has(c.sourceId) ? { ...c, sourceId: h.sourceId } : c));
+    onDraft?.({
+      ...draft,
+      item: { ...draft.item, ...(citations ? { citations } : {}), ...(h.dimension ? { dimension: h.dimension } : {}) },
+      newSources: [],
+      highlight: h,
+    });
+  };
 
   // The saved copy opens first, so rereading works offline; otherwise fetch it and keep it.
   useEffect(() => {
@@ -201,7 +239,7 @@ function Article({ article, onOpen, onOpenRecord }: { article: ArticleRef; onOpe
   return (
     <article className="reader-article" data-testid="article" data-revision={data?.revisionId ?? undefined}>
       <h1 className="reader-title">{data?.title ?? article.title}</h1>
-      <SubjectLine articleKey={article.key} onOpenRecord={onOpenRecord} />
+      <SubjectLine state={subject} onOpenRecord={onOpenRecord} />
       {error && <div className="notice bad" role="alert">{error}</div>}
       {!data && !error && <div className="notice" role="status">Opening…</div>}
       {/* Sanitized by sanitizeParsoid: an allowlist rebuild, so nothing active survives. */}
@@ -219,6 +257,7 @@ function Article({ article, onOpen, onOpenRecord }: { article: ArticleRef; onOpe
           {data.modified && <>, as edited on {new Date(data.modified).toLocaleDateString(undefined, { dateStyle: 'long' })}</>}.
         </p>
       )}
+      {data && <CaptureTray marks={marks} subject={subject} articleTitle={data.title} onAdd={addSubject} onOpenRecord={onOpenRecord} />}
     </article>
   );
 }

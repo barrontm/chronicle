@@ -269,3 +269,31 @@ export function subjectPartOf(s: Subject): string | undefined {
 export function findInChronicle<T extends { id: string; wikidataId?: string }>(records: T[], qid: string): T | undefined {
   return records.find((r) => r.wikidataId === qid);
 }
+
+/** One line of the capture tray's facts. `qids` are the items named, in order, so the tray can mark those Bob already has. */
+export interface FactLine {
+  label: string;
+  values: { text: string; qid?: string }[];
+  /** True when the subject has coordinates, so adding it puts a pin on the map. */
+  pin?: boolean;
+}
+
+/** The facts the capture tray shows for a subject: When, Where, Part of, then whatever else Wikidata says. Items without an English label are left out. */
+export function subjectFacts(s: Subject, max = 3): FactLine[] {
+  const f = s.facts;
+  const named = (ids: string[]) => ids.flatMap((qid) => (s.labels[qid] ? [{ text: s.labels[qid], qid }] : [])).slice(0, max);
+  const out: FactLine[] = [];
+  const when = subjectWhen(s);
+  if (when) out.push({ label: 'When', values: [{ text: when }] });
+  const where = named(f.locations);
+  if (where.length) out.push({ label: 'Where', values: where, ...(f.coords ? { pin: true } : {}) });
+  else if (f.coords) out.push({ label: 'Where', values: [{ text: `${Math.abs(f.coords.lat).toFixed(2)}° ${f.coords.lat < 0 ? 'S' : 'N'}, ${Math.abs(f.coords.lon).toFixed(2)}° ${f.coords.lon < 0 ? 'W' : 'E'}` }], pin: true });
+  const rows: [string, string[]][] = [
+    ['Part of', f.partOf], ['Who took part', f.participants], ['Government', f.government], ['After', f.follows], ['Before', f.followedBy],
+  ];
+  for (const [label, ids] of rows) {
+    const values = named(ids);
+    if (values.length) out.push({ label, values });
+  }
+  return out;
+}

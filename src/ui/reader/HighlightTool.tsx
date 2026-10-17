@@ -2,7 +2,7 @@ import type { useHighlighting } from './useHighlighting';
 
 type Marks = ReturnType<typeof useHighlighting>;
 
-/** "Highlight" for a selection, or "Remove highlight" for the one just made: above it on the laptop, docked at the bottom on the phone. */
+/** "Highlight" for a selection: above it on the laptop, docked at the bottom on the phone. What to do with a highlight is in the tray. */
 export function HighlightTool({ marks }: { marks: Marks }) {
   const spot = marks.toolSpot;
   if (!spot) return null;
@@ -16,9 +16,7 @@ export function HighlightTool({ marks }: { marks: Marks }) {
       // Keeps the selection when the button is pressed with a mouse.
       onMouseDown={(e) => e.preventDefault()}
     >
-      {marks.selecting
-        ? <button className="btn primary" onClick={marks.highlightSelection}>Highlight{!docked && <kbd aria-hidden="true">H</kbd>}</button>
-        : <button className="btn" onClick={marks.removeOpen}>Remove highlight</button>}
+      <button className="btn primary" onClick={marks.highlightSelection}>Highlight{!docked && <kbd aria-hidden="true">H</kbd>}</button>
     </div>
   );
 }

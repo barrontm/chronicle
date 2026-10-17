@@ -1,4 +1,4 @@
-import type { Citation, Source, TimelineDoc } from '../model/types';
+import type { Citation, Dimension, Source, TimelineDoc } from '../model/types';
 
 export function escapeHtml(s: string): string {
   return s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
@@ -19,6 +19,10 @@ export function formatCitation(source: Source | undefined, c: Citation): string 
   const year = source.year ? ` (${source.year})` : '';
   return `${parts}${year}${c.locator ? `, ${c.locator}` : ''}`;
 }
+
+export const DIMENSION_LABEL: Record<Dimension, string> = {
+  political: 'Political', economic: 'Economic', social: 'Social', technological: 'Technological', intellectual: 'Intellectual', religious: 'Religious',
+};
 
 export function titleOf(doc: TimelineDoc, id: string): string | undefined {
   return doc.items.find((i) => i.id === id)?.title ?? doc.series.find((s) => s.id === id)?.title ?? doc.territories.find((t) => t.id === id)?.title ?? doc.flows.find((f) => f.id === id)?.title;
