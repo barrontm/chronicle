@@ -15,6 +15,7 @@ Nothing appears until Bob has read and highlighted it. The app still ships no co
 
 ## Recognition: code first, AI second
 - `src/model/subjects.ts` (pure, tested): page → Wikidata QID → P31/P279 class chain → `person | polity | period | war | battle | event | movement/idea | technology | economy | work | place | migration`. Facts: P580/P582/P585 dates, P625 coordinates, P361 part of, P155/P156 follows/followed by, P710 participants, P276 location, P122 form of government.
+- A highlight can become the article's subject, a subject linked in the passage (its wiki links, classified as above), or something with no article of its own. The first two are code; only the third needs AI, asked for on demand.
 - AI features (rules in `src/ai/CLAUDE.md`):
   - `highlight`: from a highlight and its section, extract claims (dates, place names for the gazetteers, actors, quantities, institutions for regimes, sectors for economies) and a dimension. The article text is prompt-cached.
   - `themes`: group an era's highlights into themes with a suggested short label. Bob accepts or edits each.
