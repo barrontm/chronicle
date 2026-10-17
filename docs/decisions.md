@@ -2,6 +2,9 @@
 
 A log of choices that shouldn't be re-litigated every session. Newest first. To change a decision, add a new entry that supersedes the old one.
 
+## 2026-10-17 — Phase 0 checkpoint: six reader tickets, themes in v6, a bridge to records
+Phase 1 is six serial build tickets: layout shell, articles and cache, schema v6, highlighting, subject recognition, capture tray. v6 includes `themes` on periods as the vision has it, so Phase 4 needs no bump of its own. Until Phase 2 turns highlights into records, the capture tray's "Add to map and timeline" adds only the article's own subject, through today's Wikipedia prefill, so the new layout is never a dead end. The inbox was empty.
+
 ## 2026-10-17 — Inbox: ideas and schools, influences between dimensions, distribution of goods
 Bob's three inbox ideas became tickets, and none of them adds a kind. **History of ideas** is the intellectual dimension plus the movement/idea representation. It gains a `reception` by region (known, lost, revived, taught), transmission as `Flow.subject: 'ideas'`, and schools as institutions whose `structures` share the regime shape, so one power-structure diagram serves the Academy and Athens' democracy (Phase 5c, schema v9). The Phase 5 diagram is therefore built from general roles and links. Whether institutions are their own subject type is settled by the Phase 5c prototype. **Influences between dimensions** are connections with an `effect` and highlight evidence. The fields join v6 so the Phase 2 `highlight` feature can suggest them, and level 1 draws the ones that cross lanes (Phase 4). Rather than one later bump that would renumber v7 and v8, each bump that adds a record also makes it a connection endpoint. **Distribution of goods** (kinship and gift, redistribution, markets, …) is a `distribution` list on economy snapshots, part of v8 and not a bump of its own. Each idea starts with a prototype before it touches the schema.
 
