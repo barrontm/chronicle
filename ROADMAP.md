@@ -11,7 +11,7 @@ AI tickets (🤖, see the decision "AI drafts data, never images") also name a *
 
 ## Ideas inbox
 Drop ideas here any time, one line each. Nothing here is promised; each phase checkpoint turns some into tickets.
-- 
+- Every kind of thing drawn on both the map and the timeline, polities and ideas included, and addable from the tray once drawn (decided 2026-10-17; see `docs/decisions.md`; gaps: works, places, events, battles).
 
 Triaged 2026-10-17: history of ideas and schools → Phase 5c; influences between dimensions → v6 fields, Phase 2 suggestions, Phase 4 view; distribution of goods → Phase 5b.
 
@@ -84,7 +84,7 @@ A highlight can become three things, cheapest first: **the article's subject** (
 6. **Review drafts from the tray** · M · opus. Looks like: ticket 1 (b). Representation: none. "Ask Claude" in the tray (clear offline and no-key states, as in Drafting with AI) runs ticket 5 on the open highlight. The suggested dimension is marked in the picker and taken only if Bob picks it. Drafted records show in the tray (ticket 1's choice), sharing rows with `DraftReview` (extract them, don't copy), and dashed on the map. Accepting goes through `upsert`, adds the record to the highlight's `usedBy` and the highlight to a connection's `highlightIds`. A highlight with drafts waiting shows that in Library → Highlights.
    Files: `CaptureTray.tsx`, `src/ui/panels/DraftReview.tsx`, `src/ai/draft.ts`, `MapView.tsx` only if the draft layer needs a new source.
    Done when: an e2e test (recordings replayed) highlights the tribute passage in Pericles, asks Claude, sees "economic" suggested, accepts the drafted event and the "funded" connection, rejects nothing else, sees the event on the map, and sees both records under the highlight in Library. Manual: Highlighting, Drafting with AI.
-7. **Phase 2 checkpoint** · S · sonnet. Triage the inbox, write the Phase 3 tickets from the timeline spike report (`docs/spikes/timeline.md`), log decisions.
+7. **Phase 2 checkpoint** · S · sonnet. Triage the inbox, write the Phase 3 tickets from the timeline spike report (`docs/spikes/timeline.md`), log decisions. Turn "every kind on both the map and the timeline" into tickets, and lift the tray's block on places, polities and ideas as each one's representation lands.
 
 ### Phase 2b — Talk with Socrates
 Bob talks about any subject on the timeline with Socrates, as close to Plato's Socrates as we can make him. The three aims: learn the subject, see it in its era and across the six dimensions, and have Bob's assumptions questioned. See the decision "Socrates: a dialogue, not content".

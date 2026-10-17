@@ -2,6 +2,11 @@
 
 A log of choices that shouldn't be re-litigated every session. Newest first. To change a decision, add a new entry that supersedes the old one.
 
+## 2026-10-17 — Every kind of thing is drawn on both the map and the timeline
+Bob wants polities, ideas and every other kind of thing to have a representation of its own on the map **and** on the timeline. No kind is timeline-only or map-only. The representations table in `docs/vision.md` now has a row for every kind `subjects.ts` knows, adding works, places, plain events and battles, with a map and a timeline column filled in for each. A new kind needs both columns before it gets a row.
+
+For now, the tray in Phase 2 ticket 3 doesn't add places, polities or ideas that aren't in Chronicle yet. It says why, as the "Becomes" rule in `docs/design.md` asks. That's a stopgap until each kind's representation exists, not the intended design. The Phase 2 checkpoint turns this decision into tickets: the missing map or timeline half for each kind, folded into the phase that already owns it where there is one (polities → Phase 5, ideas → Phase 5c, the rest wherever the checkpoint puts them).
+
 ## 2026-10-17 — Socrates: a dialogue, not content; a living map
 Bob wants to talk about each subject on the timeline with Socrates, as close to Plato's as we can make him: professed ignorance and irony, "what is it?" questions, elenchus, analogies from the crafts, the midwife's method, and an honest aporia. It is Phase 2b, right after Phase 2, because it builds on the reader and highlights. This widens "AI drafts data, never images" in one way: the model may now talk with Bob. Its words are kept as **dialogues** (schema v7, which moves regimes, economies and institutions to v8, v9 and v10), marked as Socrates', and never stored as notes or records; whatever becomes a highlight or a note is chosen and written by Bob. Socrates draws facts only from the sources given (the article, linked articles, Bob's highlights and notes, later his own PDFs and EPUBs) and the validator checks every quote he cites. For subjects after 399 BCE he says what he has heard read to him and asks Bob to tell him more, rather than pretending he lived through it.
 
