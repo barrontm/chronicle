@@ -1,13 +1,58 @@
 # Roadmap
 
-Milestones are ordered and each one ships something usable. Tick items as they land, and record decisions in `docs/decisions.md`.
+Chronicle is being redesigned around reading: Bob highlights what he reads, and the app draws it (`docs/vision.md`). Phases are ordered and each one ships something usable. Tick items as they land, and record decisions in `docs/decisions.md`.
 
-## Next tickets
-One ticket per session, on its own branch: start fresh, finish with a commit, tick it below. Each ticket says which manual section changes (`docs/manual.md`). Ordered by value to learning and curiosity per effort. Size: S ≈ one sitting, M ≈ a longer one. Model: what to run it on (`/model …`).
+## How tickets work
+One ticket per session, on its own branch: start fresh, finish with a commit, tick it below. Each ticket says which manual section changes (`docs/manual.md`). Size: S ≈ one sitting, M ≈ a longer one. Model: what to run it on (`/model …`).
+
+Redesign tickets also name **Looks like:** (the prototype or sheet Bob chose: the visual target) and **Representation:** (the module in `src/ui/representations/` it touches). New UI hides behind the "Try the new layout" setting (`ui.next`) until its phase is done.
 
 AI tickets (🤖, see the decision "AI drafts data, never images") also name a **Prompt** (`src/ai/<feature>/prompt.md`), **Cases** (`tests/ai-evals/<feature>/`) and a **Bar** (the score a live run must reach, checked with the `ai-eval` skill). Prompt tuning runs in its own short sessions (sonnet or haiku) that touch only the prompt, its cases and its recordings.
 
-Tickets marked 🏛 make the map good for Ancient Greece and its wars (city-state borders, alliances, campaigns). They come first because Bob is studying that now.
+## Ideas inbox
+Drop ideas here any time, one line each. Nothing here is promised; each phase checkpoint turns some into tickets.
+- 
+
+## Redesign phases
+Each phase ends with a **checkpoint** session (sonnet): triage the inbox, reorder or split the remaining phases, log changes in `docs/decisions.md`, and update `docs/vision.md` if the direction moved.
+
+### Phase 0 — Design and spikes (no app code on `main`)
+1. ✅ **Plan into the repo** · S · sonnet. `docs/vision.md`, `docs/references.md`, the design language draft in `docs/design.md`, the `design-critic` agent, this roadmap.
+2. **Prototypes: overview and reader** · M · opus. Two Artifacts on fixture data, each in light, dark and phone: (a) era overview → zoom into an era's six dimension lanes; (b) the reader with a highlight becoming a capture card, on desktop and phone. Offer A/B variants where the direction is open. Bob picks and comments; record the choices in `docs/design.md`.
+   Done when: Bob has chosen a direction for both and the *proposed* items they settle are rules in `design.md`.
+3. **Prototypes: polity, economy, war** · M · opus. Three Artifacts: (c) a war animating on the map (routes draw in, battles pulse); (d) Athens' power-structure diagram morphing through its regimes, plus Athens vs Sparta in 431 BCE; (e) Athens' economy portrait (treemap) and sector streamgraph, with Black Sea grain flowing to Piraeus.
+   Done when: Bob has chosen a direction for each.
+4. **Spikes** · M · opus to brief, three background sonnet agents in worktrees. (a) A custom timeline renderer with 2,000 items and the three zoom levels; (b) the reader: Parsoid HTML, DOMPurify, highlight anchoring that survives a revision, on phone and desktop; (c) border morph (flubber) and progressive route drawing on MapLibre. Each returns a short report, its numbers and a demo; nothing is merged.
+   Done when: decisions on the renderer, the reader and the animation approach are in `docs/decisions.md`.
+5. **Rich fixture and gallery** · M · sonnet. A Classical Greece fixture (test data only, about 150 entries: eras, themes, highlights, territories, a war, a migration, Athens' and Sparta's regimes, an Athenian economy) built with the `draft-map-data` skill; a dev-only `/#gallery` route; `npm run shots -- --filmstrip <view>` and `--video`.
+   Done when: the gallery shows the existing representations from the fixture and a filmstrip of the map playing 480→400 BCE renders as one image.
+
+### Phase 1 — Reader
+Reader pane on laptop and phone; highlights saved (schema v6, `Excerpt` migrates into a highlight); subject recognition from Wikidata (`src/model/subjects.ts`); offline article cache. Under `ui.next`, the Add button and kind buttons give way to "Open an article". Tickets written at the Phase 0 checkpoint.
+
+### Phase 2 — Highlight → record
+Code path (dates, places and links from Wikidata facts); 🤖 `highlight` feature (claims and a dimension from a highlight, article prompt-cached); review reusing `DraftReview`.
+
+### Phase 3 — New timeline
+Custom renderer at parity with today's timeline, then levels 0 and 1; vis-timeline removed; `ui.next` becomes the default.
+
+### Phase 4 — Eras and themes
+Era bands with theme chips; 🤖 `themes` feature (groups an era's highlights with a suggested label Bob accepts or edits).
+
+### Phase 5 — Polities and wars
+Regimes and the power-structure diagram (schema v7, with alliances); regime-styled territories; border morph; campaigns and battles. Folds in paused tickets 3–6, 18 and 20.
+
+### Phase 5b — Economy
+`EconomyProfile` and goods flows (schema v8); sector streamgraph; production sites; economy portrait; 🤖 sector claims from highlights.
+
+### Phase 5c — Spread animations
+Technology and idea spread waves; influence arcs; the tech tree (paused ticket 10).
+
+### Phase 6 — Other sources
+A Cloudflare Worker proxy with Readability for sites without CORS; a bookmarklet and PWA share target ("send to Chronicle").
+
+## Paused tickets (folded into the redesign)
+Paused on 2026-10-16. Each is rewritten as a redesign ticket when its phase comes up: 2–6, 18 and 20 → Phase 5; 7 (Meanwhile) and 9 (Search) → the reader and level 2; 8 (Review mode) → after Phase 4, quizzing from highlights; 10 → Phase 5c; 11 → any time; 13, 14, 19 → Phase 5b or later; 16 → the Phase 0 fixture.
 
 1. ✅ **Place picker** · S · sonnet. Set an entry's places by hand (name plus coordinates; "Look up" via Wikidata search is a bonus), so hand-made entries get map pins. 🏛 Battles need this to appear on the map.
    Files: `src/ui/panels/ItemPanels.tsx` (places section in `ItemEditor`), `src/media/wikipedia.ts` (coordinate lookup). Could also offer "Pick on the map", reusing `nav.draw`'s pattern.

@@ -3,6 +3,18 @@
 ## Direction
 A quiet study tool for one reader. The **pigment palette** is the one bold thing: each category lane takes its color from a historical pigment (lapis, cinnabar, umber, verdigris, ochre, madder, indigo). Everything else stays restrained so the history is what you see.
 
+## Design language for the redesign (draft)
+The direction is in `docs/vision.md`; visual references are in `docs/references.md`. The sections marked *proposed* are settled in the Phase 0 prototypes, then written here as rules.
+
+- **Zoom levels.** Level 0: era bands with theme chips. Level 1: an era's six dimension lanes. Level 2: individual entries. Each level shows less detail than the next, never a shrunken copy of it.
+- **Representations.** Each subject type has one way of being drawn (the table in `vision.md`). Two subject types never share a glyph.
+- **Density** *(proposed)*. When crowded, hide in this order: descriptions, then secondary labels, then minor entries (merged into counts). Era bands and theme chips never hide at level 0.
+- **Dimension pigments** *(proposed)*: political lapis, economic ochre, social madder, technological verdigris, intellectual indigo, religious cinnabar; umber stays for neutral rules and uncertainty.
+- **Patterns** carry meaning that color can't: regime forms on polity bars and territories, and how labour and ownership worked in economy treemaps. Every pattern is legible in dark mode and at phone size.
+- **Uncertainty** is always visible: dashed edges for approximate dates, soft bands for ranges, "size unknown" tiles, never a confident line for a guess.
+- **Type scale** *(proposed)*: Spectral for era names (large, spaced small caps), theme chips and reading text; Public Sans for controls and axis ticks at levels 1 and 2.
+- **Motion tokens** *(proposed)*: `--motion-quick` 150 ms (hover, selection), `--motion-move` 400 ms (zooming between levels, panels), `--motion-morph` tied to the year clock (borders, diagrams, treemaps), and easing `cubic-bezier(.2,.7,.2,1)`. Only change over time animates; decoration never does. With reduced motion, states swap instantly.
+
 ## Tokens (in `src/ui/styles.css`)
 - Light: limestone background `#eef0ec`, panel `#fbfbf8`, slate ink `#1d2b3a`, rules `#cfd4cc`.
 - Dark: `#131b23` background with lightened pigments. It follows the system setting.
@@ -21,4 +33,6 @@ A quiet study tool for one reader. The **pigment palette** is the one bold thing
 - The choropleth ramps from a tint of the land color to the trend's category pigment, on one scale across all years.
 
 ## Checking your work
+For the redesign: prototype first (an Artifact on fixture data that Bob picks), then build. Review with the `design-review` skill and hand the sheet to the `design-critic` agent for a fresh-eyes critique. Use a filmstrip or short video for anything that moves.
+
 Screenshot desktop (1440×900), phone (412×860) and dark mode with the fixture imported (`npm run shots` includes map, split and phone-map views). Things to look at: lane-label alignment with the trend strips, clipped labels, and contrast in dark mode.
