@@ -15,6 +15,8 @@ Drop ideas here any time, one line each. Nothing here is promised; each phase ch
 
 Triaged 2026-10-17: history of ideas and schools → Phase 5c; influences between dimensions → v6 fields, Phase 2 suggestions, Phase 4 view; distribution of goods → Phase 5b.
 
+Triaged 2026-10-17 (later): talking with Socrates → Phase 2b; kinds of border, war technology, disasters, discoveries, the look of ideas and religion → Phase 5d; PDFs and EPUBs → Phase 6.
+
 ## Redesign phases
 Each phase ends with a **checkpoint** session (sonnet): triage the inbox, reorder or split the remaining phases, log changes in `docs/decisions.md`, and update `docs/vision.md` if the direction moved.
 
@@ -82,13 +84,39 @@ A highlight can become three things, cheapest first: **the article's subject** (
    Done when: an e2e test (recordings replayed) highlights the tribute passage in Pericles, asks Claude, sees "economic" suggested, accepts the drafted event and the "funded" connection, rejects nothing else, sees the event on the map, and sees both records under the highlight in Library. Manual: Highlighting, Drafting with AI.
 7. **Phase 2 checkpoint** · S · sonnet. Triage the inbox, write the Phase 3 tickets from the timeline spike report (`docs/spikes/timeline.md`), log decisions.
 
+### Phase 2b — Talk with Socrates
+Bob talks about any subject on the timeline with Socrates, as close to Plato's Socrates as we can make him. The three aims: learn the subject, see it in its era and across the six dimensions, and have Bob's assumptions questioned. See the decision "Socrates: a dialogue, not content".
+
+How Socrates talks:
+- He says he knows nothing, with a little irony, and asks Bob to teach him.
+- He asks "what is it?" questions: what was the polis, what is a revolution, what is piety.
+- He tests Bob's answers by elenchus: he gets Bob to agree to small premises one at a time, then shows where they clash with each other or with Bob's first answer.
+- He reasons from everyday crafts: the cobbler, the doctor, the pilot, the horse-trainer.
+- He works as a midwife: Bob reaches the idea himself, and Socrates doesn't lecture.
+- He is happy to end in aporia ("we have not found it yet") and to propose they look again tomorrow.
+
+Subjects after 399 BCE: he doesn't pretend to have lived through them. He says what he has heard read to him (the sources the app gives him) and asks Bob to tell him more.
+
+1. **Prototype: a dialogue with Socrates** · S · opus. Looks like: new. Representation: none. An Artifact laid out like a dialogue (speakers in small caps, SOCRATES and BOB), beside the reader and an entry's panel, on desktop and phone, light and dark. Each line of Socrates' has the passages it rests on one tap away, and a quoted passage offers "Make this a highlight". Two sample dialogues on fixture data: the Peloponnesian War ("Was Athens right to go to war?") and the printing press, far from his time. A/B: a side panel, or the dialogue full page.
+   Done when: Bob has picked, and the choices are rules in `docs/design.md`.
+2. **Dialogues (schema v7)** · M · opusplan. `Dialogue { id, title, about: { itemId?, sourceId?, highlightIds }, turns: { speaker: 'socrates' | 'bob', text, cites: { sourceId, highlightId?, quote }[], at }[], model, promptVersion, updatedAt }`. Kept in the doc and in backups and merged like the rest; never shown as, or turned into, a note.
+   Files: `src/model/types.ts` and the checklist in `src/model/CLAUDE.md`, `doc.ts` (upsert, remove, merge), the upgrade test.
+   Done when: v6 backups import, merge handles dialogues, and a dialogue's turns survive export and import. Manual: none (no UI yet).
+3. 🤖 **The `socrates` feature** · M · opusplan. Representation: none. `src/ai/socrates/` per `src/ai/CLAUDE.md`. In: the entry's article as a cached system block (`cache_control`), the articles it links to that Bob asks about (fetched one at a time), Bob's highlights and notes on it, what overlaps it in time (the overlap query planned for Meanwhile, in `src/model/atYear.ts`), and the dialogue so far. The prompt sets out the moves above, with short examples from Jowett's public-domain translations (Euthyphro, Meno, Apology). Socrates speaks in short turns, asks one question at a time, and never answers his own questions for Bob. Facts come only from the passages given; where they're silent, he says he has heard nothing of it. Out, through one tool: `{ move: 'ask' | 'test' | 'widen' | 'aporia', text, cites[] }`; the validator drops cites whose quote isn't in the source. Streaming goes in `client.ts`.
+   Prompt: `src/ai/socrates/prompt.md`. Cases (`tests/ai-evals/socrates/`): Bob says Athenian democracy was "rule by the people" (Socrates draws out who counted as the people); a planted misconception; a subject long after his death; a question the sources can't answer; Bob asks to be taught outright. Bar: every cite checks out; every turn of his ends in a question or an aporia; no turn runs past about 120 words; the misconception comes out through Bob's own admissions, not by being told; the uncovered question is admitted; a rubric judge finds the voice recognisably Plato's Socrates in at least 4 of 5 cases.
+   Files: `src/ai/socrates/`, `src/ai/client.ts` (streaming), `tests/ai-evals/socrates/`.
+   Done when: the cases meet the bar in a live run (`ai-eval` skill), and unit tests replay the recordings through the validator. Manual: none (no UI yet).
+4. **Socrates in the app** · M · opus. Looks like: ticket 1's pick. Representation: none. "Talk with Socrates" on an entry's panel and in the reader, with clear offline and no-key states. Past dialogues are listed on the entry and in Library, titled the way Plato's are ("Pericles, or on leadership"), and Bob can rename them. A quoted passage can become a highlight Bob keeps.
+   Files: new `src/ui/socrates/`, `ItemPanels.tsx`, `ReaderPane.tsx`, `Library.tsx`.
+   Done when: an e2e test (recordings replayed) opens Pericles, talks with Socrates for three turns, makes a cited passage a highlight, reloads, and sees the dialogue on the entry and in Library. Manual: a new "Talking with Socrates" section.
+
 ### Phase 3 — New timeline
 Custom renderer at parity with today's timeline, then levels 0 and 1; vis-timeline removed; `ui.next` becomes the default.
 
 ### Phase 4 — Eras, themes and influences
 Era bands with theme chips; 🤖 `themes` feature (groups an era's highlights with a suggested label Bob accepts or edits); influences between dimensions (the war on the economy, Christianity on politics, technology on the economy, capitalism on who holds power).
 
-Connection endpoints grow with the schema: each bump that adds a record (v6 themes, v7 regimes, v8 economies, v9 institutions) also makes it something a connection can point at, so nothing gets renumbered.
+Connection endpoints grow with the schema: each bump that adds a record (v6 themes, v8 regimes, v9 economies, v10 institutions) also makes it something a connection can point at, so nothing gets renumbered.
 1. **Prototype: influences across dimensions** · M · opus. An Artifact on fixture data at level 1 (an era's six dimension lanes), in light, dark and phone. A: arrows between items in different lanes, labelled with the effect, with the highlight one tap away. B: an era's "what drove what" grid (six dimensions by six, each cell counting Bob's links) that opens into A. Fixture cases: the Peloponnesian War weakening Athens' economy (Decelea, the Laurion mines), the plague and religion, Delian League tribute paying for the building program. Add any shapes the schema lacks to `tests/fixtures/greece/next.json`.
    Done when: Bob has picked, and the effect vocabulary (caused, enabled, weakened, strengthened, funded, legitimised, …) and the arrow style are rules in `docs/design.md`.
 2. **Influences between dimensions** · M · opusplan. Looks like: ticket 1's pick. Representation: new `src/ui/representations/influence.ts`. The connection editor gets an effect (open vocabulary, edited in the app) and "Evidence" (pick highlights). Level 1 draws connections whose two ends are in different dimensions. An entry's panel lists "Effects on other dimensions" both ways ("Weakened: Athenian economy", "Weakened by: Peloponnesian War").
@@ -96,29 +124,53 @@ Connection endpoints grow with the schema: each bump that adds a record (v6 them
    Done when: an e2e test links the war to the economy as "weakened" with a highlight, and sees the arrow cross lanes at level 1 and the line in both panels. Manual: Connections.
 
 ### Phase 5 — Polities and wars
-Regimes and the power-structure diagram (schema v7, with alliances); regime-styled territories; border morph; campaigns and battles. Folds in paused tickets 3–6, 18 and 20. Build the power-structure diagram from roles and links in general, not polity ones only, because Phase 5c reuses it for schools.
+Regimes and the power-structure diagram (schema v8, with alliances); regime-styled territories; border morph; campaigns and battles. Folds in paused tickets 3–6, 18 and 20. Build the power-structure diagram from roles and links in general, not polity ones only, because Phase 5c reuses it for schools.
 
 ### Phase 5b — Economy
-`EconomyProfile` and goods flows (schema v8); sector streamgraph; production sites; economy portrait; 🤖 sector claims from highlights. Alongside what was produced, it also records **how goods reached people**.
+`EconomyProfile` and goods flows (schema v9); sector streamgraph; production sites; economy portrait; 🤖 sector claims from highlights. Alongside what was produced, it also records **how goods reached people**.
 1. **Prototype: how goods were distributed** · S · opus. Adds to prototype (e), the economy portrait. Each snapshot gets a distribution band with relative shares of the mechanisms: kinship and gift, redistribution (palace, temple, state), tribute, householding, market exchange, planning. The vocabulary is open, with Polanyi's reciprocity, redistribution and exchange as a starting point. Add a strip that follows the mechanisms across eras: Mycenaean palace redistribution → Archaic households and gift → Classical Athens, where markets in the agora sit beside liturgies and the grain dole.
    Done when: Bob has picked, and the vocabulary and the band's look are in `docs/design.md`.
-2. **Distribution in economy profiles** · M · opusplan. Part of the v8 bump, not a bump of its own. `snapshots[].distribution: { mechanism, share?: { measure: 'relative', low?, high? }, institutions?, highlightIds }[]`, where an unknown share stays unknown. Representation: the economy module (band in the portrait, a thin mechanism strip under the sector streamgraph). The 🤖 sector claims also suggest mechanisms.
+2. **Distribution in economy profiles** · M · opusplan. Part of the v9 bump, not a bump of its own. `snapshots[].distribution: { mechanism, share?: { measure: 'relative', low?, high? }, institutions?, highlightIds }[]`, where an unknown share stays unknown. Representation: the economy module (band in the portrait, a thin mechanism strip under the sector streamgraph). The 🤖 sector claims also suggest mechanisms.
    Files: `src/model/types.ts` and the checklist in `src/model/CLAUDE.md`, `doc.ts` (merge), the economy representation.
-   Done when: the fixture's Athens shows markets and liturgies in 431 BCE, the band changes between snapshots, and v7 backups import. Manual: Economies.
+   Done when: the fixture's Athens shows markets and liturgies in 431 BCE, the band changes between snapshots, and v8 backups import. Manual: Economies.
 
 ### Phase 5c — Ideas, schools and spread
-Technology and idea spread waves; influence arcs; the tech tree (paused ticket 10). Then a history of ideas: where a work or idea was known, lost and revived, how it travelled, and the schools that taught it (schema v9). Bob can still keep a "History of ideas" category for his own topic. This adds a representation, not a kind.
+Technology and idea spread waves; influence arcs; the tech tree (paused ticket 10). Then a history of ideas: where a work or idea was known, lost and revived, how it travelled, and the schools that taught it (schema v10). Bob can still keep a "History of ideas" category for his own topic. This adds a representation, not a kind.
 1. **Prototype: history of ideas** · M · opus. Two Artifacts on fixture data, in light, dark and phone. (f) Aristotle's reception: a thread per region on the timeline that thins where his works were lost and brightens where they came back, plus arrows on the map for the translations (Athens → Alexandria → Baghdad's translation movement → Toledo and Sicily → Paris). (g) Plato's Academy against the University of Paris around 1250, shown with the power-structure diagram: who teaches, who learns, who pays, who licenses, the curriculum, and the ties to the city, the church and the crown. The fixture gets a small medieval appendix (test data only).
    Done when: Bob has picked both, and `docs/decisions.md` records whether institutions are a subject type of their own that shares the regime diagram.
-2. **Schools and institutions** · M · opusplan. Looks like: (g). v9. An `institution` row in `src/model/subjects.ts` (Wikidata: school, university, academy, madrasa, monastery). `structures` snapshots have the same shape as regimes (roles and links, with link kinds as an open vocabulary: teaches, funds, licenses, governs, examines), plus a curriculum list and `highlightIds`. Representation: new `src/ui/representations/institution.ts` (lifespan bar split by structure, map pin, the diagram morphing between snapshots, two institutions side by side).
+2. **Schools and institutions** · M · opusplan. Looks like: (g). v10. An `institution` row in `src/model/subjects.ts` (Wikidata: school, university, academy, madrasa, monastery). `structures` snapshots have the same shape as regimes (roles and links, with link kinds as an open vocabulary: teaches, funds, licenses, governs, examines), plus a curriculum list and `highlightIds`. Representation: new `src/ui/representations/institution.ts` (lifespan bar split by structure, map pin, the diagram morphing between snapshots, two institutions side by side).
    Files: `src/model/types.ts` and the checklist in `src/model/CLAUDE.md`, `doc.ts`, the shared diagram from Phase 5.
-   Done when: an e2e test compares the Academy and the University of Paris side by side, and v8 backups import. Manual: Schools and institutions.
-3. **Reception and transmission of ideas** · M · opusplan. Looks like: (f). Shares ticket 2's v9 bump, and the two land in the same release. `reception: { where (place, territory or country), from, to?, state: 'known' | 'partial' | 'lost' | 'revived' | 'taught', via?, highlightIds }[]` on idea and work entries. `Flow.subject` gains `'ideas'` for translations and teachers moving, drawn without a rate. A school that teaches a work links to it. Representation: new `src/ui/representations/idea.ts` (reception threads on the timeline, regions tinted by state on the map, transmission arrows).
+   Done when: an e2e test compares the Academy and the University of Paris side by side, and v9 backups import. Manual: Schools and institutions.
+3. **Reception and transmission of ideas** · M · opusplan. Looks like: (f). Shares ticket 2's v10 bump, and the two land in the same release. `reception: { where (place, territory or country), from, to?, state: 'known' | 'partial' | 'lost' | 'revived' | 'taught', via?, highlightIds }[]` on idea and work entries. `Flow.subject` gains `'ideas'` for translations and teachers moving, drawn without a rate. A school that teaches a work links to it. Representation: new `src/ui/representations/idea.ts` (reception threads on the timeline, regions tinted by state on the map, transmission arrows).
    Files: as ticket 2, plus `src/ui/mapData.ts` (state by year, tested).
    Done when: an e2e test sees Aristotle "lost" in the Latin West in 900, "revived" in 1200, and the Toledo → Paris arrow. Manual: History of ideas.
 
+### Phase 5d — Living map
+The map shows what kind of thing it draws, so it looks alive and teaches at a glance: what sort of border, what each side fought with, what struck, what was found, how an idea or a faith spread. Drawn by us: an icon and line set of our own, and a tap shows real Commons pictures of the thing itself (no AI imagery). Builds on Phase 5's routes, battles and regimes and Phase 5c's idea spread.
+
+1. **Prototype: a living map** · M · opus. One sheet per idea, on fixture data, in light, dark and phone, with a filmstrip for motion:
+   - **Kinds of border**: a frontier (an edge that fades out, like the American frontier), a wall (a crenellated line: the Long Walls, Hadrian's Wall), a treaty border (crisp, with posts, like today's US border), contested ground (both claimants' colours interleaved, the front moving as the year plays), claimed or occupied (dashed).
+   - **War and its technology**: force icons on routes and battles (hoplite, trireme, legion, cavalry, longbow, musket, cannon, ironclad, tank, aircraft), sized by strength; tap for Commons pictures of the arms and the battle.
+   - **Disasters**: earthquake rings, the extent of ash fall, floods, and an epidemic or famine spreading as a tint.
+   - **Discoveries in science**: a spark at the place, then a ring as word spreads.
+   - **Ideas and religion**: religion as tinted regions with conversion waves; philosophy as threads between thinkers' places and schools, so the two read differently.
+   Add the shapes the schema lacks to `tests/fixtures/greece/next.json`, plus a small appendix of later test data (frontier, a modern border, a 20th-century front).
+   Done when: Bob has picked, and the icon and line vocabulary is a rule in `docs/design.md`.
+2. **Kinds of border and walls** · M · opusplan. Looks like: ticket 1's pick. Representation: the polity module. Schema bump (v11): `TerritorySnapshot.edge?: 'frontier' | 'border' | 'contested' | 'claimed' | 'occupied'`, with claimants for contested ground, and walls as dated line features that can belong to an entry.
+   Done when: an e2e test sees Athens' Long Walls in 431 BCE and not in 403 BCE, and a contested area drawn in both claimants' colours; v10 backups import. Manual: Territories.
+3. **War technology** · M · opus. Looks like: ticket 1's pick. Representation: the war module. Forces on wars and battles (`{ side, strength?, arms[] }`, where arms link to technology entries by a "used in" connection; in the same v11 bump). A hand-drawn SVG icon set in `src/ui/representations/`; a tap opens Commons pictures (reuse the Commons search in `src/media`).
+   Done when: an e2e test sees trireme icons at Salamis and opens their Commons pictures (mocked). Manual: Wars on the map.
+4. **Disasters** · M · opusplan. Looks like: ticket 1's pick. Representation: new `src/ui/representations/disaster.ts`. A `disaster` row in `src/model/subjects.ts` (Wikidata: earthquake, eruption, epidemic, famine, flood, tsunami), an affected area, and what it did as connections with an effect.
+   Done when: unit tests classify recorded subjects (the plague of Athens, the eruption of Vesuvius in 79), and an e2e test sees the plague's tint in 430 BCE. Manual: Disasters.
+5. **Discoveries** · S · sonnet. Representation: the technology module. A `discovery` row in `src/model/subjects.ts` (scientific discovery, theory); a spark at the place, then spread on technology's wave.
+   Done when: a recorded discovery classifies, and the spark shows in its year. Manual: Discoveries.
+6. **The look of ideas and religion** · M · opus. Looks like: ticket 1's pick. Representation: `src/ui/representations/idea.ts`, plus religion's conversion tint and waves.
+   Done when: an e2e test plays a religion's spread and sees regions tint in order, while a philosophy shows as threads. Manual: History of ideas.
+
 ### Phase 6 — Other sources
 A Cloudflare Worker proxy with Readability for sites without CORS; a bookmarklet and PWA share target ("send to Chronicle").
+1. **PDFs and EPUBs** · M · opusplan. Bob uploads a book he owns. Its text is extracted (pdf.js, epub.js), kept in IndexedDB beside the article cache (not in the doc, so backups stay small), and opened in the reader. Highlights anchor by page or EPUB location (the anchor gains a locator: a schema bump), and Socrates can draw on the book too.
+   Done when: an e2e test uploads a small PDF and an EPUB, highlights a passage in each, reloads, sees them marked, and sees Socrates cite the PDF (recording replayed). Manual: Reading your own books.
 
 ## Paused tickets (folded into the redesign)
 Paused on 2026-10-16. Each is rewritten as a redesign ticket when its phase comes up: 2–6, 18 and 20 → Phase 5; 7 (Meanwhile) and 9 (Search) → the reader and level 2; 8 (Review mode) → after Phase 4, quizzing from highlights; 10 → Phase 5c; 11 → any time; 13, 14, 19 → Phase 5b or later; 16 → the Phase 0 fixture.
