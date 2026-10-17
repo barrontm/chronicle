@@ -138,6 +138,37 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .reader-text ul, .reader-text ol { padding-left: 1.4em; }
 .reader-text .references, .reader-text .mw-references { font-size: 14px; color: var(--ink-2); }
 .reader-text blockquote { margin: 1em 0; padding-left: 1em; border-left: 3px solid var(--rule); color: var(--ink-2); }
+/* Highlights: the dimension's pigment (umber until one is picked). Open 32%, kept 13%, added 20% plus an underline. */
+.reader-text { touch-action: manipulation; } /* no double-tap zoom (a double tap highlights); pinch zoom stays */
+::highlight(chronicle-mark-lapis-open) { background-color: color-mix(in srgb, var(--pig-lapis) 32%, transparent); }
+::highlight(chronicle-mark-lapis-kept) { background-color: color-mix(in srgb, var(--pig-lapis) 13%, transparent); }
+::highlight(chronicle-mark-lapis-added) { background-color: color-mix(in srgb, var(--pig-lapis) 20%, transparent); text-decoration: underline 2px var(--pig-lapis); }
+::highlight(chronicle-mark-ochre-open) { background-color: color-mix(in srgb, var(--pig-ochre) 32%, transparent); }
+::highlight(chronicle-mark-ochre-kept) { background-color: color-mix(in srgb, var(--pig-ochre) 13%, transparent); }
+::highlight(chronicle-mark-ochre-added) { background-color: color-mix(in srgb, var(--pig-ochre) 20%, transparent); text-decoration: underline 2px var(--pig-ochre); }
+::highlight(chronicle-mark-madder-open) { background-color: color-mix(in srgb, var(--pig-madder) 32%, transparent); }
+::highlight(chronicle-mark-madder-kept) { background-color: color-mix(in srgb, var(--pig-madder) 13%, transparent); }
+::highlight(chronicle-mark-madder-added) { background-color: color-mix(in srgb, var(--pig-madder) 20%, transparent); text-decoration: underline 2px var(--pig-madder); }
+::highlight(chronicle-mark-verdigris-open) { background-color: color-mix(in srgb, var(--pig-verdigris) 32%, transparent); }
+::highlight(chronicle-mark-verdigris-kept) { background-color: color-mix(in srgb, var(--pig-verdigris) 13%, transparent); }
+::highlight(chronicle-mark-verdigris-added) { background-color: color-mix(in srgb, var(--pig-verdigris) 20%, transparent); text-decoration: underline 2px var(--pig-verdigris); }
+::highlight(chronicle-mark-indigo-open) { background-color: color-mix(in srgb, var(--pig-indigo) 32%, transparent); }
+::highlight(chronicle-mark-indigo-kept) { background-color: color-mix(in srgb, var(--pig-indigo) 13%, transparent); }
+::highlight(chronicle-mark-indigo-added) { background-color: color-mix(in srgb, var(--pig-indigo) 20%, transparent); text-decoration: underline 2px var(--pig-indigo); }
+::highlight(chronicle-mark-cinnabar-open) { background-color: color-mix(in srgb, var(--pig-cinnabar) 32%, transparent); }
+::highlight(chronicle-mark-cinnabar-kept) { background-color: color-mix(in srgb, var(--pig-cinnabar) 13%, transparent); }
+::highlight(chronicle-mark-cinnabar-added) { background-color: color-mix(in srgb, var(--pig-cinnabar) 20%, transparent); text-decoration: underline 2px var(--pig-cinnabar); }
+::highlight(chronicle-mark-umber-open) { background-color: color-mix(in srgb, var(--pig-umber) 32%, transparent); }
+::highlight(chronicle-mark-umber-kept) { background-color: color-mix(in srgb, var(--pig-umber) 13%, transparent); }
+::highlight(chronicle-mark-umber-added) { background-color: color-mix(in srgb, var(--pig-umber) 20%, transparent); text-decoration: underline 2px var(--pig-umber); }
+/* Found again only roughly, after the article was edited. */
+::highlight(chronicle-unsure) { text-decoration: underline dotted 2px var(--pig-umber); }
+.highlight-tool { position: fixed; z-index: 30; transform: translate(-50%, calc(-100% - 8px)); }
+.highlight-tool .btn { box-shadow: 0 2px 8px rgb(0 0 0 / 0.18); }
+.highlight-tool kbd { font: 11px var(--font-ui); border: 1px solid currentColor; border-radius: 3px; padding: 0 4px; opacity: 0.7; }
+/* Docked at the bottom, clear of the phone's own selection menu near the text. */
+.highlight-tool.docked { left: 50%; top: auto; bottom: calc(16px + env(safe-area-inset-bottom)); transform: translateX(-50%); }
+.highlight-tool.docked .btn { padding: 10px 22px; font-size: 16px; }
 .trail { display: flex; align-items: center; gap: 2px; min-width: 0; overflow: hidden; font-size: 13px; }
 .trail-step { border: 0; background: none; color: var(--muted); padding: 2px 4px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 18ch; border-radius: var(--radius-s); }
 .trail-step + .trail-step::before { content: '›'; margin-right: 6px; color: var(--muted); }
@@ -147,7 +178,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .sheet-head { display: flex; padding: 0 8px 8px; }
 @media (max-width: 860px) {
   .workspace.next, .workspace.next.with-drawer { grid-template-columns: 1fr; }
-  .reader { border-right: 0; padding: 16px 16px 48px; }
+  .reader { border-right: 0; padding: 16px 16px 96px; } /* room below the text for the docked Highlight button */
   .reader-title { font-size: 26px; }
   .reader-text { font-size: 17px; }
   .trail { order: 10; width: 100%; }

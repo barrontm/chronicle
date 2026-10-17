@@ -1,3 +1,5 @@
+import { newId } from '../model/doc';
+import type { Source } from '../model/types';
 import { sanitizeParsoid } from './sanitize';
 
 const WIKI = 'https://en.wikipedia.org';
@@ -25,6 +27,19 @@ export function buildArticleUrl(key: string): string {
 /** A page key from a title or key ("Battle of Marathon" → "Battle_of_Marathon"). */
 export function articleKey(titleOrKey: string): string {
   return titleOrKey.trim().replace(/ /g, '_');
+}
+
+/** The page's address, as Wikipedia gives it and as sources store it. */
+export function articleUrl(key: string): string {
+  return `${WIKI}/wiki/${encodeURIComponent(articleKey(key))}`;
+}
+
+/** The source an article's highlights cite: the one Bob already has for the page, or a new one (not yet saved). */
+export function articleSource(sources: Source[], article: { key: string; title: string }, today: string): { source: Source; isNew: boolean } {
+  const url = articleUrl(article.key);
+  const found = sources.find((s) => s.url === url || s.url === `${WIKI}/wiki/${articleKey(article.key)}`);
+  if (found) return { source: found, isNew: false };
+  return { source: { id: newId('s'), kind: 'web', title: article.title, authors: 'Wikipedia contributors', publisher: 'Wikipedia', url, accessed: today, updatedAt: 0 }, isNew: true };
 }
 
 export function parseArticle(key: string, raw: string, now = Date.now()): Article {

@@ -3,6 +3,8 @@ import { articleCache } from '../../data/articleCache';
 import { fetchArticle, type Article as ArticleData } from '../../media/article';
 import { searchWikipedia, type WikiSearchResult } from '../../media/wikipedia';
 import { Field } from '../fields';
+import { HighlightTool, HighlightsForScreenReaders } from './HighlightTool';
+import { useHighlighting } from './useHighlighting';
 
 /** A page Bob has opened in the reader. */
 export interface ArticleRef {
@@ -116,6 +118,7 @@ function Article({ article, onOpen }: { article: ArticleRef; onOpen: (a: Article
   const [data, setData] = useState<ArticleData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const body = useRef<HTMLDivElement>(null);
+  const marks = useHighlighting(body, data);
 
   // The saved copy opens first, so rereading works offline; otherwise fetch it and keep it.
   useEffect(() => {
@@ -140,7 +143,7 @@ function Article({ article, onOpen }: { article: ArticleRef; onOpen: (a: Article
   const onClick = (e: React.MouseEvent) => {
     if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey) return;
     const a = (e.target as Element).closest('a');
-    if (!a) return;
+    if (!a) { marks.onTextClick(e); return; }
     const wiki = a.getAttribute('data-wiki');
     const local = a.getAttribute('data-fn') ?? (a.classList.contains('self') ? a.getAttribute('data-frag') : null);
     if (wiki) {
@@ -158,7 +161,14 @@ function Article({ article, onOpen }: { article: ArticleRef; onOpen: (a: Article
       {error && <div className="notice bad" role="alert">{error}</div>}
       {!data && !error && <div className="notice" role="status">Opening…</div>}
       {/* Sanitized by sanitizeParsoid: an allowlist rebuild, so nothing active survives. */}
-      {data && <div ref={body} className="reader-text" onClick={onClick} dangerouslySetInnerHTML={{ __html: data.html }} />}
+      {data && <div ref={body} className="reader-text" onClick={onClick} onPointerDown={marks.onPointerDown} dangerouslySetInnerHTML={{ __html: data.html }} />}
+      {data && <HighlightTool marks={marks} />}
+      {data && <HighlightsForScreenReaders marks={marks} />}
+      {marks.lost > 0 && (
+        <p className="notice" data-testid="lost-highlights">
+          {marks.lost === 1 ? 'One of your highlights' : `${marks.lost} of your highlights`} couldn’t be found in this version of the article. They’re still saved.
+        </p>
+      )}
       {data && (
         <p className="reader-credit">
           From <a href={`https://en.wikipedia.org/wiki/${encodeURIComponent(data.key)}`} target="_blank" rel="noreferrer">Wikipedia</a>, CC BY-SA

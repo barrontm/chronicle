@@ -236,6 +236,42 @@ async function reader(p, prefix) {
   await p.getByTestId('article').locator('.reader-text').waitFor();
   await p.waitForTimeout(800);
   await shot(p, `${prefix}-reader`);
+  if (any(`${prefix}-reader-highlight`)) await readerHighlight(p, prefix);
+}
+
+// Highlighting: one kept highlight, one just made, and (on the laptop) a selection with its button.
+async function readerHighlight(p, prefix) {
+  // Select (or find) from the start of `from` to the end of `to`, which may be in different text nodes.
+  const where = (from, to = from, select = false) => p.evaluate(([a, b, sel]) => {
+    const find = (t) => {
+      const w = document.createTreeWalker(document.querySelector('.reader-text'), NodeFilter.SHOW_TEXT);
+      for (let n = w.nextNode(); n; n = w.nextNode()) { const i = n.data.indexOf(t); if (i >= 0) return [n, i]; }
+      throw new Error(`no "${t}"`);
+    };
+    const [sn, si] = find(a);
+    const [en, ei] = find(b);
+    const r = document.createRange();
+    r.setStart(sn, si);
+    r.setEnd(en, ei + b.length);
+    if (!sel) sn.parentElement.scrollIntoView({ block: 'center' });
+    if (sel) { getSelection().removeAllRanges(); getSelection().addRange(r); }
+    const box = r.getClientRects()[0];
+    return { x: box.left + box.width / 2, y: box.top + box.height / 2 };
+  }, [from, to, select]);
+  const highlight = async (from, to) => {
+    // On the phone, a tap in the middle of `to` (away from links) highlights its sentence.
+    if (prefix === 'phone') { const at = await where(to); await p.touchscreen.tap(at.x, at.y); return; }
+    await where(from, to, true);
+    await p.getByRole('button', { name: 'Highlight' }).waitFor();
+    await p.keyboard.press('h');
+  };
+  await where('was fought in the');
+  await highlight('was fought in the', 'from 431 to 404 BC');
+  await p.keyboard.press('Escape');
+  await highlight('Initially inconclusive', 'Initially inconclusive');
+  if (prefix !== 'phone') await where('allowed the Spartan', 'allowed the Spartan', true);
+  await p.waitForTimeout(300);
+  await shot(p, `${prefix}-reader-highlight`);
 }
 if (any('desktop-reader')) await reader(await page('desktop-reader', desktop), 'desktop');
 if (any('dark-reader')) await reader(await page('dark-reader', { ...desktop, colorScheme: 'dark' }), 'dark');

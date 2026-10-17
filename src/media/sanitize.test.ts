@@ -2,7 +2,7 @@
 import 'fake-indexeddb/auto';
 import { describe, expect, it } from 'vitest';
 import { ArticleCache } from '../data/articleCache';
-import { articleKey, buildArticleUrl, parseArticle } from './article';
+import { articleKey, articleSource, buildArticleUrl, parseArticle } from './article';
 import { sanitizeParsoid } from './sanitize';
 
 const page = (body: string, rev = 1) =>
@@ -88,5 +88,15 @@ describe('articles', () => {
     await cache.put(a);
     expect((await cache.get('Pericles'))?.html).toContain('Greek statesman');
     expect(await cache.keys()).toEqual(['Pericles']);
+  });
+});
+
+describe('articleSource', () => {
+  it('reuses the source Bob already has for the page, or makes a new one', () => {
+    const made = articleSource([], { key: 'Peloponnesian_War', title: 'Peloponnesian War' }, '2026-10-17');
+    expect(made.isNew).toBe(true);
+    expect(made.source).toMatchObject({ kind: 'web', title: 'Peloponnesian War', publisher: 'Wikipedia', url: 'https://en.wikipedia.org/wiki/Peloponnesian_War', accessed: '2026-10-17' });
+    const again = articleSource([made.source], { key: 'Peloponnesian_War', title: 'Peloponnesian War' }, '2026-10-18');
+    expect(again).toEqual({ source: made.source, isNew: false });
   });
 });

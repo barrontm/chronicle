@@ -54,6 +54,14 @@ Chronicle is changing so that reading is how you add things. To try it, choose *
 
 The new layout is unfinished. Everything you've saved stays the same whichever layout you use.
 
+### Highlighting
+
+- **On a laptop**, select some words and press **Highlight** (it appears just above them) or the **H** key.
+- **On a phone**, select words and press **Highlight** at the bottom of the screen, or just tap a sentence to highlight all of it. Tapping the next sentence adds it to the same highlight.
+- A highlight is saved the moment you make it, and the article becomes one of your sources (**Library → Sources**). Highlights are quotes from the article, kept apart from your own notes.
+- The highlight you just made is shaded darker. Click or tap it again to pick it, and **Remove highlight** takes it away. Press **Esc**, or click elsewhere, to move on; it stays saved.
+- Wikipedia articles change. When you reopen one, Chronicle finds your highlights in the new version, even when the words around them were edited. A dotted underline means it found something close but isn't sure it's the same passage. If a passage was deleted, the article says how many highlights it couldn't find; they're still saved.
+
 ## Adding from Wikipedia
 
 **Add → From Wikipedia…** searches Wikipedia. Pick a page and you get a new entry filled in: kind and dates from Wikidata, places for the map, a picture with its credit, the intro as a quotation, and the page as a source. Nothing is saved until you check it and press **Add to timeline**. If you already have that entry, Chronicle tells you.
