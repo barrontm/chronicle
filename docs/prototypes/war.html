@@ -178,7 +178,7 @@ button { font: inherit; color: inherit; }
   <header class="pbar">
     <h1>War on the map <span>Phase 0 prototype · sample data</span></h1>
     <div class="controls">
-      <fieldset class="seg" id="vr"><legend>Routes</legend><span class="opts"><button data-v="A" aria-pressed="true">A · Lines</button><button data-v="B" aria-pressed="false">B · Minard</button></span></fieldset>
+      <fieldset class="seg" id="vr"><legend>Routes</legend><span class="opts"><button data-v="A" aria-pressed="false">A · Lines</button><button data-v="B" aria-pressed="true">B · Minard</button></span></fieldset>
       <fieldset class="seg" id="vp"><legend>Playback</legend><span class="opts"><button data-v="A" aria-pressed="true">A · Steady</button><button data-v="B" aria-pressed="false">B · Guided</button></span></fieldset>
       <fieldset class="seg device-seg" id="dev"><legend>Device</legend><span class="opts"><button data-v="laptop" aria-pressed="true">Laptop</button><button data-v="phone" aria-pressed="false">Phone</button></span></fieldset>
       <fieldset class="seg" id="thm"><legend>Theme</legend><span class="opts"><button data-v="light" aria-pressed="false">Light</button><button data-v="dark" aria-pressed="false">Dark</button></span></fieldset>
@@ -355,7 +355,7 @@ const forceText = F => !F ? 'Size unknown' : F.lo != null && F.hi != null ? `${f
 const fmtN = n => n.toLocaleString('en-US');
 
 // ---------- state ----------
-const S = { T: t(413, .705), playing: false, speed: 1, vr: 'A', vp: 'A', sel: null, hover: null, userCam: false, rate: 0 };
+const S = { T: t(413, .705), playing: false, speed: 1, vr: 'B', vp: 'A', sel: null, hover: null, userCam: false, rate: 0 };
 const reduced = matchMedia('(prefers-reduced-motion: reduce)');
 const app = $('#app'), device = $('#device'), mapbox = $('#mapbox'), base = $('#base'), ov = $('#ov'), tip = $('#tip');
 const isPhone = () => device.classList.contains('phone') || window.innerWidth <= 720;

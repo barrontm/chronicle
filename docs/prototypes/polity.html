@@ -208,7 +208,7 @@ button { font: inherit; color: inherit; }
   <header class="pbar">
     <h1>How Athens was governed <span>Phase 0 prototype · sample data</span></h1>
     <div class="controls">
-      <fieldset class="seg" id="vd"><legend>Diagram</legend><span class="opts"><button data-v="A" aria-pressed="true">A · Chart</button><button data-v="B" aria-pressed="false">B · Bodies</button></span></fieldset>
+      <fieldset class="seg" id="vd"><legend>Diagram</legend><span class="opts"><button data-v="A" aria-pressed="false">A · Chart</button><button data-v="B" aria-pressed="true">B · Bodies</button></span></fieldset>
       <fieldset class="seg device-seg" id="dev"><legend>Device</legend><span class="opts"><button data-v="laptop" aria-pressed="true">Laptop</button><button data-v="phone" aria-pressed="false">Phone</button></span></fieldset>
       <fieldset class="seg" id="thm"><legend>Theme</legend><span class="opts"><button data-v="light" aria-pressed="false">Light</button><button data-v="dark" aria-pressed="false">Dark</button></span></fieldset>
     </div>
@@ -370,7 +370,7 @@ const D0 = bce(700), D1 = bce(300), UNREC = bce(318);
 const SAY_MAX = 350000; // one scale for every bar, so Athens and Sparta compare
 
 // ---------- state ----------
-const S = { T: bce(431) + .5, view: 'time', vd: 'A', playing: false, speed: 1, dwellUntil: 0 };
+const S = { T: bce(431) + .5, view: 'time', vd: 'B', playing: false, speed: 1, dwellUntil: 0 };
 const app = $('#app'), device = $('#device'), dbox = $('#dbox'), dsvg = $('#dsvg'), tip = $('#tip');
 const reduced = matchMedia('(prefers-reduced-motion: reduce)');
 const isPhone = () => device.classList.contains('phone') || window.innerWidth <= 720;
