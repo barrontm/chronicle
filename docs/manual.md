@@ -51,6 +51,7 @@ Chronicle is changing so that reading is how you add things. To try it, choose *
 - **Open an article** (top bar) searches Wikipedia and opens the whole article in the reader, with its pictures and footnotes.
 - Links in the article open in the reader too. **Back** returns to the article you came from, and the **reading trail** in the top bar lists the articles you've opened, so you can click back to any of them.
 - Under the title, the reader says what the article is about, from Wikidata: a person, war, battle, polity, period, event, movement or idea, technology, economy, work, place or migration, with its dates and what it was part of ("Battle · 480 BCE · part of Second Persian invasion of Greece"). If you already have it as an entry or a territory, it says **Already in Chronicle**; click that to open it. Some articles aren't about one thing, and then the line stays empty.
+- An article's infobox (the box of facts Wikipedia puts at the top) starts folded to one line, with its picture as a small thumbnail, so the text starts near the top. Click **Show** to open it and **Hide** to fold it again; Chronicle remembers your choice on this device. You can highlight its rows like any other text.
 - Articles you've opened are kept on this device, so you can reread them offline. Opening a new one needs a connection. The line at the end of each article says which edit of the Wikipedia page you're reading.
 
 The new layout is unfinished. Everything you've saved stays the same whichever layout you use.

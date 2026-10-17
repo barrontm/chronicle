@@ -5,6 +5,7 @@ import type { ArticleText, TextSection } from '../../model/anchor';
  * matches against), with a map back to the DOM text nodes:
  *  - whitespace runs collapse to one space (re-renders shuffle whitespace)
  *  - footnote markers (`sup.fn`) are left out: their numbers change whenever a citation is added
+ *  - the reader's own controls inside the article (`[data-ui]`) are left out
  *  - block boundaries become "\n", so words never run together across paragraphs
  *  - each heading starts a section
  */
@@ -66,6 +67,7 @@ export function buildTextModel(root: Element): TextModel {
     if (n.nodeType !== Node.ELEMENT_NODE) return;
     const e = n as Element;
     if (e.localName === 'sup' && e.classList.contains('fn')) return;
+    if (e.hasAttribute('data-ui')) return; // the reader's own controls, not article text
     const block = BLOCK.has(e.tagName);
     if (block) blockBreak();
     if (HEADING.test(e.tagName)) sections.push({ title: (e.textContent ?? '').replace(/\s+/g, ' ').trim(), start: chars.length, end: chars.length });

@@ -141,6 +141,33 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .reader-text th, .reader-text td { border: 1px solid var(--rule-soft); padding: 4px 8px; vertical-align: top; text-align: left; }
 .reader-text .infobox { width: 100%; }
 .reader-text .infobox img { display: block; margin: 0 auto; }
+/* The infobox, folded to one line until Bob opens it; open, its picture sits beside its rows. */
+.reader-text .ibox { margin: 0 0 18px; border: 1px solid var(--rule); border-radius: 6px; background: var(--bg); font-family: var(--font-ui); }
+.reader-text .ibox [data-ui] { user-select: none; -webkit-user-select: none; }
+.ibox-head { width: 100%; display: flex; align-items: center; gap: 10px; padding: 6px 10px 6px 6px; border: 0; border-radius: 6px; background: none; color: inherit; font: inherit; cursor: pointer; text-align: left; }
+.ibox-head:focus-visible { outline: 2px solid var(--ink-2); outline-offset: 2px; }
+.reader-text .ibox-thumb { flex: none; width: 34px; height: 34px; border-radius: 3px; object-fit: cover; object-position: top; display: grid; place-items: center; background: var(--rule-soft); color: var(--muted); }
+.ibox.open .ibox-thumb { visibility: hidden; }
+.ibox-label { font-size: 13px; font-weight: 600; color: var(--ink-2); }
+.ibox-what { font-size: 12px; color: var(--muted); }
+.ibox-chev { margin-left: auto; font-size: 12px; color: var(--ink-2); display: flex; align-items: center; gap: 6px; }
+.ibox-chev svg { transition: transform var(--motion-quick, 120ms); }
+.ibox.open .ibox-chev svg { transform: rotate(180deg); }
+.reader-text .ibox-body { display: none; margin: 0; padding: 4px 14px 14px; border-top: 1px solid var(--rule-soft); overflow: visible; }
+.reader-text .ibox.open .ibox-body { display: flow-root; }
+.reader-text .ibox table.infobox, .reader-text .ibox table.infobox > tbody { display: block; }
+.reader-text .ibox tr { display: grid; grid-template-columns: 76px minmax(0, 1fr); gap: 8px; padding-top: 7px; }
+.reader-text .ibox th, .reader-text .ibox td { border: 0; padding: 0; }
+.reader-text .ibox th { font-size: 10.5px; font-weight: 400; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); padding-top: 3px; }
+.reader-text .ibox td { font: 14.5px/1.4 var(--font-read); color: var(--ink); }
+.reader-text .ibox td ul { margin: 0; padding-left: 1.1em; }
+.reader-text .ibox tr.ibox-title { display: none; }
+.reader-text .ibox tr.ibox-pair { grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: 18px; }
+.reader-text .ibox tr.ibox-wide { display: block; padding-top: 12px; }
+.reader-text .ibox tr.ibox-wide > * { font: 600 13px var(--font-ui); text-transform: none; letter-spacing: 0; color: var(--ink-2); }
+.reader-text .ibox tr.ibox-pic { display: block; float: left; width: 132px; margin: 8px 18px 4px 0; padding: 0; }
+.reader-text .ibox tr.ibox-pic > td { display: block; font: 11px/1.35 var(--font-ui); color: var(--muted); }
+.reader-text .ibox tr.ibox-pic img { width: 100%; margin: 0 0 5px; }
 .reader-text ul, .reader-text ol { padding-left: 1.4em; }
 .reader-text .references, .reader-text .mw-references { font-size: 14px; color: var(--ink-2); }
 .reader-text blockquote { margin: 1em 0; padding-left: 1em; border-left: 3px solid var(--rule); color: var(--ink-2); }
@@ -217,6 +244,9 @@ button, input, select, textarea { font: inherit; color: inherit; }
   .reader { border-right: 0; padding: 16px 16px 96px; } /* room below the text for the docked Highlight button */
   .reader-title { font-size: 26px; }
   .reader-text { font-size: 17px; }
+  .reader-text .ibox tr.ibox-pic { float: none; width: auto; margin: 8px 0 4px; }
+  .reader-text .ibox tr.ibox-pic > td { display: flex; gap: 10px; align-items: end; }
+  .reader-text .ibox tr.ibox-pic img { flex: none; width: 96px; margin: 0; }
   .tray { bottom: -96px; margin: 24px -16px -96px; border-radius: 14px 14px 0 0; padding-bottom: env(safe-area-inset-bottom); }
   .tray::before { content: ''; display: block; width: 36px; height: 4px; margin: 6px auto 0; border-radius: 2px; background: var(--rule); }
   .tray-bar, .tray-card { padding-left: 16px; padding-right: 16px; }
