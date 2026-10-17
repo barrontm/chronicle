@@ -1,0 +1,553 @@
+<title>Talking with Socrates</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600&family=Spectral+SC:wght@500;600&family=Spectral:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+<style>
+/* Layout: the reader prototype's device on a desk. A: the dialogue is the side column beside the reader (or an entry's panel), a bottom sheet on the phone. B: the dialogue is the whole page, set like a printed dialogue, with what Socrates has heard in a rail. Socrates' words are Claude's, so his name and cites are umber, as Claude's drafts are. */
+:root {
+  --desk: #dfe3dc; --desk-ink: #35424d; --frame: #1d2b3a;
+  --bg: #eef0ec; --panel: #fbfbf8; --ink: #1d2b3a; --ink-2: #4d5b66; --muted: #74808a;
+  --rule: #cfd4cc; --rule-soft: #e1e4dd; --focus: #2f5da8; --page: #fbfbf8;
+  --pol: #2f5da8; --eco: #b8860b; --soc: #a33b6b; --tec: #2e8b74; --int: #4b3f8c; --rel: #c23b22; --umber: #7a5a3a;
+  --map-water: #c9d6d8; --map-land: #ece4cf; --grat: #b7c6c9; --link: #2f5da8; --scrim: rgb(20 28 36 / .28);
+  --font-read: 'Spectral', Georgia, serif;
+  --font-sc: 'Spectral SC', 'Spectral', Georgia, serif;
+  --font-ui: 'Public Sans', system-ui, sans-serif;
+  --motion-quick: 150ms; --motion-move: 400ms; --ease: cubic-bezier(.2,.7,.2,1);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --desk: #0b1116; --desk-ink: #b7bfbf; --frame: #2a3540;
+    --bg: #131b23; --panel: #1a242e; --ink: #e3e6e0; --ink-2: #b7bfbf; --muted: #8a959b;
+    --rule: #33414d; --rule-soft: #26323d; --focus: #7fa3e0; --page: #161f28;
+    --pol: #6f93d6; --eco: #dcae45; --soc: #d06d9a; --tec: #58b89d; --int: #9184d6; --rel: #e0664c; --umber: #b9936b;
+    --map-water: #0f1820; --map-land: #2a2f2c; --grat: #1c2a35; --link: #8fb0e8; --scrim: rgb(0 0 0 / .45);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --desk: #0b1116; --desk-ink: #b7bfbf; --frame: #2a3540;
+  --bg: #131b23; --panel: #1a242e; --ink: #e3e6e0; --ink-2: #b7bfbf; --muted: #8a959b;
+  --rule: #33414d; --rule-soft: #26323d; --focus: #7fa3e0; --page: #161f28;
+  --pol: #6f93d6; --eco: #dcae45; --soc: #d06d9a; --tec: #58b89d; --int: #9184d6; --rel: #e0664c; --umber: #b9936b;
+  --map-water: #0f1820; --map-land: #2a2f2c; --grat: #1c2a35; --link: #8fb0e8; --scrim: rgb(0 0 0 / .45);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { background: var(--desk); color: var(--ink); font-family: var(--font-ui); }
+button, input, textarea { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+/* ---------- prototype chrome ---------- */
+.proto { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 14px 28px; display: grid; gap: 12px; }
+.pbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; color: var(--desk-ink); }
+.pbar h1 { font: 600 15px/1.2 var(--font-ui); margin: 0; }
+.pbar h1 span { font-weight: 400; color: var(--muted); margin-left: 6px; }
+.controls { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; }
+.seg { display: inline-flex; align-items: center; gap: 6px; border: 0; padding: 0; margin: 0; }
+.seg legend { float: left; font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin-right: 4px; padding: 0; }
+.seg .opts { display: inline-flex; flex-wrap: wrap; border: 1px solid var(--rule); border-radius: 6px; overflow: hidden; background: var(--panel); }
+.seg button { border: 0; background: none; padding: 5px 10px; font-size: 12.5px; cursor: pointer; color: var(--ink-2); }
+.seg button + button { border-left: 1px solid var(--rule); }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--panel); }
+.reset { border: 1px solid var(--rule); background: var(--panel); border-radius: 6px; padding: 5px 10px; font-size: 12.5px; cursor: pointer; color: var(--ink-2); }
+.pnote { margin: 0; font: 14px/1.5 var(--font-read); color: var(--desk-ink); max-width: 90ch; min-height: 3em; }
+.pnote .how { display: block; font: 12.5px/1.5 var(--font-ui); color: var(--muted); margin-top: 2px; }
+.stage { display: flex; justify-content: center; min-width: 0; }
+.device { position: relative; width: min(1240px, 100%); height: 780px; border: 1px solid var(--rule); border-radius: 10px; overflow: hidden; background: var(--bg); box-shadow: 0 18px 50px -24px rgb(0 0 0 / .35); }
+.device.phone { width: 412px; max-width: 100%; height: 860px; border: 9px solid var(--frame); border-radius: 34px; }
+@media (max-width: 720px) {
+  .seg.device-seg { display: none; }
+  .device, .device.phone { width: 100%; height: 84vh; min-height: 640px; border: 1px solid var(--rule); border-radius: 12px; }
+}
+
+/* ---------- the app ---------- */
+.app { position: absolute; inset: 0; display: grid; grid-template-rows: 46px minmax(0, 1fr); background: var(--bg); color: var(--ink); }
+.topbar { display: flex; align-items: center; gap: 12px; padding: 0 14px; border-bottom: 1px solid var(--rule); background: var(--panel); min-width: 0; }
+.trail { display: flex; align-items: baseline; gap: 6px; font: 15px/1 var(--font-read); white-space: nowrap; min-width: 0; overflow: hidden; }
+.trail .prev, .trail .sep { color: var(--muted); }
+.trail .cur { font-weight: 500; overflow: hidden; text-overflow: ellipsis; }
+.trail .back { border: 0; background: none; font-size: 22px; line-height: 1; padding: 0 4px 2px 0; cursor: pointer; color: var(--ink-2); }
+.open-article { margin-left: auto; width: 240px; display: flex; align-items: center; gap: 8px; padding: 6px 10px; border: 1px solid var(--rule); border-radius: 6px; background: var(--bg); color: var(--muted); font-size: 13px; }
+.btn { border: 1px solid var(--rule); background: var(--bg); border-radius: 6px; padding: 6px 11px; font-size: 12.5px; cursor: pointer; color: var(--ink-2); white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; }
+.btn:hover { border-color: var(--ink-2); }
+.btn.on { border-color: var(--umber); color: var(--umber); background: color-mix(in srgb, var(--umber) 8%, var(--panel)); }
+.btn.primary { background: var(--ink); color: var(--panel); border-color: var(--ink); }
+.btn.quiet { border-color: transparent; background: none; padding-inline: 6px; }
+.is-phone .open-article { display: none; }
+.is-phone .topbar .push { margin-left: auto; }
+
+.body { display: grid; grid-template-columns: minmax(0, 1fr) 440px; min-height: 0; position: relative; }
+.leftcol { position: relative; min-height: 0; border-right: 1px solid var(--rule); background: var(--page); overflow-y: auto; }
+.page { padding: 26px 40px 80px; display: grid; grid-template-columns: minmax(0, 34em); justify-content: center; }
+.article { font: 17px/1.62 var(--font-read); color: var(--ink); min-width: 0; }
+.article h1 { font: 500 32px/1.15 var(--font-read); margin: 0 0 4px; text-wrap: balance; }
+.byline { font: 12px/1.4 var(--font-ui); color: var(--muted); margin: 0 0 14px; }
+.article h2 { font: 600 19px/1.3 var(--font-read); margin: 26px 0 6px; padding-bottom: 3px; border-bottom: 1px solid var(--rule-soft); text-wrap: balance; }
+.article p { margin: 0 0 12px; }
+.article a { color: var(--link); text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--link) 35%, transparent); text-underline-offset: 3px; }
+.mk { --c: var(--umber); background: color-mix(in srgb, var(--c) 13%, transparent); border-radius: 2px; }
+.flash { animation: flash 1.6s var(--ease); }
+@keyframes flash { 0%, 40% { background: color-mix(in srgb, var(--umber) 34%, transparent); } }
+
+/* an entry's panel, today's drawer */
+.entry { padding: 22px 28px 60px; max-width: 40em; display: grid; gap: 18px; }
+.entry .kind { font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 6px; }
+.entry h1 { font: 500 28px/1.15 var(--font-read); margin: 0; }
+.entry .when { font-size: 13px; color: var(--ink-2); margin-top: 4px; }
+.entry h2 { font: 600 11px/1 var(--font-ui); text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 0 0 8px; }
+.entry .item { border-top: 1px solid var(--rule-soft); padding: 9px 0; font: 15px/1.5 var(--font-read); }
+.entry .item small { display: block; font: 12px/1.4 var(--font-ui); color: var(--muted); margin-top: 2px; }
+.entry .quote { border-left: 3px solid var(--c, var(--umber)); padding-left: 10px; }
+.entry .item.cur { background: color-mix(in srgb, var(--umber) 7%, transparent); margin-inline: -8px; padding-inline: 8px; border-radius: 4px; }
+.entry .actions { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* ---------- the dialogue ---------- */
+.dlg { position: relative; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; min-height: 0; background: var(--panel); }
+.dhead { padding: 14px 18px 10px; border-bottom: 1px solid var(--rule); display: grid; gap: 6px; }
+.dhead .row { display: flex; align-items: start; gap: 8px; }
+.dtitle { font: 500 21px/1.2 var(--font-read); margin: 0; text-wrap: balance; flex: 1; min-width: 0; }
+.dtitle input { width: 100%; font: inherit; border: 1px solid var(--focus); border-radius: 4px; padding: 0 4px; background: var(--bg); }
+.dsub { font-size: 12px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: center; }
+.dsub button { border: 0; background: none; padding: 0; color: var(--ink-2); text-decoration: underline; text-decoration-color: var(--rule); text-underline-offset: 3px; cursor: pointer; font-size: 12px; }
+.given { display: grid; gap: 4px; margin: 4px 0 0; padding: 8px 10px; border: 1px solid var(--rule-soft); border-radius: 6px; background: var(--bg); font-size: 12.5px; color: var(--ink-2); }
+.given li { list-style: none; display: flex; gap: 7px; align-items: baseline; }
+.given ul { margin: 0; padding: 0; display: grid; gap: 3px; }
+.given .k { font-size: 10.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); width: 66px; flex: none; }
+.turns { overflow-y: auto; padding: 18px 18px 24px; display: grid; align-content: start; gap: 14px; scroll-behavior: smooth; }
+.turn p { margin: 0; font: 16.5px/1.6 var(--font-read); color: var(--ink); }
+.spk { font: 600 13px/1 var(--font-sc); letter-spacing: .12em; margin-right: .5em; }
+.turn.s .spk { color: var(--umber); }
+.turn.b .spk { color: var(--ink-2); }
+.turn.b p { color: var(--ink-2); }
+.turn .meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; margin-top: 5px; font-size: 12px; color: var(--muted); }
+.move { display: inline-flex; align-items: center; gap: 5px; }
+.move i { width: 8px; height: 8px; border-radius: 2px; background: var(--c); display: inline-block; }
+.citebtn { border: 1px dashed var(--umber); background: none; color: var(--umber); border-radius: 999px; padding: 2px 9px; font-size: 12px; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; }
+.citebtn[aria-expanded="true"] { background: color-mix(in srgb, var(--umber) 10%, transparent); border-style: solid; }
+.citebtn svg { transition: transform var(--motion-quick); }
+.citebtn[aria-expanded="true"] svg { transform: rotate(180deg); }
+.nocite { font-style: italic; }
+.cards { display: grid; gap: 8px; margin-top: 8px; }
+.card { border: 1px solid var(--rule); border-radius: 6px; background: var(--bg); padding: 10px 12px; display: grid; gap: 7px; animation: open var(--motion-quick) var(--ease); }
+@keyframes open { from { opacity: 0; transform: translateY(-3px); } }
+.card blockquote { margin: 0; font: 15px/1.5 var(--font-read); color: var(--ink); border-left: 3px solid var(--c, var(--umber)); padding-left: 10px; }
+.card .src { font-size: 11.5px; color: var(--muted); }
+.card .acts { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.card .state { font-size: 12px; color: var(--ink-2); display: inline-flex; align-items: center; gap: 6px; }
+.card .state i { width: 9px; height: 9px; border-radius: 2px; background: var(--c); }
+.thinking { font: italic 15px/1.5 var(--font-read); color: var(--muted); }
+.caret::after { content: '▍'; color: var(--umber); margin-left: 1px; animation: blink 1s steps(2) infinite; }
+@keyframes blink { 50% { opacity: 0; } }
+.aporia { margin-top: 6px; font-size: 12px; color: var(--umber); }
+
+.composer { border-top: 1px solid var(--rule); padding: 10px 14px 12px; display: grid; gap: 6px; background: var(--panel); }
+.composer .row { display: flex; gap: 8px; align-items: end; }
+.composer textarea { flex: 1; min-width: 0; resize: none; height: 64px; padding: 8px 10px; border: 1px solid var(--rule); border-radius: 6px; background: var(--bg); font: 15px/1.45 var(--font-read); }
+.composer .hint { font-size: 11.5px; color: var(--muted); }
+.blocked { font-size: 13px; color: var(--ink-2); display: grid; gap: 4px; }
+.blocked b { font-weight: 600; color: var(--ink); }
+.blocked a { color: var(--link); }
+
+/* A on the laptop: side column with tabs */
+.side { display: grid; grid-template-rows: auto minmax(0, 1fr); min-height: 0; background: var(--panel); }
+.tabs { display: flex; gap: 2px; padding: 6px 10px 0; border-bottom: 1px solid var(--rule); }
+.tabs button { border: 0; background: none; padding: 7px 10px 8px; font-size: 12.5px; color: var(--muted); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--ink); font-weight: 600; }
+.tabs .x { margin-left: auto; }
+.mapph { position: relative; background: var(--map-water); display: grid; place-items: center; color: var(--ink-2); font-size: 13px; }
+.mapph svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+
+/* A on the phone: a bottom sheet over the reader */
+.is-phone .body { grid-template-columns: minmax(0, 1fr); }
+.is-phone .page { grid-template-columns: minmax(0, 1fr); padding: 14px 18px 120px; }
+.is-phone .article h1 { font-size: 27px; }
+.is-phone .leftcol { border: 0; }
+.is-phone .entry { padding: 16px 18px 120px; }
+.scrim { position: absolute; inset: 0; background: var(--scrim); z-index: 6; }
+.sheet { position: absolute; left: 0; right: 0; bottom: 0; height: 80%; z-index: 7; background: var(--panel); border-radius: 14px 14px 0 0; box-shadow: 0 -10px 30px -14px rgb(0 0 0 / .45); overflow: hidden; animation: up var(--motion-move) var(--ease); }
+@keyframes up { from { transform: translateY(40%); opacity: .4; } }
+.sheet .grab { width: 38px; height: 4px; border-radius: 2px; background: var(--rule); margin: 7px auto 0; }
+.is-phone .dhead { padding: 8px 16px 10px; }
+.is-phone .turns { padding: 14px 16px 20px; }
+.is-phone .composer { padding-bottom: 14px; }
+
+/* B: the whole page, set like a printed dialogue */
+.full { grid-column: 1 / -1; display: grid; grid-template-columns: minmax(0, 1fr) 300px; min-height: 0; }
+.full .dlg { background: var(--page); border-right: 1px solid var(--rule); }
+.full .dhead, .full .turns, .full .composer { padding-left: max(24px, calc((100% - 38em) / 2 - 40px)); padding-right: max(24px, calc((100% - 38em) / 2 + 40px)); }
+.full .dhead { border-bottom: 0; padding-top: 30px; }
+.full .dtitle { font-size: 30px; }
+.full .turns { gap: 18px; padding-top: 8px; }
+.full .turn { position: relative; }
+.full .turn p { font-size: 17.5px; line-height: 1.65; }
+.full .turn.s .marg { position: absolute; right: calc(100% + 16px); top: 6px; width: 70px; text-align: right; font-size: 11px; color: var(--muted); }
+.full .composer { background: var(--page); }
+.rail { overflow-y: auto; background: var(--panel); padding: 20px 18px; display: grid; align-content: start; gap: 12px; }
+.rail h2 { font: 600 11px/1 var(--font-ui); text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 0; }
+.rail p.lede { margin: 0; font-size: 12.5px; color: var(--ink-2); line-height: 1.5; }
+.ritem { border: 1px solid var(--rule-soft); border-radius: 6px; padding: 8px 10px; display: grid; gap: 4px; font: 14px/1.45 var(--font-read); background: var(--bg); }
+.ritem small { font: 11.5px/1.4 var(--font-ui); color: var(--muted); }
+.ritem.lit { border-color: var(--umber); box-shadow: 0 0 0 1px var(--umber) inset; }
+.is-phone .full { grid-template-columns: minmax(0, 1fr); }
+.is-phone .full .rail { display: none; }
+.is-phone .full .dhead, .is-phone .full .turns, .is-phone .full .composer { padding-left: 18px; padding-right: 18px; }
+.is-phone .full .dtitle { font-size: 24px; }
+.is-phone .full .dhead { padding-top: 16px; }
+.is-phone .full .turn.s .marg { position: static; display: inline; width: auto; text-align: left; }
+
+.toast { position: absolute; left: 50%; bottom: 96px; transform: translateX(-50%); z-index: 9; max-width: calc(100% - 32px); background: var(--ink); color: var(--panel); font-size: 12.5px; padding: 8px 12px; border-radius: 6px; box-shadow: 0 8px 20px -10px rgb(0 0 0 / .5); }
+
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition-duration: 0s !important; animation-duration: 0s !important; } .turns { scroll-behavior: auto; } }
+</style>
+
+<div class="proto">
+  <header class="pbar">
+    <h1>Talking with Socrates <span>Phase 2b prototype · sample text, Classical Greece fixture</span></h1>
+    <div class="controls">
+      <fieldset class="seg" id="dlgSeg"><legend>Dialogue</legend><span class="opts"><button type="button" data-v="war" aria-pressed="true">Peloponnesian War</button><button type="button" data-v="press" aria-pressed="false">Printing press</button></span></fieldset>
+      <fieldset class="seg" id="laySeg"><legend>Layout</legend><span class="opts"><button type="button" data-v="A" aria-pressed="true">A · Side panel</button><button type="button" data-v="B" aria-pressed="false">B · Full page</button></span></fieldset>
+      <fieldset class="seg" id="envSeg"><legend>Claude</legend><span class="opts"><button type="button" data-v="ready" aria-pressed="true">Ready</button><button type="button" data-v="offline" aria-pressed="false">Offline</button><button type="button" data-v="nokey" aria-pressed="false">No key</button></span></fieldset>
+      <fieldset class="seg device-seg" id="devSeg"><legend>Device</legend><span class="opts"><button type="button" data-v="laptop" aria-pressed="true">Laptop</button><button type="button" data-v="phone" aria-pressed="false">Phone</button></span></fieldset>
+      <fieldset class="seg" id="thmSeg"><legend>Theme</legend><span class="opts"><button type="button" data-v="light" aria-pressed="false">Light</button><button type="button" data-v="dark" aria-pressed="false">Dark</button></span></fieldset>
+      <button class="reset" id="reset" type="button">Start over</button>
+    </div>
+  </header>
+  <p class="pnote" id="pnote"></p>
+  <main class="stage">
+    <div class="device" id="device"><div class="app" id="app"></div></div>
+  </main>
+</div>
+
+<script>
+const DIM = { political: 'pol', economic: 'eco', social: 'soc', technological: 'tec', intellectual: 'int', religious: 'rel' };
+const MOVE = { ask: 'asks', test: 'tests', widen: 'widens', aporia: 'aporia' };
+
+// Sample text written for this prototype, in the manner of the Wikipedia articles.
+const WAR_ARTICLE = [
+  ['', [['p1', 'The Peloponnesian War (431–404 BC) was fought between <a href="#">Athens</a> and its empire and the <a href="#">Peloponnesian League</a> led by <a href="#">Sparta</a>.']]],
+  ['Causes', [
+    ['p2', '<a href="#">Thucydides</a> wrote that the truest cause, though the least spoken of, was the growth of Athenian power and the fear this caused in Sparta.'],
+    ['p3', 'The open quarrels were over <a href="#">Corcyra</a>, <a href="#">Potidaea</a> and the <a href="#">Megarian decree</a>, which shut Megara\'s merchants out of the harbours and markets of the Athenian empire.'],
+    ['p4', 'In 432 BC the Spartan assembly voted that Athens had broken the <a href="#">Thirty Years\' Peace</a>.'],
+    ['p5', 'Pericles advised the Athenians to offer arbitration, as the peace required, but not to repeal the decree against Megara.']]],
+  ['Strategy', [
+    ['p6', '<a href="#">Pericles</a> planned to avoid battle on land, bring the people of <a href="#">Attica</a> inside the <a href="#">Long Walls</a>, and use the fleet to raid the coasts of the Peloponnese.'],
+    ['p7', 'In 430 BC <a href="#">plague</a> broke out in the crowded city.']]],
+];
+const PASSAGE = {
+  p1: { src: 'Peloponnesian War', sec: 'Introduction' }, p2: { src: 'Peloponnesian War', sec: 'Causes' }, p3: { src: 'Peloponnesian War', sec: 'Causes' },
+  p4: { src: 'Peloponnesian War', sec: 'Causes' }, p5: { src: 'Peloponnesian War', sec: 'Causes' }, p6: { src: 'Peloponnesian War', sec: 'Strategy' },
+  r1: { src: 'Printing press', sec: 'Gutenberg' }, r2: { src: 'Printing press', sec: 'Gutenberg' }, r3: { src: 'Printing press', sec: 'Spread' },
+  n1: { note: true },
+};
+const PRESS_TEXT = {
+  r1: 'Johannes Gutenberg, a goldsmith in Mainz, developed a printing press with movable metal type around 1440.',
+  r2: 'A single press could print up to 3,600 pages in a workday, against a few pages by a scribe.',
+  r3: 'By 1500, presses across Western Europe had printed more than twenty million volumes.',
+  n1: 'Luther\'s pamphlets spread so fast because of this. Look up how many were printed.',
+};
+const plain = h => h.replace(/<[^>]+>/g, '');
+const WAR_TEXT = Object.fromEntries(WAR_ARTICLE.flatMap(([, ps]) => ps.map(([id, h]) => [id, plain(h)])));
+const quoteOf = id => WAR_TEXT[id] || PRESS_TEXT[id];
+const BOB_HL = { p2: 'political', r2: 'technological' }; // Bob's own highlights before the dialogue
+
+const DLG = {
+  war: {
+    title: 'The Peloponnesian War, or on justice',
+    about: 'Peloponnesian War', from: 'reader',
+    given: [['Article', 'Peloponnesian War · Wikipedia'], ['Highlight', '“the truest cause, though the least spoken of…” · political'], ['Meanwhile', 'Pericles, the plague of Athens, the Parthenon']],
+    turns: [
+      { sp: 'b', t: 'Was Athens right to go to war?' },
+      { sp: 's', move: 'ask', cites: ['p1'], t: 'You ask whether Athens was right, and you ask me, who never learned what makes a war right. I have only heard this war read to me: that Athens and its empire fought Sparta and its league. You have read more. So teach me first: when you say “right”, do you mean that it was just, or only that it was wise?' },
+      { sp: 'b', t: 'Just. Sparta started it. Athens was defending itself.' },
+      { sp: 's', move: 'test', cites: ['p4', 'p5'], t: 'Then let us go slowly. I hear that the Spartan assembly voted the peace broken, and that Pericles offered to go to arbitration, as the peace required. When two neighbours quarrel and one offers to go before a judge, which of them would you say is defending himself?' },
+      { sp: 'b', t: 'Athens. They offered arbitration and Sparta said no.' },
+      { sp: 's', move: 'test', cites: ['p5', 'p2'], t: 'So it seems. But the same passage says he would not repeal the decree against Megara. And Thucydides, whom you have marked, says the truest cause was the growth of Athenian power and the fear it caused in Sparta. Tell me: if my neighbour fears me because I grow stronger every year and yield on nothing, am I only defending myself?' },
+    ],
+    script: [
+      { sp: 'b', t: 'Not only, maybe. But being afraid of someone isn’t the same as being attacked by them.' },
+      { sp: 's', move: 'widen', dim: 'economic', cites: ['p3'], t: 'Well said, and I will hold on to it. Yet look at the decree once more: it shut Megara’s merchants out of the harbours and markets of the empire. Not a single spear was raised. When a doctor keeps food from a sick man, has he harmed him less than if he had used the knife?' },
+      { sp: 'b', t: 'No. I hadn’t thought of the trade ban as an attack, but I suppose it was one.' },
+      { sp: 's', move: 'aporia', cites: ['p3', 'p4'], t: 'Then see where we have come. You said Athens was only defending itself. You agreed that one who strikes first is not defending himself, and that closing the harbours was a kind of blow. Either one of these is false, or Athens did not only defend itself. I confess I do not know which. Shall we look again tomorrow, when you have read what the Megarians said?' },
+    ],
+  },
+  press: {
+    title: 'The printing press, or on memory',
+    about: 'Printing press', from: 'entry',
+    given: [['Article', 'Printing press · Wikipedia'], ['Highlight', '“up to 3,600 pages in a workday…” · technological'], ['Note', '“Luther’s pamphlets spread so fast…”'], ['Meanwhile', 'Fall of Constantinople, Medici bank']],
+    turns: [
+      { sp: 'b', t: 'What did the printing press change?' },
+      { sp: 's', move: 'ask', cites: ['r2'], t: 'Friend, you bring me a thing I never saw. I died long before it, and I know only what has been read to me: that one press could print some 3,600 pages in a working day, where a scribe made a few. So you must be my teacher. When you say it changed things, what was it that changed: the books, or the people who read them?' },
+      { sp: 'b', t: 'The people. More of them could read, so ideas spread faster.' },
+      { sp: 's', move: 'test', cites: ['r3'], t: 'A fine answer, and I want to test it. I hear that by 1500 the presses had made more than twenty million books. In my day an Egyptian king said that letters would make men forgetful, seeming wise without being wise. Does a man who owns twenty books know more than a man who owns one, or has he only more to look at?' },
+      { sp: 'b', t: 'More to look at, I suppose. But you can’t learn anything from a book without reading it.' },
+      { sp: 's', move: 'test', cites: [], t: 'Then reading is needed. But is it enough? Think of the cobbler. Does he learn his craft from a book about shoes, or at the bench, with a master who corrects his hand?' },
+    ],
+    script: [
+      { sp: 'b', t: 'At the bench. But books let you learn from people who are dead or far away. Like I’m learning from you.' },
+      { sp: 's', move: 'widen', dim: 'religious', cites: ['n1'], t: 'You have caught me fairly, and I am glad to be caught. Your own note says the pamphlets of one Luther spread fast because of the press. I have heard nothing of this Luther. Tell me who he was, and whether his pamphlets made many people think for themselves, or only made them think the same thing at once.' },
+      { sp: 'b', t: 'He was a monk who attacked the Church. Lots of people agreed with him. Others burned his pamphlets.' },
+      { sp: 's', move: 'aporia', cites: ['r3', 'n1'], t: 'Then the press carried his words and the anger against them, both at once and both far. We began by saying it made people know more. Now it seems it made more people sure, which may not be the same thing. I cannot yet tell which it did. Will you read me more about Luther, and try again with me tomorrow?' },
+    ],
+  },
+};
+
+const S = {};
+function fresh(keepView) {
+  const v = keepView ? { dlg: S.dlg, layout: S.layout, env: S.env, dev: S.dev } : { dlg: 'war', layout: 'A', env: 'ready', dev: 'laptop' };
+  Object.assign(S, v, { tab: 'soc', step: { war: 0, press: 0 }, open: new Set(), kept: new Set(), lit: null, busy: false, renaming: false, givenOpen: false, sheet: true,
+    titles: { war: DLG.war.title, press: DLG.press.title }, extra: { war: [], press: [] } });
+}
+fresh();
+
+const $ = s => document.querySelector(s);
+const esc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+const ICON = {
+  chev: '<svg width="10" height="10" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 4.5L6 8l3.5-3.5" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>',
+  talk: '<svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 3.5h11v7h-6l-3 2.5v-2.5h-2z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>',
+  hl: '<svg width="13" height="13" viewBox="0 0 14 14" aria-hidden="true"><path d="M2 12h10M4 9l5-6 2 2-5 6H4z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>',
+  search: '<svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><circle cx="6" cy="6" r="4.5" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M9.5 9.5L13 13" stroke="currentColor" stroke-width="1.4"/></svg>',
+};
+
+function turnsOf(k) { return DLG[k].turns.concat(DLG[k].script.slice(0, S.step[k])); }
+function nextBob(k) { const n = DLG[k].script[S.step[k]]; return n && n.sp === 'b' ? n.t : null; }
+
+/* ---------- what's beside the dialogue ---------- */
+function articleHTML() {
+  let h = '<article class="article" id="article"><h1>Peloponnesian War</h1><p class="byline">Wikipedia · sample text written for this prototype · War, 431–404 BCE · Already in Chronicle</p>';
+  for (const [sec, ps] of WAR_ARTICLE) {
+    if (sec) h += `<h2>${sec}</h2>`;
+    h += '<p>' + ps.map(([id, html]) => {
+      const dim = BOB_HL[id], kept = S.kept.has(id);
+      const cls = dim || kept ? ' class="mk"' : '';
+      const sty = dim ? ` style="--c:var(--${DIM[dim]})"` : '';
+      return `<span data-p="${id}"${cls}${sty}>${html}</span>`;
+    }).join(' ') + '</p>';
+  }
+  return h + '</article>';
+}
+function entryHTML() {
+  const n = turnsOf('press').length;
+  return `<div class="entry">
+    <div><div class="kind"><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M6 1.5l4.5 8h-9z" fill="none" stroke="var(--tec)" stroke-width="1.4"/></svg>Technology · Technology category</div>
+    <h1>Printing press</h1><div class="when">c. 1440 · Mainz</div></div>
+    <div class="actions"><button class="btn on" type="button" data-act="talk">${ICON.talk}Talk with Socrates</button><button class="btn" type="button">Edit</button><button class="btn" type="button">Open the article</button></div>
+    <section><h2>Highlights · 1</h2><div class="item"><div class="quote" style="--c:var(--tec)">${PRESS_TEXT.r2}</div><small>Printing press · Gutenberg · technological</small></div></section>
+    <section><h2>Notes · 1</h2><div class="item">${PRESS_TEXT.n1}<small>Your note · 14 Oct</small></div></section>
+    <section><h2>Dialogues · 2</h2>
+      <div class="item cur">${esc(S.titles.press)}<small>With Socrates · today · ${n} turns · open beside</small></div>
+      <div class="item">Gutenberg, or on craft<small>With Socrates · 12 Oct · 14 turns · ended in aporia</small></div></section>
+    <section><h2>Sources · 1</h2><div class="item">Printing press<small>Wikipedia · read 12 Oct</small></div></section>
+  </div>`;
+}
+
+/* ---------- the dialogue itself ---------- */
+function cardHTML(id) {
+  const p = PASSAGE[id], q = quoteOf(id), mine = BOB_HL[id], kept = S.kept.has(id);
+  const c = mine ? `var(--${DIM[mine]})` : 'var(--umber)';
+  const src = p.note ? 'Your note on Printing press' : `${p.src} · ${p.sec} · Wikipedia`;
+  const besideArticle = S.dlg === 'war' && S.layout === 'A';
+  let acts = '';
+  if (p.note) acts = '<button class="btn" type="button">Open note</button>';
+  else {
+    if (mine) acts = `<span class="state" style="--c:${c}"><i></i>Your highlight · ${mine}</span>`;
+    else if (kept) acts = `<span class="state"><i style="background:var(--umber)"></i>Kept as a highlight · no dimension yet</span><button class="btn quiet" type="button" data-unkeep="${id}">Undo</button>`;
+    else acts = `<button class="btn" type="button" data-keep="${id}">${ICON.hl}Make this a highlight</button>`;
+    acts += `<button class="btn quiet" type="button" data-show="${id}">${besideArticle ? 'Show in the article' : 'Open in the reader'}</button>`;
+  }
+  return `<div class="card" style="--c:${c}"><blockquote>${esc(q)}</blockquote><div class="src">${src}</div><div class="acts">${acts}</div></div>`;
+}
+function turnHTML(t, i, streaming) {
+  if (t.sp === 'b') return `<div class="turn b"><p><span class="spk">Bob</span>${esc(t.t)}</p></div>`;
+  const key = S.dlg + i, open = S.open.has(key);
+  const mv = t.move === 'widen'
+    ? `<span class="move" style="--c:var(--${DIM[t.dim]})"><i></i>widens to ${t.dim}</span>`
+    : `<span class="move">${MOVE[t.move]}</span>`;
+  const n = t.cites.length;
+  const cite = n
+    ? `<button class="citebtn" type="button" data-cite="${key}" aria-expanded="${open}">Rests on ${n === 1 ? 'one passage' : n + ' passages'} ${ICON.chev}</button>`
+    : '<span class="nocite">No passage: a question from the crafts</span>';
+  const full = S.layout === 'B';
+  const text = streaming ? '' : esc(t.t);
+  return `<div class="turn s" data-i="${i}">
+    ${full ? `<span class="marg">${t.move === 'widen' ? 'widens' : MOVE[t.move]}</span>` : ''}
+    <p${streaming ? ' class="caret" id="stream"' : ''}><span class="spk">Socrates</span><span class="tx">${text}</span></p>
+    ${streaming ? '' : `<div class="meta">${full && t.move !== 'widen' ? '' : mv}${cite}</div>`}
+    ${!streaming && open ? `<div class="cards">${t.cites.map(cardHTML).join('')}</div>` : ''}
+  </div>`;
+}
+function composerHTML() {
+  if (S.env === 'offline') return `<div class="composer"><div class="blocked"><b>Talking with Socrates needs a connection.</b>This dialogue is saved, so you can read it and open its passages offline.</div></div>`;
+  if (S.env === 'nokey') return `<div class="composer"><div class="blocked"><b>Add your Anthropic API key in <a href="#">Drafting with AI</a> first.</b>Socrates is Claude speaking from the passages you've given it.</div></div>`;
+  const nb = nextBob(S.dlg);
+  if (!nb) return `<div class="composer"><div class="blocked"><b>This sample ends in aporia.</b>Start over to play it again, or switch dialogues.</div></div>`;
+  return `<div class="composer"><div class="row"><textarea id="answer" aria-label="Answer Socrates" placeholder="Answer Socrates…">${esc(nb)}</textarea><button class="btn primary" type="button" id="send" ${S.busy ? 'disabled' : ''}>Answer</button></div>
+    <div class="hint">Sample reply filled in. Socrates asks one question at a time.</div></div>`;
+}
+function dialogueHTML() {
+  const d = DLG[S.dlg], ts = turnsOf(S.dlg);
+  const title = S.renaming ? `<input id="rename" value="${esc(S.titles[S.dlg])}" aria-label="Dialogue title">` : esc(S.titles[S.dlg]);
+  const given = S.givenOpen && S.layout === 'A'
+    ? `<ul class="given">${d.given.map(([k, v]) => `<li><span class="k">${k}</span><span>${esc(v)}</span></li>`).join('')}</ul>` : '';
+  let body = ts.map((t, i) => turnHTML(t, i, S.busy === 'stream' && i === ts.length - 1)).join('');
+  if (S.busy === 'think') body += '<div class="turn s"><p class="thinking"><span class="spk">Socrates</span>is thinking about what you said…</p></div>';
+  const last = ts[ts.length - 1];
+  if (last.move === 'aporia' && !S.busy) body += '<div class="aporia">Ended in aporia: “we have not found it yet.” The dialogue stays on the entry and in Library.</div>';
+  return `<section class="dlg" aria-label="Dialogue with Socrates">
+    <header class="dhead">
+      <div class="row"><h2 class="dtitle">${title}</h2>${S.layout === 'A' ? '<button class="btn quiet" type="button" data-act="close" aria-label="Close the dialogue">✕</button>' : ''}</div>
+      <div class="dsub"><span>With Socrates · about ${d.about} · ${ts.length} turns</span><button type="button" data-act="rename">${S.renaming ? 'Save' : 'Rename'}</button>${S.layout === 'A' ? `<button type="button" data-act="given">${S.givenOpen ? 'Hide' : 'What he has heard'}</button>` : ''}</div>
+      ${given}
+    </header>
+    <div class="turns" id="turns">${body}</div>
+    ${composerHTML()}
+  </section>`;
+}
+function railHTML() {
+  const d = DLG[S.dlg];
+  const cited = [...new Set(turnsOf(S.dlg).flatMap(t => t.cites || []))];
+  return `<aside class="rail" aria-label="What Socrates has heard">
+    <h2>What Socrates has heard</h2>
+    <p class="lede">He speaks only from these. Where they're silent, he says he has heard nothing of it.</p>
+    ${d.given.map(([k, v]) => `<div class="ritem"><small>${k}</small>${esc(v)}</div>`).join('')}
+    <h2 style="margin-top:8px">Passages he cited · ${cited.length}</h2>
+    ${cited.map(id => `<div class="ritem${S.lit === id ? ' lit' : ''}" data-railp="${id}"><span>${esc(quoteOf(id))}</span><small>${PASSAGE[id].note ? 'Your note' : PASSAGE[id].sec}${BOB_HL[id] ? ' · your highlight' : S.kept.has(id) ? ' · kept as a highlight' : ''}</small></div>`).join('')}
+  </aside>`;
+}
+
+/* ---------- the app ---------- */
+function render() {
+  const phone = S.dev === 'phone', war = S.dlg === 'war';
+  const app = $('#app');
+  app.className = 'app' + (phone ? ' is-phone' : '');
+  $('#device').className = 'device' + (phone ? ' phone' : '');
+  const crumb = war ? ['Pericles', 'Peloponnesian War'] : ['Timeline', 'Printing press'];
+  let top;
+  if (S.layout === 'B') {
+    top = `<nav class="trail"><button class="back" type="button" data-act="backB" aria-label="Back to ${crumb[1]}">‹</button><span class="cur">${crumb[1]}</span>${phone ? '' : '<span class="sep">›</span><span class="prev">With Socrates</span>'}</nav>
+      ${phone ? '<span class="push"></span>' : `<div class="open-article">${ICON.search}Open an article</div>`}<button class="btn" type="button" data-act="backB">Back to ${war ? 'reading' : 'the entry'}</button>`;
+  } else {
+    top = `<nav class="trail">${phone ? '<button class="back" type="button" aria-label="Back">‹</button>' : `<span class="prev">${crumb[0]}</span><span class="sep">›</span>`}<span class="cur">${crumb[1]}</span></nav>
+      ${phone ? '<span class="push"></span>' : `<div class="open-article">${ICON.search}Open an article</div>`}
+      ${war ? `<button class="btn${S.sheet || !phone ? ' on' : ''}" type="button" data-act="talk">${ICON.talk}${phone ? 'Socrates' : 'Talk with Socrates'}</button>` : ''}${phone ? '<button class="btn" type="button">Map</button>' : ''}`;
+  }
+  let body;
+  const left = `<div class="leftcol" id="left">${war ? `<div class="page">${articleHTML()}</div>` : entryHTML()}</div>`;
+  if (S.layout === 'B') body = `<div class="full">${dialogueHTML()}${railHTML()}</div>`;
+  else if (phone) body = left + (S.sheet ? `<div class="scrim" data-act="close"></div><div class="sheet dlg-sheet"><div class="side" style="height:100%;grid-template-rows:auto minmax(0,1fr)"><div class="grab"></div>${dialogueHTML()}</div></div>` : '');
+  else body = left + `<div class="side"><div class="tabs" role="tablist"><button type="button" role="tab" data-tab="soc" aria-selected="${S.tab === 'soc'}">Socrates</button><button type="button" role="tab" data-tab="map" aria-selected="${S.tab === 'map'}">Map and timeline</button></div>${S.tab === 'soc' ? dialogueHTML() : mapPH()}</div>`;
+  app.innerHTML = `<div class="topbar">${top}</div><div class="body" id="body">${body}</div><div class="toast" id="toast" hidden></div>`;
+  const rn = $('#rename'); if (rn) { rn.focus(); rn.select(); }
+  note(); seg();
+}
+function mapPH() {
+  let g = '';
+  for (let i = 1; i < 12; i++) g += `<path d="M${i * 50} 0V900M0 ${i * 70}H600" stroke="var(--grat)" fill="none"/>`;
+  return `<div class="mapph"><svg viewBox="0 0 600 700" preserveAspectRatio="xMidYMid slice" aria-hidden="true">${g}<path d="M120 80 C 220 60 300 160 260 260 C 230 340 330 400 300 520 C 280 600 160 640 110 560 C 60 480 80 300 120 80Z" fill="var(--map-land)"/></svg><span style="position:relative;background:var(--panel);padding:6px 10px;border-radius:5px">The map and timeline, as today. Not part of this prototype.</span></div>`;
+}
+const NOTES = {
+  A: ['<b>A · Side panel.</b> The dialogue sits beside what Bob was reading, so a cited passage is one tap from its place in the article. On the laptop it shares the side column with the map; on the phone it is a sheet over the reader.',
+      'Tap “Rests on…” under a line of Socrates’ to see its passages, then “Make this a highlight” or “Show in the article”. Answer to play the rest; “What he has heard” lists what Claude was given.'],
+  B: ['<b>B · Full page.</b> The dialogue is the page, set like a printed dialogue, with Socrates’ move in the margin and everything he has heard in a rail. Bob leaves the article to talk, and comes back with “Back to reading”.',
+      'Tap “Rests on…” to open a line’s passages; the rail marks the one you open. Answer to play the rest.'],
+};
+function note() {
+  const [a, b] = NOTES[S.layout];
+  const where = S.dlg === 'war' ? ' Opened from the reader, on the Peloponnesian War.' : ' Opened from an entry’s panel: the printing press, long after Socrates’ death.';
+  $('#pnote').innerHTML = a + where + `<span class="how">${b}</span>`;
+}
+function seg() {
+  const cur = { dlgSeg: S.dlg, laySeg: S.layout, envSeg: S.env, devSeg: S.dev, thmSeg: document.documentElement.dataset.theme || '' };
+  for (const [id, v] of Object.entries(cur)) for (const b of document.querySelectorAll(`#${id} button`)) b.setAttribute('aria-pressed', String(b.dataset.v === v));
+}
+function toast(msg) {
+  const t = $('#toast'); t.textContent = msg; t.hidden = false;
+  clearTimeout(toast.h); toast.h = setTimeout(() => { t.hidden = true; }, 2600);
+}
+function scrollTurnsEnd() { const el = $('#turns'); if (el) el.scrollTop = el.scrollHeight; }
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+function send() {
+  const k = S.dlg;
+  if (S.busy || !nextBob(k)) return;
+  S.step[k]++; S.busy = 'think'; render(); scrollTurnsEnd();
+  setTimeout(() => {
+    S.step[k]++; S.busy = 'stream'; render(); scrollTurnsEnd();
+    const words = DLG[k].script[S.step[k] - 1].t.split(' ');
+    const el = $('#stream .tx'); let i = 0;
+    const done = () => { S.busy = false; render(); scrollTurnsEnd(); };
+    if (reduce || !el) return done();
+    const tick = () => {
+      if (S.dlg !== k || !$('#stream')) return done();
+      i += 2; $('#stream .tx').textContent = words.slice(0, i).join(' ');
+      scrollTurnsEnd();
+      if (i < words.length) setTimeout(tick, 70); else done();
+    };
+    tick();
+  }, reduce ? 0 : 900);
+}
+
+document.addEventListener('click', e => {
+  const b = e.target.closest('button, [data-act], [data-railp]');
+  if (!b) return;
+  const sg = b.closest('.seg');
+  if (sg) {
+    const v = b.dataset.v;
+    if (sg.id === 'thmSeg') { document.documentElement.dataset.theme = v; seg(); return; }
+    if (sg.id === 'dlgSeg') { S.dlg = v; S.busy = false; S.renaming = false; S.lit = null; }
+    if (sg.id === 'laySeg') { S.layout = v; S.sheet = true; S.renaming = false; }
+    if (sg.id === 'envSeg') S.env = v;
+    if (sg.id === 'devSeg') { S.dev = v; S.sheet = true; }
+    render(); return;
+  }
+  if (b.id === 'reset') { fresh(true); render(); return; }
+  if (b.id === 'send') { send(); return; }
+  const d = b.dataset;
+  if (d.tab) { S.tab = d.tab; render(); return; }
+  if (d.cite) {
+    S.open.has(d.cite) ? S.open.delete(d.cite) : S.open.add(d.cite);
+    const t = turnsOf(S.dlg)[+d.cite.slice(S.dlg.length)];
+    if (S.open.has(d.cite) && t.cites[0]) S.lit = t.cites[0];
+    const turns = $('#turns'), y = turns.scrollTop; render(); $('#turns').scrollTop = y;
+    return;
+  }
+  if (d.keep) {
+    S.kept.add(d.keep);
+    const y = $('#turns').scrollTop; render(); $('#turns').scrollTop = y;
+    toast(`Highlight kept in ${PASSAGE[d.keep].src}. Pick its dimension in the reader.`);
+    if (S.dlg === 'war' && S.layout === 'A' && S.dev === 'laptop') showIn(d.keep);
+    return;
+  }
+  if (d.unkeep) { S.kept.delete(d.unkeep); const y = $('#turns').scrollTop; render(); $('#turns').scrollTop = y; return; }
+  if (d.show) {
+    if (S.dlg === 'war' && S.layout === 'A' && S.dev === 'laptop') showIn(d.show);
+    else if (S.dlg === 'war' && S.layout === 'A') { S.sheet = false; render(); showIn(d.show); toast('The dialogue is still open: tap Socrates to go back.'); }
+    else toast(`Opens ${PASSAGE[d.show].src} in the reader at this passage.`);
+    return;
+  }
+  if (d.railp) { S.lit = d.railp; render(); return; }
+  if (d.act === 'talk') { S.sheet = true; S.tab = 'soc'; render(); return; }
+  if (d.act === 'close') { if (S.dev === 'phone') { S.sheet = false; render(); } else toast('Closing keeps the dialogue on the entry and in Library.'); return; }
+  if (d.act === 'backB') { S.layout = 'A'; S.sheet = false; render(); toast('Back where you were. The dialogue is kept on the entry and in Library.'); return; }
+  if (d.act === 'given') { S.givenOpen = !S.givenOpen; render(); return; }
+  if (d.act === 'rename') {
+    if (S.renaming) { const v = $('#rename').value.trim(); if (v) S.titles[S.dlg] = v; }
+    S.renaming = !S.renaming; render(); return;
+  }
+});
+document.addEventListener('keydown', e => {
+  if (e.target.id === 'rename' && e.key === 'Enter') { const v = e.target.value.trim(); if (v) S.titles[S.dlg] = v; S.renaming = false; render(); }
+  if (e.target.id === 'rename' && e.key === 'Escape') { S.renaming = false; render(); }
+  if (e.target.id === 'answer' && e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
+});
+function showIn(id) {
+  const el = document.querySelector(`[data-p="${id}"]`), left = $('#left');
+  if (!el || !left) return;
+  left.scrollTo({ top: el.offsetTop - 120, behavior: reduce ? 'auto' : 'smooth' });
+  el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash');
+}
+render();
+</script>
