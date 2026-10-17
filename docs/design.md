@@ -15,6 +15,11 @@ The direction is in `docs/vision.md`; visual references are in `docs/references.
 - **Type scale** *(proposed)*: Spectral for era names (large, spaced small caps), theme chips and reading text; Public Sans for controls and axis ticks at levels 1 and 2.
 - **Motion tokens** *(proposed)*: `--motion-quick` 150 ms (hover, selection), `--motion-move` 400 ms (zooming between levels, panels), `--motion-morph` tied to the year clock (borders, diagrams, treemaps), and easing `cubic-bezier(.2,.7,.2,1)`. Only change over time animates; decoration never does. With reduced motion, states swap instantly.
 
+## Phase 0 prototypes
+Sources are in `docs/prototypes/`; republish one with the Artifact tool after editing it. Sample data only.
+- **Era overview** (ticket 0.2a): https://claude.ai/artifact/Vnu3jkQcP2D38HE6JcPQ7j. Open choices: eras as A · Bands or B · Streams (thickness = how much Bob highlighted); dimensions as A · Phases (named spans) or B · Pulse (highlights per five years).
+- **Reader** (ticket 0.2b): https://claude.ai/artifact/DQoHcwpRpcL2AjniH63RF6. Open choices: highlight by A · Selecting or B · Tapping a sentence; on the laptop, the capture card in A · the Margin or B · a Tray (the phone always uses the tray).
+
 ## Tokens (in `src/ui/styles.css`)
 - Light: limestone background `#eef0ec`, panel `#fbfbf8`, slate ink `#1d2b3a`, rules `#cfd4cc`.
 - Dark: `#131b23` background with lightened pigments. It follows the system setting.
