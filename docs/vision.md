@@ -61,16 +61,16 @@ An idea or work keeps a `reception` by region (known, partial, lost, revived, ta
 A connection can carry an `effect` (weakened, funded, legitimised, …) and the highlights that justify it. When its two ends sit in different dimensions, level 1 draws it as an arrow between the lanes. Ends can be entries, themes, regimes, economies or institutions.
 
 ## Timeline with zoom levels
-- Level 0: era bands in the spirit of the 1931 Histomap, with theme chips.
+- Level 0: era bands in the spirit of the 1931 Histomap, one row per region (a period's `region`), with theme chips.
 - Level 1: inside an era, six dimension lanes showing change.
-- Level 2: individual entries.
-- A custom renderer (d3-scale/d3-zoom, SVG, canvas if density needs it) replaces vis-timeline behind the same one-importer boundary, and lifts the ±271k-year limit. This is the one hard-to-undo step, so it gets a spike first.
+- Level 2: individual entries, each drawn as its `subject` (falling back to its `kind`).
+- A custom renderer replaces vis-timeline behind the same one-importer boundary, and lifts the ±271k-year limit. The spike settled it: a pure layout plus an SVG painter (the hybrid only if a real phone needs it), our own Pointer Events driver instead of d3-zoom, and time in decimal years.
 - Dimensions live on highlights and entries and are the default lanes at level 1. Categories stay Bob's own topics.
 - One year clock (`useYearClock`) drives the timeline, the map and every animation. Reduced motion is respected.
 
 ## Schema path
 - v6: `highlights`, `dimension`, `themes` on periods; `effect` and `highlightIds` on connections.
-- v7: `dialogues` (talking with Socrates).
+- v7: `dialogues` (talking with Socrates); `subject` and `region` on entries, for the new timeline.
 - v8: `regimes` on territories, and alliances.
 - v9: `economies` (with `distribution`), plus `Flow.subject` and `goods`.
 - v10: `institutions` with `structures`, `reception` on ideas and works, `Flow.subject: 'ideas'`.
@@ -87,8 +87,8 @@ Each phase ships something usable, behind a "Try the new layout" setting (`ui.ne
 1. Reader: reader pane, highlights (v6), recognition, offline cache
 2. Highlight → record: code path, AI `highlight` feature, review
    - 2b. Talk with Socrates: dialogues (v7), the AI `socrates` feature
-3. New timeline: renderer at parity, then the zoom levels; vis-timeline removed
-4. Eras, themes and influences between dimensions
+3. New timeline: renderer at parity, every kind drawn as itself, then the zoom levels; vis-timeline removed
+4. Eras, themes and influences between dimensions; eras on the map
 5. Polities and wars: regimes (v8), border morph, alliances, campaigns, battles
    - 5b. Economy, with distribution (v9)
    - 5c. Ideas, schools and spread (v10)
