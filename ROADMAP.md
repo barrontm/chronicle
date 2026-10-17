@@ -18,7 +18,7 @@ Each phase ends with a **checkpoint** session (sonnet): triage the inbox, reorde
 
 ### Phase 0 — Design and spikes (no app code on `main`)
 1. ✅ **Plan into the repo** · S · sonnet. `docs/vision.md`, `docs/references.md`, the design language draft in `docs/design.md`, the `design-critic` agent, this roadmap.
-2. **Prototypes: overview and reader** · M · opus. Two Artifacts on fixture data, each in light, dark and phone: (a) era overview → zoom into an era's six dimension lanes; (b) the reader with a highlight becoming a capture card, on desktop and phone. Offer A/B variants where the direction is open. Bob picks and comments; record the choices in `docs/design.md`.
+2. ✅ **Prototypes: overview and reader** · M · opus. Two Artifacts on fixture data, each in light, dark and phone: (a) era overview → zoom into an era's six dimension lanes; (b) the reader with a highlight becoming a capture card, on desktop and phone. Offer A/B variants where the direction is open. Bob picks and comments; record the choices in `docs/design.md`.
    Done when: Bob has chosen a direction for both and the *proposed* items they settle are rules in `design.md`.
 3. **Prototypes: polity, economy, war** · M · opus. Three Artifacts: (c) a war animating on the map (routes draw in, battles pulse); (d) Athens' power-structure diagram morphing through its regimes, plus Athens vs Sparta in 431 BCE; (e) Athens' economy portrait (treemap) and sector streamgraph, with Black Sea grain flowing to Piraeus.
    Done when: Bob has chosen a direction for each.

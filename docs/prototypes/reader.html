@@ -233,8 +233,8 @@ button { font: inherit; color: inherit; }
   <header class="pbar">
     <h1>Reader <span>Phase 0 prototype · sample text</span></h1>
     <div class="controls">
-      <fieldset class="seg" id="sel"><legend>Highlight by</legend><span class="opts"><button data-v="A" aria-pressed="true">A · Selecting</button><button data-v="B" aria-pressed="false">B · Tapping a sentence</button></span></fieldset>
-      <fieldset class="seg card-seg" id="crd"><legend>Card</legend><span class="opts"><button data-v="A" aria-pressed="true">A · Margin</button><button data-v="B" aria-pressed="false">B · Tray</button></span></fieldset>
+      <fieldset class="seg" id="sel"><legend>Highlight by</legend><span class="opts"><button data-v="C" aria-pressed="true">Chosen · Select, or tap on the phone</button><button data-v="A" aria-pressed="false">A · Selecting</button><button data-v="B" aria-pressed="false">B · Tapping a sentence</button></span></fieldset>
+      <fieldset class="seg card-seg" id="crd"><legend>Card</legend><span class="opts"><button data-v="A" aria-pressed="false">A · Margin</button><button data-v="B" aria-pressed="true">B · Tray (chosen)</button></span></fieldset>
       <fieldset class="seg device-seg" id="dev"><legend>Device</legend><span class="opts"><button data-v="laptop" aria-pressed="true">Laptop</button><button data-v="phone" aria-pressed="false">Phone</button></span></fieldset>
       <fieldset class="seg" id="thm"><legend>Theme</legend><span class="opts"><button data-v="light" aria-pressed="false">Light</button><button data-v="dark" aria-pressed="false">Dark</button></span></fieldset>
       <button class="reset" id="reset" type="button">Start over</button>
@@ -378,9 +378,11 @@ const onTimeline = r => ['war', 'battle', 'event', 'person', 'regime'].includes(
 const $ = s => document.querySelector(s);
 const app = $('#app'), device = $('#device'), article = $('#article'), reader = $('#reader'), page = $('#page'), margin = $('#margin');
 const trayInner = $('#trayInner'), seltool = $('#seltool'), toastEl = $('#toast'), mapSvg = $('#map'), mapbox = $('#mapbox'), tl = $('#tl');
-const S = { sel: 'A', card: 'A', H: [], open: null, fresh: null, flash: null, view: null, seq: 0 };
+const S = { sel: 'C', card: 'B', H: [], open: null, fresh: null, flash: null, view: null, seq: 0 };
 const HL = 'highlights' in CSS && typeof Highlight === 'function';
 const isPhone = () => app.clientWidth < 600;
+const tapping = () => S.sel === 'B' || (S.sel === 'C' && isPhone());
+const selecting = () => S.sel !== 'B';
 const sentences = [...article.querySelectorAll('.s')];
 
 function rangeOf(sid, sub) {
@@ -660,24 +662,25 @@ function renderTimeline() {
 function render(animateMap) {
   app.classList.toggle('is-phone', isPhone());
   app.classList.toggle('card-B', S.card === 'B');
-  app.classList.toggle('tap', S.sel === 'B');
+  app.classList.toggle('tap', tapping());
   paint(); renderCards(); renderMap(animateMap); renderTimeline(); notes();
 }
 function notes() {
   const sel = {
+    C: '<b>Chosen · Select, or tap on the phone.</b> Select exactly the words you want on any device; on the phone, a tap also highlights a whole sentence, and tapping the next one extends it.',
     A: '<b>A · Selecting.</b> Highlight exactly the words you want, as in any reader. On a phone that means long-press and drag the handles.',
     B: '<b>B · Tapping a sentence.</b> One tap highlights a whole sentence; tap the next one to extend it. Quicker on a phone, less precise.',
   }[S.sel];
   const card = isPhone() ? ' On the phone the card always comes up from the bottom.' : {
     A: ' <b>A · Margin.</b> Each card sits beside its text, like notes in a book’s margin; added ones shrink to one line.',
-    B: ' <b>B · Tray.</b> The card slides up under the text, the same way it does on the phone.',
+    B: ' <b>B · Tray (chosen).</b> The card slides up under the text, the same way it does on the phone.',
   }[S.card];
-  $('#pnote').innerHTML = sel + card + `<span class="how">${S.sel === 'A' ? 'Select any words' : 'Tap any sentence'} to see what it would become. Solid facts come from Wikidata; dashed ones are Claude’s suggestions. Nothing is drawn until you add it.</span>`;
+  $('#pnote').innerHTML = sel + card + `<span class="how">${tapping() ? (selecting() ? 'Select any words or tap a sentence' : 'Tap any sentence') : 'Select any words'} to see what it would become. Solid facts come from Wikidata; dashed ones are Claude’s suggestions. Nothing is drawn until you add it.</span>`;
 }
 
 // ---------- interactions ----------
 function updateSelTool() {
-  if (S.sel !== 'A') { seltool.hidden = true; return; }
+  if (!selecting()) { seltool.hidden = true; return; }
   const sel = getSelection();
   if (!sel.rangeCount || sel.isCollapsed || !article.contains(sel.getRangeAt(0).commonAncestorContainer) || !sel.toString().trim()) { seltool.hidden = true; return; }
   const r = sel.getRangeAt(0), rect = r.getBoundingClientRect(), pr = page.getBoundingClientRect();
@@ -698,7 +701,7 @@ function highlightSelection() {
 seltool.addEventListener('mousedown', ev => ev.preventDefault());
 $('#hlbtn').addEventListener('click', highlightSelection);
 document.addEventListener('keydown', ev => {
-  if ((ev.key === 'h' || ev.key === 'H') && !ev.metaKey && !ev.ctrlKey && S.sel === 'A' && !seltool.hidden) { ev.preventDefault(); highlightSelection(); }
+  if ((ev.key === 'h' || ev.key === 'H') && !ev.metaKey && !ev.ctrlKey && selecting() && !seltool.hidden) { ev.preventDefault(); highlightSelection(); }
   if (ev.key === 'Escape') { if (app.classList.contains('show-map')) app.classList.remove('show-map'); else if (S.open) { closeOpen(); render(true); } }
 });
 function hitHighlight(ev) {
@@ -716,10 +719,10 @@ article.addEventListener('click', ev => {
     if (sel.isCollapsed) toast(`In the app, ${link.textContent} opens here in the reader and joins your reading trail.`);
     return;
   }
-  if (S.sel === 'A' && !sel.isCollapsed) return;
+  if (selecting() && !sel.isCollapsed) return;
   const hit = hitHighlight(ev);
   if (hit) { openH(hit.id); return; }
-  if (S.sel !== 'B') return;
+  if (!tapping()) return;
   const s = ev.target.closest('.s'); if (!s) return;
   const open = S.open && getH(S.open);
   if (open && open.state === 'open') {
