@@ -13,11 +13,19 @@ import { App } from './ui/App';
 import { IdbStore } from './store/idbStore';
 import { onUpdateReady } from './ui/updates';
 
+// Dev only: `/#gallery` shows the app on the Classical Greece fixture. Dead code in production builds.
+const galleryHash = import.meta.env.DEV && location.hash.startsWith('#gallery') ? location.hash : null;
+
 // Never reload on its own: a new version waits until Bob chooses to reload (see ui/updates.ts).
 const updateSW = registerSW({ immediate: true, onNeedRefresh: () => onUpdateReady(() => updateSW(true)) });
 
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <App store={new IdbStore()} />
-  </StrictMode>,
-);
+const root = createRoot(document.getElementById('root')!);
+if (galleryHash) {
+  void import('./ui/gallery/Gallery').then(({ Gallery }) => root.render(<StrictMode><Gallery hash={galleryHash} /></StrictMode>));
+} else {
+  root.render(
+    <StrictMode>
+      <App store={new IdbStore()} />
+    </StrictMode>,
+  );
+}

@@ -364,6 +364,7 @@ export const TimelineView = forwardRef<TimelineControl, Props>(function Timeline
       window.removeEventListener('resize', report);
       t.destroy();
       tl.current = null;
+      hasPlayhead.current = false; // a new timeline (React strict mode remounts in dev) has no playhead yet
       arrowLayer.current = null;
     };
   }, []);

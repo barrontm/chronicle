@@ -82,6 +82,6 @@ Sources are in `docs/prototypes/`; republish one with the Artifact tool after ed
 - The choropleth ramps from a tint of the land color to the trend's category pigment, on one scale across all years.
 
 ## Checking your work
-For the redesign: prototype first (an Artifact on fixture data that Bob picks), then build. Review with the `design-review` skill and hand the sheet to the `design-critic` agent for a fresh-eyes critique. Use a filmstrip or short video for anything that moves.
+For the redesign: prototype first (an Artifact on fixture data that Bob picks), then build. Review with the `design-review` skill and hand the sheet to the `design-critic` agent for a fresh-eyes critique. Use a filmstrip or short video for anything that moves: `npm run shots -- --filmstrip map` tiles the map playing 480→400 BCE into one image, and `--video` records it. For stable states, `npm run dev` and open `/#gallery` (every preset on the Classical Greece fixture), or `npm run shots -- --gallery --sheet`.
 
 Screenshot desktop (1440×900), phone (412×860) and dark mode with the fixture imported (`npm run shots` includes map, split and phone-map views). Things to look at: lane-label alignment with the trend strips, clipped labels, and contrast in dark mode.
