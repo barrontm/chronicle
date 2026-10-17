@@ -1,0 +1,353 @@
+{
+ "key": "Classical_Athens",
+ "title": "Classical Athens",
+ "entity": {
+  "entities": {
+   "Q844930": {
+    "id": "Q844930",
+    "labels": {
+     "en": {
+      "language": "en",
+      "value": "Classical Athens"
+     }
+    },
+    "claims": {
+     "P31": [
+      {
+       "mainsnak": {
+        "snaktype": "value",
+        "property": "P31",
+        "hash": "7a809d7b80764a8b91f7697deea21b4152b57091",
+        "datavalue": {
+         "value": {
+          "entity-type": "item",
+          "numeric-id": 148837,
+          "id": "Q148837"
+         },
+         "type": "wikibase-entityid"
+        },
+        "datatype": "wikibase-item"
+       },
+       "rank": "preferred"
+      },
+      {
+       "mainsnak": {
+        "snaktype": "value",
+        "property": "P31",
+        "hash": "4441c653c09b7127b7d39c2f526a738ab5fbd6a9",
+        "datavalue": {
+         "value": {
+          "entity-type": "item",
+          "numeric-id": 839954,
+          "id": "Q839954"
+         },
+         "type": "wikibase-entityid"
+        },
+        "datatype": "wikibase-item"
+       },
+       "rank": "normal"
+      },
+      {
+       "mainsnak": {
+        "snaktype": "value",
+        "property": "P31",
+        "hash": "e875ed75d0b283ce7f5334ecf6a4aba2d39262fd",
+        "datavalue": {
+         "value": {
+          "entity-type": "item",
+          "numeric-id": 133442,
+          "id": "Q133442"
+         },
+         "type": "wikibase-entityid"
+        },
+        "datatype": "wikibase-item"
+       },
+       "rank": "preferred"
+      },
+      {
+       "mainsnak": {
+        "snaktype": "value",
+        "property": "P31",
+        "hash": "953d9bb4f3f6e19ffa3af140ad48cddcc173ff2e",
+        "datavalue": {
+         "value": {
+          "entity-type": "item",
+          "numeric-id": 102202066,
+          "id": "Q102202066"
+         },
+         "type": "wikibase-entityid"
+        },
+        "datatype": "wikibase-item"
+       },
+       "rank": "normal"
+      }
+     ],
+     "P571": [
+      {
+       "mainsnak": {
+        "snaktype": "value",
+        "property": "P571",
+        "hash": "99b2c177ff6d5cee89b1de8e6fc5c8471109ec30",
+        "datavalue": {
+         "value": {
+          "time": "-0508-00-00T00:00:00Z",
+          "timezone": 0,
+          "before": 0,
+          "after": 0,
+          "precision": 9,
+          "calendarmodel": "http://www.wikidata.org/entity/Q1985786"
+         },
+         "type": "time"
+        },
+        "datatype": "time"
+       },
+       "rank": "preferred"
+      },
+      {
+       "mainsnak": {
+        "snaktype": "value",
+        "property": "P571",
+        "hash": "337fd9027358f036fd6b3cfee1b89ce85ff8fa5c",
+        "datavalue": {
+         "value": {
+          "time": "-0700-00-00T00:00:00Z",
+          "timezone": 0,
+          "before": 0,
+          "after": 0,
+          "precision": 7,
+          "calendarmodel": "http://www.wikidata.org/entity/Q1985786"
+         },
+         "type": "time"
+        },
+        "datatype": "time"
+       },
+       "rank": "normal"
+      }
+     ],
+     "P625": [
+      {
+       "mainsnak": {
+        "snaktype": "value",
+        "property": "P625",
+        "hash": "1210883e6f1658ea061964433a19c22923501052",
+        "datavalue": {
+         "value": {
+          "latitude": 37.97222222222222,
+          "longitude": 23.72222222222222,
+          "altitude": null,
+          "precision": 0.0002777777777777778,
+          "globe": "http://www.wikidata.org/entity/Q2"
+         },
+         "type": "globecoordinate"
+        },
+        "datatype": "globe-coordinate"
+       },
+       "rank": "normal"
+      }
+     ],
+     "P361": [
+      {
+       "mainsnak": {
+        "snaktype": "value",
+        "property": "P361",
+        "hash": "4fe025faab6fabd220c61844bd65eb8b2d45547d",
+        "datavalue": {
+         "value": {
+          "entity-type": "item",
+          "numeric-id": 11772,
+          "id": "Q11772"
+         },
+         "type": "wikibase-entityid"
+        },
+        "datatype": "wikibase-item"
+       },
+       "rank": "normal"
+      }
+     ],
+     "P155": [
+      {
+       "mainsnak": {
+        "snaktype": "value",
+        "property": "P155",
+        "hash": "7330feae3fdb315dfc7b3336c5b2f9f9c840568f",
+        "datavalue": {
+         "value": {
+          "entity-type": "item",
+          "numeric-id": 13534153,
+          "id": "Q13534153"
+         },
+         "type": "wikibase-entityid"
+        },
+        "datatype": "wikibase-item"
+       },
+       "rank": "normal"
+      }
+     ],
+     "P156": [
+      {
+       "mainsnak": {
+        "snaktype": "value",
+        "property": "P156",
+        "hash": "58a768e82192c4ffe5e408490223cf660982192b",
+        "datavalue": {
+         "value": {
+          "entity-type": "item",
+          "numeric-id": 1524,
+          "id": "Q1524"
+         },
+         "type": "wikibase-entityid"
+        },
+        "datatype": "wikibase-item"
+       },
+       "rank": "normal"
+      }
+     ],
+     "P122": [
+      {
+       "mainsnak": {
+        "snaktype": "value",
+        "property": "P122",
+        "hash": "148dd27d7bbb146a42b8aa37be5a120b2ed5a466",
+        "datavalue": {
+         "value": {
+          "entity-type": "item",
+          "numeric-id": 223767,
+          "id": "Q223767"
+         },
+         "type": "wikibase-entityid"
+        },
+        "datatype": "wikibase-item"
+       },
+       "rank": "normal"
+      }
+     ]
+    }
+   }
+  }
+ },
+ "parents": {
+  "Q148837": [
+   "Q133442",
+   "Q15661340"
+  ],
+  "Q839954": [
+   "Q115385481"
+  ],
+  "Q133442": [
+   "Q515",
+   "Q7275",
+   "Q1063239",
+   "Q13218276"
+  ],
+  "Q102202066": [
+   "Q839954"
+  ],
+  "Q15661340": [
+   "Q515",
+   "Q839954",
+   "Q22674925"
+  ],
+  "Q115385481": [
+   "Q53617407",
+   "Q141158989"
+  ],
+  "Q515": [
+   "Q56061",
+   "Q7930989",
+   "Q124250988"
+  ],
+  "Q7275": [
+   "Q155076",
+   "Q1048835",
+   "Q1896989",
+   "Q96196009"
+  ],
+  "Q1063239": [
+   "Q7210356"
+  ],
+  "Q13218276": [
+   "Q515",
+   "Q836915"
+  ],
+  "Q22674925": [
+   "Q486972",
+   "Q96088545"
+  ],
+  "Q53617407": [
+   "Q53617489"
+  ],
+  "Q141158989": [
+   "Q141156557"
+  ],
+  "Q56061": [
+   "Q141104744"
+  ],
+  "Q7930989": [
+   "Q3257686",
+   "Q124250988"
+  ],
+  "Q124250988": [
+   "Q486972"
+  ],
+  "Q155076": [
+   "Q3778211",
+   "Q61964280"
+  ],
+  "Q1048835": [
+   "Q56061"
+  ],
+  "Q1896989": [
+   "Q3778211"
+  ],
+  "Q96196009": [
+   "Q1063239"
+  ],
+  "Q7210356": [
+   "Q43229"
+  ],
+  "Q836915": [
+   "Q7275"
+  ],
+  "Q486972": [
+   "Q2221906"
+  ],
+  "Q96088545": [
+   "Q15893266"
+  ],
+  "Q53617489": [
+   "Q103940464",
+   "Q141204587"
+  ],
+  "Q141156557": [
+   "Q53617489",
+   "Q141501601"
+  ],
+  "Q141104744": [
+   "Q141104747"
+  ],
+  "Q3257686": [
+   "Q486972",
+   "Q2221906",
+   "Q48907157"
+  ],
+  "Q3778211": [
+   "Q106559804"
+  ],
+  "Q61964280": [
+   "Q141186854"
+  ],
+  "Q43229": [
+   "Q854457",
+   "Q1639378",
+   "Q106559804",
+   "Q106668099",
+   "Q131085629"
+  ]
+ },
+ "labels": {
+  "Q11772": "Ancient Greece",
+  "Q13534153": "Athens",
+  "Q1524": "Athens",
+  "Q223767": "democracy in Athens"
+ }
+}

@@ -23,6 +23,7 @@ const fixtureV1Json = readFileSync(new URL('../../tests/fixtures/sample-history-
 const fixtureV2Json = readFileSync(new URL('../../tests/fixtures/sample-history-v2.json', import.meta.url), 'utf8');
 const fixtureV3Json = readFileSync(new URL('../../tests/fixtures/sample-history-v3.json', import.meta.url), 'utf8');
 const fixtureV4Json = readFileSync(new URL('../../tests/fixtures/sample-history-v4.json', import.meta.url), 'utf8');
+const fixtureV5Json = readFileSync(new URL('../../tests/fixtures/sample-history-v5.json', import.meta.url), 'utf8');
 
 describe('parseDoc', () => {
   it('accepts the fixture and round-trips it', () => {
@@ -181,13 +182,29 @@ describe('mutations', () => {
     expect(doc.deleted.sr_only).toBe(9);
   });
 
-  it('removing a source drops excerpts quoted from it', () => {
+  it('removing a source deletes the highlights quoted from it and drops them as evidence', () => {
     const doc = remove(fixture(), 'sources', 's_wp_magna', 5);
     const magna = doc.items.find((i) => i.id === 'i_magna')!;
-    expect(magna.excerpt).toBeUndefined();
+    expect(doc.highlights).toEqual([]);
+    expect(doc.deleted).toMatchObject({ h_i_magna: 5, h_magna_reader: 5 });
+    expect(doc.relations.find((r) => r.id === 'r_3')?.highlightIds).toEqual([]);
     expect(magna.citations).toEqual([]);
     expect(magna.updatedAt).toBe(5);
     expect(() => parseDoc(serializeDoc(doc))).not.toThrow();
+  });
+
+  it('removing an entry keeps its highlights but unlinks them', () => {
+    const doc = remove(fixture(), 'items', 'i_magna', 5);
+    expect(doc.highlights.find((h) => h.id === 'h_i_magna')).toMatchObject({ usedBy: [], updatedAt: 5 });
+  });
+
+  it('removing a highlight drops it from period themes', () => {
+    const base = fixture();
+    const span = base.items.find((i) => i.kind === 'span')!;
+    const withTheme = upsert(base, 'items', { ...span, themes: [{ id: 'th_1', label: 'Rights', highlightIds: ['h_magna_reader', 'h_i_magna'] }] }, 3);
+    const doc = remove(withTheme, 'highlights', 'h_magna_reader', 5);
+    expect(doc.items.find((i) => i.id === span.id)?.themes?.[0].highlightIds).toEqual(['h_i_magna']);
+    expect(doc.relations.find((r) => r.id === 'r_3')?.highlightIds).toEqual([]);
   });
 });
 
@@ -242,7 +259,27 @@ describe('draft provenance', () => {
     expect(JSON.parse(fixtureV4Json).schemaVersion).toBe(4);
     const doc = parseDoc(fixtureV4Json);
     expect(doc.schemaVersion).toBe(SCHEMA_VERSION);
-    expect(doc.items).toEqual(JSON.parse(fixtureV4Json).items);
+    expect(doc.items.length).toBe(JSON.parse(fixtureV4Json).items.length);
+  });
+
+  it('upgrades a schema 5 backup, turning each excerpt into a highlight used by its entry', () => {
+    const v5 = JSON.parse(fixtureV5Json);
+    expect(v5.schemaVersion).toBe(5);
+    const doc = parseDoc(fixtureV5Json);
+    expect(doc.schemaVersion).toBe(6);
+    expect(doc.items.some((i) => 'excerpt' in i)).toBe(false);
+    expect(doc.highlights).toEqual([
+      { id: 'h_i_magna', sourceId: 's_wp_magna', text: 'Fixture excerpt: a royal charter of rights agreed at Runnymede.', usedBy: ['i_magna'], updatedAt: 1760000000000 },
+    ]);
+    // Two devices upgrading the same timeline make the same highlight, so merging doesn't double it.
+    expect(mergeDocs(doc, parseDoc(fixtureV5Json)).highlights).toHaveLength(1);
+  });
+
+  it('rejects highlights that quote no known source or have a bad dimension', () => {
+    const bad = JSON.parse(fixtureJson);
+    bad.highlights[0].sourceId = 'nope';
+    bad.highlights[1].dimension = 'military';
+    expect(() => parseDoc(JSON.stringify(bad))).toThrow(/unknown source "nope"[\s\S]*unknown dimension "military"/);
   });
 
   it('keeps provenance and rejects a malformed one', () => {

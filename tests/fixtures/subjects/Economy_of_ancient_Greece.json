@@ -1,0 +1,122 @@
+{
+ "key": "Economy_of_ancient_Greece",
+ "title": "Economy of ancient Greece",
+ "entity": {
+  "entities": {
+   "Q2736823": {
+    "id": "Q2736823",
+    "labels": {
+     "en": {
+      "language": "en",
+      "value": "economy of ancient Greece"
+     }
+    },
+    "claims": {
+     "P31": [
+      {
+       "mainsnak": {
+        "snaktype": "value",
+        "property": "P31",
+        "hash": "b3ddcdc5c8bddfe49b3350b65f042a980e6cd524",
+        "datavalue": {
+         "value": {
+          "entity-type": "item",
+          "numeric-id": 100773131,
+          "id": "Q100773131"
+         },
+         "type": "wikibase-entityid"
+        },
+        "datatype": "wikibase-item"
+       },
+       "rank": "normal"
+      }
+     ],
+     "P279": [
+      {
+       "mainsnak": {
+        "snaktype": "value",
+        "property": "P279",
+        "hash": "14662b9e9a2bd258b7c31072fc16ed5f253ab42d",
+        "datavalue": {
+         "value": {
+          "entity-type": "item",
+          "numeric-id": 2226947,
+          "id": "Q2226947"
+         },
+         "type": "wikibase-entityid"
+        },
+        "datatype": "wikibase-item"
+       },
+       "rank": "normal"
+      }
+     ],
+     "P276": [
+      {
+       "mainsnak": {
+        "snaktype": "value",
+        "property": "P276",
+        "hash": "779caa4f70aa3be23fe182f5e992a60a310f0e72",
+        "datavalue": {
+         "value": {
+          "entity-type": "item",
+          "numeric-id": 11772,
+          "id": "Q11772"
+         },
+         "type": "wikibase-entityid"
+        },
+        "datatype": "wikibase-item"
+       },
+       "rank": "normal"
+      }
+     ]
+    }
+   }
+  }
+ },
+ "parents": {
+  "Q100773131": [
+   "Q159810",
+   "Q137185571"
+  ],
+  "Q2226947": [
+   "Q473750"
+  ],
+  "Q159810": [
+   "Q1639378"
+  ],
+  "Q137185571": [
+   "Q159810",
+   "Q74817647"
+  ],
+  "Q473750": [
+   "Q11862829",
+   "Q100773131"
+  ],
+  "Q1639378": [
+   "Q58778"
+  ],
+  "Q74817647": [
+   "Q21040055"
+  ],
+  "Q11862829": [
+   "Q1047113"
+  ],
+  "Q58778": [
+   "Q488383",
+   "Q53617407",
+   "Q99527517"
+  ],
+  "Q21040055": [
+   "Q12558574"
+  ],
+  "Q1047113": [
+   "Q21040055",
+   "Q26256810",
+   "Q105948247",
+   "Q110403031"
+  ]
+ },
+ "labels": {
+  "Q11772": "Ancient Greece"
+ }
+}

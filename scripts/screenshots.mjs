@@ -8,6 +8,7 @@
 //                         tiled into screenshots/filmstrip-<view>.png: one image to see motion
 //   --video               the same run recorded as screenshots/video-<view>.webm (Play at 10 years a second)
 // Output: screenshots/*.png (git-ignored). Set PW_CHROMIUM_PATH in sandboxes without Playwright browsers.
+import { gunzipSync } from 'node:zlib';
 import { chromium } from '@playwright/test';
 import { mkdirSync, readFileSync, rmSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -218,6 +219,70 @@ async function help(p, prefix) {
 if (any('desktop-help')) await help(await page('desktop-help', desktop), 'desktop');
 if (any('dark-help')) await help(await page('dark-help', { ...desktop, colorScheme: 'dark' }), 'dark');
 if (any('phone-help')) await help(await page('phone-help', { viewport: { width: 412, height: 860 }, isMobile: true, hasTouch: true }), 'phone');
+
+// The new layout's reader on a saved article, with the sample timeline beside it.
+async function reader(p, prefix) {
+  const cors = { 'Access-Control-Allow-Origin': '*' };
+  await p.route('https://en.wikipedia.org/w/rest.php/v1/search/page**', (r) => r.fulfill({ headers: cors, json: { pages: [{ key: 'Peloponnesian_War', title: 'Peloponnesian War', description: 'War between Athens and Sparta (431–404 BC)', thumbnail: null }] } }));
+  // A real article (CC BY-SA, saved by the reader spike) so the shot shows true Wikipedia content.
+  const html = gunzipSync(readFileSync(fileURLToPath(new URL('../tests/fixtures/articles/Peloponnesian_War.html.gz', import.meta.url)))).toString('utf8');
+  await p.route('https://en.wikipedia.org/w/rest.php/v1/page/*/html', (r) => r.fulfill({ headers: { ...cors, 'Content-Type': 'text/html' }, body: html }));
+  // What the article is about, recorded from Wikidata (no class walk needed for a war).
+  const subject = JSON.parse(readFileSync(fileURLToPath(new URL('../tests/fixtures/subjects/Peloponnesian_War.json', import.meta.url)), 'utf8'));
+  await p.route('https://www.wikidata.org/w/api.php**', (r) => {
+    const ids = new URL(r.request().url()).searchParams.get('ids');
+    if (!ids) return r.fulfill({ headers: cors, json: subject.entity });
+    return r.fulfill({ headers: cors, json: { entities: Object.fromEntries(ids.split('|').map((q) => [q, { id: q, labels: subject.labels[q] ? { en: { value: subject.labels[q] } } : {} }])) } });
+  });
+  await withFixture(p);
+  await p.getByRole('button', { name: 'More' }).click();
+  await p.getByRole('menuitemcheckbox', { name: 'Try the new layout' }).click();
+  await p.getByTestId('article-search').getByLabel('Search Wikipedia').fill('peloponnesian');
+  await p.getByTestId('article-search').getByRole('button', { name: 'Search' }).click();
+  await p.getByTestId('article-results').getByRole('button').first().click();
+  await p.getByTestId('article').locator('.reader-text').waitFor();
+  await p.waitForTimeout(800);
+  await shot(p, `${prefix}-reader`);
+  if (any(`${prefix}-reader-highlight`)) await readerHighlight(p, prefix);
+}
+
+// Highlighting: one kept highlight, one just made, and (on the laptop) a selection with its button.
+async function readerHighlight(p, prefix) {
+  // Select (or find) from the start of `from` to the end of `to`, which may be in different text nodes.
+  const where = (from, to = from, select = false) => p.evaluate(([a, b, sel]) => {
+    const find = (t) => {
+      const w = document.createTreeWalker(document.querySelector('.reader-text'), NodeFilter.SHOW_TEXT);
+      for (let n = w.nextNode(); n; n = w.nextNode()) { const i = n.data.indexOf(t); if (i >= 0) return [n, i]; }
+      throw new Error(`no "${t}"`);
+    };
+    const [sn, si] = find(a);
+    const [en, ei] = find(b);
+    const r = document.createRange();
+    r.setStart(sn, si);
+    r.setEnd(en, ei + b.length);
+    if (!sel) sn.parentElement.scrollIntoView({ block: 'center' });
+    if (sel) { getSelection().removeAllRanges(); getSelection().addRange(r); }
+    const box = r.getClientRects()[0];
+    return { x: box.left + box.width / 2, y: box.top + box.height / 2 };
+  }, [from, to, select]);
+  const highlight = async (from, to) => {
+    // On the phone, a tap in the middle of `to` (away from links) highlights its sentence.
+    if (prefix === 'phone') { const at = await where(to); await p.touchscreen.tap(at.x, at.y); return; }
+    await where(from, to, true);
+    await p.getByRole('button', { name: 'Highlight' }).waitFor();
+    await p.keyboard.press('h');
+  };
+  await where('was fought in the');
+  await highlight('was fought in the', 'from 431 to 404 BC');
+  await p.keyboard.press('Escape');
+  await highlight('Initially inconclusive', 'Initially inconclusive');
+  if (prefix !== 'phone') await where('allowed the Spartan', 'allowed the Spartan', true);
+  await p.waitForTimeout(300);
+  await shot(p, `${prefix}-reader-highlight`);
+}
+if (any('desktop-reader')) await reader(await page('desktop-reader', desktop), 'desktop');
+if (any('dark-reader')) await reader(await page('dark-reader', { ...desktop, colorScheme: 'dark' }), 'dark');
+if (any('phone-reader')) await reader(await page('phone-reader', { viewport: { width: 412, height: 860 }, isMobile: true, hasTouch: true }), 'phone');
 
 // Draft with AI: a recorded run replayed (no network, no key needed), one entry accepted.
 async function aiDraft(p, prefix) {

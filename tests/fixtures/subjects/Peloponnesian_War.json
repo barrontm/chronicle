@@ -1,0 +1,344 @@
+{
+ "key": "Peloponnesian_War",
+ "title": "Peloponnesian War",
+ "entity": {
+  "entities": {
+   "Q33745": {
+    "id": "Q33745",
+    "labels": {
+     "en": {
+      "language": "en",
+      "value": "Peloponnesian War"
+     }
+    },
+    "claims": {
+     "P31": [
+      {
+       "mainsnak": {
+        "snaktype": "value",
+        "property": "P31",
+        "hash": "9565c30f04dc02f1cfff5baa28b89ddc708fc7fa",
+        "datavalue": {
+         "value": {
+          "entity-type": "item",
+          "numeric-id": 198,
+          "id": "Q198"
+         },
+         "type": "wikibase-entityid"
+        },
+        "datatype": "wikibase-item"
+       },
+       "rank": "normal"
+      }
+     ],
+     "P580": [
+      {
+       "mainsnak": {
+        "snaktype": "value",
+        "property": "P580",
+        "hash": "81be94ceec1045913a06776f9020b49830cde5e8",
+        "datavalue": {
+         "value": {
+          "time": "-0431-00-00T00:00:00Z",
+          "timezone": 0,
+          "before": 0,
+          "after": 0,
+          "precision": 9,
+          "calendarmodel": "http://www.wikidata.org/entity/Q1985786"
+         },
+         "type": "time"
+        },
+        "datatype": "time"
+       },
+       "rank": "normal"
+      }
+     ],
+     "P582": [
+      {
+       "mainsnak": {
+        "snaktype": "value",
+        "property": "P582",
+        "hash": "8d06bc49a86f1a6e66f299aa6e2628a837041183",
+        "datavalue": {
+         "value": {
+          "time": "-0404-04-25T00:00:00Z",
+          "timezone": 0,
+          "before": 0,
+          "after": 0,
+          "precision": 11,
+          "calendarmodel": "http://www.wikidata.org/entity/Q1985786"
+         },
+         "type": "time"
+        },
+        "datatype": "time"
+       },
+       "rank": "normal"
+      }
+     ],
+     "P361": [
+      {
+       "mainsnak": {
+        "snaktype": "value",
+        "property": "P361",
+        "hash": "d4e499b85305038c32f714e209b898a8191e4b02",
+        "datavalue": {
+         "value": {
+          "entity-type": "item",
+          "numeric-id": 29788594,
+          "id": "Q29788594"
+         },
+         "type": "wikibase-entityid"
+        },
+        "datatype": "wikibase-item"
+       },
+       "rank": "normal"
+      }
+     ],
+     "P710": [
+      {
+       "mainsnak": {
+        "snaktype": "value",
+        "property": "P710",
+        "hash": "b72320ccace46c93060ed75c71be2c59345b117c",
+        "datavalue": {
+         "value": {
+          "entity-type": "item",
+          "numeric-id": 193235,
+          "id": "Q193235"
+         },
+         "type": "wikibase-entityid"
+        },
+        "datatype": "wikibase-item"
+       },
+       "rank": "normal"
+      },
+      {
+       "mainsnak": {
+        "snaktype": "value",
+        "property": "P710",
+        "hash": "417827792ce2c7cd49edcc7717f85396749dd681",
+        "datavalue": {
+         "value": {
+          "entity-type": "item",
+          "numeric-id": 208742,
+          "id": "Q208742"
+         },
+         "type": "wikibase-entityid"
+        },
+        "datatype": "wikibase-item"
+       },
+       "rank": "normal"
+      },
+      {
+       "mainsnak": {
+        "snaktype": "value",
+        "property": "P710",
+        "hash": "2c7f5906ee70d12f2a44ea3c08298ece5f9d96f0",
+        "datavalue": {
+         "value": {
+          "entity-type": "item",
+          "numeric-id": 389688,
+          "id": "Q389688"
+         },
+         "type": "wikibase-entityid"
+        },
+        "datatype": "wikibase-item"
+       },
+       "rank": "normal"
+      }
+     ],
+     "P276": [
+      {
+       "mainsnak": {
+        "snaktype": "value",
+        "property": "P276",
+        "hash": "779caa4f70aa3be23fe182f5e992a60a310f0e72",
+        "datavalue": {
+         "value": {
+          "entity-type": "item",
+          "numeric-id": 11772,
+          "id": "Q11772"
+         },
+         "type": "wikibase-entityid"
+        },
+        "datatype": "wikibase-item"
+       },
+       "rank": "normal"
+      },
+      {
+       "mainsnak": {
+        "snaktype": "value",
+        "property": "P276",
+        "hash": "5ba421bbef46bd46f60f3708a08732880edd4d40",
+        "datavalue": {
+         "value": {
+          "entity-type": "item",
+          "numeric-id": 34575,
+          "id": "Q34575"
+         },
+         "type": "wikibase-entityid"
+        },
+        "datatype": "wikibase-item"
+       },
+       "rank": "normal"
+      },
+      {
+       "mainsnak": {
+        "snaktype": "value",
+        "property": "P276",
+        "hash": "b49110bd5dd18993d46097f93b203204239255d9",
+        "datavalue": {
+         "value": {
+          "entity-type": "item",
+          "numeric-id": 51614,
+          "id": "Q51614"
+         },
+         "type": "wikibase-entityid"
+        },
+        "datatype": "wikibase-item"
+       },
+       "rank": "normal"
+      },
+      {
+       "mainsnak": {
+        "snaktype": "value",
+        "property": "P276",
+        "hash": "2fe19048ad06e9461de46aee8e9cdb95b6a2dc94",
+        "datavalue": {
+         "value": {
+          "entity-type": "item",
+          "numeric-id": 4951156,
+          "id": "Q4951156"
+         },
+         "type": "wikibase-entityid"
+        },
+        "datatype": "wikibase-item"
+       },
+       "rank": "normal"
+      },
+      {
+       "mainsnak": {
+        "snaktype": "value",
+        "property": "P276",
+        "hash": "783358436ce2fdb3a1ef668bfaaad1a0c1ea8924",
+        "datavalue": {
+         "value": {
+          "entity-type": "item",
+          "numeric-id": 1460,
+          "id": "Q1460"
+         },
+         "type": "wikibase-entityid"
+        },
+        "datatype": "wikibase-item"
+       },
+       "rank": "normal"
+      }
+     ]
+    }
+   }
+  }
+ },
+ "parents": {
+  "Q198": [
+   "Q350604",
+   "Q1190554",
+   "Q1920219",
+   "Q15835236",
+   "Q17091170"
+  ],
+  "Q350604": [
+   "Q71266556"
+  ],
+  "Q1190554": [
+   "Q67518978",
+   "Q140451665"
+  ],
+  "Q1920219": [
+   "Q621184",
+   "Q1190554"
+  ],
+  "Q15835236": [
+   "Q2423459"
+  ],
+  "Q17091170": [
+   "Q180684"
+  ],
+  "Q71266556": [
+   "Q1920219",
+   "Q24902509",
+   "Q115431196"
+  ],
+  "Q67518978": [
+   "Q136433660"
+  ],
+  "Q140451665": [
+   "Q141204674",
+   "Q141257229",
+   "Q141750035",
+   "Q141751599"
+  ],
+  "Q621184": [
+   "Q2141565",
+   "Q123928941"
+  ],
+  "Q2423459": [
+   "Q1190554",
+   "Q68482296"
+  ],
+  "Q180684": [
+   "Q839578",
+   "Q86923152"
+  ],
+  "Q24902509": [
+   "Q1914636"
+  ],
+  "Q115431196": [
+   "Q124490",
+   "Q180684"
+  ],
+  "Q136433660": [
+   "Q35120"
+  ],
+  "Q141204674": [
+   "Q67518978",
+   "Q141204632"
+  ],
+  "Q141257229": [
+   "Q67518978",
+   "Q141681290"
+  ],
+  "Q141750035": [
+   "Q6502323"
+  ],
+  "Q141751599": [
+   "Q141642415"
+  ],
+  "Q2141565": [
+   "Q813912"
+  ],
+  "Q123928941": [
+   "Q26256810"
+  ],
+  "Q68482296": [
+   "Q451967"
+  ],
+  "Q839578": [
+   "Q609298"
+  ],
+  "Q86923152": [
+   "Q18603648",
+   "Q31464082"
+  ]
+ },
+ "labels": {
+  "Q29788594": "Peloponnesian Wars",
+  "Q193235": "Delian League",
+  "Q208742": "Peloponnesian League",
+  "Q389688": "Achaemenid Empire",
+  "Q11772": "Ancient Greece",
+  "Q34575": "Aegean Sea",
+  "Q51614": "Anatolia",
+  "Q4951156": "Sicily",
+  "Q1460": "Sicily"
+ }
+}

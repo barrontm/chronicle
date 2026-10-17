@@ -4,7 +4,7 @@
 Years are astronomical (1 BCE = 0, 431 BCE = -430). Only `dates.ts` converts, including `fromWikidataTime`. Use `toJsDate`, never `new Date(y, …)`. Any date change needs unit tests for BCE, years 0–99 and leap days.
 
 ## Mutations
-`upsert` / `remove` in `doc.ts` stamp `updatedAt` and record tombstones, which `mergeDocs` depends on. `remove` cascades gently: it drops connections, unlinks notes and territories, and drops excerpts and territory values. It never deletes Bob's notes.
+`upsert` / `remove` in `doc.ts` stamp `updatedAt` and record tombstones, which `mergeDocs` depends on. `remove` cascades gently: it drops connections, unlinks notes, territories and highlights, deletes highlights with their source, and drops territory values. It never deletes Bob's notes.
 
 ## Schema change checklist
 1. Bump `SCHEMA_VERSION` in `types.ts`.

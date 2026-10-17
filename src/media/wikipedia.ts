@@ -1,6 +1,10 @@
-import { compareHistDate, fromWikidataTime } from '../model/dates';
+import { compareHistDate } from '../model/dates';
 import { newId } from '../model/doc';
-import type { HistDate, ItemKind, Place, Relation, Source, TimelineItem } from '../model/types';
+import {
+  P, classParentsQuery, classesToFetch, claimsFor, coordsOf, dateClaim, firstValue, idOf, idsOf, linkedIds,
+  parseClassParents, parseSubjectEntity, toSubject, type ClassParents, type Claims, type Subject,
+} from '../model/subjects';
+import type { Highlight, HistDate, ItemKind, Place, Relation, Source, TimelineItem } from '../model/types';
 import { fetchCommonsFile, resultToMedia } from './commons';
 
 /**
@@ -12,15 +16,10 @@ import { fetchCommonsFile, resultToMedia } from './commons';
  */
 const WIKI = 'https://en.wikipedia.org';
 const WIKIDATA_API = 'https://www.wikidata.org/w/api.php';
+const WDQS = 'https://query.wikidata.org/sparql';
 
-// Wikidata properties and items we read.
+// Wikidata items we read (properties are in model/subjects).
 const HUMAN = 'Q5';
-const CIRCA = 'Q5727902';
-const P = {
-  instanceOf: 'P31', born: 'P569', died: 'P570', start: 'P580', end: 'P582', pointInTime: 'P585',
-  inception: 'P571', dissolved: 'P576', coords: 'P625', image: 'P18', birthPlace: 'P19', deathPlace: 'P20',
-  location: 'P276', circumstances: 'P1480', influencedBy: 'P737',
-} as const;
 
 export interface WikiSearchResult {
   /** Page key for URLs, e.g. "Battle_of_Marathon". */
@@ -62,6 +61,8 @@ export interface ItemDraft {
   newSources: Source[];
   /** Connections to entries already on the timeline, suggested by Wikidata. */
   relations?: Relation[];
+  /** The page's intro, quoted, saved as a highlight used by the entry. */
+  highlight?: Highlight;
 }
 
 export function buildSearchUrl(query: string, limit = 10): string {
@@ -74,6 +75,16 @@ export function buildSummaryUrl(key: string): string {
 
 export function buildEntityUrl(qid: string): string {
   return `${WIKIDATA_API}?${new URLSearchParams({ action: 'wbgetentities', ids: qid, props: 'claims', format: 'json', origin: '*' })}`;
+}
+
+/** An article's Wikidata item, found by its English Wikipedia title (redirects followed). */
+export function buildSubjectUrl(title: string): string {
+  return `${WIKIDATA_API}?${new URLSearchParams({ action: 'wbgetentities', sites: 'enwiki', titles: title.replace(/_/g, ' '), normalize: '1', props: 'claims|labels', languages: 'en', format: 'json', origin: '*' })}`;
+}
+
+/** P279 parents of some classes, from the query service (the API would send each class's every claim). */
+export function buildClassParentsUrl(classIds: string[]): string {
+  return `${WDQS}?${new URLSearchParams({ query: classParentsQuery(classIds), format: 'json' })}`;
 }
 
 /** Just the coordinates of one place, so we don't download a whole city's claims. */
@@ -130,41 +141,6 @@ export function parseSummary(json: unknown): WikiSummary {
     coords: j.coordinates ? { lat: j.coordinates.lat, lon: j.coordinates.lon } : undefined,
   };
 }
-
-interface Snak { snaktype?: string; datavalue?: { value?: unknown } }
-interface Claim { mainsnak?: Snak; rank?: string; qualifiers?: Record<string, Snak[]> }
-type Claims = Record<string, Claim[] | undefined>;
-
-/** Preferred-rank values first, then normal; deprecated values and "unknown value" are skipped. */
-function claimsFor(claims: Claims, prop: string): Claim[] {
-  const usable = (claims[prop] ?? []).filter((c) => c.rank !== 'deprecated' && c.mainsnak?.snaktype === 'value');
-  const preferred = usable.filter((c) => c.rank === 'preferred');
-  return preferred.length ? preferred : usable;
-}
-
-const firstValue = <T>(claims: Claims, prop: string): T | undefined => claimsFor(claims, prop)[0]?.mainsnak?.datavalue?.value as T | undefined;
-
-function dateClaim(claims: Claims, prop: string): HistDate | undefined {
-  const c = claimsFor(claims, prop)[0];
-  const v = c?.mainsnak?.datavalue?.value as { time?: string; precision?: number } | undefined;
-  if (!v?.time) return undefined;
-  const circa = (c?.qualifiers?.[P.circumstances] ?? []).some((q) => (q.datavalue?.value as { id?: string })?.id === CIRCA);
-  return fromWikidataTime(v.time, v.precision ?? 9, circa) ?? undefined;
-}
-
-function coordsOf(claims: Claims): { lat: number; lon: number } | undefined {
-  const v = firstValue<{ latitude: number; longitude: number }>(claims, P.coords);
-  return v ? { lat: v.latitude, lon: v.longitude } : undefined;
-}
-
-const idOf = (claims: Claims, prop: string) => firstValue<{ id?: string }>(claims, prop)?.id;
-
-/** Every usable item value of a property, not just the first. */
-const idsOf = (claims: Claims, prop: string): string[] => [
-  ...new Set((claims[prop] ?? [])
-    .filter((c) => c.rank !== 'deprecated' && c.mainsnak?.snaktype === 'value')
-    .flatMap((c) => { const id = (c.mainsnak?.datavalue?.value as { id?: string })?.id; return id ? [id] : []; })),
-];
 
 export function parseEntity(json: unknown, qid: string): WikidataFacts {
   const claims = (json as { entities?: Record<string, { claims?: Claims }> })?.entities?.[qid]?.claims ?? {};
@@ -282,12 +258,14 @@ export function buildDraft(args: {
     categoryId,
     description: capitalize(summary.description),
     citations: [{ sourceId: source.id }],
-    ...(summary.extract ? { excerpt: { text: summary.extract, sourceId: source.id } } : {}),
     ...(places ? { places } : {}),
     ...(summary.qid ? { wikidataId: summary.qid } : {}),
     updatedAt: 0,
   };
-  return { item, newSources: reused ? [] : [source] };
+  const highlight: Highlight | undefined = summary.extract
+    ? { id: newId('h'), sourceId: source.id, text: summary.extract, ...(summary.qid ? { subjectQid: summary.qid } : {}), usedBy: [item.id], updatedAt: 0 }
+    : undefined;
+  return { item, newSources: reused ? [] : [source], ...(highlight ? { highlight } : {}) };
 }
 
 // ---------- Network ----------
@@ -402,4 +380,31 @@ export async function draftFromWikipedia(
     }
   }
   return { draft };
+}
+
+/**
+ * What an article is about: its Wikidata item, classified by walking its
+ * classes up (usually no further than the item itself), and labels for its
+ * facts. Undefined when the page has no Wikidata item. If the class walk or
+ * the labels fail, the subject is still returned with what's known.
+ */
+export async function fetchSubject(title: string, signal?: AbortSignal): Promise<Subject | undefined> {
+  const entity = parseSubjectEntity(await getJson(buildSubjectUrl(title), signal));
+  if (!entity) return undefined;
+  const parents: ClassParents = {};
+  try {
+    for (let need = classesToFetch(entity.classIds, parents); need.length; need = classesToFetch(entity.classIds, parents)) {
+      Object.assign(parents, parseClassParents(await getJson(buildClassParentsUrl(need), signal), need));
+    }
+  } catch (e) {
+    if ((e as Error).name === 'AbortError') throw e;
+  }
+  let labels: Record<string, string> = {};
+  const ids = linkedIds(entity.facts);
+  try {
+    if (ids.length) labels = parseLabels(await getJson(buildLabelsUrl(ids), signal));
+  } catch (e) {
+    if ((e as Error).name === 'AbortError') throw e;
+  }
+  return toSubject(entity, parents, labels);
 }

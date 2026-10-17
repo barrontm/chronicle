@@ -65,12 +65,60 @@ export interface Place {
 }
 
 /**
- * Text quoted from a reference work (e.g. a Wikipedia intro). Kept apart from
- * Bob's own notes and shown as a quotation with its source.
+ * Text quoted from a reference work (e.g. a Wikipedia intro). Schema v2–v5
+ * stored one on an entry; v6 migrates it into a `Highlight`.
  */
 export interface Excerpt {
   text: string;
   sourceId: string;
+}
+
+/** The six sides of an era the app draws, in pigment order. Categories stay Bob's topics. */
+export const DIMENSIONS = ['political', 'economic', 'social', 'technological', 'intellectual', 'religious'] as const;
+export type Dimension = (typeof DIMENSIONS)[number];
+
+/**
+ * Where a highlight sits in an article, as a quote with its context (the W3C
+ * TextQuoteSelector idea), so it can be found again after the page is edited.
+ */
+export interface TextAnchor {
+  /** The Wikipedia revision it was made on. */
+  revisionId?: number;
+  /** Heading text of the section it's in ("" for the lead). */
+  section?: string;
+  exact: string;
+  prefix?: string;
+  suffix?: string;
+  /** Character offset in the article's text: a hint for picking between repeats. */
+  pos?: number;
+}
+
+/**
+ * A passage Bob highlighted (or, before v6, an entry's quoted excerpt). Quoted
+ * text, never Bob's own words; records point at the highlights behind them.
+ */
+export interface Highlight {
+  id: string;
+  sourceId: string;
+  text: string;
+  /** Absent for quotes that weren't made in the reader (migrated excerpts). */
+  anchor?: TextAnchor;
+  dimension?: Dimension;
+  /** Wikidata id of the article's subject, when known. */
+  subjectQid?: string;
+  /** Ids of the records this highlight justifies (entries, connections…). */
+  usedBy: string[];
+  updatedAt: number;
+}
+
+/** A theme of a period: a group of Bob's highlights under a short label. */
+export interface Theme {
+  id: string;
+  label: string;
+  dimension?: Dimension;
+  highlightIds: string[];
+  /** Set when an AI-suggested grouping or label was accepted. */
+  drafted?: Provenance;
 }
 
 /**
@@ -100,7 +148,10 @@ export interface TimelineItem {
   citations?: Citation[];
   tags?: string[];
   places?: Place[];
-  excerpt?: Excerpt;
+  /** Which of the six dimensions this entry is mostly about. */
+  dimension?: Dimension;
+  /** Periods only: what the era is known for, built from Bob's highlights. */
+  themes?: Theme[];
   /** Wikidata id (e.g. "Q913") when the entry came from Wikipedia. Used to spot duplicates. */
   wikidataId?: string;
   /** Set when the entry was drafted with AI and accepted. */
@@ -162,6 +213,10 @@ export interface Relation {
   toId: string;
   type: RelationType;
   note?: string;
+  /** How the one acted on the other, in Bob's words: "weakened", "funded", "legitimised"… */
+  effect?: string;
+  /** Highlights that are the evidence for this connection. */
+  highlightIds?: string[];
   drafted?: Provenance;
   updatedAt: number;
 }
@@ -261,7 +316,7 @@ export interface Flow {
   updatedAt: number;
 }
 
-export const SCHEMA_VERSION = 5;
+export const SCHEMA_VERSION = 6;
 
 export interface TimelineDoc {
   schemaVersion: number;
@@ -275,6 +330,7 @@ export interface TimelineDoc {
   notes: Note[];
   sources: Source[];
   relations: Relation[];
+  highlights: Highlight[];
   /** id → epoch ms when deleted. Lets a merge know a missing item was deleted, not new. */
   deleted: Record<string, number>;
   updatedAt: number;

@@ -24,8 +24,8 @@ describe('Classical Greece fixture', () => {
     for (const n of doc.notes) for (const id of n.linkedIds) expect([n.id, ids.has(id)]).toEqual([n.id, true]);
     for (const i of doc.items) {
       for (const c of i.citations ?? []) expect([i.id, sources.has(c.sourceId)]).toEqual([i.id, true]);
-      if (i.excerpt) expect(sources.has(i.excerpt.sourceId)).toBe(true);
     }
+    for (const h of doc.highlights) expect([h.id, sources.has(h.sourceId)]).toEqual([h.id, true]);
   });
 
   it('has Athens’ league growing and shrinking, and Sparta losing Messenia', () => {

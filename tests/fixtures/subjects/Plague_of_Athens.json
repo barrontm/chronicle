@@ -1,0 +1,219 @@
+{
+ "key": "Plague_of_Athens",
+ "title": "Plague of Athens",
+ "entity": {
+  "entities": {
+   "Q758173": {
+    "id": "Q758173",
+    "labels": {
+     "en": {
+      "language": "en",
+      "value": "Plague of Athens"
+     }
+    },
+    "claims": {
+     "P31": [
+      {
+       "mainsnak": {
+        "snaktype": "value",
+        "property": "P31",
+        "hash": "71c9eb61e560e83319f8a820c7f4d30a1d4eae05",
+        "datavalue": {
+         "value": {
+          "entity-type": "item",
+          "numeric-id": 44512,
+          "id": "Q44512"
+         },
+         "type": "wikibase-entityid"
+        },
+        "datatype": "wikibase-item"
+       },
+       "rank": "normal"
+      }
+     ],
+     "P580": [
+      {
+       "mainsnak": {
+        "snaktype": "value",
+        "property": "P580",
+        "hash": "eaa635727c72607c0366b41a68acacc6a651a1c8",
+        "datavalue": {
+         "value": {
+          "time": "-0430-01-01T00:00:00Z",
+          "timezone": 0,
+          "before": 0,
+          "after": 0,
+          "precision": 9,
+          "calendarmodel": "http://www.wikidata.org/entity/Q1985727"
+         },
+         "type": "time"
+        },
+        "datatype": "time"
+       },
+       "rank": "normal"
+      }
+     ],
+     "P582": [
+      {
+       "mainsnak": {
+        "snaktype": "value",
+        "property": "P582",
+        "hash": "8f70c04fd363c4ec15e70ae06268670597995edf",
+        "datavalue": {
+         "value": {
+          "time": "-0426-01-01T00:00:00Z",
+          "timezone": 0,
+          "before": 0,
+          "after": 0,
+          "precision": 9,
+          "calendarmodel": "http://www.wikidata.org/entity/Q1985727"
+         },
+         "type": "time"
+        },
+        "datatype": "time"
+       },
+       "rank": "normal"
+      }
+     ],
+     "P276": [
+      {
+       "mainsnak": {
+        "snaktype": "value",
+        "property": "P276",
+        "hash": "852617d082690e11a21909e8a6326637a3193a62",
+        "datavalue": {
+         "value": {
+          "entity-type": "item",
+          "numeric-id": 844930,
+          "id": "Q844930"
+         },
+         "type": "wikibase-entityid"
+        },
+        "datatype": "wikibase-item"
+       },
+       "rank": "normal"
+      }
+     ]
+    }
+   }
+  }
+ },
+ "parents": {
+  "Q44512": [
+   "Q3241045",
+   "Q3839081",
+   "Q50156634"
+  ],
+  "Q3241045": [
+   "Q1190554",
+   "Q5422048",
+   "Q87075524"
+  ],
+  "Q3839081": [
+   "Q813912",
+   "Q1132455",
+   "Q1689296",
+   "Q1920219",
+   "Q1931388"
+  ],
+  "Q50156634": [
+   "Q79782",
+   "Q87075524",
+   "Q105460363"
+  ],
+  "Q1190554": [
+   "Q67518978",
+   "Q140451665"
+  ],
+  "Q5422048": [
+   "Q104493"
+  ],
+  "Q87075524": [
+   "Q1132455",
+   "Q122764215"
+  ],
+  "Q813912": [
+   "Q3505845",
+   "Q123241435"
+  ],
+  "Q1132455": [
+   "Q2141565",
+   "Q86923152"
+  ],
+  "Q1689296": [
+   "Q1121708",
+   "Q1132455",
+   "Q1190554"
+  ],
+  "Q1920219": [
+   "Q621184",
+   "Q1190554"
+  ],
+  "Q1931388": [
+   "Q2574811"
+  ],
+  "Q79782": [
+   "Q1150070",
+   "Q17320256"
+  ],
+  "Q105460363": [
+   "Q118193027"
+  ],
+  "Q67518978": [
+   "Q136433660"
+  ],
+  "Q140451665": [
+   "Q141204674",
+   "Q141257229",
+   "Q141750035",
+   "Q141751599"
+  ],
+  "Q104493": [
+   "Q21170479",
+   "Q123928941"
+  ],
+  "Q122764215": [
+   "Q104493"
+  ],
+  "Q3505845": [
+   "Q483247",
+   "Q937228"
+  ],
+  "Q123241435": [
+   "Q123139280",
+   "Q123240632"
+  ],
+  "Q2141565": [
+   "Q813912"
+  ],
+  "Q86923152": [
+   "Q18603648",
+   "Q31464082"
+  ],
+  "Q1121708": [
+   "Q1190554",
+   "Q2995644"
+  ],
+  "Q621184": [
+   "Q2141565",
+   "Q123928941"
+  ],
+  "Q2574811": [
+   "Q23894381"
+  ],
+  "Q1150070": [
+   "Q29017603"
+  ],
+  "Q17320256": [
+   "Q1293220",
+   "Q111752858"
+  ],
+  "Q118193027": [
+   "Q52948",
+   "Q111931734"
+  ]
+ },
+ "labels": {
+  "Q844930": "Classical Athens"
+ }
+}

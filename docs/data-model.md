@@ -1,6 +1,6 @@
 # Data model
 
-Source of truth: `src/model/types.ts`. This page explains the why. Schema version: **4**.
+Source of truth: `src/model/types.ts`. This page explains the why. Schema version: **6**.
 
 ```
 TimelineDoc
@@ -9,13 +9,17 @@ TimelineDoc
 │     ├── media[]       pictures (commons | url | local)
 │     ├── citations[]   → sources (with locator: "pp. 12–15")
 │     ├── places[]      {name?, lat, lon, role: site | born | died} for the map
-│     ├── excerpt       quoted reference text {text, sourceId} (e.g. a Wikipedia intro)
+│     ├── dimension     political | economic | social | technological | intellectual | religious
+│     ├── themes[]      periods only: {id, label, dimension?, highlightIds[]}, what the era is known for
 │     └── wikidataId    "Q7259" when added from Wikipedia; spots duplicates
 ├── notes[]        Bob's write-ups
 │     ├── linkedIds[]   → items / series / territories (many-to-many)
 │     └── citations[]   → sources
 ├── sources[]      bibliography (book, article, chapter, lecture, video, web, other)
-├── relations[]    connections: fromId → toId, type
+├── relations[]    connections: fromId → toId, type, effect? ("weakened"), highlightIds[]? (evidence)
+├── highlights[]   passages quoted from a source {text, sourceId, anchor?, dimension?, subjectQid?}
+│     ├── anchor        {revisionId, section, exact, prefix, suffix, pos}: found again after the page changes
+│     └── usedBy[]      → the records it justifies
 ├── series[]       trends: points {x: decimal year, v: value}, linear | log
 │     └── regions{}     per place, for the map: ISO-3 code ("FRA") or territory id → points
 ├── territories[]  a polity's borders over time
@@ -37,11 +41,12 @@ TimelineDoc
 - **Citations carry a locator.** Each citation has a locator, so the same book can be cited at different pages from different entries. A source's page lists everything that cites it.
 - **Connections are directed.** They're phrased both ways in the UI: "Influenced" seen from Socrates, "Influenced by" seen from Plato. `related` is the undirected fallback.
 - **Every record has `updatedAt`.** Mutations set it. `mergeDocs` keeps the newer copy of each record, and a tombstone beats any edit made before it.
-- **Deletes cascade gently.** Deleting an entry removes its connections and unlinks it from notes, but the notes survive. Deleting a source strips citations of it and drops any excerpt quoted from it (an unattributed quote is worse than none).
+- **Deletes cascade gently.** Deleting an entry removes its connections and unlinks it from notes, but the notes survive. Deleting a source strips citations of it and deletes the highlights quoted from it (an unattributed quote is worse than none). Deleting a record unlinks its highlights, which stay; deleting a highlight drops it from connections' evidence and periods' themes.
 - **Snapshots, not animation.** A territory is a list of snapshots, each in force from `from` up to (not including) `to`. The map shows whichever is in force for the current year; nothing is interpolated between borders.
 - **Values per place live on the trend.** `Series.regions` holds a curve per country or territory. `points` is the headline strip and may be empty for a map-only trend. Removing a territory removes its values (and the trend, if nothing is left).
 - **Flows are not trends.** A migration has two ends and a cause, which a `Series` can't hold, so it's its own record. `measure` keeps flows (people moving per year, drawn with moving dashes) apart from stocks (people living abroad, drawn still), and the map scales each separately, so one is never passed off as the other. Routes draw only between their first and last year (whole years count) and interpolate in between. Deleting a territory turns route ends there into named points at its last label point; deleting an entry unlinks its flows.
-- **Excerpts are not notes.** Text copied from a reference work lives in `excerpt`, shown as a quotation with its source. Notes stay Bob's own words.
+- **Highlights are not notes.** Text quoted from a reference work is a `Highlight`, shown as a quotation with its source. Notes stay Bob's own words. A highlight lists the records it justifies (`usedBy`), so one passage can back an entry and a connection; `highlightsFor(doc, id)` finds them. Highlights made in the reader carry a text-quote anchor; quotes from before v6 don't.
+- **Dimensions are not categories.** A category is Bob's topic and lane. A dimension is one of six fixed sides of an era (political, economic, social, technological, intellectual, religious) that the era views are drawn by.
 
 ## Dates
 
@@ -49,6 +54,7 @@ TimelineDoc
 
 ## Version history
 
+- **6** (2026-10-17): `highlights` (with text-quote anchors), `dimension` on entries and highlights, `themes` on periods, `effect` and `highlightIds` on connections. Each entry's `excerpt` becomes a highlight with id `h_<entry id>` used by that entry, so two devices upgrading the same timeline agree (`tests/fixtures/sample-history-v5.json`).
 - **5** (2026-10-16): optional `drafted` provenance (`{ model, prompt, draftedAt }`) on entries, connections, territories and flows, set when Bob accepts an AI draft. Nothing else changes, so v4 files import as they are (`tests/fixtures/sample-history-v4.json`).
 - **4** (2026-10-15): `flows` (migrations). Older files get an empty list (`tests/fixtures/sample-history-v3.json` must keep importing).
 - **3** (2026-10-15): territory geometry typed as Polygon/MultiPolygon (other shapes are dropped on import, since v2 never drew them), territory `itemId`/`wikidataId`, series `regions`. `tests/fixtures/sample-history-v2.json` must keep importing.

@@ -1,4 +1,5 @@
-import { describe, expect, it } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Source, TimelineItem } from '../model/types';
 import {
   buildCoordsUrl,
@@ -18,6 +19,7 @@ import {
   parsePages,
   parseSearch,
   parseSummary,
+  fetchSubject,
 } from './wikipedia';
 
 const time = (t: string, precision = 9) => ({ mainsnak: { snaktype: 'value', datavalue: { value: { time: t, precision } } }, rank: 'normal' });
@@ -106,15 +108,16 @@ describe('buildDraft', () => {
   const facts = parseEntity(entity('Q33', { P585: [time('-0490-00-00T00:00:00Z')] }), 'Q33');
 
   it('prefills an entry that cites a new Wikipedia source and quotes the intro', () => {
-    const { item, newSources } = buildDraft({ summary, facts, existingSources: [], categoryId: 'war', today: '2026-10-15' });
+    const { item, newSources, highlight } = buildDraft({ summary, facts, existingSources: [], categoryId: 'war', today: '2026-10-15' });
     expect(newSources).toHaveLength(1);
     const src = newSources[0];
     expect(src).toMatchObject({ kind: 'web', title: 'Battle of Marathon', authors: 'Wikipedia contributors', publisher: 'Wikipedia', url: 'https://en.wikipedia.org/wiki/Battle_of_Marathon', accessed: '2026-10-15' });
     expect(item).toMatchObject({
       kind: 'event', title: 'Battle of Marathon', start: { y: -489 }, categoryId: 'war', description: 'Battle in 490 BC', wikidataId: 'Q33',
-      citations: [{ sourceId: src.id }], excerpt: { text: 'The Battle of Marathon took place in 490 BC.', sourceId: src.id },
+      citations: [{ sourceId: src.id }],
       places: [{ name: 'Battle of Marathon', lat: 38.1, lon: 23.9, role: 'site' }],
     });
+    expect(highlight).toMatchObject({ text: 'The Battle of Marathon took place in 490 BC.', sourceId: src.id, usedBy: [item.id] });
   });
 
   it('reuses a source already in the bibliography', () => {
@@ -192,5 +195,51 @@ describe('place lookup', () => {
   it('returns nothing for no matches', () => {
     expect(parsePlaceSearch({ batchcomplete: true })).toEqual([]);
     expect(parsePlaceSearch(null)).toEqual([]);
+  });
+});
+
+describe('fetchSubject', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  /** Answer like Wikidata would, from a recording (`scripts/record-subjects.mjs`). */
+  function replay(key: string, opts: { sparqlFails?: boolean } = {}) {
+    const r = JSON.parse(readFileSync(new URL(`../../tests/fixtures/subjects/${key}.json`, import.meta.url), 'utf8'));
+    const asked: string[] = [];
+    vi.stubGlobal('fetch', vi.fn(async (url: string) => {
+      const u = new URL(url);
+      asked.push(u.host + (u.searchParams.get('action') ?? ''));
+      const json = (body: unknown) => new Response(JSON.stringify(body), { status: 200 });
+      if (u.host === 'query.wikidata.org') {
+        if (opts.sparqlFails) return new Response('busy', { status: 429 });
+        const ids = [...(u.searchParams.get('query') ?? '').matchAll(/wd:(Q\d+)/g)].map((m) => m[1]);
+        return json({ results: { bindings: ids.flatMap((c) => (r.parents[c] ?? []).map((p: string) => ({
+          c: { value: `http://www.wikidata.org/entity/${c}` }, p: { value: `http://www.wikidata.org/entity/${p}` },
+        }))) } });
+      }
+      if (u.searchParams.get('titles')) return json(r.entity);
+      return json({ entities: Object.fromEntries(Object.entries(r.labels).map(([q, v]) => [q, { labels: { en: { value: v } } }])) });
+    }));
+    return asked;
+  }
+
+  it('walks up from a naval battle to a battle, then gets labels', async () => {
+    const asked = replay('Battle_of_Salamis');
+    const s = await fetchSubject('Battle of Salamis');
+    expect(s?.kind).toBe('battle');
+    expect(Object.values(s!.labels)).toContain('Second Persian invasion of Greece');
+    expect(asked).toEqual(['www.wikidata.orgwbgetentities', 'query.wikidata.org', 'www.wikidata.orgwbgetentities']);
+  });
+
+  it('needs no class walk for a person', async () => {
+    const asked = replay('Pericles');
+    expect((await fetchSubject('Pericles'))?.kind).toBe('person');
+    expect(asked).toEqual(['www.wikidata.orgwbgetentities']);
+  });
+
+  it('still returns the subject when the query service is busy', async () => {
+    replay('Battle_of_Salamis', { sparqlFails: true });
+    const s = await fetchSubject('Battle of Salamis');
+    expect(s?.qid).toBe('Q178850');
+    expect(s?.kind).toBe('event'); // from its date, without classes
   });
 });

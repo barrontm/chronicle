@@ -42,9 +42,32 @@ An entry's places put it on the map as a pin: where a battle was fought, or wher
 
 **Edit** changes a place and **Remove** takes it off. An entry can have as many places as you like.
 
+## Try the new layout
+
+Chronicle is changing so that reading is how you add things. To try it, choose **More → Try the new layout**; choose it again to go back.
+
+- On a laptop, the article you're reading sits beside the map, with the timeline under the map.
+- On a phone, the article fills the screen. **Map** opens the map and timeline, and **Back to reading** returns to the article.
+- **Open an article** (top bar) searches Wikipedia and opens the whole article in the reader, with its pictures and footnotes.
+- Links in the article open in the reader too. **Back** returns to the article you came from, and the **reading trail** in the top bar lists the articles you've opened, so you can click back to any of them.
+- Under the title, the reader says what the article is about, from Wikidata: a person, war, battle, polity, period, event, movement or idea, technology, economy, work, place or migration, with its dates and what it was part of ("Battle · 480 BCE · part of Second Persian invasion of Greece"). If you already have it as an entry or a territory, it says **Already in Chronicle**; click that to open it. Some articles aren't about one thing, and then the line stays empty.
+- Articles you've opened are kept on this device, so you can reread them offline. Opening a new one needs a connection. The line at the end of each article says which edit of the Wikipedia page you're reading.
+
+The new layout is unfinished. Everything you've saved stays the same whichever layout you use.
+
+### Highlighting
+
+- **On a laptop**, select some words and press **Highlight** (it appears just above them) or the **H** key.
+- **On a phone**, select words and press **Highlight** at the bottom of the screen, or just tap a sentence to highlight all of it. Tapping the next sentence adds it to the same highlight.
+- A highlight is saved the moment you make it, and the article becomes one of your sources (**Library → Sources**). Highlights are quotes from the article, kept apart from your own notes.
+- The highlight you just made is shaded darker. Click or tap it again to pick it, and **Remove highlight** takes it away. Press **Esc**, or click elsewhere, to move on; it stays saved.
+- Wikipedia articles change. When you reopen one, Chronicle finds your highlights in the new version, even when the words around them were edited. A dotted underline means it found something close but isn't sure it's the same passage. If a passage was deleted, the article says how many highlights it couldn't find; they're still saved.
+
 ## Adding from Wikipedia
 
 **Add → From Wikipedia…** searches Wikipedia. Pick a page and you get a new entry filled in: kind and dates from Wikidata, places for the map, a picture with its credit, the intro as a quotation, and the page as a source. Nothing is saved until you check it and press **Add to timeline**. If you already have that entry, Chronicle tells you.
+
+The intro is kept as a **highlight**: a passage quoted from its source, shown on the entry and never mixed with your own notes. Quotes saved by earlier versions of Chronicle become highlights too when you open or import them.
 
 This needs a connection.
 

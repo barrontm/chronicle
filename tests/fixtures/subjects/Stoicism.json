@@ -1,0 +1,129 @@
+{
+ "key": "Stoicism",
+ "title": "Stoicism",
+ "entity": {
+  "entities": {
+   "Q48235": {
+    "id": "Q48235",
+    "labels": {
+     "en": {
+      "language": "en",
+      "value": "stoicism"
+     }
+    },
+    "claims": {
+     "P31": [
+      {
+       "mainsnak": {
+        "snaktype": "value",
+        "property": "P31",
+        "hash": "7892b9585b90c9698dd70843ac4a0c6484435529",
+        "datavalue": {
+         "value": {
+          "entity-type": "item",
+          "numeric-id": 12765852,
+          "id": "Q12765852"
+         },
+         "type": "wikibase-entityid"
+        },
+        "datatype": "wikibase-item"
+       },
+       "rank": "normal"
+      }
+     ],
+     "P279": [
+      {
+       "mainsnak": {
+        "snaktype": "value",
+        "property": "P279",
+        "hash": "0b7ab7adf5d1f1bdf0817c750aec2b9366e4261b",
+        "datavalue": {
+         "value": {
+          "entity-type": "item",
+          "numeric-id": 5891,
+          "id": "Q5891"
+         },
+         "type": "wikibase-entityid"
+        },
+        "datatype": "wikibase-item"
+       },
+       "rank": "normal"
+      }
+     ],
+     "P571": [
+      {
+       "mainsnak": {
+        "snaktype": "value",
+        "property": "P571",
+        "hash": "c2fe359de7a59bb0ed475e9b37cc2e2c5de99d47",
+        "datavalue": {
+         "value": {
+          "time": "-0300-00-00T00:00:00Z",
+          "timezone": 0,
+          "before": 0,
+          "after": 0,
+          "precision": 7,
+          "calendarmodel": "http://www.wikidata.org/entity/Q1985786"
+         },
+         "type": "time"
+        },
+        "datatype": "time"
+       },
+       "rank": "normal"
+      }
+     ]
+    }
+   }
+  }
+ },
+ "parents": {
+  "Q12765852": [
+   "Q49447",
+   "Q1387659"
+  ],
+  "Q5891": [
+   "Q105948247"
+  ],
+  "Q49447": [
+   "Q12558574",
+   "Q71966963"
+  ],
+  "Q1387659": [
+   "Q12558574"
+  ],
+  "Q105948247": [
+   "Q3622126"
+  ],
+  "Q12558574": [
+   "Q595523",
+   "Q2145290"
+  ],
+  "Q71966963": [
+   "Q12558574"
+  ],
+  "Q3622126": [
+   "Q58778",
+   "Q7048977",
+   "Q16686448"
+  ],
+  "Q595523": [
+   "Q2145290"
+  ],
+  "Q2145290": [
+   "Q1272626"
+  ],
+  "Q58778": [
+   "Q488383",
+   "Q53617407",
+   "Q99527517"
+  ],
+  "Q7048977": [
+   "Q35120"
+  ],
+  "Q16686448": [
+   "Q488383",
+   "Q141756664"
+  ]
+ },
+ "labels": {}
+}

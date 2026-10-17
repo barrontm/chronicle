@@ -22,6 +22,7 @@ import { TerritoryEditor, TerritoryImport, TerritoryView } from './panels/Territ
 import { TimeBar } from './TimeBar';
 import { TimelineView, type TimelineControl, type VisibleWindow } from './TimelineView';
 import { TrendStrips } from './TrendStrips';
+import { ReaderPane, type ArticleRef } from './reader/ReaderPane';
 import { downloadText } from './util';
 
 export function App({ store }: { store: DocStore }) {
@@ -85,7 +86,18 @@ function Workspace() {
   // ----- Map and the shared current year -----
   const narrow = useMedia('(max-width: 860px)');
   const [view, setView] = useStored<View>('chronicle.view', () => 'timeline');
-  const shownView: View = narrow && view === 'split' ? 'map' : view;
+  // "Try the new layout": the reader beside the map over the timeline; on a phone, the map is a sheet over the reader.
+  const [next, setNext] = useStored<boolean>('chronicle.uiNext', () => false);
+  const [trail, setTrail] = useStored<{ pages: ArticleRef[]; at: number }>('chronicle.trail', () => ({ pages: [], at: -1 }));
+  const article = trail.pages[trail.at] ?? null;
+  const [searching, setSearching] = useState(false);
+  const [mapSheet, setMapSheet] = useState(false);
+  const openArticle = (a: ArticleRef) => {
+    setSearching(false);
+    const pages = [...trail.pages.slice(0, trail.at + 1).filter((p) => p.key !== a.key), a];
+    setTrail({ pages, at: pages.length - 1 });
+  };
+  const shownView: View = next ? 'split' : narrow && view === 'split' ? 'map' : view;
   const showMap = shownView !== 'timeline';
   const range = useMemo<[number, number]>(() => {
     const r = docYearRange(doc);
@@ -143,6 +155,12 @@ function Workspace() {
   // Events linger for a while after they happen; longer when playing fast so they can be seen.
   const fadeYears = Math.max(10, speed * 2);
 
+  // Bring the map into view for a panel action: a split on the laptop, the sheet on a phone in the new layout.
+  const revealMap = () => {
+    if (next) { if (narrow) setMapSheet(true); }
+    else if (view === 'timeline') setView(narrow ? 'map' : 'split');
+  };
+
   const panel = stack.at(-1);
   const nav: Nav = useMemo(() => ({
     open: (p) => setStack((s) => [...s, p]),
@@ -151,26 +169,26 @@ function Workspace() {
     close: () => setStack([]),
     canGoBack: stack.length > 1,
     showTime: (id) => {
-      if (view === 'map') setView('timeline');
+      if (next) { if (narrow) setMapSheet(true); } else if (view === 'map') setView('timeline');
       timeline.current?.focus(id);
     },
     showOnMap: (y) => {
       setPlaying(false);
       setYearState(y);
-      if (view === 'timeline') setView(narrow ? 'map' : 'split');
+      revealMap();
     },
     draw: (onDone) => {
       setPlaying(false);
       setPicking(null);
       setDrawing({ onDone });
-      if (view === 'timeline') setView(narrow ? 'map' : 'split');
+      revealMap();
     },
     pick: (onDone) => {
       setDrawing(null);
       setPicking({ onDone });
-      if (view === 'timeline') setView(narrow ? 'map' : 'split');
+      revealMap();
     },
-  }), [stack.length, view, narrow, setView]);
+  }), [stack.length, view, narrow, setView, next]);
 
   const categories = useMemo(() => doc.categories.filter((c) => !hidden.has(c.id)), [doc.categories, hidden]);
   const thumbFor = useCallback((m: MediaRef) => mediaUrl(m, true), [mediaUrl]);
@@ -230,6 +248,16 @@ function Workspace() {
         />
         <span className="save-state" role="status" data-testid="save-state">{readOnly ? 'Read-only' : SAVE_LABEL[saveState]}</span>
         <span className="spacer" />
+        {next && trail.pages.length > 0 && (
+          <nav className="trail" aria-label="Reading trail">
+            {trail.pages.map((p, i) => (
+              <button key={p.key} className="trail-step" aria-current={i === trail.at ? 'page' : undefined} onClick={() => { setSearching(false); setTrail({ ...trail, at: i }); }}>{p.title}</button>
+            ))}
+          </nav>
+        )}
+        {next ? (
+          <button className="btn primary" onClick={() => { setMenu(null); setMapSheet(false); setSearching(true); }}>Open an article</button>
+        ) : (<>
         <div className="segmented view-switch" role="group" aria-label="View">
           <button aria-pressed={shownView === 'timeline'} onClick={() => setView('timeline')}>Timeline</button>
           <button aria-pressed={shownView === 'map'} onClick={() => setView('map')}>Map</button>
@@ -253,6 +281,7 @@ function Workspace() {
             </div>
           )}
         </div>
+        </>)}
         <button className="btn" onClick={() => { setMenu(null); setStack([{ type: 'library', tab: 'notes' }]); }}>Library</button>
         <button className="btn quiet" onClick={() => { setMenu(null); setStack([{ type: 'help' }]); }}>Help</button>
         <div className="menu">
@@ -260,6 +289,7 @@ function Workspace() {
           {menu === 'file' && (
             <div className="menu-pop" role="menu">
               <button role="menuitem" onClick={() => { setMenu(null); timeline.current?.fit(); }}>Show everything</button>
+              <button role="menuitemcheckbox" aria-checked={next} onClick={() => { setMenu(null); setMapSheet(false); setNext(!next); }}>Try the new layout</button>
               <hr />
               <button role="menuitem" onClick={() => {
                 setMenu(null);
@@ -272,8 +302,17 @@ function Workspace() {
         <input ref={fileInput} type="file" accept="application/json,.json" hidden data-testid="import-input" onChange={(e) => void onImportFile(e.target.files?.[0])} />
       </header>
 
-      <div className={`workspace ${panel ? 'with-drawer' : ''}`}>
-        <main className={`stage view-${shownView}`}>
+      <div className={`workspace ${next ? 'next' : ''} ${panel ? 'with-drawer' : ''}`}>
+        {next && !(narrow && mapSheet) && (
+          <ReaderPane article={article} searching={searching} onOpen={openArticle} onSearching={setSearching} onBack={trail.at > 0 ? () => setTrail({ ...trail, at: trail.at - 1 }) : undefined} onShowMap={narrow ? () => setMapSheet(true) : undefined} onOpenRecord={(r) => nav.open(r.type === 'item' ? { type: 'item', id: r.id } : { type: 'territory', id: r.id })} />
+        )}
+        {(!next || !narrow || mapSheet) && (
+        <main className={`stage view-${shownView} ${next && narrow ? 'sheet' : ''}`}>
+          {next && narrow && (
+            <div className="sheet-head">
+              <button className="btn small" onClick={() => setMapSheet(false)}>Back to reading</button>
+            </div>
+          )}
           <div className="lanebar" role="group" aria-label="Show or hide categories">
             {doc.categories.map((c) => (
               <button
@@ -327,7 +366,10 @@ function Workspace() {
             </>
           )}
           <div className="timeline-pane" hidden={shownView === 'map'}>
-          {isEmpty && (
+          {isEmpty && next && (
+            <p className="empty-strip" data-testid="empty-state">Your map and timeline fill in as you add what you read.</p>
+          )}
+          {isEmpty && !next && (
             <div className="empty-state" data-testid="empty-state">
               <h2>Start with what you’re reading about</h2>
               <p>Add an event, a period or a person. Double-click anywhere on the timeline to add something at that date.</p>
@@ -364,6 +406,7 @@ function Workspace() {
           />
           </div>
         </main>
+        )}
 
         {panel && (
           // On a phone the drawer covers the map, so step aside while drawing or picking a place (it stays mounted, keeping the form).
