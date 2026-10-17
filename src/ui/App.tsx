@@ -23,6 +23,7 @@ import { TimeBar } from './TimeBar';
 import { TimelineView, type TimelineControl, type VisibleWindow } from './TimelineView';
 import { TrendStrips } from './TrendStrips';
 import { ReaderPane, type ArticleRef } from './reader/ReaderPane';
+import { HighlightDraftsContext, useHighlightDraftStore } from './reader/highlightDrafts';
 import { downloadText } from './util';
 import { useStored } from './useStored';
 
@@ -50,6 +51,8 @@ function useMedia(query: string): boolean {
 // The Anthropic SDK is only downloaded when Bob opens Draft with AI.
 const DraftReview = lazy(() => import('./panels/DraftReview').then((m) => ({ default: m.DraftReview })));
 
+// A doc saved by a newer version opens read-only and unparsed, so it may lack fields this version expects.
+const NO_HIGHLIGHTS: TimelineDoc['highlights'] = [];
 const SAVE_LABEL = { loading: 'Opening…', saving: 'Saving…', saved: 'Saved on this device', error: 'Couldn’t save. Export a backup now.' } as const;
 
 function Workspace() {
@@ -66,7 +69,13 @@ function Workspace() {
   const fileInput = useRef<HTMLInputElement>(null);
   // An AI draft waiting for review: kept here so the map can show it while the panel is open.
   const [aiDraft, setAiDraft] = useState<DraftSet | null>(null);
-  const draftItems = useMemo(() => pendingWithPlaces(aiDraft).filter((i) => !doc.items.some((x) => x.id === i.id)), [aiDraft, doc.items]);
+  // Claude's drafts from highlights; the map shows the open highlight's.
+  const highlightDrafts = useHighlightDraftStore(doc.highlights ?? NO_HIGHLIGHTS);
+  const shownDraft = highlightDrafts.shown ? highlightDrafts.sets[highlightDrafts.shown] : null;
+  const draftItems = useMemo(
+    () => [...pendingWithPlaces(aiDraft), ...pendingWithPlaces(shownDraft)].filter((i) => !doc.items.some((x) => x.id === i.id)),
+    [aiDraft, shownDraft, doc.items],
+  );
 
   // ----- Map and the shared current year -----
   const narrow = useMedia('(max-width: 860px)');
@@ -222,6 +231,7 @@ function Workspace() {
   const isEmpty = doc.items.length === 0;
 
   return (
+    <HighlightDraftsContext.Provider value={highlightDrafts}>
     <div className="app">
       <header className="topbar">
         <span className="brand">Chronicle</span>
@@ -289,7 +299,7 @@ function Workspace() {
 
       <div className={`workspace ${next ? 'next' : ''} ${panel ? 'with-drawer' : ''}`}>
         {next && !(narrow && mapSheet) && (
-          <ReaderPane article={article} searching={searching} onOpen={openArticle} onSearching={setSearching} onBack={trail.at > 0 ? () => setTrail({ ...trail, at: trail.at - 1 }) : undefined} onShowMap={narrow ? () => setMapSheet(true) : undefined} onOpenRecord={(r) => nav.open(r.type === 'item' ? { type: 'item', id: r.id } : { type: 'territory', id: r.id })} onDraft={(draft) => nav.open({ type: 'new-item', draft })} />
+          <ReaderPane article={article} searching={searching} onOpen={openArticle} onSearching={setSearching} onBack={trail.at > 0 ? () => setTrail({ ...trail, at: trail.at - 1 }) : undefined} onShowMap={narrow ? () => setMapSheet(true) : undefined} onOpenRecord={(r) => nav.open(r.type === 'item' ? { type: 'item', id: r.id } : { type: 'territory', id: r.id })} onDraft={(draft) => nav.open({ type: 'new-item', draft })} onShowYear={setYear} onOpenDrafting={() => nav.open({ type: 'ai-draft' })} />
         )}
         {(!next || !narrow || mapSheet) && (
         <main className={`stage view-${shownView} ${next && narrow ? 'sheet' : ''}`}>
@@ -415,6 +425,7 @@ function Workspace() {
         />
       )}
     </div>
+    </HighlightDraftsContext.Provider>
   );
 }
 

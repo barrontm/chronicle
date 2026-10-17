@@ -1,8 +1,11 @@
 import { useState } from 'react';
+import { waiting } from '../../ai/draft';
 import { formatYear } from '../../model/dates';
+import { describeRelation } from '../../model/doc';
 import { useDoc } from '../DocContext';
 import type { Nav } from '../nav';
 import { routeYears } from '../mapData';
+import { useHighlightDrafts } from '../reader/highlightDrafts';
 import { DIMENSION_LABEL, titleOf } from '../util';
 
 type Tab = 'notes' | 'highlights' | 'sources' | 'trends' | 'territories' | 'migration';
@@ -10,6 +13,7 @@ type Tab = 'notes' | 'highlights' | 'sources' | 'trends' | 'territories' | 'migr
 /** Everything that isn't on the timeline itself: your notes, your bibliography, your trends. */
 export function Library({ tab: initial, nav }: { tab: Tab; nav: Nav }) {
   const { doc } = useDoc();
+  const drafts = useHighlightDrafts();
   const [tab, setTab] = useState<Tab>(initial);
   const [q, setQ] = useState('');
   const needle = q.trim().toLowerCase();
@@ -25,6 +29,11 @@ export function Library({ tab: initial, nav }: { tab: Tab; nav: Nav }) {
     .map((s) => ({ source: s, highlights: doc.highlights.filter((h) => h.sourceId === s.id && match(h.text, s.title)) }))
     .filter((g) => g.highlights.length)
     .sort((a, b) => Math.max(...b.highlights.map((h) => h.updatedAt)) - Math.max(...a.highlights.map((h) => h.updatedAt)));
+  // A highlight is used by entries and the like, or by connections: "Delian League funded Decree…".
+  const usedName = (id: string) => {
+    const r = doc.relations.find((x) => x.id === id);
+    return r ? `${titleOf(doc, r.fromId)} ${r.effect || describeRelation(r.type, 'out').toLowerCase()} ${titleOf(doc, r.toId)}` : titleOf(doc, id);
+  };
 
   return (
     <section data-testid="library">
@@ -64,14 +73,16 @@ export function Library({ tab: initial, nav }: { tab: Tab; nav: Nav }) {
               <h3><button className="citation" onClick={() => nav.open({ type: 'source', id: source.id })}>{source.title}</button></h3>
               <ul className="linklist">
                 {highlights.map((h) => {
-                  const on = h.usedBy.flatMap((id) => { const t = titleOf(doc, id); return t ? [{ id, t }] : []; });
+                  const on = h.usedBy.flatMap((id) => { const t = usedName(id); return t ? [{ id, t }] : []; });
                   const item = on.find((o) => doc.items.some((i) => i.id === o.id));
+                  const left = waiting(doc, drafts.sets[h.id]);
                   return (
                     <li key={h.id}>
                       <button onClick={() => nav.open(item ? { type: 'item', id: item.id } : { type: 'source', id: source.id })}>
                         <strong className="quote">“{h.text}”</strong>
                         <small>
                           {[h.dimension && DIMENSION_LABEL[h.dimension], on.length ? `on ${on.map((o) => o.t).join(', ')}` : 'kept as a highlight'].filter(Boolean).join(' · ')}
+                          {left > 0 && <span className="waiting"> · {left === 1 ? '1 draft' : `${left} drafts`} from Claude waiting</span>}
                         </small>
                       </button>
                     </li>

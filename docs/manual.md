@@ -66,10 +66,13 @@ The new layout is unfinished. Everything you've saved stays the same whichever l
 - Under your pick are its facts from Wikidata: when, where, what it was part of, who took part. Underlined names are already in Chronicle.
 - **Dimension**: pick political, economic, social, technological, intellectual or religious. The highlight takes that color; pick it again to clear it.
 - **Add to map and timeline** fills in an entry for what you picked from its Wikipedia article, with your highlight as its quote and the article you were reading as its source. Check it and press **Add to timeline**. The highlight is then underlined, and it shows on the entry. If you already have it, the button says **Link to …** instead and adds the highlight to it straight away. Either way, connections Wikipedia knows of to your other entries are suggested (see Connections from Wikipedia).
-- Places, polities and ideas can't be added from the tray yet; it says so, and you can keep the highlight.
+- Places, polities and ideas can't be added from the tray yet; it says so, and you can keep the highlight or ask Claude.
+- **Ask Claude** is for what has no article of its own: Pericles' decree of 449 BC, the tribute that paid for the Parthenon. Claude reads the passage and its section and drafts what they state: entries with their dates (and a place, looked up on Wikipedia), and connections with their effect ("Delian League *funded* the decree"). Under each draft are the words of the passage it rests on. It also suggests a dimension, marked with a dashed ring in the picker; it's only used if you pick it. Asking needs a connection and your Anthropic API key (see Drafting with AI); it usually costs a few cents.
+- Claude's drafts wait in the tray, dashed. Entries with a place show as dashed pins on the map while the highlight is open. **Accept** adds a draft, with the highlight as its evidence, and moves the map to its year. **Edit** opens an entry in the editor first. **Reject** leaves it out. **Undo** takes back either choice; undoing an entry also takes back the connections you accepted to it. A connection to a drafted entry waits until you accept the entry.
+- The drafts stay with the highlight on this device until you decide, even if you close the tray or reload. **Discard the rest** throws away the ones you haven't decided on.
 - **Just keep the highlight** closes the tray and keeps it as a plain highlight (once the highlight is on something, it says **Done**). **Remove** deletes it. Pressing **Esc**, clicking elsewhere or opening another article also keeps it.
 - With nothing open, the tray counts the article's highlights and how many are on your map and timeline.
-- **Library → Highlights** lists all your highlights under the article or book they came from, with their dimension and the entries they're on. An entry's panel shows the highlights behind it.
+- **Library → Highlights** lists all your highlights under the article or book they came from, with their dimension, the entries and connections they're on, and how many of Claude's drafts are waiting. An entry's panel shows the highlights behind it.
 - Wikipedia articles change. When you reopen one, Chronicle finds your highlights in the new version, even when the words around them were edited. A dotted underline means it found something close but isn't sure it's the same passage. If a passage was deleted, the article says how many highlights it couldn't find; they're still saved.
 
 ## Adding from Wikipedia
@@ -86,13 +89,15 @@ This needs a connection.
 
 Nothing is added until you decide, one record at a time:
 
-- **Accept** adds the entry and its source. **Edit first** opens it in the editor so you can change it before adding it. **Reject** leaves it out (**Undo** brings it back).
+- **Accept** adds the entry and its source (**Undo** takes it back). **Edit** opens it in the editor so you can change it before adding it. **Reject** leaves it out (**Undo** brings it back).
 - Entries waiting for you show on the map as **dashed pins** in their category's color, whatever year the map is on. **Show on map** takes you there.
 - **Connections** Claude suggests (a battle is part of its war) can be accepted once both entries are on your timeline.
 - **Left out by the checker** lists what Chronicle refused and why: a page Claude didn't actually find, something already on your timeline, too many at once.
 - An accepted entry says **Drafted with AI** at the top, with the model and prompt version, so you can always tell it apart. Claude's reasons are shown while you review and are never saved, and drafting never writes notes or makes pictures.
 
-It needs a connection and your own **Anthropic API key** (from console.anthropic.com), which you paste in the panel once. The key stays in this browser only: it's never in your backups or exports, and **Forget** removes it. Drafts are billed to your Anthropic account, usually a few cents each.
+While reading, you can also ask Claude about a passage you highlighted (see Highlighting).
+
+It needs a connection and your own **Anthropic API key** (from console.anthropic.com), which you paste in the panel once (in the new layout, the reader's tray links to it). The key stays in this browser only: it's never in your backups or exports, and **Forget** removes it. Drafts are billed to your Anthropic account, usually a few cents each.
 
 ## Notes, sources and citations
 
