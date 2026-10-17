@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import type { DraftSet } from '../../ai/draft';
 import { articleCache } from '../../data/articleCache';
 import { fetchArticle, type Article as ArticleData } from '../../media/article';
 import { draftFromWikipedia, searchWikipedia, type ItemDraft, type WikiSearchResult } from '../../media/wikipedia';
@@ -32,12 +33,16 @@ const OFFLINE_ADD = 'You’re offline. Adding to the map and timeline needs a co
  * The reader column of the new layout: search Wikipedia and read the article
  * that's open. Opening and the reading trail are owned by the caller.
  */
-export function ReaderPane({ article, searching, onOpen, onSearching, onBack, onShowMap, onOpenRecord, onDraft }: {
+export function ReaderPane({ article, searching, onOpen, onSearching, onBack, onShowMap, onOpenRecord, onDraft, onShowYear, onOpenDrafting }: {
   article: ArticleRef | null;
   /** Open what Bob already has for the article's subject. */
   onOpenRecord?: (r: RecordRef) => void;
   /** Open a prefilled entry for Bob to check and add. */
   onDraft?: (d: ItemDraft) => void;
+  /** Move the map and timeline to a year (to show an entry Bob just accepted). */
+  onShowYear?: (year: number) => void;
+  /** Open Drafting with AI, where Bob sets his Anthropic key. */
+  onOpenDrafting?: () => void;
   /** Go back along the reading trail, when there is somewhere to go. */
   onBack?: () => void;
   /** True while the "Open an article" search is showing. */
@@ -61,7 +66,7 @@ export function ReaderPane({ article, searching, onOpen, onSearching, onBack, on
         </div>
       )}
       {(searching || !article) && <ArticleSearch hasArticle={!!article} onOpen={onOpen} onCancel={() => onSearching(false)} />}
-      {article && !searching && <Article key={article.key} article={article} onOpen={onOpen} onOpenRecord={onOpenRecord} onDraft={onDraft} />}
+      {article && !searching && <Article key={article.key} article={article} onOpen={onOpen} onOpenRecord={onOpenRecord} onDraft={onDraft} onShowYear={onShowYear} onOpenDrafting={onOpenDrafting} />}
     </section>
   );
 }
@@ -164,11 +169,13 @@ function SubjectLine({ state, onOpenRecord }: { state: SubjectState; onOpenRecor
   );
 }
 
-function Article({ article, onOpen, onOpenRecord, onDraft }: {
+function Article({ article, onOpen, onOpenRecord, onDraft, onShowYear, onOpenDrafting }: {
   article: ArticleRef;
   onOpen: (a: ArticleRef) => void;
   onOpenRecord?: (r: RecordRef) => void;
   onDraft?: (d: ItemDraft) => void;
+  onShowYear?: (year: number) => void;
+  onOpenDrafting?: () => void;
 }) {
   const { doc } = useDoc();
   const [data, setData] = useState<ArticleData | null>(null);
@@ -212,6 +219,19 @@ function Article({ article, onOpen, onOpenRecord, onDraft }: {
       highlight: h,
       // The highlight is the evidence Bob read for what Wikidata connects.
       ...(draft.relations ? { relations: draft.relations.map((r) => ({ ...r, highlightIds: [h.id] })) } : {}),
+    });
+  };
+
+  /** Ask Claude what the passage states that has no article of its own. The SDK loads only now. */
+  const askClaude = async (h: Highlight, apiKey: string, signal: AbortSignal): Promise<DraftSet> => {
+    if (!marks.text || !data) throw new Error('The article is still opening.');
+    const { draftFromHighlight } = await import('../../ai/highlight');
+    return draftFromHighlight({
+      highlight: h,
+      article: { key: article.key, title: data.title, text: marks.text },
+      candidates: candidates.map((c) => ({ key: c.key, subject: c.state.status === 'ready' ? c.state.subject : undefined })),
+      doc, apiKey, signal,
+      today: new Date().toISOString().slice(0, 10),
     });
   };
 
@@ -272,7 +292,12 @@ function Article({ article, onOpen, onOpenRecord, onDraft }: {
           {data.modified && <>, as edited on {new Date(data.modified).toLocaleDateString(undefined, { dateStyle: 'long' })}</>}.
         </p>
       )}
-      {data && <CaptureTray marks={marks} candidates={candidates} articleTitle={data.title} onAdd={addPage} onOpenRecord={onOpenRecord} />}
+      {data && (
+        <CaptureTray
+          marks={marks} candidates={candidates} articleTitle={data.title}
+          onAdd={addPage} onAsk={askClaude} onOpenRecord={onOpenRecord} onEdit={onDraft} onShowYear={onShowYear} onOpenDrafting={onOpenDrafting}
+        />
+      )}
     </article>
   );
 }

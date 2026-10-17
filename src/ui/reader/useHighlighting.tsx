@@ -247,6 +247,8 @@ export function useHighlighting(body: RefObject<HTMLDivElement | null>, article:
     link,
     /** The article's wiki links, for the passage's candidates. */
     links: model?.links ?? NO_LINKS,
+    /** The article's text, sections and all, as highlights anchor to it (what Claude reads). */
+    text: model,
     openRect,
     readOnly: !!readOnly,
     onTextClick,

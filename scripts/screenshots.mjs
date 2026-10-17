@@ -310,6 +310,66 @@ if (any('desktop-reader')) await reader(await page('desktop-reader', desktop), '
 if (any('dark-reader')) await reader(await page('dark-reader', { ...desktop, colorScheme: 'dark' }), 'dark');
 if (any('phone-reader')) await reader(await page('phone-reader', { viewport: { width: 412, height: 860 }, isMobile: true, hasTouch: true }), 'phone');
 
+// Asking Claude from the tray: the tribute passage in Pericles, a recorded answer replayed, the event accepted, its connection waiting.
+async function readerClaude(p, prefix) {
+  const cors = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': '*', 'Access-Control-Allow-Methods': '*' };
+  const tribute = 'It was from the alliance\'s treasury that Pericles drew the funds necessary to enable his ambitious building plan, centred on the "Periclean Acropolis", which included the Propylaea, the Parthenon and the golden statue of Athena, sculpted by Pericles\'s friend, Phidias. In 449 BC Pericles proposed a decree allowing the use of 9,000 talents to finance the major rebuilding programme of Athenian temples.';
+  await p.route('https://en.wikipedia.org/w/rest.php/v1/search/page**', (r) => r.fulfill({ headers: cors, json: { pages: [{ key: 'Pericles', title: 'Pericles', description: 'Athenian statesman', thumbnail: null }] } }));
+  await p.route('https://en.wikipedia.org/w/rest.php/v1/page/*/html', (r) => r.fulfill({
+    headers: { ...cors, 'Content-Type': 'text/html' },
+    body: '<!DOCTYPE html><html about="https://en.wikipedia.org/wiki/Special:Redirect/revision/42"><head><title>Pericles</title></head><body>' +
+      '<section data-mw-section-id="0"><p>Pericles was a Greek statesman and general of Athens during its golden age, between the Persian and Peloponnesian wars.</p></section>' +
+      '<section data-mw-section-id="1"><h2>Athens\'s rule over its alliance</h2><p>In 454 BC the treasury of the Delian League was moved from Delos to Athens, and the allies’ tribute now came to the city.</p>' +
+      `<p>${tribute}</p><p>The building programme employed thousands of craftsmen and labourers for fifteen years.</p></section></body></html>`,
+  }));
+  const rec = JSON.parse(readFileSync(fileURLToPath(new URL('../tests/ai-evals/highlight/recordings/handmade-tribute.json', import.meta.url)), 'utf8'));
+  const used = new Set();
+  const anthropic = (u) => u.startsWith('https://api.anthropic.com/');
+  for (const pattern of ['https://api.anthropic.com/**', 'https://en.wikipedia.org/w/api.php**', 'https://www.wikidata.org/**']) {
+    await p.route(pattern, (route) => {
+      const url = route.request().url();
+      if (route.request().method() === 'OPTIONS') return route.fulfill({ status: 204, headers: cors });
+      const i = rec.exchanges.findIndex((e, n) => !used.has(n) && (anthropic(url) ? anthropic(e.url) : e.url === url));
+      if (i < 0) return route.fulfill({ headers: cors, json: { entities: {} } });
+      used.add(i);
+      return route.fulfill({ headers: cors, json: rec.exchanges[i].body });
+    });
+  }
+  await p.evaluate(() => localStorage.setItem('chronicle.anthropicKey', 'sk-ant-screenshot-1234'));
+  await p.getByTestId('import-input').setInputFiles(fileURLToPath(new URL('../tests/ai-evals/highlight/doc.json', import.meta.url)));
+  await p.locator('.vis-item', { hasText: 'Delian League' }).waitFor();
+  await p.getByRole('button', { name: 'More' }).click();
+  await p.getByRole('menuitemcheckbox', { name: 'Try the new layout' }).click();
+  await p.getByTestId('article-search').getByLabel('Search Wikipedia').fill('pericles');
+  await p.getByTestId('article-search').getByRole('button', { name: 'Search' }).click();
+  await p.getByTestId('article-results').getByRole('button').first().click();
+  await p.getByTestId('article').getByText('In 449 BC').waitFor();
+  const at = await p.evaluate((phone) => {
+    const para = [...document.querySelectorAll('.reader-text p')].find((x) => x.textContent.includes('449 BC'));
+    para.scrollIntoView({ block: 'start' });
+    const r = document.createRange();
+    r.selectNodeContents(para);
+    if (!phone) { getSelection().removeAllRanges(); getSelection().addRange(r); }
+    const b = r.getClientRects()[r.getClientRects().length - 1];
+    return { x: b.left + 20, y: b.top + b.height / 2 };
+  }, prefix === 'phone');
+  if (prefix === 'phone') await p.touchscreen.tap(at.x, at.y);
+  else { await p.getByRole('button', { name: 'Highlight' }).waitFor(); await p.keyboard.press('h'); }
+  const tray = p.getByTestId('capture-tray');
+  await p.evaluate(() => getSelection().removeAllRanges());
+  await tray.getByRole('button', { name: 'Ask Claude' }).click();
+  await tray.getByTestId('draft-entry').waitFor();
+  await p.waitForTimeout(900); // the tray scrolls to the drafts; the map frames the dashed pin
+  await shot(p, `${prefix}-reader-claude`);
+  await tray.getByTestId('draft-entry').getByRole('button', { name: 'Accept' }).click();
+  await tray.getByRole('button', { name: 'Economic, suggested by Claude' }).click();
+  await p.waitForTimeout(700);
+  await shot(p, `${prefix}-reader-claude-accepted`);
+}
+if (any('desktop-reader-claude')) await readerClaude(await page('desktop-reader-claude', desktop), 'desktop');
+if (any('dark-reader-claude')) await readerClaude(await page('dark-reader-claude', { ...desktop, colorScheme: 'dark' }), 'dark');
+if (any('phone-reader-claude')) await readerClaude(await page('phone-reader-claude', { viewport: { width: 412, height: 860 }, isMobile: true, hasTouch: true }), 'phone');
+
 // Draft with AI: a recorded run replayed (no network, no key needed), one entry accepted.
 async function aiDraft(p, prefix) {
   const rec = JSON.parse(readFileSync(fileURLToPath(new URL('../tests/ai-evals/entries/recordings/handmade-persian-wars.json', import.meta.url)), 'utf8'));

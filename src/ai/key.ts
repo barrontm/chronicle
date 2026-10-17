@@ -12,6 +12,9 @@ export function readApiKey(): string {
   }
 }
 
+/** Dispatched on `window` when the key is saved or forgotten, so every place that asks Claude knows. */
+export const KEY_CHANGED = 'chronicle:api-key';
+
 export function saveApiKey(key: string): void {
   try {
     if (key.trim()) localStorage.setItem(KEY, key.trim());
@@ -19,6 +22,7 @@ export function saveApiKey(key: string): void {
   } catch {
     /* private window: the key works for this visit only */
   }
+  if (typeof window !== 'undefined') window.dispatchEvent(new Event(KEY_CHANGED));
 }
 
 /** "sk-ant-…abcd", so Bob can tell which key is set without showing it. */

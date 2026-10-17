@@ -1,4 +1,5 @@
 import { readFileSync, readdirSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { expect, test, type Page } from '@playwright/test';
 
 const cors = { 'Access-Control-Allow-Origin': '*' };
@@ -437,6 +438,105 @@ test('a highlight becomes a page its passage links: pick the war, add it, and se
   await page.getByRole('button', { name: 'Library' }).click();
   await page.getByRole('tab', { name: /Highlights/ }).click();
   await expect(page.getByTestId('highlight-group')).toContainText('on Peloponnesian War');
+});
+
+test('Claude drafts from the tribute passage: a suggested dimension, an event on the map and a "funded" connection, accepted from the tray', async ({ page }) => {
+  test.slow();
+  const tribute = 'It was from the alliance\'s treasury that Pericles drew the funds necessary to enable his ambitious building plan, centred on the "Periclean Acropolis", which included the Propylaea, the Parthenon and the golden statue of Athena, sculpted by Pericles\'s friend, Phidias. In 449 BC Pericles proposed a decree allowing the use of 9,000 talents to finance the major rebuilding programme of Athenian temples.';
+  await mockArticles(page);
+  await page.route('https://en.wikipedia.org/w/rest.php/v1/page/Pericles/html', (route) => route.fulfill({
+    headers: { ...cors, 'Content-Type': 'text/html' },
+    body: '<!DOCTYPE html><html about="https://en.wikipedia.org/wiki/Special:Redirect/revision/42"><head><title>Pericles</title></head><body>' +
+      '<section data-mw-section-id="0"><p>Pericles led Athens in its golden age.</p></section>' +
+      `<section data-mw-section-id="1"><h2 id="rule">Athens's rule over its alliance</h2><p>In 454 BC the treasury of the Delian League was moved from Delos to Athens.</p><p>${tribute}</p></section></body></html>`,
+  }));
+  // Claude's answer and the place lookup, replayed from a recording (tests/ai-evals/highlight/recordings).
+  const { replayer } = await import('../tests/ai-evals/replay');
+  const next = replayer(JSON.parse(readFileSync(new URL('../tests/ai-evals/highlight/recordings/handmade-tribute.json', import.meta.url), 'utf8')));
+  const ai = { ...cors, 'Access-Control-Allow-Headers': '*', 'Access-Control-Allow-Methods': '*' };
+  const asked: string[] = [];
+  for (const pattern of ['https://api.anthropic.com/**', 'https://en.wikipedia.org/w/api.php**']) {
+    await page.route(pattern, (route) => {
+      const req = route.request();
+      if (req.method() === 'OPTIONS') return route.fulfill({ status: 204, headers: ai });
+      if (req.url().startsWith('https://api.anthropic.com/')) asked.push(req.headers()['x-api-key']);
+      const e = next(req.url());
+      return e ? route.fulfill({ status: e.status ?? 200, headers: ai, json: e.body }) : route.fulfill({ status: 404, headers: ai, body: 'not recorded' });
+    });
+  }
+  await open(page);
+  // Bob's timeline already has Pericles and the Delian League.
+  await page.getByTestId('import-input').setInputFiles(fileURLToPath(new URL('../tests/ai-evals/highlight/doc.json', import.meta.url)));
+  await expect(page.locator('.vis-item', { hasText: 'Delian League' })).toBeVisible();
+  await page.getByRole('button', { name: 'More' }).click();
+  await page.getByRole('menuitemcheckbox', { name: 'Try the new layout' }).click();
+  await search(page, 'pericles', 'Pericles');
+  await expect(page.getByTestId('reader').getByText('In 449 BC Pericles')).toBeVisible();
+  await expect(page.locator('[data-testid=map][data-ready]')).toBeVisible();
+
+  await page.evaluate(() => {
+    const p = [...document.querySelectorAll('.reader-text p')].find((x) => x.textContent!.includes('449 BC'))!;
+    const r = document.createRange();
+    r.selectNodeContents(p);
+    getSelection()!.removeAllRanges();
+    getSelection()!.addRange(r);
+  });
+  await expect(page.getByRole('button', { name: 'Highlight' })).toBeVisible();
+  await page.keyboard.press('h');
+  const tray = page.getByTestId('capture-tray');
+  await expect(tray.getByRole('blockquote')).toContainText('from the alliance');
+
+  // No key yet: the tray says where to add one.
+  const askButton = tray.getByRole('button', { name: 'Ask Claude' });
+  await expect(askButton).toBeDisabled();
+  await tray.getByRole('button', { name: 'Drafting with AI' }).click();
+  const panel = page.getByTestId('draft-review');
+  await panel.getByLabel('Your Anthropic API key').fill('sk-ant-test-key-1234');
+  await panel.getByRole('button', { name: 'Save key' }).click();
+  await page.getByRole('button', { name: 'Close panel' }).click();
+  await askButton.click();
+
+  // Claude suggests a dimension; it's marked, not taken.
+  await expect(tray).toContainText('Claude suggests Economic · pick it to use it');
+  await expect(tray.getByRole('button', { name: 'Economic, suggested by Claude' })).toHaveAttribute('aria-pressed', 'false');
+  expect(asked).toEqual(['sk-ant-test-key-1234']);
+
+  // The drafted event waits, dashed on the map; its connection waits for it.
+  const entry = tray.getByTestId('draft-entry');
+  await expect(entry).toHaveCount(1);
+  await expect(entry).toContainText('Decree funding the rebuilding of Athenian temples');
+  await expect(entry).toContainText('Event · 449 BCE · Acropolis of Athens');
+  await expect(entry).toContainText('In 449 BC Pericles proposed a decree');
+  await expect(page.locator('.map-label.draft-pin', { hasText: 'Decree funding' })).toBeVisible();
+  const funded = tray.getByTestId('draft-connection');
+  await expect(funded).toHaveCount(1);
+  await expect(funded).toContainText('Delian League funded Decree funding the rebuilding of Athenian temples');
+  await expect(funded).toContainText('Accept the entry first.');
+  await expect(funded.getByRole('button', { name: 'Accept' })).toBeDisabled();
+
+  // Library says the highlight has drafts waiting.
+  await page.getByRole('button', { name: 'Library' }).click();
+  await page.getByRole('tab', { name: /Highlights/ }).click();
+  await expect(page.getByTestId('highlight-group')).toContainText('kept as a highlight · 2 drafts from Claude waiting');
+  await page.getByRole('button', { name: 'Close panel' }).click();
+
+  // Picking the suggestion, then accepting both: the event is on the map in its year, solid.
+  await tray.getByRole('button', { name: 'Economic, suggested by Claude' }).click();
+  await expect(tray).toContainText('Economic · Claude’s suggestion');
+  await entry.getByRole('button', { name: 'Accept' }).click();
+  await expect(entry).toContainText('Added · on the map and timeline');
+  await expect(page.locator('.map-label.draft-pin')).toHaveCount(0);
+  await expect(page.locator('.map-label.pin', { hasText: 'Decree funding' })).toBeVisible();
+  await funded.getByRole('button', { name: 'Accept' }).click();
+  await expect(funded).toContainText('Added');
+  await expect(tray.getByRole('button', { name: 'Done' })).toBeVisible();
+
+  // Both records are under the highlight in Library, and nothing is waiting.
+  await page.getByRole('button', { name: 'Library' }).click();
+  await page.getByRole('tab', { name: /Highlights/ }).click();
+  const group = page.getByTestId('highlight-group');
+  await expect(group).toContainText('Economic · on Decree funding the rebuilding of Athenian temples, Delian League funded Decree funding the rebuilding of Athenian temples');
+  await expect(group).not.toContainText('waiting');
 });
 
 test('adding a battle connects it to the war already in Chronicle, with the highlight as evidence @phone', async ({ page }, info) => {

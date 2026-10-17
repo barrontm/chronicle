@@ -1,27 +1,16 @@
 import { useEffect, useRef, useState } from 'react';
 import { AiError } from '../../ai/client';
-import { acceptConnection, acceptEntry, canAcceptConnection, type DraftEntry, type DraftSet } from '../../ai/draft';
+import { acceptConnection, acceptEntry, statusIn, undoConnection, undoEntry, waiting, type DraftSet, type DraftStatus } from '../../ai/draft';
 import { draftEntries } from '../../ai/entries';
 import { maskKey, readApiKey, saveApiKey } from '../../ai/key';
-import { describeRelation } from '../../model/doc';
-import { formatRange, toDecimalYear } from '../../model/dates';
+import { toDecimalYear } from '../../model/dates';
 import { useDoc } from '../DocContext';
 import { Field } from '../fields';
 import type { Nav } from '../nav';
-import { titleOf } from '../util';
+import { useOnline } from '../useAi';
+import { DraftConnectionRow, DraftEntryRow, DroppedList } from './DraftRows';
 
 const OFFLINE = 'You’re offline. Drafting with AI needs a connection; you can still add entries by hand.';
-
-function useOnline(): boolean {
-  const [online, setOnline] = useState(() => navigator.onLine);
-  useEffect(() => {
-    const on = () => setOnline(navigator.onLine);
-    window.addEventListener('online', on);
-    window.addEventListener('offline', on);
-    return () => { window.removeEventListener('online', on); window.removeEventListener('offline', on); };
-  }, []);
-  return online;
-}
 
 /**
  * Draft with AI: Bob describes a topic, Claude picks Wikipedia pages for it,
@@ -71,13 +60,10 @@ export function DraftReview({ nav, draft, onDraft }: { nav: Nav; draft: DraftSet
     }
   };
 
-  const onTimeline = new Set(doc.items.map((i) => i.id));
-  const statusOf = (e: DraftEntry) => (onTimeline.has(e.item.id) ? 'accepted' : e.status);
-  const setEntry = (id: string, status: DraftEntry['status']) => draft && onDraft({ ...draft, entries: draft.entries.map((e) => (e.item.id === id ? { ...e, status } : e)) });
-  const setConnection = (id: string, status: DraftEntry['status']) => draft && onDraft({ ...draft, connections: draft.connections.map((c) => (c.relation.id === id ? { ...c, status } : c)) });
-  const nameOf = (id: string) => titleOf(doc, id) ?? draft?.entries.find((e) => e.item.id === id)?.item.title ?? 'Missing entry';
-  const firstOnMap = draft?.entries.find((e) => statusOf(e) === 'pending' && e.item.places?.length && e.item.start);
-  const pending = draft ? draft.entries.filter((e) => statusOf(e) === 'pending').length + draft.connections.filter((c) => c.status === 'pending' && !doc.relations.some((r) => r.id === c.relation.id)).length : 0;
+  const setEntry = (id: string, status: DraftStatus) => draft && onDraft({ ...draft, entries: draft.entries.map((e) => (e.item.id === id ? { ...e, status } : e)) });
+  const setConnection = (id: string, status: DraftStatus) => draft && onDraft({ ...draft, connections: draft.connections.map((c) => (c.relation.id === id ? { ...c, status } : c)) });
+  const firstOnMap = draft?.entries.find((e) => statusIn(doc, e) === 'pending' && e.item.places?.length && e.item.start);
+  const pending = waiting(doc, draft);
 
   return (
     <div data-testid="draft-review">
@@ -129,72 +115,43 @@ export function DraftReview({ nav, draft, onDraft }: { nav: Nav; draft: DraftSet
         <section data-testid="draft-results" aria-label="Draft">
           <h3>Entries</h3>
           {draft.entries.length === 0 && <div className="notice">Claude didn’t find anything to add. Try describing it differently.</div>}
-          <ul className="draft-list">
-            {draft.entries.map((e) => {
-              const status = statusOf(e);
-              const item = e.item;
-              return (
-                <li key={item.id} className={`draft-row ${status}`} data-testid="draft-entry">
-                  <div>
-                    <strong>{item.title}</strong>
-                    <small>{item.start ? formatRange(item.start, item.end) : 'No date'}{item.places?.length ? ' · on the map' : ''}</small>
-                    {e.why && <small className="why">Claude: {e.why}</small>}
-                    {e.problems.map((p) => <small key={p} className="bad">{p}</small>)}
-                  </div>
-                  <div className="draft-actions">
-                    {status === 'pending' && (
-                      <>
-                        {!e.problems.length && <button className="btn small primary" onClick={() => update((d) => acceptEntry(d, e))}>Accept</button>}
-                        <button className="btn small" onClick={() => nav.open({ type: 'new-item', draft: { item, newSources: e.newSources, highlight: e.highlight } })}>Edit first</button>
-                        <button className="btn small quiet" onClick={() => setEntry(item.id, 'rejected')}>Reject</button>
-                      </>
-                    )}
-                    {status === 'accepted' && <button className="btn small quiet" onClick={() => nav.open({ type: 'item', id: item.id })}>Added · Open</button>}
-                    {status === 'rejected' && <button className="btn small quiet" onClick={() => setEntry(item.id, 'pending')}>Left out · Undo</button>}
-                  </div>
-                </li>
-              );
-            })}
+          <ul className="drows">
+            {draft.entries.map((e) => (
+              <DraftEntryRow
+                key={e.item.id}
+                entry={e}
+                status={statusIn(doc, e)}
+                onAccept={() => update((d) => acceptEntry(d, e))}
+                onEdit={() => nav.open({ type: 'new-item', draft: { item: e.item, newSources: e.newSources, highlight: e.highlight } })}
+                onReject={() => setEntry(e.item.id, 'rejected')}
+                onRestore={() => setEntry(e.item.id, 'pending')}
+                onUndo={() => update((d) => undoEntry(d, draft, e))}
+                onOpen={() => nav.open({ type: 'item', id: e.item.id })}
+              />
+            ))}
           </ul>
 
           {draft.connections.length > 0 && (
             <>
               <h3>Connections</h3>
-              <ul className="draft-list">
-                {draft.connections.map((c) => {
-                  const r = c.relation;
-                  const added = doc.relations.some((x) => x.id === r.id);
-                  const ready = canAcceptConnection(doc, c);
-                  return (
-                    <li key={r.id} className={`draft-row ${added ? 'accepted' : c.status}`} data-testid="draft-connection">
-                      <div>
-                        <strong>{nameOf(r.fromId)}</strong>
-                        <small>{describeRelation(r.type, 'out')} {nameOf(r.toId)}</small>
-                        {!added && c.status === 'pending' && !ready && <small>Accept both entries first.</small>}
-                      </div>
-                      <div className="draft-actions">
-                        {!added && c.status === 'pending' && (
-                          <>
-                            {ready && <button className="btn small primary" onClick={() => update((d) => acceptConnection(d, c))}>Accept</button>}
-                            <button className="btn small quiet" onClick={() => setConnection(r.id, 'rejected')}>Reject</button>
-                          </>
-                        )}
-                        {added && <small>Added</small>}
-                        {!added && c.status === 'rejected' && <button className="btn small quiet" onClick={() => setConnection(r.id, 'pending')}>Left out · Undo</button>}
-                      </div>
-                    </li>
-                  );
-                })}
+              <ul className="drows">
+                {draft.connections.map((c) => (
+                  <DraftConnectionRow
+                    key={c.relation.id}
+                    c={c}
+                    status={statusIn(doc, c)}
+                    entries={draft.entries}
+                    onAccept={() => update((d) => acceptConnection(d, c))}
+                    onReject={() => setConnection(c.relation.id, 'rejected')}
+                    onRestore={() => setConnection(c.relation.id, 'pending')}
+                    onUndo={() => update((d) => undoConnection(d, c))}
+                  />
+                ))}
               </ul>
             </>
           )}
 
-          {draft.dropped.length > 0 && (
-            <details className="draft-dropped">
-              <summary>Left out by the checker ({draft.dropped.length})</summary>
-              <ul>{draft.dropped.map((d) => <li key={d}>{d}</li>)}</ul>
-            </details>
-          )}
+          <DroppedList dropped={draft.dropped} />
 
           <div className="actions">
             {firstOnMap && <button className="btn" onClick={() => nav.showOnMap(Math.round(toDecimalYear(firstOnMap.item.start)))}>Show on map</button>}

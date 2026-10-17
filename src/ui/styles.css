@@ -239,6 +239,27 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .dimpick button i { width: 14px; height: 14px; background: var(--d); border-radius: 2px; }
 .dimpick button[aria-pressed='true'] { border-color: var(--d); box-shadow: 0 0 0 1px var(--d); }
 .dimpick .dn { margin-left: 6px; font-size: 12.5px; color: var(--ink-2); }
+.dimpick .dn em { font-style: normal; color: var(--pig-umber); }
+/* Claude's suggested dimension: a dashed umber ring, never taken until Bob picks it. */
+.dimpick button { position: relative; }
+.dimpick button.sug::after { content: ''; position: absolute; inset: -4px; border: 1.5px dashed var(--pig-umber); border-radius: 6px; pointer-events: none; }
+/* Asking Claude, and Claude's drafts, in the tray. */
+.tray-card .claude { padding: 9px 0 10px; border-top: 1px solid var(--rule-soft); }
+.tray-card .claude > .lbl { display: flex; align-items: center; gap: 6px; font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); margin-bottom: 7px; }
+.tray-card .claude > .lbl span { text-transform: none; letter-spacing: 0; font-size: 11.5px; }
+.tray-card .claude > .lbl .glyph { width: 13px; height: 13px; color: var(--pig-umber); }
+.tray-card .ask { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
+.tray-card .ask-btn { display: inline-flex; align-items: center; gap: 6px; border: 1px dashed var(--pig-umber); background: var(--panel); color: var(--ink); padding: 6px 10px; border-radius: 5px; font: 600 12.5px var(--font-ui); cursor: pointer; }
+.tray-card .ask-btn .glyph { width: 14px; height: 14px; color: var(--pig-umber); }
+.tray-card .ask-btn:disabled { opacity: 0.5; cursor: default; }
+.tray-card .ask .why { font-size: 12px; color: var(--muted); flex: 1; min-width: 180px; }
+.tray-card .ask .why.bad { color: var(--danger); }
+.tray-card .ask .busy { margin: 0; flex: 1; font: italic 13.5px/1.4 var(--font-read); color: var(--pig-umber); }
+.tray-card .link, .tray-card .why .link { border: 0; background: none; padding: 0; color: inherit; font: inherit; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.tray-card .dgroup { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin: 10px 0 5px; }
+.tray-card .dgroup:first-of-type { margin-top: 0; }
+.tray-card .dnote { margin: 8px 0 0; font-size: 12px; color: var(--muted); }
+.library .waiting, .linklist .waiting { color: var(--pig-umber); }
 .cardacts { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .cardacts .link { border: 0; background: none; color: var(--muted); padding: 7px 4px; margin-left: auto; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; font: inherit; }
 .trail { display: flex; align-items: center; gap: 2px; min-width: 0; overflow: hidden; font-size: 13px; }
@@ -606,15 +627,31 @@ dialog h2 { font-family: var(--font-read); margin: 0 0 12px; font-weight: 600; }
 /* Level with the input, below the field's label (12px × line height + the field's gap); a hint underneath doesn't move it. */
 .editor-row.beside-input > .btn { margin-top: calc(12px * 1.45 + 4px); padding-block: 7px; }
 
-/* Draft with AI */
-.draft-list { list-style: none; margin: 0; padding: 0; }
-.draft-row { display: flex; gap: 10px; align-items: flex-start; justify-content: space-between; padding: 8px 0 8px 10px; border-top: 1px solid var(--rule-soft); border-left: 2px dashed var(--rule); }
-.draft-row:first-child { border-top: 0; }
-.draft-row small { display: block; color: var(--muted); }
-.draft-row small.why { font-style: italic; color: var(--ink-2); }
-.draft-row small.bad { color: var(--danger); }
-.draft-row.accepted { border-left: 2px solid var(--ink-2); }
-.draft-row.rejected strong { text-decoration: line-through; color: var(--muted); }
-.draft-actions { display: flex; gap: 4px; flex-wrap: wrap; justify-content: flex-end; flex-shrink: 0; }
+/* Drafted records waiting for Bob (DraftRows.tsx): Draft with AI and the reader's tray. Dashed umber until accepted. */
+.drows { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; font-family: var(--font-ui); }
+.drow { display: grid; grid-template-columns: 20px minmax(0, 1fr); gap: 0 8px; padding: 8px 10px 9px 8px; border: 1px dashed color-mix(in srgb, var(--pig-umber) 65%, transparent); border-radius: 6px; background: var(--panel); }
+.drow > .glyph { width: 18px; height: 18px; display: block; color: var(--pig-umber); margin-top: 2px; }
+.drow.accepted { border-style: solid; border-color: var(--rule); }
+.drow.accepted > .glyph { color: var(--c, var(--ink-2)); }
+.drow.rejected { opacity: 0.55; }
+.drow.rejected .t { text-decoration: line-through; text-decoration-color: var(--muted); }
+.drow .t { font: 500 15px/1.3 var(--font-read); color: var(--ink); }
+.drow .m { font-size: 11.5px; color: var(--muted); margin-top: 1px; }
+.drow .m i { font-style: normal; color: var(--pig-umber); }
+.drow .ev { margin: 5px 0 0; font: italic 13px/1.4 var(--font-read); color: var(--ink-2); }
+.drow .ev q { quotes: '“' '”'; }
+.drow .bad { margin: 4px 0 0; font-size: 12px; color: var(--danger); }
+.drow .acts { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 7px; }
+.drow .acts button { border: 1px solid var(--rule); background: var(--bg); color: var(--ink); padding: 5px 9px; border-radius: 5px; font: inherit; font-size: 12px; cursor: pointer; }
+.drow .acts .primary { background: var(--ink); border-color: var(--ink); color: var(--panel); font-weight: 600; }
+.drow .acts .primary:disabled { opacity: 0.35; cursor: default; }
+.drow .acts .quiet { border: 0; background: none; color: var(--muted); text-decoration: underline; text-underline-offset: 3px; padding: 5px 3px; }
+.drow .acts .state { font-size: 12px; color: var(--ink-2); }
+.drow .acts small { font-size: 11.5px; color: var(--muted); }
+.drow .end { text-underline-offset: 3px; }
+.drow .end.have { text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--c, var(--ink-2)) 60%, transparent); }
+.drow .end.draft { text-decoration: underline dashed var(--pig-umber); text-decoration-thickness: 1px; }
+.drow .eff { display: inline-block; font: 500 11px/1 var(--font-ui); color: var(--pig-umber); border: 1px dashed var(--pig-umber); border-radius: 10px; padding: 3px 7px; margin: 0 3px; vertical-align: 2px; white-space: nowrap; }
+.drow.accepted .eff { border-style: solid; color: var(--ink-2); border-color: var(--rule); }
 .draft-dropped { margin-top: 12px; font-size: 13px; color: var(--ink-2); }
 .draft-dropped ul { margin: 6px 0 0; padding-left: 18px; }

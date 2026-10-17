@@ -959,12 +959,12 @@ test.describe('drafting with AI', () => {
 
     // The connection waits until both its ends are on the timeline.
     const marathonToWar = panel.getByTestId('draft-connection').first();
-    await expect(marathonToWar).toContainText('Accept both entries first.');
-    await expect(marathonToWar.getByRole('button', { name: 'Accept' })).toHaveCount(0);
+    await expect(marathonToWar).toContainText('Accept the entry first.');
+    await expect(marathonToWar.getByRole('button', { name: 'Accept' })).toBeDisabled();
 
     await expect(page.locator('.vis-item', { hasText: 'Battle of Marathon' })).toBeVisible();
     await expect(page.locator('.vis-item', { hasText: 'Battle of Salamis' })).toHaveCount(0);
-    await entries.nth(1).getByRole('button', { name: 'Added · Open' }).click();
+    await entries.nth(1).getByRole('button', { name: 'Open' }).click();
     await expect(page.getByTestId('item-drafted')).toContainText('Drafted with AI (claude-opus-5-5, entries@1)');
   });
 

@@ -1,16 +1,27 @@
-import { useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import {
+  acceptConnection, acceptEntry, statusIn, undoConnection, undoEntry, waiting,
+  type DraftConnection, type DraftEntry, type DraftSet, type DraftStatus,
+} from '../../ai/draft';
+import type { ItemDraft } from '../../media/wikipedia';
+import { toDecimalYear } from '../../model/dates';
 import { CANT_ADD, firstChoice } from '../../model/passage';
 import { describeRelation, upsert } from '../../model/doc';
 import { KIND_LABEL, factRelations, findInChronicle, subjectFacts, type Subject } from '../../model/subjects';
 import { DIMENSIONS, type Dimension, type Highlight, type Relation } from '../../model/types';
 import { useDoc } from '../DocContext';
+import { DraftConnectionRow, DraftEntryRow, DroppedList } from '../panels/DraftRows';
+import { useApiKey, useOnline } from '../useAi';
 import { DIMENSION_LABEL } from '../util';
 import { Glyph } from './Glyph';
+import { useHighlightDrafts } from './highlightDrafts';
 import type { RecordRef } from './ReaderPane';
 import { PIGMENT, type useHighlighting } from './useHighlighting';
 import type { SubjectState } from './useSubject';
 
 type Marks = ReturnType<typeof useHighlighting>;
+
+const ASK_OFFLINE = 'Asking Claude needs a connection.';
 
 interface Row {
   key: string;
@@ -34,17 +45,28 @@ const pigment = (d?: Dimension) => `var(--pig-${PIGMENT[d ?? 'none']})`;
  * and what to do with it. Otherwise one line counts the article's highlights. Closing
  * the card, or moving on, keeps the highlight as it is.
  */
-export function CaptureTray({ marks, candidates, articleTitle, onAdd, onOpenRecord }: {
+export function CaptureTray({ marks, candidates, articleTitle, onAdd, onAsk, onOpenRecord, onEdit, onShowYear, onOpenDrafting }: {
   marks: Marks;
   /** What the open highlight could become: the article's subject first, then the pages its passage links. */
   candidates: { key: string; state: SubjectState }[];
   articleTitle: string;
   /** Draft a page as an entry citing this highlight. Throws with a message Bob can read. */
   onAdd: (h: Highlight, key: string) => Promise<void>;
+  /** Ask Claude to draft what the passage states. Throws with a message Bob can read. */
+  onAsk: (h: Highlight, apiKey: string, signal: AbortSignal) => Promise<DraftSet>;
   onOpenRecord?: (r: RecordRef) => void;
+  /** Open a drafted entry in the editor before adding it. */
+  onEdit?: (d: ItemDraft) => void;
+  onShowYear?: (year: number) => void;
+  onOpenDrafting?: () => void;
 }) {
   const { doc, update } = useDoc();
+  const drafts = useHighlightDrafts();
+  const online = useOnline();
+  const apiKey = useApiKey();
   const tray = useRef<HTMLDivElement>(null);
+  const card = useRef<HTMLElement>(null);
+  const claudeSection = useRef<HTMLElement>(null);
   const [flash, setFlash] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -52,8 +74,16 @@ export function CaptureTray({ marks, candidates, articleTitle, onAdd, onOpenReco
   const [picked, setPicked] = useState<Record<string, string>>({});
   /** Suggested connections Bob unticked, by the other entry's id. */
   const [unticked, setUnticked] = useState<Set<string>>(new Set());
+  /** Highlights Claude is reading, and what went wrong asking, by highlight id. Asking goes on if Bob moves on. */
+  const [asking, setAsking] = useState<Record<string, AbortController>>({});
+  const [askError, setAskError] = useState<Record<string, string>>({});
   const open = marks.open;
   const openId = open?.highlight.id;
+
+  // The map shows the open highlight's drafts.
+  const { show } = drafts;
+  useEffect(() => { show(openId ?? null); }, [openId, show]);
+  useEffect(() => () => show(null), [show]);
 
   // A newly opened card starts fresh, and the passage is lifted clear of the tray.
   useLayoutEffect(() => {
@@ -235,6 +265,112 @@ export function CaptureTray({ marks, candidates, articleTitle, onAdd, onOpenReco
     }
   }
 
+  // ----- Claude, for what has no article of its own -----
+  const set = drafts.sets[h.id];
+  const suggestedDim = set?.dimension?.value;
+  const ctl = asking[h.id];
+  const ask = async () => {
+    if (!navigator.onLine) { setAskError((m) => ({ ...m, [h.id]: ASK_OFFLINE })); return; }
+    const c = new AbortController();
+    setAsking((a) => ({ ...a, [h.id]: c }));
+    setAskError(({ [h.id]: _gone, ...m }) => m);
+    try {
+      drafts.put(h.id, await onAsk(h, apiKey, c.signal));
+      // Bring the drafts into view in the tray.
+      requestAnimationFrame(() => {
+        const s = claudeSection.current?.getBoundingClientRect();
+        const t = card.current?.getBoundingClientRect();
+        if (s && t) card.current!.scrollBy({ top: s.top - t.top - 8, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+      });
+    } catch (e) {
+      if ((e as Error).name !== 'AbortError') setAskError((m) => ({ ...m, [h.id]: navigator.onLine ? (e as Error).message : ASK_OFFLINE }));
+    } finally {
+      setAsking(({ [h.id]: _done, ...a }) => a);
+    }
+  };
+  const setStatus = (x: DraftEntry | DraftConnection, status: DraftStatus) => set && drafts.put(h.id, {
+    ...set,
+    entries: set.entries.map((e) => (e === x ? { ...e, status } : e)),
+    connections: set.connections.map((c) => (c === x ? { ...c, status } : c)),
+  });
+  const left = waiting(doc, set);
+
+  let claude: React.ReactNode;
+  if (ctl) {
+    claude = (
+      <div className="ask">
+        <p className="busy" role="status">Claude is reading this passage and its section…</p>
+        <button type="button" className="link" onClick={() => ctl.abort()}>Stop</button>
+      </div>
+    );
+  } else if (set) {
+    claude = (
+      <>
+        {set.entries.length > 0 && (
+          <>
+            <div className="dgroup">Entries</div>
+            <ul className="drows">
+              {set.entries.map((e) => (
+                <DraftEntryRow
+                  key={e.item.id}
+                  entry={e}
+                  status={statusIn(doc, e)}
+                  onAccept={() => {
+                    update((d) => acceptEntry(d, e, Date.now(), h.id));
+                    if (e.item.start) onShowYear?.(Math.round(toDecimalYear(e.item.start)));
+                  }}
+                  onEdit={onEdit && (() => onEdit({ item: { ...e.item, ...(h.dimension && !e.item.dimension ? { dimension: h.dimension } : {}) }, newSources: e.newSources, highlight: h }))}
+                  onReject={() => setStatus(e, 'rejected')}
+                  onRestore={() => setStatus(e, 'pending')}
+                  onUndo={() => update((d) => undoEntry(d, set, e))}
+                />
+              ))}
+            </ul>
+          </>
+        )}
+        {set.connections.length > 0 && (
+          <>
+            <div className="dgroup">Connections</div>
+            <ul className="drows">
+              {set.connections.map((c) => (
+                <DraftConnectionRow
+                  key={c.relation.id}
+                  c={c}
+                  status={statusIn(doc, c)}
+                  entries={set.entries}
+                  onAccept={() => update((d) => acceptConnection(d, c, Date.now(), h.id))}
+                  onReject={() => setStatus(c, 'rejected')}
+                  onRestore={() => setStatus(c, 'pending')}
+                  onUndo={() => update((d) => undoConnection(d, c))}
+                />
+              ))}
+            </ul>
+          </>
+        )}
+        {!set.entries.length && !set.connections.length && <p className="tray-note">Claude found nothing in this passage that isn’t already in Chronicle or on Wikipedia.</p>}
+        <DroppedList dropped={set.dropped} />
+        <p className="dnote">
+          Drafted by {set.provenance.model} ({set.provenance.prompt}).{left > 0 && ' Dashed on the map until you decide.'}
+          {left > 0 && <> <button type="button" className="link" onClick={() => drafts.put(h.id, null)}>Discard the rest</button></>}
+        </p>
+      </>
+    );
+  } else {
+    const why = !online ? <span className="why bad">{ASK_OFFLINE}</span>
+      : !apiKey ? (
+        <span className="why bad">
+          Add your Anthropic API key in {onOpenDrafting ? <button type="button" className="link" onClick={onOpenDrafting}>Drafting with AI</button> : 'Drafting with AI'} first.
+        </span>
+      )
+      : <span className="why">Dates, events and connections the passage states, for you to check one by one.</span>;
+    claude = (
+      <div className="ask">
+        <button type="button" className="ask-btn" disabled={!online || !apiKey} onClick={() => void ask()}><Glyph kind="claude" />Ask Claude</button>
+        {why}
+      </div>
+    );
+  }
+
   const n = rows.length;
   const becomes = (
     <div className="becomes">
@@ -275,7 +411,7 @@ export function CaptureTray({ marks, candidates, articleTitle, onAdd, onOpenReco
 
   return (
     <div ref={tray} className="tray" data-testid="capture-tray">
-      <article className="tray-card" aria-label="Highlight" style={{ '--c': pigment(h.dimension) } as React.CSSProperties}>
+      <article ref={card} className="tray-card" aria-label="Highlight" style={{ '--c': pigment(h.dimension) } as React.CSSProperties}>
         <blockquote className="q">“{h.text}”</blockquote>
         <p className="src">{articleTitle}{section ? ` › ${section}` : ''}</p>
         {becomes}
@@ -285,16 +421,28 @@ export function CaptureTray({ marks, candidates, articleTitle, onAdd, onOpenReco
             <button
               type="button"
               key={d}
+              className={d === suggestedDim ? 'sug' : undefined}
               style={{ '--d': pigment(d) } as React.CSSProperties}
-              title={DIMENSION_LABEL[d]}
-              aria-label={DIMENSION_LABEL[d]}
+              title={`${DIMENSION_LABEL[d]}${d === suggestedDim ? ' (suggested by Claude)' : ''}`}
+              aria-label={`${DIMENSION_LABEL[d]}${d === suggestedDim ? ', suggested by Claude' : ''}`}
               aria-pressed={h.dimension === d}
               disabled={marks.readOnly}
               onClick={() => marks.setDimension(h.dimension === d ? undefined : d)}
             ><i /></button>
           ))}
-          <span className="dn">{h.dimension ? DIMENSION_LABEL[h.dimension] : 'None yet'}</span>
+          <span className="dn">
+            {h.dimension ? <>{DIMENSION_LABEL[h.dimension]}{h.dimension === suggestedDim && <em> · Claude’s suggestion</em>}</>
+              : suggestedDim ? <><em>Claude suggests {DIMENSION_LABEL[suggestedDim]}</em> · pick it to use it</>
+              : 'None yet'}
+          </span>
         </div>
+        {!marks.readOnly && (
+          <section ref={claudeSection} className="claude" aria-label="Claude">
+            <div className="lbl"><Glyph kind="claude" />Claude <span>· for what has no article of its own</span></div>
+            {claude}
+            {askError[h.id] && <div className="notice bad" role="alert">{askError[h.id]}</div>}
+          </section>
+        )}
         {error && <div className="notice bad" role="alert">{error}</div>}
         {!marks.readOnly && (
           <div className="cardacts">

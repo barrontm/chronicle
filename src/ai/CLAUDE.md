@@ -2,7 +2,7 @@
 
 Rules for AI features (decisions: "AI drafts data, never images" and "AI foundation" in `docs/decisions.md`).
 
-Layout: `client.ts` (the tool loop, errors in Bob's words), `key.ts` (the key in localStorage), `draft.ts` (`DraftSet`, accept helpers, prompt version), and one folder per feature, e.g. `entries/` (`prompt.md`, `tools.ts`, `validate.ts`, `toDraft.ts`, `index.ts`, tests). The review UI is `ui/panels/DraftReview.tsx`, lazy-loaded.
+Layout: `client.ts` (the tool loop, errors in Bob's words), `key.ts` (the key in localStorage), `draft.ts` (`DraftSet`, accept helpers, prompt version), and one folder per feature, e.g. `entries/` (`prompt.md`, `tools.ts`, `validate.ts`, `toDraft.ts`, `index.ts`, tests). The review UI is `ui/panels/DraftReview.tsx`, lazy-loaded; its rows (`ui/panels/DraftRows.tsx`) are shared with the reader's tray, which must never import `client.ts` statically (it `import()`s the feature when Bob asks).
 
 - `client.ts` is the only importer of `@anthropic-ai/sdk`, the same rule as vis-timeline and maplibre-gl. It reads Bob's key from the device (never saved in the doc or backups) and says clearly when offline or when no key is set.
 - One folder per feature: `prompt.md` (version line on top), a tool schema built from `model/types.ts`, `validate.ts` (pure, unit-tested), and `toDraft.ts`. The model answers through a tool or structured output into existing types, never free text into the doc.

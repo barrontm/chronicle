@@ -5,7 +5,7 @@ import type { SubjectKind } from '../../model/subjects';
  * battle, event, person, polity and place are the prototype's; the rest are
  * stand-ins until their representations are designed. Drawn in `currentColor`.
  */
-const SHAPES: Record<SubjectKind | 'none', React.ReactNode> = {
+const SHAPES: Record<GlyphKind | 'none', React.ReactNode> = {
   war: <><rect x="1.5" y="6" width="15" height="6" rx="1" fill="currentColor" opacity=".35" /><path d="M6 3.5v11M12 3.5v11" stroke="currentColor" strokeWidth="1.8" /></>,
   battle: <><circle cx="9" cy="9" r="7.5" fill="currentColor" /><path d="M6 6l6 6M12 6l-6 6" stroke="var(--panel)" strokeWidth="1.8" /></>,
   event: <circle cx="9" cy="9" r="5" fill="currentColor" />,
@@ -19,8 +19,13 @@ const SHAPES: Record<SubjectKind | 'none', React.ReactNode> = {
   economy: <><circle cx="9" cy="9" r="6.5" fill="none" stroke="currentColor" strokeWidth="1.6" /><path d="M9 5.5v7" stroke="currentColor" strokeWidth="1.6" /></>,
   work: <><path d="M3 3.5h8.5a3 3 0 0 1 3 3v8H6a3 3 0 0 1-3-3z" fill="none" stroke="currentColor" strokeWidth="1.6" /><path d="M6 7h5.5" stroke="currentColor" strokeWidth="1.4" /></>,
   none: <path d="M4 12c0-3 1-5 3-6M10 12c0-3 1-5 3-6" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" />,
+  // Not a kind of subject: a connection between two records, and Claude, who drafts them.
+  connection: <><path d="M2 9h12" stroke="currentColor" strokeWidth="1.6" /><path d="M10.5 5.5 14 9l-3.5 3.5" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" /></>,
+  claude: <path d="M9 2v14M2 9h14M4 4l10 10M14 4 4 14" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />,
 };
 
-export function Glyph({ kind }: { kind?: SubjectKind }) {
+export type GlyphKind = SubjectKind | 'connection' | 'claude';
+
+export function Glyph({ kind }: { kind?: GlyphKind }) {
   return <svg className="glyph" viewBox="0 0 18 18" aria-hidden="true">{SHAPES[kind ?? 'none']}</svg>;
 }
