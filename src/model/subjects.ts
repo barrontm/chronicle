@@ -1,5 +1,6 @@
 import { formatRange, fromWikidataTime } from './dates';
-import type { HistDate } from './types';
+import { newId } from './doc';
+import type { HistDate, Relation, RelationType } from './types';
 
 /**
  * What an article is about, from Wikidata: its classes (P31 "instance of" and
@@ -160,6 +161,8 @@ export interface SubjectFacts {
   participants: string[];
   locations: string[];
   government: string[];
+  /** P737 "influenced by". Missing on subjects cached before it was read. */
+  influencedBy?: string[];
 }
 
 /** An article's subject. Cached with the article, so it shows offline too. */
@@ -206,6 +209,7 @@ export function parseSubjectEntity(json: unknown): SubjectEntity | undefined {
       participants: idsOf(c, P.participants),
       locations: idsOf(c, P.location),
       government: idsOf(c, P.government),
+      influencedBy: idsOf(c, P.influencedBy),
     },
   };
 }
@@ -294,6 +298,58 @@ export function subjectFacts(s: Subject, max = 3): FactLine[] {
   for (const [label, ids] of rows) {
     const values = named(ids);
     if (values.length) out.push({ label, values });
+  }
+  return out;
+}
+
+// ——— Connections from facts ———
+
+/**
+ * Which facts become which connections, in the order they're suggested. `out`:
+ * the subject is the "from" end ("Salamis is part of the invasion"); `in`: the
+ * record it names is ("what it follows led to it").
+ */
+const FACT_RELATIONS: { fact: keyof SubjectFacts | 'influenced'; type: RelationType; dir: 'out' | 'in' }[] = [
+  { fact: 'partOf', type: 'part-of', dir: 'out' },
+  { fact: 'follows', type: 'caused', dir: 'in' },
+  { fact: 'followedBy', type: 'caused', dir: 'out' },
+  { fact: 'influencedBy', type: 'influenced', dir: 'in' },
+  { fact: 'influenced', type: 'influenced', dir: 'out' },
+  { fact: 'participants', type: 'related', dir: 'out' },
+  { fact: 'locations', type: 'related', dir: 'out' },
+];
+
+/**
+ * Suggested connections between the entry for a subject and entries Bob
+ * already has, from the subject's Wikidata facts: part of → part of, follows
+ * and followed by → led to, influenced by → influenced, participants and
+ * location → related. Each cites `highlightId` when there is one. At most one
+ * per entry, and none that Bob already has. `influenced` (who this person
+ * influenced) comes from a separate search, so it's passed in.
+ */
+export function factRelations(
+  itemId: string,
+  facts: Partial<SubjectFacts> & { influenced?: string[] },
+  doc: { items: { id: string; wikidataId?: string }[]; relations: Relation[] },
+  highlightId?: string,
+): Relation[] {
+  const byQid = new Map(doc.items.filter((i) => i.wikidataId && i.id !== itemId).map((i) => [i.wikidataId!, i.id]));
+  const connected = new Set(doc.relations.flatMap((r) => (r.fromId === itemId ? [r.toId] : r.toId === itemId ? [r.fromId] : [])));
+  const out: Relation[] = [];
+  for (const { fact, type, dir } of FACT_RELATIONS) {
+    for (const qid of (facts[fact] as string[] | undefined) ?? []) {
+      const other = byQid.get(qid);
+      if (!other || connected.has(other)) continue;
+      connected.add(other);
+      out.push({
+        id: newId('r'),
+        fromId: dir === 'out' ? itemId : other,
+        toId: dir === 'out' ? other : itemId,
+        type,
+        ...(highlightId ? { highlightIds: [highlightId] } : {}),
+        updatedAt: 0,
+      });
+    }
   }
   return out;
 }

@@ -1,7 +1,7 @@
 import { compareHistDate } from '../model/dates';
 import { newId } from '../model/doc';
 import {
-  P, classParentsQuery, classesToFetch, claimsFor, coordsOf, dateClaim, firstValue, idOf, idsOf, linkedIds,
+  P, classParentsQuery, classesToFetch, claimsFor, coordsOf, dateClaim, factRelations, firstValue, idOf, idsOf, linkedIds,
   parseClassParents, parseSubjectEntity, toSubject, type ClassParents, type Claims, type Subject,
 } from '../model/subjects';
 import type { Highlight, HistDate, ItemKind, Place, Relation, Source, TimelineItem } from '../model/types';
@@ -213,18 +213,6 @@ export interface InfluenceSuggestion {
   existingId?: string;
 }
 
-/**
- * "Influenced" connections between a (new) entry and entries already on the
- * timeline, from Wikidata ids in both directions.
- */
-export function influenceRelations(itemId: string, byIds: string[], onIds: string[], existingItems: TimelineItem[]): Relation[] {
-  const byQid = new Map(existingItems.filter((i) => i.wikidataId && i.id !== itemId).map((i) => [i.wikidataId!, i.id]));
-  const rel = (fromId: string, toId: string): Relation => ({ id: newId('r'), fromId, toId, type: 'influenced', updatedAt: 0 });
-  const by = [...new Set(byIds)].flatMap((q) => (byQid.has(q) ? [rel(byQid.get(q)!, itemId)] : []));
-  const on = [...new Set(onIds)].flatMap((q) => (byQid.has(q) ? [rel(itemId, byQid.get(q)!)] : []));
-  return [...by, ...on];
-}
-
 /** Person if Wikidata says human; a period if it has distinct start and end; otherwise an event. */
 export function kindAndDates(f: WikidataFacts): { kind: ItemKind; start?: HistDate; end?: HistDate } {
   if (f.isHuman) return { kind: 'person', start: f.born, end: f.died };
@@ -353,21 +341,26 @@ export async function draftFromWikipedia(
   const dup = summary.qid && opts.existingItems.find((i) => i.wikidataId === summary.qid);
   if (dup) return { duplicateOf: dup.id };
   let facts: WikidataFacts | undefined;
+  let entity: ReturnType<typeof parseSubjectEntity>;
   let places: Place[] = [];
   if (summary.qid) {
-    facts = parseEntity(await getJson(buildEntityUrl(summary.qid), opts.signal), summary.qid);
+    const json = await getJson(buildEntityUrl(summary.qid), opts.signal);
+    facts = parseEntity(json, summary.qid);
+    entity = parseSubjectEntity(json);
     places = await fetchPlaces(facts, opts.signal);
   }
   const draft = buildDraft({ summary, facts, places, existingSources: opts.existingSources, categoryId: opts.categoryId, today: opts.today });
-  // Influences are a bonus too: connect the new person to people already on the timeline.
-  if (facts?.isHuman && summary.qid) {
-    let onIds: string[] = [];
-    try {
-      onIds = await fetchInfluenced(summary.qid, opts.signal);
-    } catch {
-      /* "influenced by" from the entity is still worth having */
+  // Connections are a bonus too: what Wikidata says links the new entry to entries already on the timeline.
+  if (entity) {
+    let influenced: string[] = [];
+    if (facts?.isHuman) {
+      try {
+        influenced = await fetchInfluenced(entity.qid, opts.signal);
+      } catch {
+        /* the other facts are still worth having */
+      }
     }
-    const relations = influenceRelations(draft.item.id, facts.influencedByIds, onIds, opts.existingItems);
+    const relations = factRelations(draft.item.id, { ...entity.facts, influenced }, { items: opts.existingItems, relations: [] });
     if (relations.length) draft.relations = relations;
   }
   // The picture is a bonus: if Commons is slow or the file is odd, the entry is still worth having.

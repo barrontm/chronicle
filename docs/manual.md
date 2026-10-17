@@ -65,7 +65,7 @@ The new layout is unfinished. Everything you've saved stays the same whichever l
 - The tray shows the quote and its section, then **Becomes**: what the highlight could be about. The article's own subject comes first, then each article the passage links to, in the order you read them. Each says what kind of thing it is (a war, a person, a polity), and **In Chronicle** or **Linked** if you already have it. Pick one; the first war, battle or event the passage links is picked for you, otherwise the article's subject. What you pick is remembered with the highlight, and the tray still shows the list offline once it's been looked up.
 - Under your pick are its facts from Wikidata: when, where, what it was part of, who took part. Underlined names are already in Chronicle.
 - **Dimension**: pick political, economic, social, technological, intellectual or religious. The highlight takes that color; pick it again to clear it.
-- **Add to map and timeline** fills in an entry for what you picked from its Wikipedia article, with your highlight as its quote and the article you were reading as its source. Check it and press **Add to timeline**. The highlight is then underlined, and it shows on the entry. If you already have it, the button says **Link to …** instead and adds the highlight to it straight away.
+- **Add to map and timeline** fills in an entry for what you picked from its Wikipedia article, with your highlight as its quote and the article you were reading as its source. Check it and press **Add to timeline**. The highlight is then underlined, and it shows on the entry. If you already have it, the button says **Link to …** instead and adds the highlight to it straight away. Either way, connections Wikipedia knows of to your other entries are suggested (see Connections from Wikipedia).
 - Places, polities and ideas can't be added from the tray yet; it says so, and you can keep the highlight.
 - **Just keep the highlight** closes the tray and keeps it as a plain highlight (once the highlight is on something, it says **Done**). **Remove** deletes it. Pressing **Esc**, clicking elsewhere or opening another article also keeps it.
 - With nothing open, the tray counts the article's highlights and how many are on your map and timeline.
@@ -107,11 +107,24 @@ In an entry's editor, connect it to another entry and choose the kind: *influenc
 
 > Use *part of* for battles in a war, so later you can see a war and its battles together.
 
+### Connections from Wikipedia
+
+When you add something from Wikipedia, Chronicle checks what Wikidata says about it against the entries you already have, and suggests connections under **Wikipedia also says** in the editor:
+
+- *part of*: the Battle of Salamis is part of the Second Persian invasion, if you have the invasion.
+- *led to*: what it came after, and what came after it.
+- *influenced*: for people, who influenced them and whom they influenced.
+- *related*: who took part, and where it happened, when those are entries of yours.
+
+They're ticked, so they're saved with the entry. Untick any you disagree with first. If you added it from a highlight, the highlight is kept as the connection's evidence, and it shows under the connection on both entries.
+
+When you **Link** a highlight in the reader to an entry you already have, the tray lists the same kind of connections for that entry, ticked, and saves them when you link.
+
 ### Influences
 
 Click a person on the timeline and the people connected to them by *influenced* light up: amber for who influenced them, blue for whom they influenced, with arrows showing which way it went. Entries connected in other ways (*caused*, *part of*, *responded to*, *related*) get a grey outline and a dashed line. Everything else fades back. The timeline zooms so they're all in view. Click empty space or close the panel to clear it. Lines only show while both entries are in view.
 
-For a person added from Wikipedia, **Suggest influences** lists who Wikipedia says influenced them and whom they influenced. People already on your timeline get **Connect**; the rest get **Add from Wikipedia**. When you add a person from Wikipedia, their influences who are already on your timeline are filled in as connections, so you can remove any you disagree with before saving. Suggestions need a connection.
+For a person added from Wikipedia, **Suggest influences** lists who Wikipedia says influenced them and whom they influenced. People already on your timeline get **Connect**; the rest get **Add from Wikipedia**. When you add a person from Wikipedia, their influences who are already on your timeline are suggested as connections (see Connections from Wikipedia). Suggestions need a connection.
 
 ## Pictures
 

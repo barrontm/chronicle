@@ -59,6 +59,7 @@ export function ItemView({ id, nav }: { id: string; nav: Nav }) {
   const years = item.end ? Math.round(compareHistDate(item.end, item.start)) : null;
   const territories = doc.territories.filter((t) => t.itemId === id);
   const flows = doc.flows.filter((f) => f.itemId === id);
+  const evidence = (r: Relation) => (r.highlightIds ?? []).flatMap((hid) => doc.highlights.filter((h) => h.id === hid));
 
   return (
     <article data-testid="item-view">
@@ -105,6 +106,7 @@ export function ItemView({ id, nav }: { id: string; nav: Nav }) {
                 <button onClick={() => nav.open({ type: 'item', id: other })}>
                   <small>{describeRelation(r.type, dir)}</small>
                   <strong>{titleOf(doc, other) ?? 'Missing entry'}</strong>
+                  {evidence(r).map((h) => <small key={h.id} className="evidence" data-testid="evidence">Evidence: “{h.text.length > 120 ? `${h.text.slice(0, 120)}…` : h.text}”</small>)}
                 </button>
               </li>
             ))}
@@ -203,8 +205,10 @@ export function ItemEditor({ id, init, draft: prefill, nav }: {
   });
   const [valid, setValid] = useState({ start: !!draft.start, end: true });
   const initialRelations = existing ? doc.relations.filter((r) => r.fromId === draft.id || r.toId === draft.id) : [];
-  // A Wikipedia draft arrives with influences on people already on the timeline.
-  const [relations, setRelations] = useState<Relation[]>(existing ? initialRelations : prefill?.relations ?? []);
+  const [relations, setRelations] = useState<Relation[]>(initialRelations);
+  // A Wikipedia draft arrives with connections to entries already on the timeline, from Wikidata's facts. Ticked ones are saved.
+  const suggested = existing ? [] : prefill?.relations ?? [];
+  const [unticked, setUnticked] = useState<Set<string>>(new Set());
   const [choice, setChoice] = useState(0);
   const [picking, setPicking] = useState(false);
   const [quickSource, setQuickSource] = useState(false);
@@ -231,6 +235,7 @@ export function ItemEditor({ id, init, draft: prefill, nav }: {
       }
       for (const r of initialRelations) if (!keep.has(r.id)) next = remove(next, 'relations', r.id);
       for (const r of relations) if (!initialRelations.includes(r)) next = upsert(next, 'relations', r);
+      for (const r of suggested) if (!unticked.has(r.id)) next = upsert(next, 'relations', r);
       return next;
     });
     nav.replace({ type: 'item', id: item.id });
@@ -304,6 +309,28 @@ export function ItemEditor({ id, init, draft: prefill, nav }: {
           );
         })}
       </div>
+      {suggested.length > 0 && (
+        <div className="suggested" data-testid="suggested-connections">
+          <h4>Wikipedia also says</h4>
+          {suggested.map((r) => {
+            const dir = r.fromId === draft.id ? 'out' : 'in';
+            const other = dir === 'out' ? r.toId : r.fromId;
+            const name = `${describeRelation(r.type, dir)} ${titleOf(doc, other) ?? 'Missing entry'}`;
+            return (
+              <label className="check" key={r.id}>
+                <input
+                  type="checkbox"
+                  aria-label={name}
+                  checked={!unticked.has(r.id)}
+                  onChange={(e) => setUnticked((u) => { const n = new Set(u); if (e.target.checked) n.delete(r.id); else n.add(r.id); return n; })}
+                />
+                <span><small style={{ color: 'var(--muted)' }}>{describeRelation(r.type, dir)}</small> {titleOf(doc, other) ?? 'Missing entry'}
+                  {r.highlightIds?.length ? <small style={{ color: 'var(--muted)' }}> · your highlight as evidence</small> : null}</span>
+              </label>
+            );
+          })}
+        </div>
+      )}
       <div className="editor-row">
         <select className="input" style={{ width: 150 }} value={choice} onChange={(e) => setChoice(Number(e.target.value))} aria-label="Kind of connection">
           {CONNECTION_CHOICES.map((c, i) => <option key={c.label} value={i}>{c.label}</option>)}

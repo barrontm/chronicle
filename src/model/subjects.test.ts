@@ -1,7 +1,8 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
+import type { Relation, TimelineItem } from './types';
 import {
-  classesToFetch, classify, findInChronicle, linkedIds, parseClassParents, parseSubjectEntity, subjectFacts, subjectPartOf, subjectWhen, toSubject,
+  classesToFetch, classify, factRelations, findInChronicle, linkedIds, parseClassParents, parseSubjectEntity, subjectFacts, subjectPartOf, subjectWhen, toSubject,
   type ClassParents, type Subject,
 } from './subjects';
 
@@ -141,4 +142,52 @@ it('finds what Bob already has by Wikidata id', () => {
   const items = [{ id: 'a', wikidataId: 'Q80398' }, { id: 'b' }];
   expect(findInChronicle(items, 'Q80398')?.id).toBe('a');
   expect(findInChronicle(items, 'Q1')).toBeUndefined();
+});
+
+describe('connections from facts', () => {
+  const entry = (id: string, wikidataId?: string): TimelineItem => ({ id, kind: 'event', title: id, start: { y: -480 }, categoryId: 'c', updatedAt: 1, ...(wikidataId ? { wikidataId } : {}) });
+  const ends = (rs: Relation[]) => rs.map(({ fromId, toId, type, highlightIds }) => ({ fromId, toId, type, highlightIds }));
+
+  it('makes the Battle of Salamis part of the Second Persian invasion, citing the highlight', () => {
+    const s = subjectOf('Battle_of_Salamis');
+    const items = [entry('invasion', 'Q1122337'), entry('handmade'), entry('elsewhere', 'Q1')];
+    expect(ends(factRelations('salamis', s.facts, { items, relations: [] }, 'h1'))).toEqual([
+      { fromId: 'salamis', toId: 'invasion', type: 'part-of', highlightIds: ['h1'] },
+    ]);
+  });
+
+  it('relates the Peloponnesian War to the participants and places already in Chronicle', () => {
+    const s = subjectOf('Peloponnesian_War');
+    const items = [entry('league', 'Q193235'), entry('persia', 'Q389688'), entry('sicily', 'Q1460'), entry('wars', 'Q29788594')];
+    expect(ends(factRelations('war', s.facts, { items, relations: [] }))).toEqual([
+      { fromId: 'war', toId: 'wars', type: 'part-of', highlightIds: undefined },
+      { fromId: 'war', toId: 'league', type: 'related', highlightIds: undefined },
+      { fromId: 'war', toId: 'persia', type: 'related', highlightIds: undefined },
+      { fromId: 'war', toId: 'sicily', type: 'related', highlightIds: undefined },
+    ]);
+  });
+
+  it('turns follows and followed by into "led to", and influences go both ways', () => {
+    const facts = { follows: ['Q1'], followedBy: ['Q2'], influencedBy: ['Q913', 'Q999'], influenced: ['Q868', 'Q868'] };
+    const items = [entry('before', 'Q1'), entry('after', 'Q2'), entry('socrates', 'Q913'), entry('aristotle', 'Q868')];
+    expect(ends(factRelations('plato', facts, { items, relations: [] }))).toEqual([
+      { fromId: 'before', toId: 'plato', type: 'caused', highlightIds: undefined },
+      { fromId: 'plato', toId: 'after', type: 'caused', highlightIds: undefined },
+      { fromId: 'socrates', toId: 'plato', type: 'influenced', highlightIds: undefined },
+      { fromId: 'plato', toId: 'aristotle', type: 'influenced', highlightIds: undefined },
+    ]);
+  });
+
+  it('suggests nothing Bob already has, nor the entry itself', () => {
+    const s = subjectOf('Battle_of_Salamis');
+    const have: Relation = { id: 'r1', fromId: 'invasion', toId: 'salamis', type: 'related', updatedAt: 1 };
+    expect(factRelations('salamis', s.facts, { items: [entry('invasion', 'Q1122337')], relations: [have] })).toEqual([]);
+    expect(factRelations('salamis', { partOf: ['Q178850'] }, { items: [entry('salamis', 'Q178850')], relations: [] })).toEqual([]);
+  });
+
+  it('reads influences from the entity, and copes with subjects cached before they were read', () => {
+    expect(subjectOf('Pericles').facts.influencedBy).toBeInstanceOf(Array);
+    const old = { partOf: [], follows: [], followedBy: [], participants: [], locations: [], government: [] };
+    expect(factRelations('x', old, { items: [entry('y', 'Q1')], relations: [] })).toEqual([]);
+  });
 });

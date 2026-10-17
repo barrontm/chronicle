@@ -210,6 +210,8 @@ function Article({ article, onOpen, onOpenRecord, onDraft }: {
       item: { ...draft.item, ...(citations ? { citations } : {}), ...(h.dimension ? { dimension: h.dimension } : {}) },
       newSources: [],
       highlight: h,
+      // The highlight is the evidence Bob read for what Wikidata connects.
+      ...(draft.relations ? { relations: draft.relations.map((r) => ({ ...r, highlightIds: [h.id] })) } : {}),
     });
   };
 
