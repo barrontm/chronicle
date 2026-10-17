@@ -23,6 +23,7 @@ Sources are in `docs/prototypes/`; republish one with the Artifact tool after ed
 - **Reader**: https://claude.ai/artifact/DQoHcwpRpcL2AjniH63RF6. Bob chose on 2026-10-16: selecting, with tapping a sentence as an extra on the phone; the capture card in a tray on both laptop and phone. Not chosen: the margin card.
 - **War on the map**: https://claude.ai/artifact/WwwBbRxD4FCBLKGLi8tcDr. Bob chose on 2026-10-17: B · Minard routes and A · Steady playback. Not chosen: plain lines (they hid the size of each force) and Guided playback (the camera following each campaign while time slowed).
 - **How Athens was governed**: https://claude.ai/artifact/655Bst5cfb946u1jG7XBjn. Bob chose on 2026-10-17: B · Bodies. Not chosen: the Chart of who chooses whom in labelled boxes.
+- **From highlight to record** (Phase 2, `docs/prototypes/capture.html`): https://claude.ai/artifact/UuyhpQT6qD1VEbSn3jNnv4. (a) "Becomes" with the passage's candidates, (b) after "Ask Claude", A · drafts in the tray or B · in the draft panel, (c) the folded infobox. Waiting for Bob's pick.
 - **Athens' economy**: https://claude.ai/artifact/K9PKyrZmwCg4QSxjukT4ak. Bob chose on 2026-10-17: A · Treemap and A · Stream. Not chosen: Ranges (low-to-high bars per sector) and Shares (a full-height lane).
 
 ## Overview (levels 0 and 1)

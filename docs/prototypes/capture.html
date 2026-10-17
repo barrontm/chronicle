@@ -1,0 +1,995 @@
+<title>Highlight to record</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600&family=Spectral+SC:wght@500;600&family=Spectral:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+<style>
+/* Layout: the reader prototype's device on a desk. Reader column with its tray on the left, map over a timeline strip on the right; one column on the phone. Phase 2 adds: several candidates in "Becomes", Claude's drafts (A in the tray, B in the draft panel), a folded infobox. */
+:root {
+  --desk: #dfe3dc; --desk-ink: #35424d; --frame: #1d2b3a;
+  --bg: #eef0ec; --panel: #fbfbf8; --ink: #1d2b3a; --ink-2: #4d5b66; --muted: #74808a;
+  --rule: #cfd4cc; --rule-soft: #e1e4dd; --focus: #2f5da8; --page: #fbfbf8;
+  --pol: #2f5da8; --eco: #b8860b; --soc: #a33b6b; --tec: #2e8b74; --int: #4b3f8c; --rel: #c23b22; --umber: #7a5a3a;
+  --map-water: #c9d6d8; --map-land: #ece4cf; --map-border: #a9a48f; --grat: #b7c6c9;
+  --link: #2f5da8; --thumb: #d9d4c4;
+  --font-read: 'Spectral', Georgia, serif;
+  --font-sc: 'Spectral SC', 'Spectral', Georgia, serif;
+  --font-ui: 'Public Sans', system-ui, sans-serif;
+  --motion-quick: 150ms; --motion-move: 400ms; --ease: cubic-bezier(.2,.7,.2,1);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --desk: #0b1116; --desk-ink: #b7bfbf; --frame: #2a3540;
+    --bg: #131b23; --panel: #1a242e; --ink: #e3e6e0; --ink-2: #b7bfbf; --muted: #8a959b;
+    --rule: #33414d; --rule-soft: #26323d; --focus: #7fa3e0; --page: #161f28;
+    --pol: #6f93d6; --eco: #dcae45; --soc: #d06d9a; --tec: #58b89d; --int: #9184d6; --rel: #e0664c; --umber: #b9936b;
+    --map-water: #0f1820; --map-land: #2a2f2c; --map-border: #4a524b; --grat: #1c2a35;
+    --link: #8fb0e8; --thumb: #3a3f3a;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --desk: #0b1116; --desk-ink: #b7bfbf; --frame: #2a3540;
+  --bg: #131b23; --panel: #1a242e; --ink: #e3e6e0; --ink-2: #b7bfbf; --muted: #8a959b;
+  --rule: #33414d; --rule-soft: #26323d; --focus: #7fa3e0; --page: #161f28;
+  --pol: #6f93d6; --eco: #dcae45; --soc: #d06d9a; --tec: #58b89d; --int: #9184d6; --rel: #e0664c; --umber: #b9936b;
+  --map-water: #0f1820; --map-land: #2a2f2c; --map-border: #4a524b; --grat: #1c2a35;
+  --link: #8fb0e8; --thumb: #3a3f3a;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { background: var(--desk); color: var(--ink); font-family: var(--font-ui); }
+button { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+/* ---------- prototype chrome ---------- */
+.proto { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 14px 28px; display: grid; gap: 12px; }
+.pbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; color: var(--desk-ink); }
+.pbar h1 { font: 600 15px/1.2 var(--font-ui); margin: 0; }
+.pbar h1 span { font-weight: 400; color: var(--muted); margin-left: 6px; }
+.controls { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; }
+.seg { display: inline-flex; align-items: center; gap: 6px; border: 0; padding: 0; margin: 0; }
+.seg legend { float: left; font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin-right: 4px; padding: 0; }
+.seg .opts { display: inline-flex; flex-wrap: wrap; border: 1px solid var(--rule); border-radius: 6px; overflow: hidden; background: var(--panel); }
+.seg button { border: 0; background: none; padding: 5px 10px; font-size: 12.5px; cursor: pointer; color: var(--ink-2); }
+.seg button + button { border-left: 1px solid var(--rule); }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--panel); }
+.reset { border: 1px solid var(--rule); background: var(--panel); border-radius: 6px; padding: 5px 10px; font-size: 12.5px; cursor: pointer; color: var(--ink-2); }
+.pnote { margin: 0; font: 14px/1.5 var(--font-read); color: var(--desk-ink); max-width: 90ch; min-height: 3em; }
+.pnote b { font-weight: 600; }
+.pnote .how { display: block; font: 12.5px/1.5 var(--font-ui); color: var(--muted); margin-top: 2px; }
+.stage { display: flex; justify-content: center; min-width: 0; }
+.device { position: relative; width: min(1240px, 100%); height: 780px; border: 1px solid var(--rule); border-radius: 10px; overflow: hidden; background: var(--bg); box-shadow: 0 18px 50px -24px rgb(0 0 0 / .35); }
+.device.phone { width: 412px; max-width: 100%; height: 860px; border: 9px solid var(--frame); border-radius: 34px; }
+@media (max-width: 720px) {
+  .seg.device-seg { display: none; }
+  .device, .device.phone { width: 100%; height: 84vh; min-height: 640px; border: 1px solid var(--rule); border-radius: 12px; }
+}
+
+/* ---------- the app ---------- */
+.app { position: absolute; inset: 0; display: grid; grid-template-rows: 46px minmax(0, 1fr); background: var(--bg); color: var(--ink); }
+.topbar { display: flex; align-items: center; gap: 14px; padding: 0 14px; border-bottom: 1px solid var(--rule); background: var(--panel); min-width: 0; }
+.trail { display: flex; align-items: baseline; gap: 6px; font: 15px/1 var(--font-read); white-space: nowrap; min-width: 0; overflow: hidden; }
+.trail .prev, .trail .sep { color: var(--muted); }
+.trail .cur { font-weight: 500; overflow: hidden; text-overflow: ellipsis; }
+.trail .back { display: none; border: 0; background: none; font-size: 22px; line-height: 1; padding: 0 4px 2px 0; cursor: pointer; color: var(--ink-2); }
+.open-article { margin-left: auto; width: 260px; display: flex; align-items: center; gap: 8px; padding: 6px 10px; border: 1px solid var(--rule); border-radius: 6px; background: var(--bg); color: var(--muted); font-size: 13px; }
+.count { font-size: 12px; color: var(--ink-2); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.mapbtn { display: none; margin-left: auto; border: 1px solid var(--rule); background: var(--bg); border-radius: 6px; padding: 5px 10px; font-size: 12.5px; cursor: pointer; }
+
+.body { display: grid; grid-template-columns: minmax(0, 640px) minmax(0, 1fr); min-height: 0; position: relative; }
+.readcol { position: relative; min-height: 0; border-right: 1px solid var(--rule); background: var(--page); }
+.reader { position: absolute; inset: 0; overflow-y: auto; scroll-behavior: smooth; }
+.page { position: relative; padding: 26px 40px 300px; display: grid; grid-template-columns: minmax(0, 34em); justify-content: center; }
+.article { font: 17px/1.62 var(--font-read); color: var(--ink); min-width: 0; touch-action: manipulation; }
+.article h1 { font: 500 32px/1.15 var(--font-read); margin: 0 0 4px; text-wrap: balance; }
+.article .byline { font: 12px/1.4 var(--font-ui); color: var(--muted); margin: 0 0 14px; }
+.article h2 { font: 600 19px/1.3 var(--font-read); margin: 26px 0 6px; padding-bottom: 3px; border-bottom: 1px solid var(--rule-soft); text-wrap: balance; }
+.article p { margin: 0 0 12px; }
+.article a { color: var(--link); text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--link) 35%, transparent); text-underline-offset: 3px; }
+.article a:hover { text-decoration-color: var(--link); }
+.is-phone .article .s { cursor: pointer; }
+.s.fb { background: color-mix(in srgb, var(--c) 22%, transparent); }
+
+/* the infobox, folded to one line */
+.ibox { margin: 0 0 18px; border: 1px solid var(--rule); border-radius: 6px; background: var(--bg); font-family: var(--font-ui); }
+.ibox-head { width: 100%; display: flex; align-items: center; gap: 10px; padding: 6px 10px 6px 6px; border: 0; background: none; cursor: pointer; text-align: left; }
+.ibox-head .thumb { flex: none; width: 34px; height: 34px; border-radius: 3px; }
+.thumb { background: var(--thumb); display: grid; place-items: center; color: var(--muted); }
+.ibox-head .il { font-size: 13px; font-weight: 600; color: var(--ink-2); }
+.ibox-head .ih { font-size: 12px; color: var(--muted); }
+.ibox-head .chev { margin-left: auto; font-size: 12px; color: var(--ink-2); display: flex; align-items: center; gap: 6px; }
+.ibox-head .chev svg { transition: transform var(--motion-quick); }
+.ibox.open .ibox-head .chev svg { transform: rotate(180deg); }
+.ibox.open .ibox-head .thumb { visibility: hidden; }
+.ibox-body { display: none; padding: 4px 14px 14px; border-top: 1px solid var(--rule-soft); }
+.ibox.open .ibox-body { display: grid; grid-template-columns: 132px minmax(0, 1fr); gap: 4px 18px; align-items: start; }
+.ibox-pic { grid-row: span 7; margin: 8px 0 0; }
+.ibox-pic .thumb { width: 132px; height: 160px; border-radius: 3px; }
+.ibox-pic figcaption { font: 11px/1.35 var(--font-ui); color: var(--muted); margin-top: 5px; }
+.ibox-row { display: grid; grid-template-columns: 76px minmax(0, 1fr); gap: 8px; padding-top: 7px; }
+.ibox-row dt { font-size: 10.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); padding-top: 3px; }
+.ibox-row dd { margin: 0; font: 14.5px/1.4 var(--font-read); color: var(--ink); }
+.is-phone .ibox.open .ibox-body { grid-template-columns: minmax(0, 1fr); }
+.is-phone .ibox-pic { grid-row: auto; display: flex; gap: 10px; align-items: end; }
+.is-phone .ibox-pic .thumb { width: 96px; height: 116px; }
+
+.seltool { position: absolute; z-index: 4; transform: translate(-50%, -100%); display: flex; gap: 2px; padding: 3px; background: var(--ink); border-radius: 6px; box-shadow: 0 6px 16px -6px rgb(0 0 0 / .4); }
+.seltool button { border: 0; background: none; color: var(--panel); padding: 5px 10px; font-size: 13px; font-weight: 600; cursor: pointer; border-radius: 4px; display: flex; align-items: center; gap: 6px; }
+.seltool kbd { font: 10.5px/1 var(--font-ui); opacity: .65; }
+.seltool.docked { position: absolute; left: 12px; right: 12px; bottom: 64px; top: auto; transform: none; justify-content: center; }
+.seltool.docked button { flex: 1; justify-content: center; padding: 10px; font-size: 14px; }
+
+/* ---------- capture card in the tray ---------- */
+.tray { position: absolute; left: 0; right: 0; bottom: 0; z-index: 5; }
+.tray-inner { margin: 0 auto; max-width: 640px; background: var(--panel); border-top: 1px solid var(--rule); box-shadow: 0 -12px 28px -20px rgb(0 0 0 / .35); }
+.card { --c: var(--umber); display: flex; flex-direction: column; max-height: 470px; font-size: 13px; animation: rise var(--motion-move) var(--ease); }
+.card .cbody { overflow-y: auto; padding: 14px 40px 6px; min-height: 0; }
+.card .q { margin: 0; font: italic 14.5px/1.45 var(--font-read); color: var(--ink); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; border-left: 3px solid color-mix(in srgb, var(--c) 55%, transparent); padding-left: 10px; }
+.card .src { margin: 4px 0 10px 13px; font-size: 11px; color: var(--muted); }
+.sect { border-top: 1px solid var(--rule-soft); padding: 9px 0 10px; }
+.sect > .lbl { display: flex; align-items: baseline; gap: 6px; font-size: 10.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin-bottom: 6px; }
+.sect > .lbl span { text-transform: none; letter-spacing: 0; font-size: 11.5px; }
+.cands { display: grid; gap: 2px; }
+.cand { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; align-items: center; gap: 8px; width: 100%; text-align: left; border: 1px solid transparent; background: none; border-radius: 5px; padding: 4px 8px 4px 6px; cursor: pointer; }
+.cand .line { display: block; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cand:hover { background: color-mix(in srgb, var(--ink) 4%, transparent); }
+.cand[aria-checked="true"] { border-color: color-mix(in srgb, var(--c) 50%, var(--rule)); background: color-mix(in srgb, var(--c) 7%, var(--panel)); }
+.cand .ct { font: 500 15px/1.4 var(--font-read); }
+.cand .ck { font-size: 11.5px; color: var(--muted); margin-left: 6px; }
+.cand .radio { position: absolute; }
+.glyph { width: 18px; height: 18px; color: var(--c); display: block; }
+.facts { margin: 8px 0 0 36px; display: grid; gap: 3px; }
+.fact { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 8px; align-items: baseline; }
+.fact dt { font-size: 10.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.fact dd { margin: 0; font: 14px/1.35 var(--font-read); min-width: 0; }
+.fact .pin { color: var(--muted); font: 11px var(--font-ui); }
+.have-u { text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--c) 60%, transparent); text-underline-offset: 3px; }
+.tag { font: 500 9.5px/1 var(--font-ui); letter-spacing: .04em; padding: 3px 5px; border-radius: 3px; white-space: nowrap; color: var(--ink-2); border: 1px solid var(--rule); }
+.tag.ai { border-style: dashed; border-color: var(--umber); color: var(--umber); }
+.tag.have { background: var(--rule-soft); border-color: transparent; }
+.tag.linked { background: var(--ink); border-color: var(--ink); color: var(--panel); }
+.note { margin: 6px 0 0 36px; font: italic 13px/1.4 var(--font-read); color: var(--muted); }
+.dimpick { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; }
+.dimpick button { width: 26px; height: 26px; padding: 0; border: 1px solid var(--rule); background: var(--panel); border-radius: 4px; cursor: pointer; display: grid; place-items: center; position: relative; }
+.dimpick button i { width: 12px; height: 12px; background: var(--d); border-radius: 2px; }
+.dimpick button[aria-pressed="true"] { border-color: var(--d); box-shadow: 0 0 0 1px var(--d); }
+.dimpick button.sug::after { content: ''; position: absolute; inset: -5px; border: 1.5px dashed var(--umber); border-radius: 6px; pointer-events: none; }
+.dimpick .dn { margin-left: 8px; font-size: 12px; color: var(--ink-2); }
+.dimpick .dn em { font-style: normal; color: var(--umber); }
+
+/* asking Claude */
+.ask { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
+.ask button { display: inline-flex; align-items: center; gap: 6px; border: 1px dashed var(--umber); background: var(--panel); color: var(--ink); padding: 6px 10px; border-radius: 5px; font-size: 12.5px; font-weight: 600; cursor: pointer; }
+.ask button:disabled { opacity: .5; cursor: default; }
+.ask .why { font-size: 12px; color: var(--muted); flex: 1; min-width: 180px; }
+.ask .why.bad { color: var(--rel); }
+.busy { font: italic 13.5px/1.4 var(--font-read); color: var(--umber); margin: 0; }
+.summary { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; }
+.summary p { margin: 0; flex: 1; min-width: 200px; font: 14px/1.4 var(--font-read); }
+.summary button { border: 1px solid var(--ink); background: var(--ink); color: var(--panel); padding: 6px 11px; border-radius: 5px; font-size: 12.5px; font-weight: 600; cursor: pointer; }
+
+/* draft rows: shared by the tray (A) and the draft panel (B) */
+.dgroup { font-size: 10.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 10px 0 5px; }
+.dgroup:first-child { margin-top: 0; }
+.drows { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.drow { --c: var(--umber); display: grid; grid-template-columns: 20px minmax(0, 1fr); gap: 0 8px; padding: 8px 10px 9px 8px; border: 1px dashed color-mix(in srgb, var(--umber) 65%, transparent); border-radius: 6px; background: var(--panel); }
+.drow .glyph { color: var(--umber); margin-top: 2px; }
+.drow.accepted { border-style: solid; border-color: var(--rule); }
+.drow.accepted .glyph { color: var(--c); }
+.drow.rejected { opacity: .55; }
+.drow.rejected .t { text-decoration: line-through; text-decoration-color: var(--muted); }
+.drow .t { font: 500 15px/1.3 var(--font-read); }
+.drow .m { font-size: 11.5px; color: var(--muted); margin-top: 1px; }
+.drow .m i { font-style: normal; color: var(--umber); }
+.drow .ev { margin: 5px 0 0; font: italic 13px/1.4 var(--font-read); color: var(--ink-2); }
+.drow .ev q { quotes: '“' '”'; }
+.drow .ev q + q::before { content: ' … “'; }
+.drow .acts { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 7px; }
+.drow .acts button { border: 1px solid var(--rule); background: var(--bg); padding: 5px 9px; border-radius: 5px; font-size: 12px; cursor: pointer; }
+.drow .acts .primary { background: var(--ink); border-color: var(--ink); color: var(--panel); font-weight: 600; }
+.drow .acts .primary:disabled { opacity: .35; cursor: default; }
+.drow .acts .quiet { border: 0; background: none; color: var(--muted); text-decoration: underline; text-underline-offset: 3px; padding: 5px 3px; }
+.drow .acts .state { font-size: 12px; color: var(--ink-2); }
+.drow .acts small { font-size: 11.5px; color: var(--muted); }
+.end { text-underline-offset: 3px; }
+.end.have { text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--c) 60%, transparent); }
+.end.draft { text-decoration: underline dashed var(--umber); text-decoration-thickness: 1px; }
+.eff { display: inline-block; font: 500 11px/1 var(--font-ui); color: var(--umber); border: 1px dashed var(--umber); border-radius: 10px; padding: 3px 7px; margin: 0 3px; vertical-align: 2px; white-space: nowrap; }
+.accepted .eff { border-style: solid; color: var(--ink-2); border-color: var(--rule); }
+.dnote { margin: 8px 0 0; font: italic 12.5px/1.4 var(--font-read); color: var(--muted); }
+
+.cfoot { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 10px 40px 12px; border-top: 1px solid var(--rule-soft); background: var(--panel); }
+.cfoot button { border: 1px solid var(--rule); background: var(--bg); padding: 7px 10px; border-radius: 5px; font-size: 12.5px; cursor: pointer; }
+.cfoot .primary { background: var(--ink); border-color: var(--ink); color: var(--panel); font-weight: 600; }
+.cfoot .link { border: 0; background: none; color: var(--muted); padding: 7px 4px; margin-left: auto; text-decoration: underline; text-underline-offset: 3px; }
+.tray-bar { display: flex; align-items: center; gap: 10px; padding: 10px 40px; font-size: 12.5px; color: var(--ink-2); min-height: 44px; }
+.tray-bar .msg { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tray-bar .msg strong { font-weight: 600; color: var(--ink); }
+.tray-bar button { border: 1px solid var(--rule); background: var(--bg); border-radius: 5px; padding: 6px 10px; font-size: 12.5px; cursor: pointer; }
+@keyframes rise { from { transform: translateY(24px); opacity: 0; } }
+.is-phone .tray-inner { max-width: none; border-radius: 14px 14px 0 0; position: relative; }
+.is-phone .tray-inner::before { content: ''; position: absolute; top: 6px; left: 50%; width: 36px; height: 4px; margin-left: -18px; border-radius: 2px; background: var(--rule); z-index: 1; }
+.is-phone .card { max-height: 560px; }
+.is-phone .card .cbody { padding: 18px 16px 6px; }
+.is-phone .cfoot { padding: 10px 16px 14px; }
+.is-phone .tray-bar { padding: 14px 16px 12px; }
+.is-phone .facts, .is-phone .note { margin-left: 0; }
+
+/* ---------- B: the draft panel, today's drawer ---------- */
+.drawer { position: absolute; top: 0; right: 0; bottom: 0; width: 380px; z-index: 8; background: var(--panel); border-left: 1px solid var(--rule); box-shadow: -14px 0 30px -22px rgb(0 0 0 / .45); display: flex; flex-direction: column; animation: slidein var(--motion-move) var(--ease); }
+@keyframes slidein { from { transform: translateX(40px); opacity: 0; } }
+.drawer header { display: flex; align-items: center; gap: 8px; padding: 12px 16px; border-bottom: 1px solid var(--rule); }
+.drawer h2 { margin: 0; font: 600 15px/1.2 var(--font-ui); }
+.drawer header button { margin-left: auto; border: 1px solid var(--rule); background: var(--bg); border-radius: 5px; padding: 5px 9px; font-size: 12.5px; cursor: pointer; }
+.drawer .dbody { overflow-y: auto; padding: 12px 16px 18px; display: grid; gap: 10px; align-content: start; }
+.drawer .from { margin: 0; font-size: 11.5px; color: var(--muted); }
+.drawer blockquote { margin: 0; font: italic 14px/1.45 var(--font-read); border-left: 3px solid color-mix(in srgb, var(--c) 55%, transparent); padding-left: 10px; }
+.drawer .dimline { margin: 0; font-size: 12.5px; color: var(--ink-2); }
+.drawer .dimline em { font-style: normal; color: var(--umber); }
+.drawer .dacts { display: flex; gap: 6px; flex-wrap: wrap; }
+.drawer .dacts button { border: 1px solid var(--rule); background: var(--bg); border-radius: 5px; padding: 7px 10px; font-size: 12.5px; cursor: pointer; }
+.drawer .subtle { margin: 0; font-size: 11.5px; color: var(--muted); }
+.is-phone .drawer { top: 54px; left: 0; width: auto; border-left: 0; border-top: 1px solid var(--rule); border-radius: 14px 14px 0 0; box-shadow: 0 -14px 30px -18px rgb(0 0 0 / .5); animation-name: rise; }
+
+/* ---------- map and timeline ---------- */
+.side { display: grid; grid-template-rows: minmax(0, 1fr) 230px; min-height: 0; background: var(--panel); }
+.sidehead { display: none; }
+.mapbox { position: relative; background: var(--map-water); min-height: 0; overflow: hidden; }
+.mapbox svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.maplabel { position: absolute; left: 10px; top: 8px; font-size: 11px; color: var(--ink-2); background: color-mix(in srgb, var(--panel) 80%, transparent); padding: 3px 6px; border-radius: 3px; }
+.land { fill: var(--map-land); stroke: var(--map-border); }
+.grat { stroke: var(--grat); fill: none; }
+.ctx { font-family: var(--font-sc); fill: var(--ink-2); letter-spacing: .1em; }
+.ctxdot { fill: var(--ink-2); }
+.plabel { font-family: var(--font-ui); fill: var(--ink); paint-order: stroke; stroke: var(--map-land); stroke-linejoin: round; }
+.pin.ghost .plabel { fill: var(--ink-2); font-style: italic; }
+.pin.ghost .halo { fill: none; stroke: var(--umber); stroke-dasharray: 3 3; }
+.pin.fresh { animation: pop var(--motion-move) var(--ease); transform-box: fill-box; transform-origin: center; }
+.ring { fill: none; stroke: var(--c); transform-box: fill-box; transform-origin: center; animation: ring 1.1s var(--ease) forwards; }
+@keyframes pop { from { transform: scale(.4); opacity: 0; } }
+@keyframes ring { from { transform: scale(.4); opacity: .9; } to { transform: scale(2.6); opacity: 0; } }
+
+.tl { position: relative; border-top: 1px solid var(--rule); background: var(--panel); overflow: hidden; }
+.tlhead { position: absolute; left: 12px; top: 7px; font-size: 11px; color: var(--muted); }
+.tl svg.arcs { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
+.arc { fill: none; stroke: var(--ink-2); stroke-width: 1.3; }
+.arc.pending { stroke: var(--umber); stroke-dasharray: 4 3; }
+.arch { fill: var(--ink-2); }
+.arch.pending { fill: var(--umber); }
+.arclab { font: 500 10.5px var(--font-ui); fill: var(--ink-2); paint-order: stroke; stroke: var(--panel); stroke-width: 3px; }
+.arclab.pending { fill: var(--umber); font-style: italic; }
+.ti { position: absolute; --c: var(--pol); }
+.ti .bar { position: absolute; left: 0; height: 100%; width: 100%; background: color-mix(in srgb, var(--c) 22%, var(--panel)); border: 1px solid color-mix(in srgb, var(--c) 70%, transparent); border-radius: 2px; }
+.ti.war .bar { background: color-mix(in srgb, var(--c) 30%, var(--panel)); }
+.ti.person .bar { height: 2px; top: 50%; margin-top: -1px; background: var(--c); border: 0; }
+.ti.person .bar::after { content: ''; position: absolute; right: -3px; top: -3px; width: 6px; height: 6px; border-radius: 50%; background: var(--c); }
+.ti.person.approx .bar { background: repeating-linear-gradient(90deg, var(--c) 0 6px, transparent 6px 9px); }
+.ti.point .bar { width: 9px; height: 9px; left: -4.5px; top: 50%; margin-top: -4.5px; border-radius: 50%; background: var(--c); border: 0; }
+.ti .lab { position: absolute; bottom: calc(100% + 2px); left: 0; font: 12.5px/1 var(--font-read); color: var(--ink); white-space: nowrap; }
+.ti.point .lab { bottom: auto; top: 50%; left: 10px; transform: translateY(-50%); }
+.ti.ghost .bar { background: transparent; border: 1px dashed var(--umber); }
+.ti.ghost.point .bar { border: 1.5px dashed var(--umber); }
+.ti.ghost.openend .bar { border-right: 0; -webkit-mask-image: linear-gradient(90deg, #000 55%, transparent); mask-image: linear-gradient(90deg, #000 55%, transparent); }
+.ti.openend:not(.ghost) .bar { border-right: 0; -webkit-mask-image: linear-gradient(90deg, #000 55%, transparent); mask-image: linear-gradient(90deg, #000 55%, transparent); }
+.ti.ghost .lab { color: var(--ink-2); font-style: italic; }
+.ti.fresh { animation: pop var(--motion-move) var(--ease); }
+.tlaxis { position: absolute; left: 0; right: 0; bottom: 0; height: 22px; border-top: 1px solid var(--rule-soft); }
+.tlaxis span { position: absolute; top: 5px; transform: translateX(-50%); font: 11px/1 var(--font-ui); color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.tlaxis i { position: absolute; top: 0; height: 3px; border-left: 1px solid var(--rule); }
+
+.toast { position: absolute; left: 50%; bottom: 74px; transform: translateX(-50%); z-index: 9; max-width: calc(100% - 32px); background: var(--ink); color: var(--panel); font-size: 12.5px; padding: 8px 12px; border-radius: 6px; box-shadow: 0 8px 20px -10px rgb(0 0 0 / .5); }
+
+/* ---------- phone ---------- */
+.is-phone .body { grid-template-columns: minmax(0, 1fr); }
+.is-phone .page { grid-template-columns: minmax(0, 1fr); padding: 14px 18px 160px; }
+.is-phone .open-article, .is-phone .trail .prev, .is-phone .trail .sep, .is-phone .count { display: none; }
+.is-phone .trail .back { display: inline; }
+.is-phone .mapbtn { display: inline-block; }
+.is-phone .article h1 { font-size: 27px; }
+.is-phone .readcol { border: 0; }
+.is-phone .side { position: absolute; left: 0; right: 0; top: 0; bottom: 0; z-index: 7; grid-template-rows: auto minmax(0, 1fr) 230px; transform: translateY(102%); visibility: hidden; transition: transform var(--motion-move) var(--ease), visibility 0s linear var(--motion-move); }
+.is-phone.show-map .side { transform: none; visibility: visible; transition: transform var(--motion-move) var(--ease), visibility 0s; }
+.is-phone .sidehead { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--rule); background: var(--panel); font-size: 13px; color: var(--ink-2); }
+.sidehead button { margin-left: auto; border: 1px solid var(--rule); background: var(--bg); border-radius: 5px; padding: 6px 10px; font-size: 12.5px; cursor: pointer; }
+
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition-duration: 0s !important; animation-duration: 0s !important; } .reader { scroll-behavior: auto; } }
+</style>
+
+<div class="proto">
+  <header class="pbar">
+    <h1>From highlight to record <span>Phase 2 prototype · sample text, Classical Greece fixture</span></h1>
+    <div class="controls">
+      <fieldset class="seg" id="scn"><legend>Show</legend><span class="opts"><button data-v="a" aria-pressed="true">a · Becomes</button><button data-v="b" aria-pressed="false">b · After Ask Claude</button><button data-v="c" aria-pressed="false">c · Infobox</button></span></fieldset>
+      <fieldset class="seg" id="mode"><legend>Drafts</legend><span class="opts"><button data-v="A" aria-pressed="true">A · In the tray</button><button data-v="B" aria-pressed="false">B · In the draft panel</button></span></fieldset>
+      <fieldset class="seg" id="env"><legend>Claude</legend><span class="opts"><button data-v="ready" aria-pressed="true">Ready</button><button data-v="offline" aria-pressed="false">Offline</button><button data-v="nokey" aria-pressed="false">No key</button></span></fieldset>
+      <fieldset class="seg device-seg" id="dev"><legend>Device</legend><span class="opts"><button data-v="laptop" aria-pressed="true">Laptop</button><button data-v="phone" aria-pressed="false">Phone</button></span></fieldset>
+      <fieldset class="seg" id="thm"><legend>Theme</legend><span class="opts"><button data-v="light" aria-pressed="false">Light</button><button data-v="dark" aria-pressed="false">Dark</button></span></fieldset>
+      <button class="reset" id="reset" type="button">Start over</button>
+    </div>
+  </header>
+  <p class="pnote" id="pnote"></p>
+  <main class="stage">
+    <div class="device" id="device">
+      <div class="app" id="app">
+        <div class="topbar">
+          <nav class="trail" aria-label="Reading trail"><button class="back" type="button" aria-label="Back">‹</button><span class="prev">Delian League</span><span class="sep">›</span><span class="cur">Pericles</span></nav>
+          <div class="open-article" title="Not part of this prototype"><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><circle cx="6" cy="6" r="4.5" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M9.5 9.5L13 13" stroke="currentColor" stroke-width="1.4"/></svg>Open an article</div>
+          <span class="count" id="count"></span>
+          <button class="mapbtn" id="mapbtn" type="button">Map</button>
+        </div>
+        <div class="body" id="body">
+          <div class="readcol">
+            <div class="reader" id="reader">
+              <div class="page" id="page">
+                <article class="article" id="article">
+                  <h1>Pericles</h1>
+                  <p class="byline">Wikipedia · sample text written for this prototype · Person, c. 495–429 BCE · Already in Chronicle</p>
+                  <section class="ibox" id="ibox" data-sec="Infobox">
+                    <button class="ibox-head" id="iboxHead" type="button" aria-expanded="false" aria-controls="iboxBody">
+                      <span class="thumb" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 16 16"><rect x="1.5" y="2.5" width="13" height="11" rx="1" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M2 12l4-4 3 3 2-2 3 3" fill="none" stroke="currentColor" stroke-width="1.2"/></svg></span>
+                      <span><span class="il">Infobox</span> <span class="ih">· picture and 6 rows</span></span>
+                      <span class="chev"><span id="iboxWord">Show</span><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 4.5L6 8l3.5-3.5" fill="none" stroke="currentColor" stroke-width="1.5"/></svg></span>
+                    </button>
+                    <div class="ibox-body" id="iboxBody">
+                      <figure class="ibox-pic"><span class="thumb" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 16 16"><rect x="1.5" y="2.5" width="13" height="11" rx="1" fill="none" stroke="currentColor" stroke-width="1"/><path d="M2 12l4-4 3 3 2-2 3 3" fill="none" stroke="currentColor" stroke-width="1"/></svg></span><figcaption>The article's picture: a Roman copy of a bust by Kresilas. (A placeholder here.)</figcaption></figure>
+                      <dl style="margin:0;display:contents">
+                        <div class="ibox-row"><dt>Born</dt><dd><span class="s" data-s="i1">c. 495 BC, Athens</span></dd></div>
+                        <div class="ibox-row"><dt>Died</dt><dd><span class="s" data-s="i2">429 BC, Athens</span></dd></div>
+                        <div class="ibox-row"><dt>Office</dt><dd><span class="s" data-s="i3">General (strategos), most years from 443 BC</span></dd></div>
+                        <div class="ibox-row"><dt>Partner</dt><dd><span class="s" data-s="i4"><a href="#" data-ent="aspasia">Aspasia</a></span></dd></div>
+                        <div class="ibox-row"><dt>Children</dt><dd><span class="s" data-s="i5">Xanthippus, Paralus, Pericles the Younger</span></dd></div>
+                        <div class="ibox-row"><dt>Parents</dt><dd><span class="s" data-s="i6">Xanthippus and Agariste</span></dd></div>
+                      </dl>
+                    </div>
+                  </section>
+                  <p data-sec="">
+                    <span class="s" data-s="s1">Pericles (c. 495 – 429 BC) was an Athenian statesman and general who led <a href="#" data-ent="athens">Athens</a> through its golden age, between the Persian and <a href="#" data-ent="pelwar">Peloponnesian</a> wars.</span>
+                    <span class="s" data-s="s2">He was elected general almost every year from 443 BC until his death.</span>
+                  </p>
+                  <h2>Democracy</h2>
+                  <p data-sec="Democracy">
+                    <span class="s" data-s="s3">Pericles rose as an ally of <a href="#" data-ent="ephialtes">Ephialtes</a>, whose reforms in 462 BC took most of the old council's powers.</span>
+                    <span class="s" data-s="s4">In 451 BC he proposed a <a href="#" data-ent="citizenship">law</a> that limited citizenship to men whose parents were both Athenian.</span>
+                  </p>
+                  <h2>Empire and the building programme</h2>
+                  <p data-sec="Empire and the building programme">
+                    <span class="s" data-s="s5">In 454 BC the treasury of the <a href="#" data-ent="delian">Delian League</a> was moved from <a href="#" data-ent="delos">Delos</a> to Athens.</span>
+                    <span class="s" data-s="s6">From 447 BC Pericles used its tribute to pay for a great building programme on the <a href="#" data-ent="acropolis">Acropolis</a>, beginning with the <a href="#" data-ent="parthenon">Parthenon</a>, whose sculpture was overseen by <a href="#" data-ent="phidias">Phidias</a>.</span>
+                    <span class="s" data-s="s7">His rival <a href="#" data-ent="thucmel">Thucydides, son of Melesias</a>, said Athens was decking itself out with the allies' money like a vain woman; in 443 BC he was <a href="#" data-ent="ostracism">ostracised</a>.</span>
+                  </p>
+                  <h2>Peloponnesian War</h2>
+                  <p data-sec="Peloponnesian War">
+                    <span class="s" data-s="s8">When the <a href="#" data-ent="pelwar">Peloponnesian War</a> broke out in 431 BC, Pericles persuaded the Athenians to abandon the farms of <a href="#" data-ent="attica">Attica</a> and shelter behind the <a href="#" data-ent="longwalls">Long Walls</a>, trusting in the fleet.</span>
+                    <span class="s" data-s="s9">That winter he gave the <a href="#" data-ent="funeral">funeral oration</a> for the war's first dead, as <a href="#" data-ent="thucydides">Thucydides</a> later wrote it down.</span>
+                    <span class="s" data-s="s10">In 430 BC <a href="#" data-ent="plague">plague</a> broke out in the crowded city; Pericles died of it in the autumn of 429 BC.</span>
+                  </p>
+                </article>
+                <div class="seltool" id="seltool" hidden><button type="button" id="hlbtn"><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="M2 12h10M4 9l5-6 2 2-5 6H4z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>Highlight <kbd>H</kbd></button></div>
+              </div>
+            </div>
+            <div class="tray" id="tray"><div class="tray-inner" id="trayInner"></div></div>
+          </div>
+          <div class="side" id="side">
+            <div class="sidehead"><span>Map and timeline</span><button type="button" id="closeMap">Back to reading</button></div>
+            <div class="mapbox" id="mapbox"><svg id="map" role="img" aria-label="Map of the Aegean with what this article is linked to"></svg><span class="maplabel">Map · this article</span></div>
+            <div class="tl" id="tl"></div>
+          </div>
+          <aside class="drawer" id="drawer" hidden aria-label="Draft with AI"></aside>
+        </div>
+        <div class="toast" id="toast" hidden></div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+(() => {
+'use strict';
+const GEO = {"W":1000,"H":539,"lon0":12,"lat1":42.4,"kx":0.7826081568524139,"sx":69.06911662083238,"d":"M1000.0 411.4L998.6 414.3L1000.0 419.7L998.2 422.2L999.3 422.2L994.5 427.8L993.7 423.1L992.5 423.5L985.6 420.7L981.5 421.4L980.8 424.5L980.1 423.1L979.0 425.5L975.6 424.2L974.9 424.5L976.0 425.0L972.3 427.0L968.5 426.9L963.8 429.2L961.1 432.4L960.1 432.6L960.8 431.1L957.8 430.8L955.3 433.5L952.6 429.8L953.4 430.1L953.6 429.1L950.5 429.2L952.6 428.3L945.6 427.5L942.3 425.5L941.6 426.1L941.2 423.6L939.5 423.8L937.8 426.0L931.6 419.6L927.5 417.4L926.7 417.9L926.7 416.0L924.1 415.0L926.0 413.6L925.6 410.7L924.1 409.3L925.6 408.0L925.1 403.9L919.7 404.2L920.9 403.3L920.0 401.3L921.2 398.9L921.9 399.6L924.1 397.6L923.8 398.7L925.2 398.2L924.1 396.1L916.6 391.8L915.6 390.2L910.8 396.1L911.9 398.5L912.7 395.7L913.6 396.6L911.9 400.1L909.7 400.4L909.1 399.2L910.4 398.0L907.5 397.1L907.2 395.3L905.2 393.9L902.8 393.3L900.8 394.2L900.0 392.4L898.6 393.7L897.5 391.4L897.9 385.7L897.1 387.1L896.0 385.4L894.4 385.2L893.2 385.9L893.4 387.6L891.2 386.7L891.9 385.7L889.5 384.8L889.3 381.0L888.4 382.3L885.2 383.0L887.8 384.8L886.3 387.5L881.9 385.7L881.9 387.1L879.9 387.0L879.9 385.8L881.9 384.8L878.8 383.6L877.7 385.9L878.3 389.1L880.8 392.3L879.3 391.6L878.2 392.8L877.5 392.3L877.5 393.7L873.6 395.6L870.9 400.3L869.6 401.4L868.2 400.9L866.8 403.0L865.6 402.3L865.1 403.2L863.7 403.0L862.7 400.4L866.7 400.4L869.7 397.6L869.0 396.6L867.5 398.0L868.2 396.1L866.9 394.3L866.5 395.7L863.0 394.5L867.1 392.3L871.2 392.4L871.2 391.4L869.3 390.4L870.8 388.5L871.9 390.0L870.6 386.6L867.4 389.3L866.7 388.5L860.4 390.9L860.1 390.0L857.1 390.9L854.4 389.5L849.7 389.8L847.8 391.8L847.1 396.6L840.8 394.7L836.4 397.1L832.7 396.1L832.1 394.8L830.8 395.2L830.0 392.8L833.2 393.1L835.1 390.0L843.9 389.2L844.5 386.7L845.7 386.3L848.2 387.9L851.9 388.1L854.0 386.3L859.3 385.9L866.4 388.1L867.9 386.2L865.2 384.8L866.2 384.1L865.2 382.9L867.9 381.9L866.0 379.1L867.1 379.1L866.4 378.1L868.2 378.1L867.1 377.2L873.4 377.7L873.8 379.1L873.4 376.7L874.9 377.2L876.3 372.9L878.1 373.8L878.2 372.4L882.7 370.4L881.3 369.5L871.7 370.5L870.7 370.8L870.8 372.0L864.1 370.5L853.4 372.4L853.0 373.4L848.0 372.6L845.2 374.3L841.5 373.2L841.2 374.8L836.4 373.4L834.5 371.1L832.9 371.8L832.3 371.1L831.5 373.4L831.2 371.1L828.6 372.0L827.5 375.8L825.0 375.5L823.2 368.7L826.7 365.4L824.9 365.4L824.5 364.4L828.2 364.4L828.2 362.0L829.3 364.0L831.5 362.5L831.7 364.0L834.5 364.4L835.7 366.8L841.4 364.3L841.9 363.5L840.8 364.0L839.3 359.7L842.6 359.2L841.9 360.6L843.8 359.2L842.7 357.0L844.1 354.0L840.7 354.1L838.6 357.1L837.8 356.8L838.8 356.0L838.3 354.5L835.9 355.6L837.4 350.4L836.4 349.2L836.1 351.2L834.9 351.9L832.3 350.7L832.3 347.7L834.5 346.0L832.8 344.5L830.8 345.0L829.5 347.4L828.2 347.4L828.7 348.7L824.1 349.8L821.1 348.3L821.9 345.5L823.0 345.0L822.8 340.0L820.4 340.7L820.6 335.4L822.1 334.1L822.1 331.7L811.4 327.0L811.9 325.6L817.7 325.4L822.3 323.7L824.3 321.6L824.9 317.5L823.7 313.3L825.7 308.8L823.7 304.7L818.4 304.9L814.6 302.5L813.8 300.7L809.5 299.4L805.0 300.0L803.9 301.5L802.3 298.6L801.9 294.8L799.7 292.0L798.7 292.5L797.9 288.9L791.1 289.8L790.4 294.3L789.7 293.9L788.9 296.7L787.4 293.9L786.9 295.5L785.1 293.7L784.8 291.5L783.3 291.9L779.3 288.7L779.3 290.1L777.8 288.4L777.8 285.8L775.9 288.1L769.4 284.5L773.4 281.6L772.4 280.4L772.7 278.4L773.4 279.2L774.1 277.8L773.7 280.6L777.6 281.9L777.5 280.2L779.3 280.6L782.5 278.6L781.2 274.5L783.2 275.8L784.5 274.0L780.6 271.2L777.7 272.5L778.6 270.2L776.7 266.9L775.6 260.0L776.0 258.2L779.1 257.0L784.1 258.8L790.8 268.0L791.5 271.6L788.5 272.1L789.5 272.6L788.5 275.0L790.4 275.9L793.1 282.7L794.6 281.4L793.0 277.3L794.7 274.2L796.0 274.0L798.2 278.8L799.3 278.2L799.7 279.1L806.7 277.8L811.5 275.4L815.6 276.1L819.7 273.1L819.2 272.2L812.0 272.0L807.3 273.9L807.8 273.1L805.3 269.7L800.8 266.4L804.9 268.8L801.9 266.0L802.6 262.6L801.9 261.9L799.7 262.6L800.1 261.7L797.5 261.2L797.8 259.8L795.6 258.8L797.5 257.9L795.6 254.1L801.0 251.7L805.6 253.2L805.3 252.2L807.1 251.8L807.3 250.7L805.3 247.5L807.4 246.6L808.7 248.2L808.6 245.6L811.5 243.7L812.6 244.5L814.2 242.6L813.0 242.3L813.9 240.5L813.0 239.0L809.9 240.4L808.8 239.0L806.7 239.0L803.6 240.8L800.4 238.3L800.8 233.3L799.7 233.3L803.9 230.5L804.1 228.6L801.3 224.5L796.6 221.2L795.6 216.7L789.7 215.8L791.6 212.9L791.1 214.3L793.0 215.3L793.0 213.7L800.8 207.3L800.1 204.9L802.7 204.5L803.7 202.3L807.0 201.1L807.4 195.1L805.0 194.5L801.8 196.4L800.4 195.4L781.4 198.8L776.3 201.6L772.3 201.2L770.2 202.7L762.9 203.1L760.8 202.1L760.5 200.6L762.7 193.5L765.2 190.0L765.6 186.2L764.1 182.6L765.1 177.8L764.1 177.0L765.8 167.6L767.4 165.2L770.3 166.1L773.6 164.4L776.3 161.4L776.7 158.7L778.0 158.3L778.8 152.4L783.8 151.1L796.5 137.9L805.3 137.7L810.3 138.9L816.0 134.5L822.5 134.8L826.3 133.4L828.6 137.2L826.7 137.7L829.1 140.2L835.3 143.5L840.6 144.4L843.9 142.9L852.0 144.0L858.6 139.1L853.6 138.6L851.4 134.2L847.8 131.5L851.9 128.7L853.0 130.2L863.2 131.0L866.7 133.0L865.8 134.6L859.7 138.1L859.9 139.9L861.9 140.5L870.9 138.4L883.7 137.9L891.2 138.1L889.7 139.6L894.3 138.7L899.3 140.5L906.6 138.0L915.6 140.5L920.8 140.6L922.5 139.8L923.8 136.3L927.1 135.8L924.9 133.6L919.5 132.5L917.3 133.9L906.7 129.7L907.7 127.6L913.4 124.9L917.3 121.6L934.1 119.8L940.1 116.9L941.5 118.3L946.0 115.4L948.6 118.0L959.6 115.7L968.9 116.3L969.1 113.4L960.8 114.1L954.9 111.6L938.2 113.1L936.5 109.1L932.7 109.8L933.8 107.8L934.9 107.8L933.2 105.7L926.7 102.6L920.4 97.9L919.3 94.6L922.3 91.4L923.8 87.0L922.7 86.1L923.9 84.2L928.1 80.6L930.6 80.2L966.7 86.4L981.9 86.6L988.2 81.8L993.0 84.2L1000.0 85.8L1000.0 0.0L848.6 0.0L849.7 0.9L849.1 2.5L850.0 4.2L853.0 4.2L853.4 6.1L851.4 8.5L852.6 11.3L857.1 15.1L856.7 16.1L859.7 19.4L864.1 22.6L865.2 25.0L867.4 34.7L863.7 35.4L863.0 38.1L869.6 49.9L869.0 51.1L870.1 53.4L877.4 60.9L885.6 65.8L914.0 78.3L920.2 79.9L921.4 79.0L924.0 79.7L924.8 80.4L924.3 82.2L921.1 85.3L922.7 87.7L921.2 92.1L918.4 94.6L918.2 96.5L916.0 96.0L909.3 99.3L906.5 98.1L897.0 98.2L897.5 96.0L896.0 95.1L895.8 92.1L893.4 90.8L895.3 94.2L894.1 97.4L888.4 93.7L877.7 90.8L873.8 90.8L865.6 93.9L861.7 98.7L850.7 95.8L839.1 97.4L836.3 100.7L833.8 108.3L828.7 113.2L826.4 117.2L820.4 122.1L813.4 123.5L810.3 126.8L806.0 127.7L793.7 134.3L789.3 141.9L779.8 149.9L775.4 152.0L777.1 155.2L769.9 160.9L766.4 162.3L765.4 161.1L771.5 149.9L771.2 148.0L768.5 145.3L769.3 144.3L768.1 143.5L768.6 142.9L774.1 140.5L780.2 135.4L787.3 131.3L793.0 130.5L796.4 126.8L799.4 126.9L801.6 124.2L799.5 120.1L789.7 121.6L784.1 124.4L780.8 123.0L778.4 124.0L776.9 123.3L773.1 124.2L761.7 124.0L759.7 120.1L758.2 110.8L757.1 110.2L759.7 109.4L759.7 108.4L757.4 108.8L756.7 107.8L756.7 109.3L752.4 106.9L731.8 105.6L718.9 100.0L717.1 101.7L712.5 100.7L709.9 99.3L711.9 97.0L710.2 96.0L704.8 96.3L704.8 97.4L702.3 98.9L702.1 100.7L696.9 102.2L692.0 106.8L690.0 106.0L687.0 106.9L684.5 105.0L682.6 106.5L679.3 100.0L676.0 99.3L673.7 100.8L669.8 101.1L665.5 105.0L666.6 106.7L665.2 107.6L667.1 108.3L654.6 115.5L647.9 115.2L640.1 111.7L633.0 114.8L632.4 119.2L635.4 121.2L637.4 125.2L640.4 127.1L642.6 126.8L644.0 128.5L639.1 130.7L639.3 133.9L641.5 137.2L646.7 139.6L648.8 139.1L648.2 134.8L649.3 134.7L653.3 140.5L658.4 141.5L659.7 143.8L661.3 143.9L669.9 155.2L668.2 156.6L664.9 156.9L657.8 146.8L649.7 144.3L645.2 140.5L639.6 140.1L635.7 141.6L634.1 141.0L632.1 144.4L633.3 148.1L636.7 151.8L643.1 153.9L648.2 157.6L647.4 159.5L648.9 161.1L647.9 162.9L649.3 162.8L649.7 164.6L648.0 166.5L648.6 167.5L647.0 168.0L648.2 169.0L644.3 168.8L644.5 167.5L643.3 167.8L643.4 166.6L640.3 164.1L639.1 164.3L639.3 165.2L637.0 161.1L637.5 159.3L631.1 150.7L618.3 146.5L614.3 147.7L613.0 150.0L614.2 155.4L616.3 155.8L621.6 162.8L630.8 166.7L632.3 169.9L635.0 170.6L632.6 171.8L627.9 171.1L620.1 167.7L614.1 168.5L615.2 165.6L611.1 158.5L612.1 153.7L610.8 149.5L596.2 143.3L592.6 139.6L588.6 139.1L588.6 136.9L585.0 131.1L591.4 130.0L593.7 127.6L589.8 121.2L586.7 121.6L586.5 124.8L584.6 126.4L581.5 126.6L580.4 130.2L576.9 129.4L576.0 130.9L577.0 131.5L575.7 133.1L572.5 132.8L571.8 133.4L573.3 137.2L576.3 140.3L570.4 154.3L571.4 162.0L573.0 164.6L578.8 168.4L580.0 173.7L586.5 180.2L591.3 194.7L599.9 200.2L601.4 203.4L609.3 212.5L613.2 222.4L610.9 224.4L605.9 225.7L607.0 226.7L605.6 227.6L600.8 228.7L597.4 228.1L599.0 224.7L600.8 223.8L600.0 227.6L603.9 225.5L604.4 223.9L605.4 224.4L606.3 222.4L601.9 214.3L595.7 212.9L594.5 210.2L591.1 209.9L591.5 213.9L586.1 214.9L585.2 219.6L586.7 223.8L587.9 221.7L589.3 222.4L590.3 226.2L591.1 227.1L591.1 225.7L592.5 226.6L594.5 230.0L592.6 234.2L596.9 232.1L598.5 232.3L595.9 234.3L593.8 238.0L591.1 238.5L591.5 239.5L589.1 240.4L586.3 239.9L585.8 242.0L583.4 243.3L580.1 243.6L579.4 242.4L577.8 243.3L574.1 240.7L569.7 243.3L568.9 242.7L568.9 244.6L571.5 244.2L570.5 245.3L572.0 246.4L573.0 245.6L572.6 246.6L578.5 245.2L582.6 249.9L585.4 249.6L587.4 251.8L590.0 250.3L596.9 252.3L600.2 259.8L604.5 258.7L605.2 257.9L603.7 257.0L604.7 256.5L611.1 258.8L612.6 262.2L610.0 265.5L611.2 264.6L615.2 266.9L613.0 267.8L612.7 269.1L622.7 270.0L623.9 268.6L627.1 271.2L625.6 272.6L631.0 279.3L633.0 280.6L636.9 280.2L646.0 283.8L652.6 290.3L653.0 292.4L651.9 294.8L650.7 294.0L648.1 295.4L650.4 303.4L649.3 309.1L651.2 310.4L649.3 311.4L652.3 313.3L651.5 316.1L653.4 318.7L651.9 322.3L652.5 325.3L650.4 328.0L645.9 326.2L645.6 322.7L644.5 323.2L643.4 319.0L642.6 319.5L641.4 317.2L638.9 315.7L636.7 317.6L632.3 308.1L628.5 308.6L629.3 307.2L624.5 305.3L626.9 302.4L626.0 300.7L618.9 302.4L616.0 304.7L617.8 305.3L616.7 305.7L606.9 305.7L599.7 310.0L595.4 309.1L594.3 312.0L595.3 314.4L600.8 314.2L604.5 317.1L604.5 319.5L601.5 320.4L601.1 321.8L604.1 323.3L603.7 330.6L612.8 336.0L614.1 335.1L614.0 333.3L611.5 330.3L616.1 328.9L616.4 331.6L614.8 334.6L617.4 336.5L616.0 337.4L623.0 341.2L623.0 342.6L618.7 344.3L608.8 345.3L607.0 347.1L609.6 348.8L604.7 349.4L605.6 352.1L603.7 352.3L602.2 351.6L603.3 350.7L601.3 350.5L601.2 349.1L598.5 348.4L598.5 345.3L599.7 346.1L600.8 343.6L602.2 344.5L601.7 342.0L597.1 341.2L597.8 340.7L597.1 339.3L594.9 341.2L593.6 337.8L590.4 335.7L589.3 335.6L590.4 336.5L588.4 336.1L586.7 337.4L582.6 331.7L579.8 333.9L580.0 338.8L581.9 343.1L581.5 345.5L584.8 349.2L584.8 351.1L589.5 359.6L589.4 364.6L592.2 364.4L592.2 366.3L593.6 367.3L592.6 367.2L594.6 370.7L595.2 373.9L594.1 373.9L595.2 374.8L595.2 377.2L599.6 385.5L599.0 387.6L600.8 388.1L599.4 391.4L597.4 390.4L596.3 391.9L596.3 394.2L597.8 394.2L596.5 395.4L596.5 397.2L599.0 402.0L603.0 404.7L601.9 407.0L605.6 410.5L605.2 412.2L599.7 411.4L597.4 406.0L593.1 406.1L590.8 400.9L587.8 398.5L588.3 396.9L585.8 394.6L584.6 395.7L583.1 387.2L577.6 386.1L571.8 388.0L571.8 390.9L568.9 394.7L570.3 395.2L570.4 397.1L569.4 395.7L568.5 396.0L569.0 399.7L568.3 400.4L567.8 398.9L566.7 400.1L566.8 405.8L568.2 409.8L567.1 415.0L565.9 410.8L562.6 408.4L561.2 408.9L559.7 406.7L561.5 403.6L560.7 401.8L561.5 400.4L560.4 400.4L561.5 393.3L559.9 393.5L556.3 385.4L552.5 380.1L551.4 379.4L550.0 380.5L548.0 378.7L548.8 371.5L543.1 370.5L537.5 373.4L536.3 382.4L536.7 385.3L538.9 387.1L537.6 387.5L534.2 391.9L531.0 386.2L527.8 387.1L524.7 385.5L523.7 380.5L524.9 376.9L523.7 375.4L522.6 375.8L523.3 374.8L522.3 375.8L517.3 364.9L517.5 359.7L523.4 353.4L524.1 351.1L523.0 345.6L516.2 334.2L508.2 327.7L505.0 326.7L503.4 328.9L502.6 326.5L503.3 322.8L501.9 318.7L492.6 314.7L492.2 312.3L493.7 307.6L495.4 308.8L497.7 307.6L504.1 302.4L503.7 301.5L501.9 302.8L506.3 295.5L506.7 288.7L508.6 291.1L508.2 289.1L514.8 292.4L520.1 293.2L524.4 289.7L527.8 283.5L532.4 280.3L538.2 280.6L541.6 282.3L543.2 284.9L546.7 285.4L549.3 289.2L552.4 290.9L558.4 291.5L563.0 294.4L568.2 295.0L577.3 299.3L587.4 308.1L591.7 307.6L593.3 305.4L588.5 301.6L586.7 301.5L587.9 300.5L591.5 298.1L598.3 299.8L603.9 298.4L606.3 296.8L604.1 293.9L606.7 292.9L601.5 292.0L602.6 291.1L601.2 289.5L598.2 291.3L596.3 291.1L597.4 290.6L596.0 288.9L592.0 288.3L590.4 289.6L591.9 289.4L592.9 290.6L589.7 290.6L588.9 287.2L588.2 288.2L587.8 287.2L584.1 288.2L581.9 286.8L583.7 284.4L578.2 282.0L577.0 280.2L577.5 279.0L575.5 277.0L574.4 278.2L575.5 278.9L573.6 278.8L572.3 280.6L573.3 281.6L573.0 283.0L570.9 283.6L565.9 274.8L562.2 272.6L562.6 275.2L560.7 276.8L562.1 277.9L561.2 280.2L552.7 279.0L550.8 281.6L547.7 278.2L538.3 275.5L534.0 277.8L531.4 276.5L527.7 281.2L525.2 279.2L518.9 279.7L514.5 283.5L509.6 281.1L513.0 282.5L512.2 280.2L513.0 279.2L511.9 279.2L512.2 278.2L509.3 278.8L509.0 276.7L506.9 276.4L506.0 271.6L503.9 269.6L503.4 270.3L505.6 274.0L504.8 274.0L504.7 276.6L502.2 277.8L502.2 278.8L501.1 278.5L500.0 280.6L496.7 280.3L496.3 281.1L497.3 281.6L495.9 283.0L494.9 282.9L494.1 280.6L491.1 280.2L492.2 279.5L492.2 278.2L491.5 278.8L492.2 277.3L492.6 278.1L494.1 276.4L491.6 276.1L490.9 274.8L491.1 273.5L492.3 274.5L493.0 273.5L492.2 274.0L492.2 270.7L490.8 270.2L491.9 269.8L491.1 269.2L491.7 267.2L488.1 268.6L487.8 261.9L485.4 257.5L481.9 256.5L479.6 249.0L478.1 248.7L476.3 251.2L475.9 250.5L474.2 251.3L471.9 248.0L472.9 244.7L476.0 244.0L473.3 241.3L474.0 237.7L474.7 239.3L476.6 240.3L478.9 237.6L479.3 239.9L481.3 239.8L482.2 238.0L488.0 239.5L487.9 241.9L491.1 244.2L492.0 241.0L496.1 243.4L494.1 238.9L495.1 235.0L491.1 230.5L490.8 232.3L488.5 233.3L489.6 234.2L484.0 232.5L483.0 230.9L483.7 230.0L481.2 229.5L479.3 231.2L480.4 232.3L478.1 232.3L478.8 230.8L478.2 229.5L477.1 230.0L477.7 228.5L476.9 226.9L474.4 228.6L474.8 231.4L473.4 233.3L472.6 232.8L477.4 237.3L473.9 236.4L472.2 238.3L470.4 234.9L471.1 233.8L469.5 229.8L464.6 226.3L458.3 219.3L458.5 215.3L453.7 214.3L452.2 215.0L450.0 213.9L447.0 208.1L445.2 207.3L444.1 204.4L446.9 204.0L444.1 200.6L446.2 200.8L446.7 199.7L444.4 198.8L444.5 199.7L442.3 198.0L439.7 198.2L440.4 195.4L441.9 195.0L442.3 191.7L437.2 188.3L431.8 187.4L432.6 183.2L431.4 182.5L433.0 175.0L427.4 172.2L429.3 169.9L425.1 162.6L422.0 162.1L420.4 160.4L420.0 161.4L418.0 158.2L404.1 151.0L399.0 145.4L397.0 139.9L394.0 136.7L395.5 135.5L397.2 136.0L401.3 143.0L404.1 141.7L404.3 134.4L401.0 131.8L399.3 128.2L401.8 130.8L403.0 127.5L400.8 125.5L399.5 125.8L399.3 127.7L394.8 120.7L397.9 116.7L398.3 110.4L400.4 109.1L399.6 107.4L400.8 105.8L399.0 103.0L402.2 100.2L401.5 101.1L401.5 105.5L402.0 104.5L402.2 105.5L406.7 102.2L405.2 96.5L402.9 101.9L404.1 97.0L402.2 95.3L403.0 89.3L402.3 86.8L403.4 86.2L406.1 77.6L404.8 75.5L401.0 74.4L399.6 68.1L401.6 69.0L402.2 66.2L404.8 64.5L406.3 61.2L402.2 56.3L406.9 56.9L408.9 56.3L410.0 53.9L411.5 54.9L410.8 52.6L408.5 51.1L409.6 49.2L409.3 43.5L410.2 43.8L410.8 41.5L410.4 40.1L401.8 36.7L398.1 37.8L395.1 34.9L387.6 31.9L385.8 28.6L385.9 24.7L382.8 22.0L382.9 20.0L381.0 17.9L379.0 18.0L373.7 12.3L372.2 8.0L369.3 8.5L368.5 7.5L366.4 8.9L362.9 5.2L361.0 1.0L359.9 0.9L359.6 2.3L357.7 2.2L355.2 0.5L362.4 0.0L126.6 0.0L138.4 12.0L146.4 15.5L148.1 21.8L155.2 25.4L161.8 26.9L168.8 32.2L186.3 34.1L195.2 32.6L204.0 33.1L217.7 31.5L223.8 33.2L225.9 35.0L226.6 42.1L224.1 45.0L210.8 54.2L210.6 59.6L212.6 63.6L217.4 67.1L244.4 79.4L248.3 82.4L273.4 91.0L285.2 98.1L289.1 102.8L296.0 108.4L310.7 114.1L315.9 117.8L321.9 119.5L321.9 121.1L324.7 120.8L326.7 124.2L326.3 127.3L337.2 134.2L348.0 147.3L352.2 156.1L352.2 158.5L346.6 167.2L345.4 178.4L343.1 179.7L339.6 177.3L335.7 176.9L328.2 171.9L324.1 166.1L325.4 165.1L325.2 163.3L322.6 161.8L324.9 159.1L320.3 153.6L318.9 148.6L319.6 148.1L316.9 146.0L297.9 144.8L291.9 142.9L281.1 136.7L283.4 135.3L282.6 133.0L286.3 133.1L287.7 131.3L284.4 132.0L283.6 131.0L280.5 132.5L278.7 130.4L272.9 129.9L269.0 131.7L265.5 135.0L258.5 144.9L255.7 151.9L248.9 159.9L248.6 163.4L250.4 168.1L245.5 173.7L242.7 181.3L244.8 185.0L244.1 187.2L245.7 189.2L250.0 191.6L258.5 192.6L262.0 196.7L270.9 201.3L275.1 205.6L278.8 206.8L276.5 215.3L278.1 220.3L277.0 228.6L278.8 232.0L281.4 232.8L279.6 234.5L279.6 237.6L275.9 241.8L275.4 240.4L271.5 241.3L269.3 239.2L266.8 239.1L255.6 243.2L247.9 248.8L245.1 255.6L247.4 267.4L246.6 275.1L241.5 279.8L232.8 284.8L225.4 294.0L221.7 306.6L219.6 308.6L216.3 309.5L213.1 308.5L203.3 309.1L198.2 306.2L196.5 303.3L197.8 301.0L195.9 297.5L197.2 294.0L196.4 288.7L197.3 287.3L204.7 284.7L206.1 283.1L211.1 271.2L211.7 265.9L207.3 260.5L207.8 258.3L216.4 253.8L224.5 253.4L227.1 250.3L228.1 241.8L227.3 239.4L223.8 236.6L220.7 229.6L218.1 211.0L216.0 204.5L209.1 195.9L205.8 186.8L203.8 177.5L204.0 173.3L195.9 160.4L191.1 160.4L184.3 166.2L180.7 165.5L179.2 163.4L176.3 163.7L177.3 162.5L176.4 160.7L169.0 154.1L164.7 154.1L162.3 151.2L157.4 149.1L158.5 142.7L161.9 141.0L162.1 138.3L156.2 126.2L150.4 119.5L148.8 119.0L145.4 120.9L141.9 120.9L137.5 123.4L134.4 122.1L126.6 126.4L126.4 122.6L129.0 121.8L133.9 117.8L133.7 115.4L132.0 113.6L129.4 113.2L124.0 107.8L120.2 108.3L119.1 110.4L112.6 108.3L112.6 111.6L110.7 111.2L110.9 107.9L109.3 102.1L106.2 96.9L103.7 95.1L103.3 92.2L100.1 86.5L93.1 79.3L86.2 79.2L84.5 80.3L85.2 82.3L83.5 82.4L81.9 80.8L81.1 81.4L71.6 76.3L69.5 76.3L64.2 77.5L58.9 81.0L56.5 81.0L52.9 73.8L48.3 69.1L40.5 67.4L35.4 64.5L34.3 65.8L24.2 53.1L17.7 47.6L12.9 45.8L9.2 35.9L0.0 27.9L0.0 0.0L1000.0 0.0L1000.0 538.7ZM680.3 300.6L679.3 304.7L677.4 306.0L674.4 306.5L671.9 302.4L669.5 304.1L670.4 305.3L668.7 305.8L665.6 301.9L666.3 301.0L664.1 297.9L659.7 297.7L660.0 295.3L658.5 294.6L660.0 292.4L658.7 288.8L657.1 288.0L656.7 289.2L655.5 288.9L657.5 285.4L656.9 284.5L654.6 286.2L655.2 282.5L650.0 281.1L652.3 279.7L650.9 276.2L643.9 276.8L629.7 275.9L627.8 272.1L626.7 272.6L629.0 269.3L627.8 265.4L621.9 262.6L621.5 260.3L618.7 257.2L605.5 246.6L602.4 245.2L598.3 245.4L596.6 243.5L592.9 242.5L592.2 243.3L594.2 244.2L593.6 245.5L585.6 247.1L585.8 244.9L596.5 239.9L597.1 238.5L599.3 238.0L599.7 235.7L601.5 234.4L605.4 234.2L610.8 231.9L613.9 233.7L615.2 234.7L615.4 237.1L617.6 238.0L619.6 244.8L626.7 249.4L626.7 250.7L630.4 251.8L633.7 251.3L635.3 254.2L641.0 256.8L645.8 257.7L647.8 256.5L652.6 257.0L657.1 258.8L655.5 260.0L655.5 262.6L661.2 267.8L658.8 271.2L659.7 275.4L658.7 275.8L662.3 283.7L662.3 288.2L667.3 292.9L669.9 292.6L674.5 294.3L680.4 292.9L680.0 298.1L680.8 299.6ZM787.4 233.3L786.6 233.8L784.8 232.3L785.2 229.1L783.2 227.0L780.4 227.7L786.3 234.2L786.3 235.7L784.9 236.3L778.8 236.9L771.7 234.1L765.2 233.1L761.5 229.1L769.0 225.7L772.6 222.6L771.3 221.0L766.1 221.4L762.0 227.5L760.2 228.6L754.5 226.7L747.8 222.4L749.1 216.9L752.3 214.3L753.3 215.7L758.6 215.3L759.3 213.9L760.0 214.8L765.6 212.5L765.6 208.7L776.3 208.7L775.9 210.2L779.3 212.0L777.4 215.7L785.9 223.4L785.4 224.4L789.9 231.4L789.0 234.0ZM811.2 481.6L811.2 483.6L804.1 487.0L802.6 485.4L805.4 481.8L811.5 481.3ZM834.5 413.2L834.0 415.4L831.2 415.7L830.4 412.7L827.8 413.6L826.9 412.5L827.1 409.3L827.6 410.4L830.0 408.9L832.3 411.7L831.8 413.0L833.5 413.8ZM621.9 348.8L621.5 350.9L614.8 352.1L619.7 348.3L626.3 347.4L622.9 349.0ZM624.1 322.3L623.0 325.1L620.8 326.1L619.3 325.1L619.9 323.6L618.1 322.3L617.5 320.4L624.1 319.5L625.0 319.9L624.1 321.5ZM850.4 122.6L843.5 125.9L839.8 124.2L839.3 121.6L840.3 120.2L840.8 121.1L844.9 119.9L850.2 121.4ZM804.3 365.8L802.0 365.7L802.8 364.4L800.9 364.7L800.9 362.9L798.5 360.4L800.0 359.2L802.7 360.0L802.4 361.8L804.7 365.7ZM822.0 478.1L819.5 480.0L819.3 481.8L820.1 481.3L818.2 483.2L818.5 482.1L815.8 479.9L817.2 477.8L817.0 473.1L814.5 470.4L819.1 461.5L819.3 455.8L820.8 455.8L822.8 453.8L822.6 461.0L819.5 466.1L819.3 468.4L822.8 473.1L821.8 474.7L823.4 476.3L823.4 478.5ZM137.7 453.4L136.6 455.8L133.7 455.1L128.7 452.9L126.8 450.6L125.5 443.9L128.5 442.5L127.0 443.9L131.3 444.4L135.6 447.0L135.9 448.9L138.5 451.0L138.5 453.8ZM599.9 426.0L597.8 427.1L597.4 432.0L594.1 432.6L590.8 429.8L589.7 427.8L590.1 422.4L589.2 419.4L591.0 415.7L592.2 415.6L595.2 420.7L600.2 425.7ZM781.9 401.8L776.9 402.5L775.2 406.9L773.0 406.6L771.1 404.2L771.2 400.9L775.2 402.7L776.5 401.3L778.6 401.3L776.3 398.0L778.0 398.1L781.6 400.8ZM678.0 390.7L678.2 394.5L674.8 396.1L666.3 397.1L667.1 392.8L666.3 392.3L667.8 390.0L670.0 391.2L670.7 393.2L673.6 393.7L673.5 391.8L670.7 390.0L671.4 388.8L674.3 390.4L677.5 389.0L678.2 390.0ZM828.3 383.4L822.4 385.1L817.8 389.5L813.4 388.5L810.4 390.0L809.0 393.3L809.3 395.2L808.4 395.0L806.4 392.6L806.8 389.2L808.6 388.1L810.1 389.0L814.1 384.1L819.7 380.5L826.0 379.3L830.0 382.4ZM760.8 380.0L757.1 380.5L752.5 384.0L750.3 387.1L743.5 388.9L742.6 387.1L748.4 386.2L749.4 384.3L748.4 383.4L755.2 380.0L754.1 378.6L757.1 377.2L759.7 379.6ZM716.3 371.5L713.8 373.7L711.0 373.9L708.3 372.1L708.8 368.6L711.1 366.8L710.0 366.5L712.4 364.0L715.6 362.5L714.8 363.7L716.7 364.4L717.1 362.5L718.6 362.5L716.9 366.8L717.8 369.6L716.7 370.8ZM734.4 361.9L734.7 367.4L732.6 375.1L727.0 378.6L725.6 375.3L723.7 373.9L723.4 370.5L721.2 367.2L722.8 366.8L729.5 359.9L731.6 359.1L733.8 360.6ZM719.4 343.8L720.3 341.0L719.3 340.3L719.6 339.3L721.5 337.9L723.1 340.7L724.1 338.9L727.9 341.0L727.4 342.2L724.7 342.8L724.5 344.1L719.4 344.0ZM702.6 328.9L701.9 326.1L705.6 326.1L707.5 328.4L709.3 328.0L710.8 329.4L711.6 328.4L716.0 329.9L716.7 332.2L714.4 336.2L708.9 334.3L703.2 329.3ZM667.1 333.6L664.5 336.7L663.5 336.3L663.7 330.0L666.7 326.5L666.0 326.1L668.9 325.6L670.4 327.7L668.7 331.9ZM768.3 333.9L763.7 334.6L759.9 337.1L755.5 337.3L755.7 335.1L760.8 328.9L767.4 329.3L771.9 326.3L776.3 325.6L769.2 333.5ZM814.1 324.2L810.9 324.2L805.9 326.1L803.7 328.4L799.9 328.4L797.9 325.3L795.0 323.7L789.1 326.2L788.3 321.0L791.6 319.6L792.3 318.2L800.3 316.7L809.0 321.3L807.8 318.5L810.5 318.0L810.5 318.8L814.5 319.5L812.6 321.0L814.4 323.4ZM485.6 323.8L480.0 322.7L478.0 324.5L478.2 327.8L476.5 328.0L470.5 322.0L465.9 316.1L465.9 313.3L469.5 308.8L470.8 309.1L473.1 313.9L476.2 314.3L480.3 316.8L482.1 320.1L485.8 322.6L486.3 324.7ZM700.4 324.2L700.4 325.6L698.8 323.9L696.9 319.9L694.9 319.0L693.4 316.5L691.9 316.6L691.6 314.7L688.6 311.4L687.4 312.3L685.6 308.6L686.1 306.3L690.8 303.9L693.5 306.5L694.5 309.8L700.2 310.4L699.6 314.7L701.9 316.6L700.4 319.5L702.3 319.9L702.4 320.9L701.1 323.3ZM461.9 264.6L462.8 256.2L465.0 249.9L469.5 245.2L471.9 249.9L471.8 253.4L470.1 256.3L470.6 256.9L471.5 255.1L471.1 260.6L470.0 259.8L470.4 261.2L467.5 261.9L467.4 263.6L465.0 260.6L462.2 264.6ZM685.6 249.2L683.8 250.8L680.8 249.2L679.3 251.2L677.4 248.9L679.7 248.0L678.8 245.5L676.0 245.6L674.5 243.3L672.2 242.6L673.6 241.0L673.6 237.1L675.2 236.1L679.7 239.5L679.9 243.4L685.6 248.6ZM438.8 209.2L432.4 207.3L427.7 205.1L428.5 203.9L425.9 203.5L423.2 195.3L418.8 192.0L417.2 188.3L415.2 187.9L414.7 184.8L413.7 185.5L413.5 183.6L412.2 183.2L414.5 180.0L421.6 179.4L424.4 177.9L428.9 180.8L429.6 180.2L428.9 183.6L423.9 186.2L424.8 188.8L424.1 189.8L428.5 191.6L428.3 193.2L427.0 193.1L429.0 202.2L434.2 204.5L436.9 203.9L438.8 208.7ZM726.6 164.6L727.0 166.6L724.4 168.3L723.7 171.3L721.5 172.2L722.6 172.7L721.1 174.5L722.7 178.4L721.6 180.4L718.7 179.0L718.4 177.5L715.6 175.6L717.8 173.4L716.3 171.4L713.4 173.2L714.9 173.7L712.3 176.5L713.6 176.7L714.3 179.3L710.4 178.4L711.6 175.5L710.0 177.0L709.3 175.6L705.2 177.0L706.3 175.6L705.2 174.2L706.4 171.2L704.5 166.1L714.9 165.2L718.1 169.0L721.5 167.0L723.4 164.2L727.0 163.3L726.3 164.6ZM751.4 157.3L744.1 159.1L738.6 156.6L743.7 151.5L752.8 149.0L755.2 150.5L754.8 154.9L757.4 154.3L757.4 155.7L755.0 156.7ZM733.4 138.1L726.7 132.5L733.8 130.2L738.2 131.5L740.4 133.9L739.6 136.5L734.5 138.3ZM691.2 116.9L690.0 119.5L690.8 123.5L689.5 122.9L683.4 126.4L680.4 122.8L676.6 121.6L677.5 116.2L683.4 110.2L688.2 111.6L691.2 115.0L690.0 115.0L690.1 116.6ZM656.0 523.4L654.5 523.8L651.2 521.5L653.0 520.2L655.6 520.6L655.4 523.1ZM612.6 453.8L609.3 448.7L612.5 451.4ZM746.1 415.1L748.9 416.9L748.5 417.8L746.9 416.9L742.9 417.3L742.2 415.8L744.2 414.3ZM699.4 400.8L694.6 397.4L694.1 396.1L695.2 396.0L699.9 398.9L700.7 400.9ZM712.6 393.3L707.7 398.1L706.3 398.0L708.4 393.7L710.6 392.3L712.6 392.9ZM684.3 390.2L681.5 388.1L683.2 387.2L684.7 389.3ZM678.7 388.1L676.8 385.6L679.0 383.6L681.5 384.3L679.6 388.0ZM728.6 381.9L728.5 384.4L726.2 385.2L726.0 383.7L728.2 381.9ZM737.8 379.1L739.7 380.5L739.1 381.3L735.6 381.0L737.2 379.7ZM704.1 372.4L707.5 370.1L705.9 374.8L707.1 376.2L704.4 373.7ZM746.0 366.3L744.9 364.4L747.8 363.5L747.9 365.9L746.2 366.2ZM603.4 354.7L602.8 356.4L599.7 354.0L601.5 353.1L603.2 354.2ZM620.8 335.1L623.0 336.9L620.6 337.8L618.2 336.9L620.7 334.8ZM17.0 307.6L19.9 309.1L19.3 309.8L15.6 309.3L14.8 308.1L16.5 307.7ZM162.3 276.9L161.5 278.8L159.4 276.5L159.9 274.0L161.8 276.1ZM158.1 267.8L160.3 268.2L161.0 270.7L159.6 270.7L160.3 272.6L156.7 270.6L157.3 268.3ZM152.2 263.6L155.0 263.8L154.7 266.7L151.0 264.4ZM736.3 264.0L735.4 266.9L733.0 266.9L733.0 265.0L731.1 262.2L734.5 261.7L736.4 263.9ZM616.0 224.7L620.0 220.1L621.8 221.4L621.9 223.8L621.0 223.2L619.5 225.7L616.4 224.5ZM443.3 222.4L441.6 222.2L439.4 219.4L440.0 218.1L442.7 220.8ZM701.9 202.6L701.4 197.7L703.4 195.9L705.3 197.2L702.3 202.6ZM760.8 180.6L755.6 177.2L760.9 176.5L761.2 179.6ZM174.7 249.4L173.9 250.5L172.3 249.2L174.0 247.8L175.0 248.9ZM33.0 477.3L28.9 475.1L33.6 475.7L33.6 477.1ZM844.0 426.9L839.5 427.4L838.8 426.1L841.4 425.1L844.1 425.3L844.3 426.3ZM820.2 403.3L817.6 402.0L819.8 399.6L821.3 400.1L821.5 402.8ZM788.9 349.4L787.7 349.0L786.4 350.4L787.4 354.0L786.3 353.8L785.3 352.2L785.8 347.2L788.1 347.4L789.2 349.7ZM685.0 331.5L684.3 331.1L688.3 329.3L688.7 331.8L687.5 332.0ZM2.6 306.6L1.6 305.0L3.5 304.9L4.3 307.3L3.5 307.3ZM482.7 261.1L479.5 263.7L481.3 259.5L483.5 258.8L483.3 260.6ZM475.5 258.9L473.5 260.6L475.7 262.8L473.1 260.7L472.8 258.1L474.8 257.3L475.8 258.5ZM653.1 213.8L651.6 213.8L651.1 211.2L652.3 209.8L653.7 212.0ZM845.7 134.8L842.3 133.6L843.6 130.9L845.4 131.6L845.1 133.5L846.3 134.7ZM125.5 440.2L120.0 440.7L118.1 439.7L118.0 437.6L122.0 436.8L126.2 439.7ZM729.3 414.6L728.6 417.3L726.8 418.8L722.3 417.4L724.8 416.9L726.3 415.0L725.5 410.9L722.6 409.3L725.3 409.6L728.6 412.7ZM857.7 403.6L858.2 404.7L855.6 405.6L856.7 404.2L853.6 402.9L854.5 402.3L851.9 402.3L855.0 398.3L857.4 397.4L854.9 399.9L856.0 400.4L857.8 398.9L858.2 403.3ZM717.8 391.8L716.3 391.8L716.9 389.0L719.3 387.1L721.5 390.4L724.3 391.8L724.1 395.2L722.9 396.9L717.7 392.1ZM2.9 389.0L1.7 390.8L0.0 390.6L0.0 384.3L2.8 387.5ZM690.0 376.5L687.1 379.6L684.8 374.5L685.2 372.9L683.4 371.1L683.4 369.6L686.7 370.5L690.0 376.0ZM806.8 374.2L808.2 370.5L806.3 370.1L804.9 366.8L810.1 369.6L809.3 370.1L811.2 372.9L813.0 372.4L813.0 376.8L810.5 376.2L809.9 377.8L807.8 378.1L806.0 376.7L807.1 375.3ZM675.6 359.2L677.1 359.2L677.4 364.0L676.7 363.0L675.6 365.4L675.6 364.4L673.7 364.4L673.5 363.5L671.5 364.4L672.2 360.2L674.9 358.7ZM672.2 339.3L671.9 342.2L674.7 344.5L672.6 348.8L668.5 351.6L670.4 347.4L670.0 344.5L668.5 344.5L668.9 342.7L671.3 340.4ZM700.7 344.1L700.8 345.2L696.3 347.9L696.7 345.5L695.2 345.5L696.3 343.6L695.6 343.1L697.2 342.0L697.0 337.7L699.4 338.5L700.5 343.6ZM617.5 308.5L619.9 308.6L621.5 306.2L619.5 307.2L617.4 306.7L619.3 305.7L617.8 304.7L620.0 305.3L620.4 304.0L622.6 304.0L624.1 307.2L625.6 307.2L623.7 308.1L622.6 310.9L621.7 310.4L619.0 311.8L616.7 310.9L616.7 309.3ZM473.1 278.2L472.3 278.2L473.7 281.6L471.3 282.1L469.6 280.6L465.6 271.6L467.8 269.2L468.9 270.4L468.2 272.1L470.8 273.1L468.9 277.8L471.1 278.2L470.4 277.3L471.1 276.8L473.4 278.2ZM628.0 223.2L626.3 220.5L627.1 220.1L634.1 224.7L633.9 225.8L637.4 226.2L635.7 228.6L633.3 229.5L630.2 228.1L630.8 226.7L628.2 224.1ZM639.6 224.7L646.3 214.8L646.9 217.5L641.3 224.9ZM102.2 117.8L100.0 116.4L100.7 113.1L106.3 115.0L105.1 117.3L102.9 117.4ZM876.3 417.3L873.7 425.6L871.9 429.2L870.4 429.2L869.5 430.6L868.2 434.0L870.1 434.9L869.0 436.8L869.7 438.2L865.8 437.3L862.1 439.3L857.5 446.1L853.0 449.6L850.4 447.9L849.3 445.3L851.7 436.2L847.8 431.1L852.5 428.4L854.2 423.4L856.1 422.6L859.4 418.5L871.3 412.5L874.8 412.7L876.9 410.5L877.8 411.7L877.6 416.3L876.5 416.9ZM467.7 296.2L463.8 295.9L463.0 297.7L460.0 296.3L457.8 290.6L460.0 291.5L456.5 284.8L455.6 285.8L455.4 291.8L453.0 293.4L450.8 290.1L453.6 283.2L454.0 278.8L454.4 280.2L455.5 278.8L458.3 282.5L461.1 280.6L461.1 276.8L462.2 277.3L461.5 271.2L463.3 271.2L466.4 280.2L464.8 283.0L467.2 286.4L469.3 284.4L468.9 285.4L469.9 285.6L475.9 295.9L475.1 299.4L471.3 299.3L469.3 297.1ZM763.3 270.2L765.1 271.6L764.3 275.0L765.6 283.0L762.9 284.3L762.8 288.5L758.9 290.1L757.3 293.1L754.8 292.0L751.9 288.2L750.8 288.7L750.8 286.8L749.5 286.9L750.6 284.4L754.8 283.0L756.3 280.2L756.2 277.7L754.1 275.9L753.7 272.6L750.0 270.5L747.7 266.3L748.6 263.8L757.6 262.3L760.2 263.2L762.6 266.4L763.0 265.0L765.1 265.5L764.6 269.9ZM771.1 493.2L772.9 498.3L774.1 497.4L772.2 500.7L772.3 502.9L769.5 508.8L764.7 511.0L762.4 511.2L761.2 509.7L757.9 509.7L755.9 508.4L746.4 510.7L735.2 510.2L730.1 512.2L721.5 511.7L708.5 515.4L688.6 515.8L689.7 509.2L688.8 505.8L686.9 504.5L679.2 503.8L675.7 500.6L673.7 500.7L670.5 499.0L670.4 497.9L664.5 498.5L660.4 497.9L659.7 496.9L651.3 497.9L648.0 495.0L643.3 495.1L639.3 493.7L631.5 495.5L626.3 494.6L622.6 489.9L624.5 488.9L623.7 485.3L625.6 481.1L625.2 474.7L627.3 468.8L628.1 474.9L631.5 476.6L633.9 474.5L633.0 466.3L634.7 463.7L636.7 464.7L636.7 471.3L638.8 474.2L650.0 475.1L651.8 472.9L653.7 472.8L653.1 470.4L657.3 469.9L659.6 473.7L658.8 475.3L653.0 475.5L652.5 476.7L658.7 479.9L662.3 478.0L663.0 485.6L667.0 487.1L671.8 485.6L673.7 486.1L687.6 481.6L694.1 483.2L697.1 481.8L700.4 483.2L701.1 481.8L705.6 483.2L705.7 486.6L706.9 487.3L723.0 487.4L727.2 490.8L738.4 487.0L744.1 487.9L741.9 490.8L742.1 492.8L743.3 491.5L743.7 493.2L742.3 494.1L741.2 498.5L742.1 501.9L745.7 503.2L747.6 502.7L751.2 498.3L755.6 497.6L760.0 495.0L763.2 496.2L762.6 496.9L763.8 497.6L766.5 496.8L770.8 491.5L772.6 491.2L772.6 489.3L774.1 489.3L771.9 492.2ZM197.2 285.5L193.0 288.2L192.4 290.1L193.3 290.1L189.2 298.0L173.7 320.4L174.1 324.2L171.0 333.8L167.4 338.8L167.4 349.2L168.1 350.7L175.8 355.2L176.3 356.8L175.4 356.0L174.1 357.8L173.3 356.1L172.1 358.6L173.9 362.3L175.5 362.0L174.6 362.6L175.5 364.8L178.6 366.0L178.5 368.7L177.7 368.2L177.5 369.6L179.5 370.2L180.1 372.2L176.7 372.9L176.7 374.8L171.6 376.8L170.7 378.2L167.2 386.8L169.4 395.4L167.2 396.8L162.5 393.5L161.2 394.5L155.8 391.6L150.3 393.7L145.1 391.9L143.7 390.0L139.6 388.1L134.4 387.2L129.4 376.8L123.2 369.9L114.9 365.2L102.4 366.0L99.1 363.3L92.7 361.1L84.8 354.1L78.5 352.3L69.1 345.8L67.7 343.1L63.5 339.3L55.5 338.9L54.1 336.0L51.0 333.7L35.6 333.9L31.2 327.9L27.4 327.0L23.1 317.9L25.1 316.1L25.9 312.1L25.1 309.9L27.2 304.1L26.6 302.4L31.2 299.0L32.9 299.6L35.8 295.9L38.1 296.2L39.2 295.2L39.6 290.6L41.1 291.4L44.2 298.5L48.7 302.0L57.4 298.1L57.0 294.1L59.5 290.8L65.3 291.7L67.0 289.6L71.3 288.7L74.2 292.0L75.2 296.8L81.8 296.3L83.3 297.4L83.6 300.0L89.3 303.8L96.8 305.7L109.2 300.5L112.6 302.3L122.9 302.9L131.5 300.5L133.2 301.3L135.8 300.8L142.4 298.3L147.8 293.0L157.1 290.9L166.9 295.0L171.8 293.1L175.2 287.2L175.0 285.6L175.4 288.9L177.9 289.6L183.8 287.8L190.7 283.0L197.4 284.9ZM715.5 481.6L712.7 480.4L714.2 479.2L716.0 480.0L715.6 481.5ZM593.8 410.4L592.7 409.2L590.9 409.9L590.5 409.2L593.0 406.7L594.0 410.0ZM818.1 375.8L819.6 375.9L820.3 378.3L818.0 378.1L817.1 375.9ZM797.8 352.7L795.1 351.3L796.2 350.4L797.3 351.6L799.2 351.6L799.2 353.8L797.9 353.1ZM796.7 347.1L795.1 345.2L795.6 344.5L797.8 347.0L797.0 348.1L796.8 347.1ZM811.0 341.8L808.6 342.3L807.1 340.1L810.1 340.3L811.2 341.8ZM780.9 334.0L778.2 333.2L780.3 331.4L781.1 333.9ZM784.5 332.8L783.9 336.5L782.4 333.7L782.4 331.2L783.3 332.5L784.5 331.6L784.1 328.0L785.2 328.3L786.0 330.4L784.7 332.7ZM656.7 322.8L654.4 328.3L654.0 327.4L655.5 321.7L656.4 321.0L656.8 322.3ZM663.0 305.4L661.0 305.1L662.4 302.5L663.7 304.9ZM771.2 268.6L767.8 268.4L766.8 266.5L771.3 268.5ZM794.2 268.5L794.6 266.5L795.8 267.1L797.2 271.0L796.3 272.2L794.2 270.6ZM656.9 209.8L656.4 208.8L658.0 205.3L658.2 208.3ZM121.4 128.2L118.7 128.4L118.8 127.2L122.0 127.3L121.9 128.0ZM894.2 127.6L893.6 130.2L892.8 130.0L892.9 127.0L894.5 127.4Z"};
+// ---------- dates: astronomical years as in src/model/dates.ts (431 BCE = -430) ----------
+const bce = n => 1 - n;
+const fmtY = y => y <= 0 ? `${1 - y} BCE` : `${y} CE`;
+const fmtR = (a, b) => (a <= 0 && b <= 0) ? `${1 - a}–${1 - b} BCE` : `${fmtY(a)} – ${fmtY(b)}`;
+
+const DIMS = [['pol', 'Political'], ['eco', 'Economic'], ['soc', 'Social'], ['tec', 'Technological'], ['int', 'Intellectual'], ['rel', 'Religious']];
+const DIMNAME = Object.fromEntries(DIMS);
+const PLACES = {
+  athens: ['Athens', 23.7275, 37.9838], acropolis: ['Acropolis of Athens', 23.7257, 37.9715], delos: ['Delos', 25.2683, 37.3967],
+  sparta: ['Sparta', 22.43, 37.073], attica: ['Attica', 23.85, 38.12],
+};
+// What subject recognition finds for each linked page (Wikidata), and what is already in Chronicle (the Classical Greece fixture).
+// have: the title of the record already in Chronicle (by wikidataId).
+const REC = {
+  pericles: { kind: 'person', title: 'Pericles', from: bce(495), to: bce(429), approx: true, place: 'athens', have: 'Pericles', dim: 'pol', extra: [['Office', 'general (strategos) of Athens']] },
+  athens: { kind: 'polity', title: 'Classical Athens', have: 'Athens', dim: 'pol' },
+  pelwar: { kind: 'war', title: 'Peloponnesian War', from: bce(431), to: bce(404), have: 'Peloponnesian War', dim: 'pol', extra: [['Between', 'Delian League and Peloponnesian League']] },
+  ephialtes: { kind: 'person', title: 'Ephialtes', to: bce(461), diedOnly: true, place: 'athens', dim: 'pol' },
+  citizenship: { kind: 'event', title: 'Periclean citizenship law', at: bce(451), place: 'athens', have: 'Pericles’ citizenship law', dim: 'soc' },
+  delian: { kind: 'polity', title: 'Delian League', from: bce(478), to: bce(404), have: 'Delian League', haveAs: 'territory', dim: 'pol', extra: [['Seat', 'Delos, then Athens']] },
+  delos: { kind: 'place', title: 'Delos', place: 'delos', dim: 'rel' },
+  acropolis: { kind: 'place', title: 'Acropolis of Athens', place: 'acropolis', dim: 'pol' },
+  parthenon: { kind: 'place', title: 'Parthenon', from: bce(447), to: bce(432), place: 'acropolis', have: 'Parthenon built', dim: 'rel', extra: [['Is a', 'temple of Athena']] },
+  phidias: { kind: 'person', title: 'Phidias', from: bce(480), to: bce(430), approx: true, place: 'athens', have: 'Phidias', dim: 'int' },
+  thucmel: { kind: 'person', title: 'Thucydides, son of Melesias', from: bce(500), to: bce(420), approx: true, place: 'athens', dim: 'pol' },
+  ostracism: { kind: 'idea', title: 'Ostracism', dim: 'pol' },
+  attica: { kind: 'place', title: 'Attica', place: 'attica', dim: 'pol' },
+  longwalls: { kind: 'place', title: 'Long Walls', from: bce(461), to: bce(456), approx: true, place: 'athens', have: 'Long Walls built', dim: 'tec' },
+  funeral: { kind: 'work', title: 'Pericles’ Funeral Oration', at: bce(431), place: 'athens', have: 'Pericles’ funeral oration', dim: 'int', extra: [['Author', 'Thucydides (as he recorded it)']] },
+  thucydides: { kind: 'person', title: 'Thucydides', from: bce(460), to: bce(400), approx: true, place: 'athens', dim: 'int' },
+  plague: { kind: 'event', title: 'Plague of Athens', from: bce(430), to: bce(426), place: 'athens', have: 'Plague of Athens', dim: 'soc', partOf: 'Peloponnesian War' },
+  aspasia: { kind: 'person', title: 'Aspasia', from: bce(470), to: bce(400), approx: true, place: 'athens', have: 'Aspasia', dim: 'int' },
+  // in Chronicle but not linked from the article
+  treasury: { kind: 'event', title: 'League treasury moves to Athens', at: bce(454), place: 'athens', have: 'League treasury moves to Athens', dim: 'pol', notLinked: true },
+};
+const SUBJECT = 'pericles';
+const KIND = { war: 'War', battle: 'Battle', event: 'Event', person: 'Person', polity: 'Polity', place: 'Place', work: 'Work', idea: 'Movement or idea' };
+// What Claude answers (ticket 5), by the sentences a highlight touches. Words are the passage's own; the validator drops anything else.
+const CLAUDE = {
+  tribute: {
+    dim: 'eco', dimWords: 'used its tribute to pay for',
+    already: ['treasury'],
+    entries: [{ id: 'prog', kind: 'event', title: 'Building programme on the Acropolis', from: bce(447), openEnd: true, place: 'acropolis', placeNote: 'looked up on Wikidata', dim: 'eco', words: ['From 447 BC', 'a great building programme on the Acropolis'] }],
+    conns: [
+      { id: 'c1', from: 'treasury', to: 'prog', effect: 'funded', words: ['used its tribute to pay for'] },
+      { id: 'c2', from: 'parthenon', to: 'prog', type: 'part of', words: ['beginning with the Parthenon'] },
+    ],
+  },
+  walls: {
+    dim: 'pol', dimWords: 'persuaded the Athenians',
+    entries: [{ id: 'withdraw', kind: 'event', title: 'Athenians withdraw behind the Long Walls', at: bce(431), place: 'athens', placeNote: 'looked up on Wikidata', dim: 'pol', words: ['broke out in 431 BC', 'abandon the farms of Attica and shelter behind the Long Walls'] }],
+    conns: [
+      { id: 'c3', from: 'longwalls', to: 'withdraw', effect: 'enabled', words: ['shelter behind the Long Walls'] },
+      { id: 'c4', from: 'withdraw', to: 'pelwar', type: 'part of', words: ['When the Peloponnesian War broke out'] },
+    ],
+  },
+  treasuryOnly: { dim: 'pol', dimWords: 'the treasury … was moved', already: ['treasury'], entries: [], conns: [] },
+};
+function claudeCase(h) {
+  const ids = h.sids;
+  if (ids.includes('s6')) return 'tribute';
+  if (ids.includes('s8')) return 'walls';
+  if (ids.includes('s5')) return 'treasuryOnly';
+  return null;
+}
+
+const GLYPH = {
+  war: '<rect x="1.5" y="6" width="15" height="6" rx="1" fill="currentColor" opacity=".35"/><path d="M6 3.5v11M12 3.5v11" stroke="currentColor" stroke-width="1.8"/>',
+  battle: '<circle cx="9" cy="9" r="7.5" fill="currentColor"/><path d="M6 6l6 6M12 6l-6 6" stroke="var(--panel)" stroke-width="1.8"/>',
+  event: '<circle cx="9" cy="9" r="5" fill="currentColor"/>',
+  person: '<path d="M3 9h12" stroke="currentColor" stroke-width="1.8"/><circle cx="3.5" cy="9" r="2.3" fill="currentColor"/><circle cx="14.5" cy="9" r="2.3" fill="currentColor"/>',
+  polity: '<rect x="4" y="4" width="10" height="10" fill="currentColor"/>',
+  place: '<path d="M9 2a5 5 0 0 1 5 5c0 4-5 9-5 9s-5-5-5-9a5 5 0 0 1 5-5z" fill="none" stroke="currentColor" stroke-width="1.6"/>',
+  work: '<path d="M2.5 4.5h5a1.5 1.5 0 0 1 1.5 1.5v8.5a1.5 1.5 0 0 0-1.5-1.5h-5zM15.5 4.5h-5A1.5 1.5 0 0 0 9 6v8.5a1.5 1.5 0 0 1 1.5-1.5h5z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>',
+  idea: '<path d="M9 2.5l6.5 6.5L9 15.5 2.5 9z" fill="none" stroke="currentColor" stroke-width="1.6"/>',
+  conn: '<path d="M2.5 13c2.5-7 8.5-8 12.5-3.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-dasharray="2.5 2"/><path d="M11.6 8.6l3.6 1.2-1.6 3.4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>',
+  claude: '<path d="M9 2v4M9 12v4M2 9h4M12 9h4M4.2 4.2l2.6 2.6M11.2 11.2l2.6 2.6M13.8 4.2l-2.6 2.6M6.8 11.2l-2.6 2.6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>',
+};
+const glyph = (k, extra = '') => `<svg class="glyph" viewBox="0 0 18 18" aria-hidden="true"${extra}>${GLYPH[k]}</svg>`;
+function whenOf(r) {
+  if (r.at != null) return fmtY(r.at);
+  if (r.diedOnly) return `died ${fmtY(r.to)}`;
+  if (r.openEnd) return `from ${fmtY(r.from)}`;
+  if (r.from != null) return r.approx ? `c. ${1 - r.from} – c. ${fmtY(r.to)}` : fmtR(r.from, r.to);
+  return '';
+}
+const dated = r => r.at != null || r.from != null;
+const canAdd = r => dated(r) && ['person', 'event', 'war', 'battle', 'work'].includes(r.kind);
+
+// ---------- state ----------
+const $ = s => document.querySelector(s);
+const app = $('#app'), device = $('#device'), article = $('#article'), reader = $('#reader'), page = $('#page'), drawer = $('#drawer');
+const trayInner = $('#trayInner'), seltool = $('#seltool'), toastEl = $('#toast'), mapSvg = $('#map'), mapbox = $('#mapbox'), tl = $('#tl');
+const S = { mode: 'A', env: 'ready', scn: 'a', H: [], open: null, panel: false, fresh: null, seq: 0, added: new Set(), ibox: false };
+const HL = 'highlights' in CSS && typeof Highlight === 'function';
+const isPhone = () => app.clientWidth < 600;
+const sentences = [...article.querySelectorAll('.s')];
+const getH = id => S.H.find(h => h.id === id);
+const inChronicle = k => !!(REC[k] && (REC[k].have || S.added.has(k)));
+const titleOf = k => REC[k] ? (REC[k].have || REC[k].title) : k;
+
+function rangeOf(a, b) {
+  const r = document.createRange();
+  r.setStartBefore(article.querySelector(`[data-s="${a}"]`).firstChild);
+  const e = article.querySelector(`[data-s="${b || a}"]`); r.setEnd(e, e.childNodes.length);
+  return r;
+}
+// The passage's candidates: the article's subject first, then the pages it links, de-duplicated, in reading order (ticket 3).
+function candidatesOf(range) {
+  const links = [...article.querySelectorAll('a[data-ent]')].filter(a => range.intersectsNode(a)).map(a => a.dataset.ent);
+  return [...new Set([SUBJECT, ...links])];
+}
+// Chosen at first: the first event, war or battle the passage links, else the article's subject.
+const firstChoice = cands => cands.find(k => ['event', 'war', 'battle'].includes(REC[k].kind)) || SUBJECT;
+
+function addHighlight(range, opts = {}) {
+  closeOpen();
+  const cands = candidatesOf(range);
+  const sids = sentences.filter(s => range.intersectsNode(s)).map(s => s.dataset.s);
+  const sec = article.querySelector(`[data-s="${sids[0]}"]`).closest('[data-sec]');
+  const h = {
+    id: 'h' + (++S.seq), range, cands, chosen: opts.chosen || firstChoice(cands), sids,
+    dim: opts.dim || null, quote: range.toString().replace(/\s+/g, ' ').trim(),
+    section: sec ? sec.dataset.sec : '', state: opts.state || 'open',
+    used: new Set(opts.used || []), claude: null, drafts: null,
+  };
+  S.H.push(h);
+  S.H.sort((a, b) => a.range.compareBoundaryPoints(Range.START_TO_START, b.range));
+  if (h.state === 'open') S.open = h.id;
+  return h;
+}
+function closeOpen() {
+  const h = S.open && getH(S.open);
+  if (h && h.state === 'open') h.state = h.used.size ? 'used' : 'kept';
+  S.open = null; S.panel = false;
+}
+function askClaude(h, instant) {
+  const key = claudeCase(h);
+  const go = () => {
+    h.claude = key ? 'done' : 'nothing';
+    if (key) {
+      const c = CLAUDE[key];
+      h.sug = c.dim; h.sugWords = c.dimWords; h.already = c.already || [];
+      h.drafts = { entries: c.entries.map(e => ({ ...e, status: 'pending' })), conns: c.conns.map(x => ({ ...x, status: 'pending' })) };
+    }
+    if (S.mode === 'B' && key && h.id === S.open) S.panel = true;
+    S.toClaude = true;
+  };
+  if (instant) { go(); return; }
+  h.claude = 'busy'; render(false);
+  setTimeout(() => { go(); render(true); }, 1300);
+}
+
+function initState(scn) {
+  S.H = []; S.open = null; S.panel = false; S.fresh = null; S.seq = 0; S.added = new Set();
+  addHighlight(rangeOf('s2'), { state: 'used', chosen: 'pericles', dim: 'pol', used: ['pericles'] });
+  addHighlight(rangeOf('s10'), { state: 'used', chosen: 'plague', dim: 'soc', used: ['plague'] });
+  if (scn === 'c') return;
+  const h = addHighlight(rangeOf('s5', 's6'));
+  if (scn === 'b') askClaude(h, true);
+}
+
+// ---------- painting highlights in the text ----------
+const MARKS = [...DIMS.map(([d]) => d), 'none'];
+const sheet = document.createElement('style');
+sheet.textContent = MARKS.map(d => { const c = d === 'none' ? 'var(--umber)' : `var(--${d})`; return `
+::highlight(used-${d}) { background-color: color-mix(in srgb, ${c} 20%, transparent); text-decoration: underline; text-decoration-color: ${c}; text-decoration-thickness: 2px; text-underline-offset: 4px; }
+::highlight(kept-${d}) { background-color: color-mix(in srgb, ${c} 13%, transparent); }
+::highlight(open-${d}) { background-color: color-mix(in srgb, ${c} 32%, transparent); }`; }).join('');
+document.head.append(sheet);
+function paint() {
+  if (HL) {
+    for (const st of ['used', 'kept', 'open']) for (const d of MARKS) {
+      const rs = S.H.filter(h => h.state === st && (h.dim || 'none') === d).map(h => h.range);
+      if (rs.length) CSS.highlights.set(`${st}-${d}`, new Highlight(...rs)); else CSS.highlights.delete(`${st}-${d}`);
+    }
+  } else {
+    sentences.forEach(s => { s.classList.remove('fb'); s.style.removeProperty('--c'); });
+    for (const h of S.H) sentences.filter(s => h.range.intersectsNode(s)).forEach(s => { s.classList.add('fb'); s.style.setProperty('--c', h.dim ? `var(--${h.dim})` : 'var(--umber)'); });
+  }
+}
+
+// ---------- the card ----------
+const esc = s => s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const pig = h => h.dim ? `var(--${h.dim})` : 'var(--umber)';
+function candRow(h, k) {
+  const r = REC[k], on = h.chosen === k, have = inChronicle(k);
+  const what = k === SUBJECT ? `This article · ${KIND[r.kind]}` : KIND[r.kind] + (have ? ` · in Chronicle${r.haveAs ? ' as a ' + r.haveAs : ''}${r.have && r.have !== r.title ? ': ' + r.have : ''}` : '');
+  const tag = h.used.has(k) ? '<span class="tag linked">Linked</span>' : have ? '<span class="tag have">In Chronicle</span>' : '';
+  return `<button type="button" class="cand" role="radio" aria-checked="${on}" data-cand="${k}">${glyph(r.kind)}<span class="line"><span class="ct">${r.title}</span><span class="ck">${what}</span></span>${tag}</button>`;
+}
+function chosenDetail(h) {
+  const r = REC[h.chosen], facts = [];
+  const when = whenOf(r);
+  if (when) facts.push(['When', when]);
+  if (r.place) facts.push(['Where', PLACES[r.place][0] + (dated(r) ? ' <span class="pin">· pin on the map</span>' : '')]);
+  if (r.partOf) facts.push(['Part of', `<span class="have-u">${r.partOf}</span>`]);
+  for (const x of r.extra || []) facts.push(x);
+  let note = '';
+  if (r.kind === 'place' && !inChronicle(h.chosen)) note = 'A place on its own isn’t an event. Keep it, or ask Claude what happened there.';
+  else if (r.kind === 'idea') note = 'Ideas can’t be drawn yet (Phase 5c). Keep it, or ask Claude.';
+  else if (r.kind === 'polity' && !inChronicle(h.chosen)) note = 'Polities come from the territory tools for now.';
+  return (facts.length ? `<dl class="facts">${facts.map(([k, v]) => `<div class="fact"><dt>${k}</dt><dd>${v}</dd></div>`).join('')}</dl>` : '') + (note ? `<p class="note">${note}</p>` : '');
+}
+function dimPicker(h) {
+  const sug = h.claude === 'done' ? h.sug : null;
+  let txt;
+  if (h.dim) txt = DIMNAME[h.dim] + (h.dim === sug ? ' <em>· Claude’s suggestion</em>' : '');
+  else txt = sug ? `<em>Claude suggests ${DIMNAME[sug]}</em> · pick it to use it` : 'Not picked yet';
+  return `<div class="sect"><div class="lbl">Dimension</div><div class="dimpick" role="group" aria-label="Dimension">${DIMS.map(([d, n]) => `<button type="button" data-dim="${d}" class="${d === sug ? 'sug' : ''}" style="--d:var(--${d})" title="${n}${d === sug ? ' (suggested by Claude)' : ''}" aria-label="${n}${d === sug ? ', suggested by Claude' : ''}" aria-pressed="${h.dim === d}"><i></i></button>`).join('')}<span class="dn">${txt}</span></div></div>`;
+}
+// One draft row, shared by the tray (A) and the panel (B): extracted from DraftReview, never copied.
+function endHTML(k, h) {
+  const d = h.drafts.entries.find(e => e.id === k);
+  if (d) return `<span class="end ${d.status === 'accepted' ? 'have' : 'draft'}">${d.title}</span>`;
+  return `<span class="end have">${titleOf(k)}</span>`;
+}
+const endReady = (k, h) => { const d = h.drafts.entries.find(e => e.id === k); return d ? d.status === 'accepted' : inChronicle(k); };
+function rowActs(kind, x, extraBlock) {
+  if (x.status === 'accepted') return `<div class="acts"><span class="state">${kind === 'e' ? 'Added · on the map and timeline' : 'Added'}</span><button type="button" class="quiet" data-act="undo-d" data-d="${x.id}">Undo</button></div>`;
+  if (x.status === 'rejected') return `<div class="acts"><span class="state">Left out</span><button type="button" class="quiet" data-act="undo-d" data-d="${x.id}">Undo</button></div>`;
+  return `<div class="acts"><button type="button" class="primary" data-act="acc" data-d="${x.id}"${extraBlock ? ' disabled' : ''}>Accept</button>${kind === 'e' ? `<button type="button" data-act="edit" data-d="${x.id}">Edit</button>` : ''}<button type="button" class="quiet" data-act="rej" data-d="${x.id}">Reject</button>${extraBlock ? `<small>${extraBlock}</small>` : ''}</div>`;
+}
+const evid = words => `<p class="ev">${words.map(w => `<q>${esc(w)}</q>`).join('')}</p>`;
+function draftRows(h) {
+  const D = h.drafts;
+  let html = '';
+  if (D.entries.length) html += `<div class="dgroup">Entries</div><ul class="drows">${D.entries.map(e => `<li class="drow ${e.status}" style="--c:${pig(h)}">${glyph(e.kind)}<div><div class="t">${e.title}</div><div class="m">${KIND[e.kind]} · ${whenOf(e)} · ${PLACES[e.place][0]} <i>(${e.placeNote})</i></div>${evid(e.words)}${rowActs('e', e)}</div></li>`).join('')}</ul>`;
+  if (D.conns.length) html += `<div class="dgroup">Connections</div><ul class="drows">${D.conns.map(c => {
+    const block = c.status === 'pending' && !(endReady(c.from, h) && endReady(c.to, h)) ? 'Accept the entry first.' : '';
+    return `<li class="drow ${c.status}" style="--c:${pig(h)}">${glyph('conn')}<div><div class="t">${endHTML(c.from, h)} <span class="eff">${c.effect || c.type}</span> ${endHTML(c.to, h)}</div><div class="m">Connection${c.effect ? ' with an effect' : ''} · cites this highlight as evidence</div>${evid(c.words)}${rowActs('c', c, block)}</div></li>`;
+  }).join('')}</ul>`;
+  if (h.already && h.already.length) html += `<p class="dnote">Already in Chronicle, so not drafted again: ${h.already.map(k => `<span class="end have" style="--c:${pig(h)}">${titleOf(k)}</span> (${whenOf(REC[k])})`).join(', ')}.</p>`;
+  if (!D.entries.length && !D.conns.length) html += `<p class="dnote">Everything this passage states is already in Chronicle.</p>`;
+  return html;
+}
+function draftCount(h) {
+  const n = h.drafts.entries.length, m = h.drafts.conns.length, p = [...h.drafts.entries, ...h.drafts.conns].filter(x => x.status === 'pending').length;
+  const parts = []; if (n) parts.push(`${n} ${n === 1 ? 'entry' : 'entries'}`); if (m) parts.push(`${m} connection${m === 1 ? '' : 's'}`);
+  return { text: parts.join(' and ') || 'nothing new', pending: p };
+}
+function claudeBlock(h) {
+  const lbl = `<div class="lbl">${glyph('claude', ' style="width:13px;height:13px;color:var(--umber)"')}Claude <span>· for what has no article of its own</span></div>`;
+  if (h.claude === 'busy') return `<div class="sect">${lbl}<p class="busy" role="status">Claude is reading this passage and its section…</p></div>`;
+  if (h.claude === 'nothing') return `<div class="sect">${lbl}<p class="dnote" style="margin:0">In this prototype Claude answers for the treasury, the building programme and the Long Walls passages.</p></div>`;
+  if (h.claude === 'done') {
+    if (S.mode === 'A') return `<div class="sect claude">${lbl}${draftRows(h)}</div>`;
+    const { text, pending } = draftCount(h);
+    return `<div class="sect">${lbl}<div class="summary"><p>Claude drafted ${text}${pending ? `, ${pending} waiting for you` : ''}. Dashed on the map and timeline.</p>${h.drafts.entries.length + h.drafts.conns.length ? `<button type="button" data-act="review">Review drafts</button>` : ''}</div></div>`;
+  }
+  const why = S.env === 'offline' ? '<span class="why bad">Asking Claude needs a connection.</span>'
+    : S.env === 'nokey' ? '<span class="why bad">Add your Anthropic API key in Drafting with AI first.</span>'
+    : '<span class="why">Dates, events and links the passage states, for you to check one by one.</span>';
+  return `<div class="sect">${lbl}<div class="ask"><button type="button" data-act="ask"${S.env !== 'ready' ? ' disabled' : ''}>${glyph('claude', ' style="width:14px;height:14px;color:var(--umber)"')}Ask Claude</button>${why}</div></div>`;
+}
+function cardFull(h) {
+  const r = REC[h.chosen], have = inChronicle(h.chosen), linked = h.used.has(h.chosen);
+  let primary = '';
+  if (linked) primary = '';
+  else if (have) primary = `<button type="button" class="primary" data-act="link">Link to ${titleOf(h.chosen)}</button>`;
+  else if (canAdd(r)) primary = `<button type="button" class="primary" data-act="add">Add to map and timeline</button>`;
+  const second = h.used.size ? `<button type="button"${primary ? '' : ' class="primary"'} data-act="done">Done</button>` : `<button type="button"${primary ? '' : ' class="primary"'} data-act="keep">Just keep the highlight</button>`;
+  const n = h.cands.length;
+  return `<article class="card" data-h="${h.id}" style="--c:${pig(h)}" aria-label="Highlight">
+    <div class="cbody">
+      <blockquote class="q">“${esc(h.quote)}”</blockquote>
+      <p class="src">Pericles${h.section ? ' › ' + h.section : ''}</p>
+      <div class="sect"><div class="lbl">Becomes <span>· ${n === 1 ? 'the article’s subject' : `${n} in this passage, pick one`}</span></div>
+        <div class="cands" role="radiogroup" aria-label="Becomes">${h.cands.map(k => candRow(h, k)).join('')}</div>
+        ${chosenDetail(h)}
+      </div>
+      ${dimPicker(h)}
+      ${claudeBlock(h)}
+    </div>
+    <div class="cfoot">${primary}${second}<button type="button" class="link" data-act="remove">Remove</button></div>
+  </article>`;
+}
+function renderTray() {
+  const open = S.open && getH(S.open);
+  if (open) {
+    const prev = trayInner.querySelector('.cbody'), keep = prev && prev.closest('.card').dataset.h === open.id ? prev.scrollTop : 0;
+    trayInner.innerHTML = cardFull(open);
+    const body = trayInner.querySelector('.cbody'); body.scrollTop = keep;
+    if (S.toClaude) { const c = body.querySelector('.sect.claude'); if (c) body.scrollTop = c.offsetTop - 70; S.toClaude = false; }
+  }
+  else {
+    const n = S.H.length, m = S.H.filter(h => h.state === 'used').length;
+    trayInner.innerHTML = `<div class="tray-bar"><span class="msg">${S.flash || `${n} highlight${n === 1 ? '' : 's'} in this article · ${m} in use`}</span>${isPhone() ? '<button type="button" data-act="showmap">Show on map</button>' : ''}</div>`;
+  }
+  const trayH = $('#tray').offsetHeight;
+  page.style.paddingBottom = (trayH + 48) + 'px';
+  if (open && !open.range.collapsed) {
+    const rr = open.range.getBoundingClientRect(), tr = $('#tray').getBoundingClientRect(), rd = reader.getBoundingClientRect();
+    if (rr.height && rr.bottom > tr.top - 16) reader.scrollBy({ top: Math.min(rr.bottom - tr.top + 40, rr.top - rd.top - 16) });
+    else if (rr.height && rr.top < rd.top) reader.scrollBy({ top: rr.top - rd.top - 24 });
+  }
+  $('#count').textContent = `${S.H.length} highlights here`;
+}
+function renderDrawer() {
+  const h = S.open && getH(S.open);
+  const show = S.mode === 'B' && S.panel && h && h.claude === 'done';
+  drawer.hidden = !show;
+  if (!show) return;
+  const { pending } = draftCount(h);
+  drawer.style.setProperty('--c', pig(h));
+  drawer.innerHTML = `<header><h2>Draft with AI</h2><button type="button" data-act="closedrawer">Close</button></header>
+    <div class="dbody">
+      <p class="from">From your highlight in Pericles${h.section ? ' › ' + h.section : ''}</p>
+      <blockquote>“${esc(h.quote)}”</blockquote>
+      <p class="dimline">${h.dim === h.sug ? `Dimension: ${DIMNAME[h.sug]}, as Claude suggested.` : `<em>Claude suggests ${DIMNAME[h.sug]}</em> for this highlight (“${esc(h.sugWords)}”). Pick it in the tray to use it.`}</p>
+      <div>${draftRows(h)}</div>
+      <div class="dacts">${isPhone() ? '<button type="button" data-act="showmap">Show on map</button>' : ''}<button type="button" data-act="closedrawer">${pending ? 'Back to the highlight' : 'Done'}</button></div>
+      <p class="subtle">Drafted by Claude (highlight prompt). Dashed pins on the map are waiting for you. Words in quotes are what each draft rests on.</p>
+    </div>`;
+}
+
+// ---------- what the map and timeline show ----------
+function shown() {
+  // records this article's highlights use, plus what the open highlight would make
+  const items = new Map();
+  const put = (k, o) => { if (!items.has(k)) items.set(k, o); };
+  for (const h of S.H) for (const k of h.used) {
+    const d = h.drafts && h.drafts.entries.find(e => e.id === k);
+    put(k, { key: k, r: d || REC[k], dim: (d && h.dim) || REC[k]?.dim || h.dim || 'pol', fresh: S.fresh === k });
+  }
+  const conns = [];
+  for (const h of S.H) {
+    if (!h.drafts) continue;
+    const isOpen = h.id === S.open;
+    for (const e of h.drafts.entries) if (isOpen && e.status === 'pending') put(e.id, { key: e.id, r: e, dim: h.dim || 'umber', ghost: true });
+    for (const c of h.drafts.conns) {
+      if (c.status === 'rejected' || (!isOpen && c.status !== 'accepted')) continue;
+      for (const k of [c.from, c.to]) if (REC[k]) put(k, { key: k, r: REC[k], dim: REC[k].dim });
+      conns.push({ ...c, pending: c.status !== 'accepted', fromT: c.from, toT: c.to });
+    }
+  }
+  const open = S.open && getH(S.open);
+  if (open && !inChronicle(open.chosen) && canAdd(REC[open.chosen])) put(open.chosen, { key: open.chosen, r: REC[open.chosen], dim: open.dim || 'umber', ghost: true });
+  return { items: [...items.values()], conns };
+}
+
+// ---------- map ----------
+const P = (lon, lat) => [(lon - GEO.lon0) * GEO.kx * GEO.sx, (GEO.lat1 - lat) * GEO.sx];
+const CONTEXT = [['Athens', 23.7275, 37.9838], ['Sparta', 22.43, 37.073], ['Delos', 25.2683, 37.3967]];
+let viewNow = null;
+function fitView(items, cw, ch) {
+  const pts = [[22.43, 37.073], [25.2683, 37.3967], [23.7275, 37.9838], ...items.map(i => PLACES[i.r.place].slice(1))].map(([lo, la]) => P(lo, la));
+  let x0 = Math.min(...pts.map(p => p[0])), x1 = Math.max(...pts.map(p => p[0])), y0 = Math.min(...pts.map(p => p[1])), y1 = Math.max(...pts.map(p => p[1]));
+  x0 -= 70; x1 += 120; y0 -= 70; y1 += 60;
+  let w = x1 - x0, h = y1 - y0;
+  const ar = cw / ch;
+  if (w / h < ar) { const nw = h * ar; x0 -= (nw - w) / 2; w = nw; } else { const nh = w / ar; y0 -= (nh - h) / 2; h = nh; }
+  if (w <= GEO.W) x0 = Math.min(Math.max(x0, 0), GEO.W - w);
+  if (h <= GEO.H) y0 = Math.min(Math.max(y0, 0), GEO.H - h);
+  return [x0, y0, w, h];
+}
+function renderMap(animate) {
+  const cw = mapbox.clientWidth, ch = mapbox.clientHeight;
+  if (!cw || !ch) return;
+  const items = shown().items.filter(i => i.r.place && dated(i.r));
+  const target = fitView(items, cw, ch);
+  const from = viewNow || target;
+  const draw = v => {
+    viewNow = v;
+    const k = v[2] / cw;
+    const pieces = [];
+    mapSvg.setAttribute('viewBox', v.map(n => n.toFixed(1)).join(' '));
+    for (let lo = 12; lo <= 30; lo += 2) { const a = P(lo, 42.4), b = P(lo, 34.6); pieces.push(`<path class="grat" stroke-width="${(.8 * k).toFixed(2)}" d="M${a[0]} ${a[1]}V${b[1]}"/>`); }
+    for (let la = 35; la <= 42; la += 1) { const a = P(12, la), b = P(30.5, la); pieces.push(`<path class="grat" stroke-width="${(.8 * k).toFixed(2)}" d="M${a[0]} ${a[1]}H${b[0]}"/>`); }
+    pieces.push(`<path class="land" stroke-width="${(.8 * k).toFixed(2)}" d="${GEO.d}"/>`);
+    for (const [name, lo, la] of CONTEXT) {
+      const [x, y] = P(lo, la);
+      pieces.push(`<rect class="ctxdot" x="${x - 3 * k}" y="${y - 3 * k}" width="${6 * k}" height="${6 * k}"/><text class="ctx" x="${x - 7 * k}" y="${y + 4 * k}" font-size="${12.5 * k}" text-anchor="end">${name}</text>`);
+    }
+    // everything in and around Athens stacks into one list of pins beside the city
+    const clusters = {};
+    for (const it of items) {
+      const c = it.r.place === 'acropolis' ? 'athens' : it.r.place;
+      (clusters[c] = clusters[c] || []).push(it);
+    }
+    for (const [c, list] of Object.entries(clusters)) {
+      const [bx, by] = P(...PLACES[c].slice(1));
+      list.forEach((it, n) => {
+        const x = bx + 14 * k, y = by - (list.length - 1) * 8 * k + n * 16 * k;
+        if (list.length > 1) pieces.push(`<path d="M${bx} ${by}L${x - 6 * k} ${y}" stroke="var(--ink-2)" stroke-width="${.6 * k}" opacity=".5"/>`);
+        pieces.push(pinSVG(it, x, y, k));
+      });
+    }
+    mapSvg.innerHTML = pieces.join('');
+  };
+  const same = from.every((n, i) => Math.abs(n - target[i]) < .5);
+  if (!animate || same || matchMedia('(prefers-reduced-motion: reduce)').matches) { draw(target); return; }
+  const t0 = performance.now();
+  const step = now => { const t = Math.min(1, (now - t0) / 400), e = 1 - Math.pow(1 - t, 3); draw(from.map((n, i) => n + (target[i] - n) * e)); if (t < 1) requestAnimationFrame(step); };
+  requestAnimationFrame(step);
+}
+function pinSVG(it, x, y, k) {
+  const c = it.ghost ? 'var(--umber)' : `var(--${it.dim})`, r = it.r;
+  let g;
+  if (r.kind === 'person') g = `<circle cx="${x}" cy="${y}" r="${4.5 * k}" fill="var(--map-land)" stroke="${c}" stroke-width="${2 * k}"/>`;
+  else if (r.kind === 'war') g = `<circle cx="${x}" cy="${y}" r="${7 * k}" fill="color-mix(in srgb, ${c} 12%, transparent)" stroke="${c}" stroke-width="${1.4 * k}" stroke-dasharray="${3 * k} ${2 * k}"/>`;
+  else if (it.ghost) g = `<circle cx="${x}" cy="${y}" r="${5 * k}" fill="var(--map-land)" stroke="${c}" stroke-width="${1.5 * k}" stroke-dasharray="${2.2 * k} ${1.6 * k}"/>`;
+  else g = `<circle cx="${x}" cy="${y}" r="${5 * k}" fill="${c}"/>`;
+  const halo = it.ghost ? `<circle class="halo" cx="${x}" cy="${y}" r="${9.5 * k}" stroke-width="${1.1 * k}"/>` : '';
+  const ring = it.fresh ? `<circle class="ring" cx="${x}" cy="${y}" r="${8 * k}" stroke-width="${2 * k}" style="--c:${c}"/>` : '';
+  const label = `<text class="plabel" x="${x + 12 * k}" y="${y + 4 * k}" font-size="${12 * k}" stroke-width="${3 * k}">${r.have || r.title}${it.ghost ? '?' : ''}</text>`;
+  return `<g class="pin${it.ghost ? ' ghost' : ''}${it.fresh ? ' fresh' : ''}">${halo}${ring}${g}${label}</g>`;
+}
+
+// ---------- timeline strip ----------
+const TL = [bce(500), bce(400)];
+const ctx2d = document.createElement('canvas').getContext('2d');
+const textW = (s, font) => { ctx2d.font = font; return ctx2d.measureText(s).width; };
+function renderTimeline() {
+  const w = tl.clientWidth; if (!w) return;
+  const x0 = 16, x1 = w - 16, X = y => x0 + (y - TL[0]) / (TL[1] - TL[0]) * (x1 - x0);
+  const { items, conns } = shown();
+  const all = [{ key: 'pelwar', r: REC.pelwar, dim: 'pol' }, ...items.filter(i => i.key !== 'pelwar' && dated(i.r))];
+  all.sort((a, b) => (a.r.from ?? a.r.at) - (b.r.from ?? b.r.at));
+  let html = '<span class="tlhead">Timeline · 500–400 BCE</span>';
+  const rows = [], pos = {};
+  for (const it of all) {
+    const r = it.r, point = r.at != null;
+    const a = point ? X(r.at) : X(r.from ?? r.to), b = point ? a : r.openEnd ? X(r.from + 14) : X(r.to);
+    const name = (r.have || r.title) + (it.ghost ? '?' : '');
+    const lw = textW(name, '12.5px Spectral');
+    const end = Math.max(b, a + lw + (point ? 12 : 0)) + 12;
+    let row = rows.findIndex(e => e <= a); if (row < 0) { row = rows.length; rows.push(0); } rows[row] = end;
+    const top = 44 + row * 30;
+    const cls = ['ti', r.kind === 'war' ? 'war' : r.kind === 'person' ? 'person' : '', point ? 'point' : '', it.ghost ? 'ghost' : '', it.fresh ? 'fresh' : '', r.approx ? 'approx' : '', r.openEnd ? 'openend' : ''].join(' ');
+    const h = point ? 12 : r.kind === 'war' ? 10 : 7;
+    html += `<div class="${cls}" style="--c:${it.ghost ? 'var(--umber)' : `var(--${it.dim})`};left:${a}px;width:${Math.max(0, b - a)}px;top:${top}px;height:${h}px"><div class="bar"></div><span class="lab">${name}</span></div>`;
+    pos[it.key] = { x: a, y: top + h / 2 };
+  }
+  // drafted connections: dashed while waiting, solid once accepted
+  let svg = '';
+  for (const c of conns) {
+    const A = pos[c.fromT], B = pos[c.toT]; if (!A || !B) continue;
+    const cl = c.pending ? ' pending' : '', label = (c.effect || c.type) + (c.pending ? '?' : '');
+    if (Math.abs(B.x - A.x) < 24) {
+      // same year: loop out to the left, labelled beside the loop
+      const lx = Math.min(A.x, B.x) - 34;
+      svg += `<path class="arc${cl}" d="M${A.x - 5} ${A.y}C${lx} ${A.y} ${lx} ${B.y} ${B.x - 7} ${B.y}"/>`;
+      svg += `<path class="arch${cl}" d="M${B.x - 3} ${B.y}l-6 -4v8z"/>`;
+      svg += `<text class="arclab${cl}" x="${lx + 4}" y="${(A.y + B.y) / 2 + 4}" text-anchor="end">${label}</text>`;
+      continue;
+    }
+    const lift = 26 + Math.abs(B.x - A.x) * .08, my = Math.min(A.y, B.y) - lift, mx = (A.x + B.x) / 2;
+    const dir = B.x >= A.x ? 1 : -1;
+    svg += `<path class="arc${cl}" d="M${A.x} ${A.y - 5}Q${mx} ${my} ${B.x - dir * 2} ${B.y - 6}"/>`;
+    svg += `<path class="arch${cl}" d="M${B.x} ${B.y - 4}l${-dir * 5.5} -5.5l${dir * 1.2} 6.8z"/>`;
+    svg += `<text class="arclab${cl}" x="${mx}" y="${(my + Math.min(A.y, B.y)) / 2 - 2}" text-anchor="middle">${label}</text>`;
+  }
+  html += `<svg class="arcs" aria-hidden="true">${svg}</svg>`;
+  html += '<div class="tlaxis">';
+  for (let n = 500; n >= 400; n -= 10) { const x = X(bce(n)); html += `<i style="left:${x}px"></i>`; if (n % 20 === 0) html += `<span style="left:${x}px">${n === 500 ? '500 BCE' : n}</span>`; }
+  html += '</div>';
+  tl.innerHTML = html;
+}
+
+function render(animateMap) {
+  app.classList.toggle('is-phone', isPhone());
+  paint(); renderTray(); renderDrawer(); renderMap(animateMap); renderTimeline(); notes();
+}
+function notes() {
+  const scn = {
+    a: '<b>a · Becomes.</b> A highlight lists every subject it could become: the article’s own subject first, then the pages the passage links, in reading order, each with its glyph, kind and whether it’s already in Chronicle. Pick one; the facts, the dashed ghost on the map and the button follow it.',
+    b: '<b>b · After Ask Claude.</b> Claude suggests a dimension (the dashed ring; it’s only taken if you pick it) and drafts what has no article of its own, each with the words of the passage it rests on. Accept or reject them one by one; a connection to a new entry waits for the entry.',
+    c: '<b>c · Folded infobox.</b> The infobox starts as one line, with its picture as a small thumbnail, so the text starts near the top on the phone. Tap to open it; the choice is remembered on this device. Its rows can still be highlighted.',
+  }[S.scn];
+  const mode = S.scn === 'c' ? '' : S.mode === 'A'
+    ? ' <b>A · In the tray.</b> The drafts sit in the tray under the dimension picker, beside the quote they came from.'
+    : ' <b>B · In the draft panel.</b> The tray says what Claude drafted, and “Review drafts” opens today’s draft panel, on the right on the laptop and as a sheet on the phone.';
+  $('#pnote').innerHTML = scn + mode + `<span class="how">Select any words (H on the laptop) or tap a sentence on the phone. Claude answers in this prototype for the treasury, the building programme and the Long Walls passages; other links work through Wikidata alone.</span>`;
+}
+
+// ---------- interactions ----------
+function updateSelTool() {
+  const sel = getSelection();
+  if (!sel.rangeCount || sel.isCollapsed || !article.contains(sel.getRangeAt(0).commonAncestorContainer) || !sel.toString().trim()) { seltool.hidden = true; return; }
+  const r = sel.getRangeAt(0), rect = r.getBoundingClientRect(), pr = page.getBoundingClientRect();
+  seltool.hidden = false;
+  if (isPhone()) { seltool.classList.add('docked'); app.append(seltool); return; }
+  seltool.classList.remove('docked'); page.append(seltool);
+  seltool.style.left = (rect.left + rect.width / 2 - pr.left) + 'px';
+  seltool.style.top = (rect.top - pr.top - 8) + 'px';
+}
+document.addEventListener('selectionchange', () => requestAnimationFrame(updateSelTool));
+function highlightSelection() {
+  const sel = getSelection(); if (!sel.rangeCount || sel.isCollapsed) return;
+  const r = sel.getRangeAt(0).cloneRange();
+  if (!article.contains(r.commonAncestorContainer) || !sentences.some(s => r.intersectsNode(s))) return;
+  sel.removeAllRanges(); seltool.hidden = true;
+  addHighlight(r); S.fresh = null; S.flash = null; render(true);
+}
+seltool.addEventListener('mousedown', ev => ev.preventDefault());
+$('#hlbtn').addEventListener('click', highlightSelection);
+document.addEventListener('keydown', ev => {
+  if ((ev.key === 'h' || ev.key === 'H') && !ev.metaKey && !ev.ctrlKey && !seltool.hidden) { ev.preventDefault(); highlightSelection(); }
+  if (ev.key === 'Escape') {
+    if (app.classList.contains('show-map')) app.classList.remove('show-map');
+    else if (S.panel) { S.panel = false; render(false); }
+    else if (S.open) { closeOpen(); render(true); }
+  }
+});
+function hitHighlight(ev) {
+  let node, off;
+  if (document.caretRangeFromPoint) { const c = document.caretRangeFromPoint(ev.clientX, ev.clientY); if (!c) return null; node = c.startContainer; off = c.startOffset; }
+  else if (document.caretPositionFromPoint) { const c = document.caretPositionFromPoint(ev.clientX, ev.clientY); if (!c) return null; node = c.offsetNode; off = c.offset; }
+  else return null;
+  return S.H.find(h => { try { return h.range.isPointInRange(node, off) && !(h.range.endContainer === node && h.range.endOffset === off); } catch { return false; } });
+}
+article.addEventListener('click', ev => {
+  if (ev.target.closest('#iboxHead')) return;
+  const link = ev.target.closest('a[data-ent]');
+  const sel = getSelection();
+  if (link) { ev.preventDefault(); if (sel.isCollapsed) toast(`In the app, ${link.textContent} opens here in the reader and joins your reading trail.`); return; }
+  if (!sel.isCollapsed) return;
+  const hit = hitHighlight(ev);
+  if (hit) { openH(hit.id); return; }
+  if (!isPhone()) return;
+  const s = ev.target.closest('.s'); if (!s) return;
+  addHighlight(rangeOf(s.dataset.s)); S.fresh = null; S.flash = null; render(true);
+});
+function openH(id) {
+  if (S.open === id) return;
+  closeOpen();
+  const h = getH(id); h.state = 'open'; S.open = id; S.fresh = null; S.flash = null;
+  render(true);
+}
+function findDraft(h, id) { return h.drafts.entries.find(e => e.id === id) || h.drafts.conns.find(c => c.id === id); }
+function onAction(ev) {
+  const btn = ev.target.closest('button'); if (!btn) return;
+  const act = btn.dataset.act;
+  if (act === 'showmap') { app.classList.add('show-map'); renderMap(false); renderTimeline(); return; }
+  const h = S.open && getH(S.open); if (!h) return;
+  if (btn.dataset.cand) { h.chosen = btn.dataset.cand; render(true); return; }
+  if (btn.dataset.dim) { h.dim = h.dim === btn.dataset.dim ? null : btn.dataset.dim; render(false); return; }
+  if (act === 'ask') { askClaude(h); return; }
+  if (act === 'review') { S.panel = true; render(false); return; }
+  if (act === 'closedrawer') { S.panel = false; render(false); return; }
+  if (act === 'link' || act === 'add') {
+    if (act === 'add') S.added.add(h.chosen);
+    h.used.add(h.chosen); S.fresh = h.chosen;
+    toast(act === 'add' ? `In the app, Add opens the entry editor filled in from Wikipedia. Here ${REC[h.chosen].title} is added at once.` : `Highlight linked to ${titleOf(h.chosen)}.`);
+    render(true); setTimeout(() => { S.fresh = null; }, 1200); return;
+  }
+  if (act === 'keep' || act === 'done') { closeOpen(); S.flash = act === 'done' ? `Highlight in use by ${[...h.used].map(k => titleOf(k) || k).join(', ')}.` : null; render(true); S.flash = null; return; }
+  if (act === 'remove') { S.H = S.H.filter(x => x !== h); S.open = null; S.panel = false; render(true); toast('Highlight removed.'); return; }
+  const d = btn.dataset.d && findDraft(h, btn.dataset.d);
+  if (!d) { if (act === 'edit') toast('In the app, Edit opens the entry editor with this draft filled in.'); return; }
+  if (act === 'acc') {
+    d.status = 'accepted';
+    if (h.drafts.entries.includes(d)) { h.used.add(d.id); REC[d.id] = { ...d, have: d.title }; S.fresh = d.id; setTimeout(() => { S.fresh = null; }, 1200); }
+    else h.used.add('conn:' + d.id);
+  } else if (act === 'rej') d.status = 'rejected';
+  else if (act === 'undo-d') {
+    d.status = 'pending'; h.used.delete(d.id); h.used.delete('conn:' + d.id);
+    if (h.drafts.entries.includes(d)) { delete REC[d.id]; for (const c of h.drafts.conns) if ((c.from === d.id || c.to === d.id) && c.status === 'accepted') { c.status = 'pending'; h.used.delete('conn:' + c.id); } }
+  }
+  if (act === 'edit') toast('In the app, Edit opens the entry editor with this draft filled in.');
+  render(true);
+}
+trayInner.addEventListener('click', onAction);
+drawer.addEventListener('click', onAction);
+$('#mapbtn').addEventListener('click', () => { app.classList.add('show-map'); renderMap(false); renderTimeline(); });
+$('#closeMap').addEventListener('click', () => app.classList.remove('show-map'));
+let toastT = 0;
+function toast(msg) { toastEl.textContent = msg; toastEl.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => { toastEl.hidden = true; }, 3200); }
+
+// the infobox: folded by default, remembered per device (useStored in the app)
+const ibox = $('#ibox'), iboxHead = $('#iboxHead');
+function setIbox(open) { S.ibox = open; ibox.classList.toggle('open', open); iboxHead.setAttribute('aria-expanded', String(open)); $('#iboxWord').textContent = open ? 'Hide' : 'Show'; try { localStorage.setItem('proto.infobox', open ? '1' : '0'); } catch {} }
+iboxHead.addEventListener('click', () => { setIbox(!S.ibox); renderTray(); });
+
+// ---------- prototype controls ----------
+function seg(id, cb) {
+  const f = document.getElementById(id);
+  f.addEventListener('click', ev => { const b = ev.target.closest('button[data-v]'); if (!b) return; press(f, b.dataset.v); cb(b.dataset.v); });
+  return f;
+}
+const press = (f, v) => f.querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', String(x.dataset.v === v)));
+function start(scn) {
+  S.scn = scn; press($('#scn'), scn);
+  initState(scn); viewNow = null; app.classList.remove('show-map'); setIbox(false);
+  render(false);
+  if (scn === 'c') reader.scrollTop = 0;
+}
+seg('scn', start);
+seg('mode', v => { S.mode = v; const h = S.open && getH(S.open); S.panel = v === 'B' && !!(h && h.claude === 'done'); render(false); });
+seg('env', v => { S.env = v; render(false); });
+seg('dev', v => { device.classList.toggle('phone', v === 'phone'); app.classList.remove('show-map'); viewNow = null; requestAnimationFrame(() => render(false)); });
+const thm = seg('thm', v => { document.documentElement.dataset.theme = v; });
+const darkNow = () => document.documentElement.dataset.theme ? document.documentElement.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+press(thm, darkNow() ? 'dark' : 'light');
+$('#reset').addEventListener('click', () => start(S.scn));
+
+let lastW = 0;
+new ResizeObserver(() => { const w = app.clientWidth; if (w === lastW) return; lastW = w; viewNow = null; render(false); }).observe(app);
+new ResizeObserver(() => { renderMap(false); renderTimeline(); }).observe(mapbox);
+
+start('a');
+document.fonts && document.fonts.ready.then(() => render(false));
+})();
+</script>
