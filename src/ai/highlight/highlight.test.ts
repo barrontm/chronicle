@@ -213,7 +213,14 @@ describe('draftFromHighlight', () => {
   const replay = async (r: Recording) => {
     const fetch = replayFetch(r);
     vi.stubGlobal('fetch', fetch);
-    return runCase(cases.get(r.case)!, { apiKey: 'sk-ant-test', today: '2026-10-17', now: 42, fetch });
+    vi.useFakeTimers({ toFake: ['setTimeout'] }); // live runs recorded Wikipedia's 429s, and the waits before asking again
+    try {
+      const done = runCase(cases.get(r.case)!, { apiKey: 'sk-ant-test', today: '2026-10-17', now: 42, fetch });
+      await vi.runAllTimersAsync();
+      return await done;
+    } finally {
+      vi.useRealTimers();
+    }
   };
 
   it('drafts a dated entry with its place, and a connection with its effect citing the highlight', async () => {

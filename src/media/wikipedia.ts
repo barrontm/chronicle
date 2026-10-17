@@ -258,8 +258,17 @@ export function buildDraft(args: {
 
 // ---------- Network ----------
 
+/** Wikipedia and Wikidata answer 429 when asked too fast (a draft's labels and coordinates go at once), so wait and ask again, twice. */
+const RETRY_MS = [1500, 4000];
+
 async function getJson(url: string, signal?: AbortSignal): Promise<unknown> {
-  const res = await fetch(url, { signal });
+  let res = await fetch(url, { signal });
+  for (const ms of RETRY_MS) {
+    if (res.status !== 429) break;
+    await new Promise((r) => setTimeout(r, ms));
+    signal?.throwIfAborted();
+    res = await fetch(url, { signal });
+  }
   if (!res.ok) throw new Error(`Wikipedia returned ${res.status}. Try again in a moment.`);
   return res.json();
 }

@@ -25,6 +25,8 @@ const dir = `tests/ai-evals/${feature}`;
 const cases = parse(readFileSync(`${dir}/cases.yaml`, 'utf8')).tests.filter((t) => !opt('case') || t.description === opt('case'));
 const baseline = existsSync(`${dir}/results.json`) ? JSON.parse(readFileSync(`${dir}/results.json`, 'utf8')) : { cases: {} };
 
+const KEEP_CLAIMS = new Set(['P122', 'P1480', 'P155', 'P156', 'P18', 'P19', 'P20', 'P276', 'P279', 'P31', 'P361', 'P569', 'P570', 'P571', 'P576', 'P580', 'P582', 'P585', 'P625', 'P710', 'P737']);
+
 // Record every response (Anthropic, Wikipedia, Wikidata) so passing runs can be replayed in tests.
 const realFetch = globalThis.fetch;
 let exchanges = [];
@@ -33,7 +35,10 @@ const recordingFetch = async (input, init) => {
   const res = await realFetch(input, init);
   const text = await res.clone().text();
   try {
-    exchanges.push({ url, status: res.status, body: JSON.parse(text) });
+    const body = JSON.parse(text);
+    // Keep only the Wikidata claims Chronicle reads, so recordings stay small.
+    for (const e of Object.values(body?.entities ?? {})) if (e?.claims) e.claims = Object.fromEntries(Object.entries(e.claims).filter(([k]) => KEEP_CLAIMS.has(k)));
+    exchanges.push({ url, status: res.status, body });
   } catch {
     exchanges.push({ url, status: res.status, body: text });
   }
