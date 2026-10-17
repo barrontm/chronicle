@@ -219,6 +219,29 @@ if (any('desktop-help')) await help(await page('desktop-help', desktop), 'deskto
 if (any('dark-help')) await help(await page('dark-help', { ...desktop, colorScheme: 'dark' }), 'dark');
 if (any('phone-help')) await help(await page('phone-help', { viewport: { width: 412, height: 860 }, isMobile: true, hasTouch: true }), 'phone');
 
+// The new layout's reader on a mocked article, with the sample timeline beside it.
+async function reader(p, prefix) {
+  const cors = { 'Access-Control-Allow-Origin': '*' };
+  await p.route('https://en.wikipedia.org/w/rest.php/v1/search/page**', (r) => r.fulfill({ headers: cors, json: { pages: [{ key: 'Peloponnesian_War', title: 'Peloponnesian War', description: 'War between Athens and Sparta (431–404 BC)', thumbnail: null }] } }));
+  await p.route('https://en.wikipedia.org/api/rest_v1/page/summary/**', (r) => r.fulfill({ headers: cors, json: {
+    title: 'Peloponnesian War', description: 'War between Athens and Sparta (431–404 BC)',
+    extract: 'The Peloponnesian War (431–404 BC) was an ancient Greek war fought between Athens and Sparta and their respective allies for the hegemony of the Greek world. The war remained undecided for a long time until the decisive intervention of the Persian Empire in support of Sparta.',
+    content_urls: { desktop: { page: 'https://en.wikipedia.org/wiki/Peloponnesian_War' } },
+  } }));
+  await withFixture(p);
+  await p.getByRole('button', { name: 'More' }).click();
+  await p.getByRole('menuitemcheckbox', { name: 'Try the new layout' }).click();
+  await p.getByTestId('article-search').getByLabel('Search Wikipedia').fill('peloponnesian');
+  await p.getByTestId('article-search').getByRole('button', { name: 'Search' }).click();
+  await p.getByTestId('article-results').getByRole('button').first().click();
+  await p.getByTestId('article').getByText('hegemony').waitFor();
+  await p.waitForTimeout(800);
+  await shot(p, `${prefix}-reader`);
+}
+if (any('desktop-reader')) await reader(await page('desktop-reader', desktop), 'desktop');
+if (any('dark-reader')) await reader(await page('dark-reader', { ...desktop, colorScheme: 'dark' }), 'dark');
+if (any('phone-reader')) await reader(await page('phone-reader', { viewport: { width: 412, height: 860 }, isMobile: true, hasTouch: true }), 'phone');
+
 // Draft with AI: a recorded run replayed (no network, no key needed), one entry accepted.
 async function aiDraft(p, prefix) {
   const rec = JSON.parse(readFileSync(fileURLToPath(new URL('../tests/ai-evals/entries/recordings/handmade-persian-wars.json', import.meta.url)), 'utf8'));

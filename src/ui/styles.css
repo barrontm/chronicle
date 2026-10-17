@@ -104,6 +104,34 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .workspace.with-drawer { grid-template-columns: 1fr var(--drawer); }
 .stage { display: flex; flex-direction: column; min-width: 0; min-height: 0; overflow: auto; }
 
+/* ---------- New layout: the reader beside the map over a timeline strip ---------- */
+.workspace.next { grid-template-columns: minmax(320px, 40em) 1fr; }
+.workspace.next.with-drawer { grid-template-columns: minmax(320px, 40em) 1fr var(--drawer); }
+.workspace.next .stage { padding-top: 12px; }
+.workspace.next .lanebar { display: none; }
+.reader { min-width: 0; min-height: 0; overflow: auto; border-right: 1px solid var(--rule); background: var(--panel); padding: 24px 32px 48px; }
+.reader-tools { display: flex; justify-content: flex-end; margin: -8px -8px 8px 0; }
+.reader-search, .reader-article { max-width: 34em; margin: 0 auto; }
+.reader-title { font-family: var(--font-read); font-size: 30px; line-height: 1.15; font-weight: 600; margin: 0 0 6px; }
+.reader-sub { color: var(--muted); margin: 0 0 20px; font-size: 14px; }
+.reader-text { font-family: var(--font-read); font-size: 18px; line-height: 1.65; color: var(--ink); }
+.reader-text p { margin: 0 0 1em; }
+.reader-credit { color: var(--muted); font-size: 12px; margin-top: 24px; }
+.trail { display: flex; align-items: center; gap: 2px; min-width: 0; overflow: hidden; font-size: 13px; }
+.trail-step { border: 0; background: none; color: var(--muted); padding: 2px 4px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 18ch; border-radius: var(--radius-s); }
+.trail-step + .trail-step::before { content: '›'; margin-right: 6px; color: var(--muted); }
+.trail-step[aria-current='page'] { color: var(--ink); font-weight: 600; }
+.trail-step:hover { background: var(--rule-soft); }
+.empty-strip { margin: 8px 16px; color: var(--muted); font-family: var(--font-read); font-size: 15px; }
+.sheet-head { display: flex; padding: 0 8px 8px; }
+@media (max-width: 860px) {
+  .workspace.next, .workspace.next.with-drawer { grid-template-columns: 1fr; }
+  .reader { border-right: 0; padding: 16px 16px 48px; }
+  .reader-title { font-size: 26px; }
+  .reader-text { font-size: 17px; }
+  .trail { order: 10; width: 100%; }
+}
+
 /* ---------- Buttons & fields ---------- */
 .btn {
   display: inline-flex; align-items: center; gap: 6px;
