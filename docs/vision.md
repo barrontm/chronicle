@@ -19,6 +19,7 @@ Nothing appears until Bob has read and highlighted it. The app still ships no co
 - AI features (rules in `src/ai/CLAUDE.md`):
   - `highlight`: from a highlight and its section, extract claims (dates, place names for the gazetteers, actors, quantities, institutions for regimes, sectors for economies) and a dimension. The article text is prompt-cached.
   - `themes`: group an era's highlights into themes with a suggested short label. Bob accepts or edits each.
+  - `socrates`: Bob talks about any subject with Plato's Socrates, who questions rather than tells (elenchus, analogies from the crafts, aporia), drawing only on the article, linked articles, Bob's highlights and notes, and later his own books. Dialogues are kept with the entry, never as notes.
 
 ## Representations
 One module per subject type in `src/ui/representations/`, each declaring its timeline glyph, map layers and animation.
@@ -34,7 +35,12 @@ One module per subject type in `src/ui/representations/`, each declaring its tim
 | Migration | span | flow arrows | moving dashes |
 | Movement/idea | span; reception threads per region (thin where lost, bright where revived) | influence arcs; regions tinted by reception; transmission arrows | arcs spread outward; threads brighten on revival |
 | Institution (school, university) | lifespan bar, split by structure | pin | structure diagram morphs between snapshots |
+| Disaster (earthquake, eruption, epidemic, famine, flood) | point or span | affected area | rings, ash fall, a spreading tint |
+| Discovery (science) | point | spark at the place | a ring as word spreads |
+| Religion | span | regions tinted by adherence | conversion waves |
 | Influence (connection across dimensions) | arrow between level-1 lanes, labelled with its effect | none | none |
+
+Borders also show their kind (Phase 5d): a frontier fades out, a wall is a crenellated line, a treaty border is crisp, contested ground interleaves both claimants' colours, a claim or occupation is dashed. Wars carry force icons for the arms each side used. Icons and lines are drawn by us; a tap shows real Commons pictures.
 
 ### Polity: how it was governed
 `regimes: { from, to?, form, institutions: { id, name, role, selection?, powers? }[], links: { from, to, kind: 'elects' | 'appoints' | 'advises' | 'checks' | 'commands' }[], highlightIds, citations }[]`. `form` is an open vocabulary (monarchy, tyranny, oligarchy, democracy, republic, empire, federation, theocracy, occupied/client, …). Seeded from Wikidata P122; institutions come from Bob's highlights. The timeline bar splits into regime segments, each with a pattern per form, and the territory's edge and texture follow the regime. A power-structure diagram (who elects, appoints and checks whom) morphs as the year plays. Polities can be compared side by side, for example Athens vs Sparta in 431 BCE.
@@ -58,9 +64,11 @@ A connection can carry an `effect` (weakened, funded, legitimised, …) and the 
 
 ## Schema path
 - v6: `highlights`, `dimension`, `themes` on periods; `effect` and `highlightIds` on connections.
-- v7: `regimes` on territories, and alliances.
-- v8: `economies` (with `distribution`), plus `Flow.subject` and `goods`.
-- v9: `institutions` with `structures`, `reception` on ideas and works, `Flow.subject: 'ideas'`.
+- v7: `dialogues` (talking with Socrates).
+- v8: `regimes` on territories, and alliances.
+- v9: `economies` (with `distribution`), plus `Flow.subject` and `goods`.
+- v10: `institutions` with `structures`, `reception` on ideas and works, `Flow.subject: 'ideas'`.
+- v11: kinds of border (`edge` on territory snapshots), walls, forces on wars and battles.
 
 Each bump that adds a record also makes it a valid connection endpoint.
 
@@ -72,12 +80,14 @@ Each phase ships something usable, behind a "Try the new layout" setting (`ui.ne
 0. Design and spikes: design language, prototypes, spikes, rich fixture
 1. Reader: reader pane, highlights (v6), recognition, offline cache
 2. Highlight → record: code path, AI `highlight` feature, review
+   - 2b. Talk with Socrates: dialogues (v7), the AI `socrates` feature
 3. New timeline: renderer at parity, then the zoom levels; vis-timeline removed
 4. Eras, themes and influences between dimensions
-5. Polities and wars: regimes (v7), border morph, alliances, campaigns, battles
-   - 5b. Economy, with distribution (v8)
-   - 5c. Ideas, schools and spread (v9)
-6. Other sources: Worker proxy with Readability, bookmarklet / share target
+5. Polities and wars: regimes (v8), border morph, alliances, campaigns, battles
+   - 5b. Economy, with distribution (v9)
+   - 5c. Ideas, schools and spread (v10)
+   - 5d. Living map: kinds of border and walls, war technology, disasters, discoveries, the look of ideas and religion (v11)
+6. Other sources: Worker proxy with Readability, bookmarklet / share target, PDFs and EPUBs Bob uploads
 
 A checkpoint session closes each phase. It triages the ideas inbox, reorders what's left and logs changes.
 
