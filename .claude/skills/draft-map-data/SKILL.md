@@ -27,6 +27,7 @@ A schema-5 doc (see `docs/data-model.md`, `src/model/types.ts`) in the scratchpa
 - The doc's own top-level `updatedAt` is `0`. Merge takes the title, id and categories from the newer doc, so a newer draft would rename Bob's timeline and replace his lanes.
 - Reuse his category ids (the defaults are in `DEFAULT_CATEGORIES`, `src/model/doc.ts`) so the draft lands in an existing lane.
 - Quoted reference text goes in `excerpt`, never in a note: notes are Bob's own words, so a draft has **no notes**.
+- A route by sea (a fleet, a flow of goods) comes from `node scripts/sea-route.mjs --stops "lon,lat;…"`, ports first and last and capes between, so it never crosses land. Land routes go town to town through sourced places.
 - No pictures unless they come from Commons with credit and license. Never generated images.
 
 ## 4. Check it
