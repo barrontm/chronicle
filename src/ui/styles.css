@@ -117,6 +117,27 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .reader-text { font-family: var(--font-read); font-size: 18px; line-height: 1.65; color: var(--ink); }
 .reader-text p { margin: 0 0 1em; }
 .reader-credit { color: var(--muted); font-size: 12px; margin-top: 24px; }
+.reader-text h2 { font-size: 23px; font-weight: 600; margin: 1.6em 0 0.4em; line-height: 1.25; }
+.reader-text h3 { font-size: 19px; font-weight: 600; margin: 1.3em 0 0.3em; }
+.reader-text h4, .reader-text h5 { font-size: 17px; font-weight: 600; margin: 1em 0 0.3em; }
+.reader-text a { color: inherit; text-decoration: underline; text-decoration-color: var(--rule); text-underline-offset: 0.18em; }
+.reader-text a:hover { text-decoration-color: var(--ink-2); }
+.reader-text sup.fn { font-family: var(--font-ui); font-size: 10px; line-height: 0; }
+.reader-text sup.fn a { text-decoration: none; color: var(--muted); padding: 0 1px; }
+.reader-text .hatnote { font-style: italic; color: var(--muted); font-size: 15px; }
+.reader-text figure { margin: 1em 0; font-family: var(--font-ui); font-size: 13px; color: var(--ink-2); }
+.reader-text figure.mw-halign-right, .reader-text figure.mw-default-size { max-width: 50%; }
+.reader-text img { max-width: 100%; height: auto; border-radius: var(--radius-s); }
+.reader-text figcaption { margin-top: 4px; line-height: 1.4; }
+.reader-text figcaption .credit { color: var(--muted); font-size: 11px; }
+.reader-text .tbl { overflow-x: auto; margin: 1em 0; }
+.reader-text table { border-collapse: collapse; font-family: var(--font-ui); font-size: 13px; line-height: 1.4; }
+.reader-text th, .reader-text td { border: 1px solid var(--rule-soft); padding: 4px 8px; vertical-align: top; text-align: left; }
+.reader-text .infobox { width: 100%; }
+.reader-text .infobox img { display: block; margin: 0 auto; }
+.reader-text ul, .reader-text ol { padding-left: 1.4em; }
+.reader-text .references, .reader-text .mw-references { font-size: 14px; color: var(--ink-2); }
+.reader-text blockquote { margin: 1em 0; padding-left: 1em; border-left: 3px solid var(--rule); color: var(--ink-2); }
 .trail { display: flex; align-items: center; gap: 2px; min-width: 0; overflow: hidden; font-size: 13px; }
 .trail-step { border: 0; background: none; color: var(--muted); padding: 2px 4px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 18ch; border-radius: var(--radius-s); }
 .trail-step + .trail-step::before { content: '›'; margin-right: 6px; color: var(--muted); }

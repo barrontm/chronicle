@@ -8,6 +8,7 @@
 //                         tiled into screenshots/filmstrip-<view>.png: one image to see motion
 //   --video               the same run recorded as screenshots/video-<view>.webm (Play at 10 years a second)
 // Output: screenshots/*.png (git-ignored). Set PW_CHROMIUM_PATH in sandboxes without Playwright browsers.
+import { gunzipSync } from 'node:zlib';
 import { chromium } from '@playwright/test';
 import { mkdirSync, readFileSync, rmSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -219,22 +220,20 @@ if (any('desktop-help')) await help(await page('desktop-help', desktop), 'deskto
 if (any('dark-help')) await help(await page('dark-help', { ...desktop, colorScheme: 'dark' }), 'dark');
 if (any('phone-help')) await help(await page('phone-help', { viewport: { width: 412, height: 860 }, isMobile: true, hasTouch: true }), 'phone');
 
-// The new layout's reader on a mocked article, with the sample timeline beside it.
+// The new layout's reader on a saved article, with the sample timeline beside it.
 async function reader(p, prefix) {
   const cors = { 'Access-Control-Allow-Origin': '*' };
   await p.route('https://en.wikipedia.org/w/rest.php/v1/search/page**', (r) => r.fulfill({ headers: cors, json: { pages: [{ key: 'Peloponnesian_War', title: 'Peloponnesian War', description: 'War between Athens and Sparta (431–404 BC)', thumbnail: null }] } }));
-  await p.route('https://en.wikipedia.org/api/rest_v1/page/summary/**', (r) => r.fulfill({ headers: cors, json: {
-    title: 'Peloponnesian War', description: 'War between Athens and Sparta (431–404 BC)',
-    extract: 'The Peloponnesian War (431–404 BC) was an ancient Greek war fought between Athens and Sparta and their respective allies for the hegemony of the Greek world. The war remained undecided for a long time until the decisive intervention of the Persian Empire in support of Sparta.',
-    content_urls: { desktop: { page: 'https://en.wikipedia.org/wiki/Peloponnesian_War' } },
-  } }));
+  // A real article (CC BY-SA, saved by the reader spike) so the shot shows true Wikipedia content.
+  const html = gunzipSync(readFileSync(fileURLToPath(new URL('../tests/fixtures/articles/Peloponnesian_War.html.gz', import.meta.url)))).toString('utf8');
+  await p.route('https://en.wikipedia.org/w/rest.php/v1/page/*/html', (r) => r.fulfill({ headers: { ...cors, 'Content-Type': 'text/html' }, body: html }));
   await withFixture(p);
   await p.getByRole('button', { name: 'More' }).click();
   await p.getByRole('menuitemcheckbox', { name: 'Try the new layout' }).click();
   await p.getByTestId('article-search').getByLabel('Search Wikipedia').fill('peloponnesian');
   await p.getByTestId('article-search').getByRole('button', { name: 'Search' }).click();
   await p.getByTestId('article-results').getByRole('button').first().click();
-  await p.getByTestId('article').getByText('hegemony').waitFor();
+  await p.getByTestId('article').locator('.reader-text').waitFor();
   await p.waitForTimeout(800);
   await shot(p, `${prefix}-reader`);
 }

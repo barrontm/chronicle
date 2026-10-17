@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
-import { fetchSummary, searchWikipedia, type WikiSearchResult, type WikiSummary } from '../../media/wikipedia';
+import { articleCache } from '../../data/articleCache';
+import { fetchArticle, type Article as ArticleData } from '../../media/article';
+import { searchWikipedia, type WikiSearchResult } from '../../media/wikipedia';
 import { Field } from '../fields';
 
 /** A page Bob has opened in the reader. */
@@ -10,14 +12,16 @@ export interface ArticleRef {
 }
 
 const OFFLINE_SEARCH = 'You’re offline. Searching Wikipedia needs a connection.';
-const OFFLINE_READ = 'You’re offline. This article needs a connection to open.';
+const OFFLINE_READ = 'You’re offline, and this article isn’t saved on this device yet. Articles you’ve opened before can be read offline.';
 
 /**
  * The reader column of the new layout: search Wikipedia and read the article
  * that's open. Opening and the reading trail are owned by the caller.
  */
-export function ReaderPane({ article, searching, onOpen, onSearching, onShowMap }: {
+export function ReaderPane({ article, searching, onOpen, onSearching, onBack, onShowMap }: {
   article: ArticleRef | null;
+  /** Go back along the reading trail, when there is somewhere to go. */
+  onBack?: () => void;
   /** True while the "Open an article" search is showing. */
   searching: boolean;
   onOpen: (a: ArticleRef) => void;
@@ -25,15 +29,21 @@ export function ReaderPane({ article, searching, onOpen, onSearching, onShowMap 
   /** Phone only: open the map and timeline sheet. */
   onShowMap?: () => void;
 }) {
+  // A new article starts at its top.
+  const pane = useRef<HTMLElement>(null);
+  useEffect(() => { pane.current?.scrollTo({ top: 0 }); }, [article?.key, searching]);
+
   return (
-    <section className="reader" aria-label="Reader" data-testid="reader">
-      {onShowMap && (
+    <section ref={pane} className="reader" aria-label="Reader" data-testid="reader">
+      {(onShowMap || (onBack && !searching)) && (
         <div className="reader-tools">
-          <button className="btn small" onClick={onShowMap}>Map</button>
+          {onBack && !searching && <button className="btn small quiet" onClick={onBack}>Back</button>}
+          <span className="spacer" />
+          {onShowMap && <button className="btn small" onClick={onShowMap}>Map</button>}
         </div>
       )}
       {(searching || !article) && <ArticleSearch hasArticle={!!article} onOpen={onOpen} onCancel={() => onSearching(false)} />}
-      {article && !searching && <Article key={article.key} article={article} />}
+      {article && !searching && <Article key={article.key} article={article} onOpen={onOpen} />}
     </section>
   );
 }
@@ -102,27 +112,59 @@ function ArticleSearch({ hasArticle, onOpen, onCancel }: { hasArticle: boolean; 
   );
 }
 
-function Article({ article }: { article: ArticleRef }) {
-  const [summary, setSummary] = useState<WikiSummary | null>(null);
+function Article({ article, onOpen }: { article: ArticleRef; onOpen: (a: ArticleRef) => void }) {
+  const [data, setData] = useState<ArticleData | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const body = useRef<HTMLDivElement>(null);
 
+  // The saved copy opens first, so rereading works offline; otherwise fetch it and keep it.
   useEffect(() => {
-    if (!navigator.onLine) { setError(OFFLINE_READ); return; }
     const ctl = new AbortController();
-    fetchSummary(article.key, ctl.signal).then(setSummary, (e: Error) => {
-      if (e.name !== 'AbortError') setError(navigator.onLine ? e.message : OFFLINE_READ);
-    });
+    void (async () => {
+      const cached = await articleCache().get(article.key);
+      if (ctl.signal.aborted) return;
+      if (cached) { setData(cached); return; }
+      if (!navigator.onLine) { setError(OFFLINE_READ); return; }
+      try {
+        const fresh = await fetchArticle(article.key, ctl.signal);
+        setData(fresh);
+        await articleCache().put(fresh);
+      } catch (e) {
+        if ((e as Error).name !== 'AbortError') setError(navigator.onLine ? (e as Error).message : OFFLINE_READ);
+      }
+    })();
     return () => ctl.abort();
   }, [article.key]);
 
+  // Wiki links open in the reader; footnotes and same-page links scroll within it.
+  const onClick = (e: React.MouseEvent) => {
+    if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey) return;
+    const a = (e.target as Element).closest('a');
+    if (!a) return;
+    const wiki = a.getAttribute('data-wiki');
+    const local = a.getAttribute('data-fn') ?? (a.classList.contains('self') ? a.getAttribute('data-frag') : null);
+    if (wiki) {
+      e.preventDefault();
+      onOpen({ key: wiki.replace(/ /g, '_'), title: wiki.replace(/_/g, ' ') });
+    } else if (local) {
+      e.preventDefault();
+      body.current?.querySelector(`[id="${CSS.escape(local)}"]`)?.scrollIntoView({ block: 'start' });
+    }
+  };
+
   return (
-    <article className="reader-article" data-testid="article">
-      <h1 className="reader-title">{summary?.title ?? article.title}</h1>
-      {summary?.description && <p className="reader-sub">{summary.description}</p>}
+    <article className="reader-article" data-testid="article" data-revision={data?.revisionId ?? undefined}>
+      <h1 className="reader-title">{data?.title ?? article.title}</h1>
       {error && <div className="notice bad" role="alert">{error}</div>}
-      {!summary && !error && <div className="notice" role="status">Opening…</div>}
-      {summary?.extract && <div className="reader-text"><p>{summary.extract}</p></div>}
-      {summary && <p className="reader-credit">From <a href={summary.pageUrl} target="_blank" rel="noreferrer">Wikipedia</a>, CC BY-SA.</p>}
+      {!data && !error && <div className="notice" role="status">Opening…</div>}
+      {/* Sanitized by sanitizeParsoid: an allowlist rebuild, so nothing active survives. */}
+      {data && <div ref={body} className="reader-text" onClick={onClick} dangerouslySetInnerHTML={{ __html: data.html }} />}
+      {data && (
+        <p className="reader-credit">
+          From <a href={`https://en.wikipedia.org/wiki/${encodeURIComponent(data.key)}`} target="_blank" rel="noreferrer">Wikipedia</a>, CC BY-SA
+          {data.modified && <>, as edited on {new Date(data.modified).toLocaleDateString(undefined, { dateStyle: 'long' })}</>}.
+        </p>
+      )}
     </article>
   );
 }

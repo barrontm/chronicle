@@ -48,10 +48,11 @@ Chronicle is changing so that reading is how you add things. To try it, choose *
 
 - On a laptop, the article you're reading sits beside the map, with the timeline under the map.
 - On a phone, the article fills the screen. **Map** opens the map and timeline, and **Back to reading** returns to the article.
-- **Open an article** (top bar) searches Wikipedia. For now the reader shows the article's introduction; full articles come next.
-- The **reading trail** in the top bar lists the articles you've opened. Click one to go back to it.
+- **Open an article** (top bar) searches Wikipedia and opens the whole article in the reader, with its pictures and footnotes.
+- Links in the article open in the reader too. **Back** returns to the article you came from, and the **reading trail** in the top bar lists the articles you've opened, so you can click back to any of them.
+- Articles you've opened are kept on this device, so you can reread them offline. Opening a new one needs a connection. The line at the end of each article says which edit of the Wikipedia page you're reading.
 
-The new layout is unfinished. Everything you've saved stays the same whichever layout you use. Opening an article needs a connection.
+The new layout is unfinished. Everything you've saved stays the same whichever layout you use.
 
 ## Adding from Wikipedia
 

@@ -304,7 +304,7 @@ function Workspace() {
 
       <div className={`workspace ${next ? 'next' : ''} ${panel ? 'with-drawer' : ''}`}>
         {next && !(narrow && mapSheet) && (
-          <ReaderPane article={article} searching={searching} onOpen={openArticle} onSearching={setSearching} onShowMap={narrow ? () => setMapSheet(true) : undefined} />
+          <ReaderPane article={article} searching={searching} onOpen={openArticle} onSearching={setSearching} onBack={trail.at > 0 ? () => setTrail({ ...trail, at: trail.at - 1 }) : undefined} onShowMap={narrow ? () => setMapSheet(true) : undefined} />
         )}
         {(!next || !narrow || mapSheet) && (
         <main className={`stage view-${shownView} ${next && narrow ? 'sheet' : ''}`}>
