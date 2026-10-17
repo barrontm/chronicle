@@ -1,0 +1,120 @@
+{
+  "schemaVersion": 6,
+  "id": "doc_highlight_eval",
+  "title": "Highlight eval",
+  "updatedAt": 1760000000000,
+  "categories": [
+    {
+      "id": "politics",
+      "label": "Politics & government",
+      "color": "var(--pig-lapis)"
+    },
+    {
+      "id": "war",
+      "label": "War & conflict",
+      "color": "var(--pig-cinnabar)"
+    },
+    {
+      "id": "ideas",
+      "label": "Philosophy & religion",
+      "color": "var(--pig-umber)"
+    },
+    {
+      "id": "science",
+      "label": "Science",
+      "color": "var(--pig-verdigris)"
+    },
+    {
+      "id": "technology",
+      "label": "Technology",
+      "color": "var(--pig-ochre)"
+    },
+    {
+      "id": "society",
+      "label": "Society & economy",
+      "color": "var(--pig-madder)"
+    },
+    {
+      "id": "arts",
+      "label": "Art & literature",
+      "color": "var(--pig-indigo)"
+    }
+  ],
+  "items": [
+    {
+      "id": "i_pericles",
+      "kind": "person",
+      "title": "Pericles",
+      "start": {
+        "y": -494
+      },
+      "end": {
+        "y": -428
+      },
+      "categoryId": "politics",
+      "wikidataId": "Q80398",
+      "updatedAt": 1760000000000
+    },
+    {
+      "id": "i_pelop",
+      "kind": "span",
+      "title": "Peloponnesian War",
+      "start": {
+        "y": -430
+      },
+      "end": {
+        "y": -403
+      },
+      "categoryId": "war",
+      "wikidataId": "Q33745",
+      "updatedAt": 1760000000000
+    },
+    {
+      "id": "i_delian",
+      "kind": "span",
+      "title": "Delian League",
+      "start": {
+        "y": -477
+      },
+      "end": {
+        "y": -403
+      },
+      "categoryId": "politics",
+      "wikidataId": "Q193235",
+      "updatedAt": 1760000000000
+    },
+    {
+      "id": "i_salamis",
+      "kind": "event",
+      "title": "Battle of Salamis",
+      "start": {
+        "y": -479
+      },
+      "categoryId": "war",
+      "wikidataId": "Q178850",
+      "updatedAt": 1760000000000
+    },
+    {
+      "id": "i_themistocles",
+      "kind": "person",
+      "title": "Themistocles",
+      "start": {
+        "y": -523,
+        "approx": true
+      },
+      "end": {
+        "y": -458
+      },
+      "categoryId": "politics",
+      "updatedAt": 1760000000000
+    }
+  ],
+  "series": [],
+  "territories": [],
+  "flows": [],
+  "notes": [],
+  "sources": [],
+  "relations": [],
+  "highlights": [],
+  "deleted": {}
+}

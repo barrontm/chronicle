@@ -40,7 +40,14 @@ export function passageCandidates(articleKey: string, links: WikiLink[], start: 
   return out;
 }
 
-const FIRST: SubjectKind[] = ['event', 'war', 'battle'];
+/** Kinds that can't be drawn from Wikipedia yet, and why (docs/design.md, Becomes). */
+export const CANT_ADD: Partial<Record<SubjectKind, string>> = {
+  place: 'A place on its own isn’t an event. Keep the highlight, or highlight what happened there.',
+  idea: 'Ideas can’t be drawn on the map and timeline yet. Keep the highlight.',
+  polity: 'Polities come from the territory tools for now. Keep the highlight.',
+};
+
+const FIRST: SubjectKind[] =['event', 'war', 'battle'];
 
 /** The candidate chosen at first: the first event, war or battle the passage links, else the article's subject (index 0). */
 export function firstChoice(kinds: (SubjectKind | undefined)[]): number {

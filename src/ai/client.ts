@@ -33,6 +33,8 @@ export interface DraftRequest {
   apiKey: string;
   model?: string;
   system: string;
+  /** Long material that stays the same across requests (an article), sent after the prompt and cached with it. */
+  context?: string;
   user: string;
   tools: AiTool[];
   /** Name of the tool whose input is the answer. */
@@ -76,7 +78,10 @@ export async function draftWithClaude(req: DraftRequest): Promise<DraftAnswer> {
       res = await client.beta.messages.create({
         model,
         max_tokens: 16000,
-        system: [{ type: 'text', text: req.system, cache_control: { type: 'ephemeral' } }],
+        system: [
+          { type: 'text', text: req.system, cache_control: { type: 'ephemeral' } },
+          ...(req.context ? [{ type: 'text' as const, text: req.context, cache_control: { type: 'ephemeral' as const } }] : []),
+        ],
         tools,
         messages,
         output_config: { effort: 'medium' },

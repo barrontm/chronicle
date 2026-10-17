@@ -1,7 +1,7 @@
 import { useLayoutEffect, useRef, useState } from 'react';
-import { firstChoice } from '../../model/passage';
+import { CANT_ADD, firstChoice } from '../../model/passage';
 import { describeRelation, upsert } from '../../model/doc';
-import { KIND_LABEL, factRelations, findInChronicle, subjectFacts, type Subject, type SubjectKind } from '../../model/subjects';
+import { KIND_LABEL, factRelations, findInChronicle, subjectFacts, type Subject } from '../../model/subjects';
 import { DIMENSIONS, type Dimension, type Highlight, type Relation } from '../../model/types';
 import { useDoc } from '../DocContext';
 import { DIMENSION_LABEL } from '../util';
@@ -24,13 +24,6 @@ interface Row {
   linked: boolean;
   title: string;
 }
-
-/** Kinds that can't be drawn from Wikipedia yet, and why (docs/design.md, Becomes). */
-const CANT_ADD: Partial<Record<SubjectKind, string>> = {
-  place: 'A place on its own isn’t an event. Keep the highlight, or highlight what happened there.',
-  idea: 'Ideas can’t be drawn on the map and timeline yet. Keep the highlight.',
-  polity: 'Polities come from the territory tools for now. Keep the highlight.',
-};
 
 const pigment = (d?: Dimension) => `var(--pig-${PIGMENT[d ?? 'none']})`;
 

@@ -1,0 +1,899 @@
+{
+  "case": "decelea-and-the-mines",
+  "model": "claude-opus-5-5",
+  "prompt": "highlight@1",
+  "handmade": true,
+  "note": "Written by hand as test data before the first live run: Wikipedia and Wikidata answers are real, Claude’s answer is made up to exercise the validator.",
+  "exchanges": [
+    {
+      "url": "https://www.wikidata.org/w/api.php?action=wbgetentities&sites=enwiki&titles=Peloponnesian+War&normalize=1&props=claims%7Clabels&languages=en&format=json&origin=*",
+      "status": 200,
+      "body": {
+        "entities": {
+          "Q33745": {
+            "type": "item",
+            "id": "Q33745",
+            "labels": {
+              "en": {
+                "language": "en",
+                "value": "Peloponnesian War"
+              }
+            },
+            "claims": {
+              "P580": [
+                {
+                  "mainsnak": {
+                    "snaktype": "value",
+                    "property": "P580",
+                    "hash": "81be94ceec1045913a06776f9020b49830cde5e8",
+                    "datavalue": {
+                      "value": {
+                        "time": "-0431-00-00T00:00:00Z",
+                        "timezone": 0,
+                        "before": 0,
+                        "after": 0,
+                        "precision": 9,
+                        "calendarmodel": "http://www.wikidata.org/entity/Q1985786"
+                      },
+                      "type": "time"
+                    },
+                    "datatype": "time"
+                  },
+                  "type": "statement",
+                  "id": "Q33745$4534e899-42fb-7d62-d82d-82cec58324f5",
+                  "rank": "normal"
+                }
+              ],
+              "P31": [
+                {
+                  "mainsnak": {
+                    "snaktype": "value",
+                    "property": "P31",
+                    "hash": "9565c30f04dc02f1cfff5baa28b89ddc708fc7fa",
+                    "datavalue": {
+                      "value": {
+                        "entity-type": "item",
+                        "numeric-id": 198,
+                        "id": "Q198"
+                      },
+                      "type": "wikibase-entityid"
+                    },
+                    "datatype": "wikibase-item"
+                  },
+                  "type": "statement",
+                  "id": "Q33745$8472d36c-4a88-b5b9-d348-f4f0e1921fb3",
+                  "rank": "normal"
+                }
+              ],
+              "P582": [
+                {
+                  "mainsnak": {
+                    "snaktype": "value",
+                    "property": "P582",
+                    "hash": "8d06bc49a86f1a6e66f299aa6e2628a837041183",
+                    "datavalue": {
+                      "value": {
+                        "time": "-0404-04-25T00:00:00Z",
+                        "timezone": 0,
+                        "before": 0,
+                        "after": 0,
+                        "precision": 11,
+                        "calendarmodel": "http://www.wikidata.org/entity/Q1985786"
+                      },
+                      "type": "time"
+                    },
+                    "datatype": "time"
+                  },
+                  "type": "statement",
+                  "qualifiers": {
+                    "P3005": [
+                      {
+                        "snaktype": "value",
+                        "property": "P3005",
+                        "hash": "e4379dfc00f0b6f979f9fe7099d98f9e1fb8767e",
+                        "datavalue": {
+                          "value": {
+                            "entity-type": "item",
+                            "numeric-id": 712144,
+                            "id": "Q712144"
+                          },
+                          "type": "wikibase-entityid"
+                        },
+                        "datatype": "wikibase-item"
+                      }
+                    ]
+                  },
+                  "qualifiers-order": [
+                    "P3005"
+                  ],
+                  "id": "Q33745$8bf36bb0-4ac0-c4f1-98e9-7eda7e7433ba",
+                  "rank": "normal"
+                }
+              ],
+              "P361": [
+                {
+                  "mainsnak": {
+                    "snaktype": "value",
+                    "property": "P361",
+                    "hash": "d4e499b85305038c32f714e209b898a8191e4b02",
+                    "datavalue": {
+                      "value": {
+                        "entity-type": "item",
+                        "numeric-id": 29788594,
+                        "id": "Q29788594"
+                      },
+                      "type": "wikibase-entityid"
+                    },
+                    "datatype": "wikibase-item"
+                  },
+                  "type": "statement",
+                  "id": "Q33745$ee9b63fe-4733-6f74-81ce-5c0f3236c08b",
+                  "rank": "normal"
+                }
+              ],
+              "P710": [
+                {
+                  "mainsnak": {
+                    "snaktype": "value",
+                    "property": "P710",
+                    "hash": "b72320ccace46c93060ed75c71be2c59345b117c",
+                    "datavalue": {
+                      "value": {
+                        "entity-type": "item",
+                        "numeric-id": 193235,
+                        "id": "Q193235"
+                      },
+                      "type": "wikibase-entityid"
+                    },
+                    "datatype": "wikibase-item"
+                  },
+                  "type": "statement",
+                  "id": "Q33745$f2632435-4c84-ae9d-faf5-7837ea3be1bc",
+                  "rank": "normal"
+                },
+                {
+                  "mainsnak": {
+                    "snaktype": "value",
+                    "property": "P710",
+                    "hash": "417827792ce2c7cd49edcc7717f85396749dd681",
+                    "datavalue": {
+                      "value": {
+                        "entity-type": "item",
+                        "numeric-id": 208742,
+                        "id": "Q208742"
+                      },
+                      "type": "wikibase-entityid"
+                    },
+                    "datatype": "wikibase-item"
+                  },
+                  "type": "statement",
+                  "id": "Q33745$915ae8cb-41dc-5a21-9b32-2fe1aa65bc36",
+                  "rank": "normal"
+                },
+                {
+                  "mainsnak": {
+                    "snaktype": "value",
+                    "property": "P710",
+                    "hash": "2c7f5906ee70d12f2a44ea3c08298ece5f9d96f0",
+                    "datavalue": {
+                      "value": {
+                        "entity-type": "item",
+                        "numeric-id": 389688,
+                        "id": "Q389688"
+                      },
+                      "type": "wikibase-entityid"
+                    },
+                    "datatype": "wikibase-item"
+                  },
+                  "type": "statement",
+                  "id": "Q33745$f6f8ca28-499b-9702-30b4-c62db50aa66c",
+                  "rank": "normal"
+                }
+              ],
+              "P276": [
+                {
+                  "mainsnak": {
+                    "snaktype": "value",
+                    "property": "P276",
+                    "hash": "779caa4f70aa3be23fe182f5e992a60a310f0e72",
+                    "datavalue": {
+                      "value": {
+                        "entity-type": "item",
+                        "numeric-id": 11772,
+                        "id": "Q11772"
+                      },
+                      "type": "wikibase-entityid"
+                    },
+                    "datatype": "wikibase-item"
+                  },
+                  "type": "statement",
+                  "id": "Q33745$428025de-4f63-d5ad-bf3f-e99aa543dd43",
+                  "rank": "normal"
+                },
+                {
+                  "mainsnak": {
+                    "snaktype": "value",
+                    "property": "P276",
+                    "hash": "5ba421bbef46bd46f60f3708a08732880edd4d40",
+                    "datavalue": {
+                      "value": {
+                        "entity-type": "item",
+                        "numeric-id": 34575,
+                        "id": "Q34575"
+                      },
+                      "type": "wikibase-entityid"
+                    },
+                    "datatype": "wikibase-item"
+                  },
+                  "type": "statement",
+                  "id": "Q33745$b4e947fa-4f1f-a305-1def-9f577f3ddc84",
+                  "rank": "normal",
+                  "references": [
+                    {
+                      "hash": "bcfed61dcac5a22117dc4c9052f6880a6a38fb88",
+                      "snaks": {
+                        "P143": [
+                          {
+                            "snaktype": "value",
+                            "property": "P143",
+                            "hash": "4a713f1b9c73c024784e593b0da93f2244c86d3f",
+                            "datavalue": {
+                              "value": {
+                                "entity-type": "item",
+                                "numeric-id": 58251,
+                                "id": "Q58251"
+                              },
+                              "type": "wikibase-entityid"
+                            },
+                            "datatype": "wikibase-item"
+                          }
+                        ],
+                        "P4656": [
+                          {
+                            "snaktype": "value",
+                            "property": "P4656",
+                            "hash": "adef9c886d9c2631f21bc5304aa81b2f5052f88f",
+                            "datavalue": {
+                              "value": "https://az.wikipedia.org/?oldid=5546365",
+                              "type": "string"
+                            },
+                            "datatype": "url"
+                          }
+                        ]
+                      },
+                      "snaks-order": [
+                        "P143",
+                        "P4656"
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "mainsnak": {
+                    "snaktype": "value",
+                    "property": "P276",
+                    "hash": "b49110bd5dd18993d46097f93b203204239255d9",
+                    "datavalue": {
+                      "value": {
+                        "entity-type": "item",
+                        "numeric-id": 51614,
+                        "id": "Q51614"
+                      },
+                      "type": "wikibase-entityid"
+                    },
+                    "datatype": "wikibase-item"
+                  },
+                  "type": "statement",
+                  "id": "Q33745$2e763f94-4356-21d5-a1be-a30449ae684a",
+                  "rank": "normal",
+                  "references": [
+                    {
+                      "hash": "bcfed61dcac5a22117dc4c9052f6880a6a38fb88",
+                      "snaks": {
+                        "P143": [
+                          {
+                            "snaktype": "value",
+                            "property": "P143",
+                            "hash": "4a713f1b9c73c024784e593b0da93f2244c86d3f",
+                            "datavalue": {
+                              "value": {
+                                "entity-type": "item",
+                                "numeric-id": 58251,
+                                "id": "Q58251"
+                              },
+                              "type": "wikibase-entityid"
+                            },
+                            "datatype": "wikibase-item"
+                          }
+                        ],
+                        "P4656": [
+                          {
+                            "snaktype": "value",
+                            "property": "P4656",
+                            "hash": "adef9c886d9c2631f21bc5304aa81b2f5052f88f",
+                            "datavalue": {
+                              "value": "https://az.wikipedia.org/?oldid=5546365",
+                              "type": "string"
+                            },
+                            "datatype": "url"
+                          }
+                        ]
+                      },
+                      "snaks-order": [
+                        "P143",
+                        "P4656"
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "mainsnak": {
+                    "snaktype": "value",
+                    "property": "P276",
+                    "hash": "2fe19048ad06e9461de46aee8e9cdb95b6a2dc94",
+                    "datavalue": {
+                      "value": {
+                        "entity-type": "item",
+                        "numeric-id": 4951156,
+                        "id": "Q4951156"
+                      },
+                      "type": "wikibase-entityid"
+                    },
+                    "datatype": "wikibase-item"
+                  },
+                  "type": "statement",
+                  "id": "Q33745$080983e5-426e-fa08-e890-443ecfe3ded8",
+                  "rank": "normal",
+                  "references": [
+                    {
+                      "hash": "bcfed61dcac5a22117dc4c9052f6880a6a38fb88",
+                      "snaks": {
+                        "P143": [
+                          {
+                            "snaktype": "value",
+                            "property": "P143",
+                            "hash": "4a713f1b9c73c024784e593b0da93f2244c86d3f",
+                            "datavalue": {
+                              "value": {
+                                "entity-type": "item",
+                                "numeric-id": 58251,
+                                "id": "Q58251"
+                              },
+                              "type": "wikibase-entityid"
+                            },
+                            "datatype": "wikibase-item"
+                          }
+                        ],
+                        "P4656": [
+                          {
+                            "snaktype": "value",
+                            "property": "P4656",
+                            "hash": "adef9c886d9c2631f21bc5304aa81b2f5052f88f",
+                            "datavalue": {
+                              "value": "https://az.wikipedia.org/?oldid=5546365",
+                              "type": "string"
+                            },
+                            "datatype": "url"
+                          }
+                        ]
+                      },
+                      "snaks-order": [
+                        "P143",
+                        "P4656"
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "mainsnak": {
+                    "snaktype": "value",
+                    "property": "P276",
+                    "hash": "783358436ce2fdb3a1ef668bfaaad1a0c1ea8924",
+                    "datavalue": {
+                      "value": {
+                        "entity-type": "item",
+                        "numeric-id": 1460,
+                        "id": "Q1460"
+                      },
+                      "type": "wikibase-entityid"
+                    },
+                    "datatype": "wikibase-item"
+                  },
+                  "type": "statement",
+                  "id": "Q33745$2185914e-4842-db6d-bb4c-d1441cd4f83c",
+                  "rank": "normal",
+                  "references": [
+                    {
+                      "hash": "3b6c38a58413bcd2678e9b001d4e7edf2f048f19",
+                      "snaks": {
+                        "P4656": [
+                          {
+                            "snaktype": "value",
+                            "property": "P4656",
+                            "hash": "1a9c0da9dec0a589c6fa33c5e106a31ae23796a6",
+                            "datavalue": {
+                              "value": "https://az.m.wikipedia.org/?oldid=7294820",
+                              "type": "string"
+                            },
+                            "datatype": "url"
+                          }
+                        ]
+                      },
+                      "snaks-order": [
+                        "P4656"
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "P18": [
+                {
+                  "mainsnak": {
+                    "snaktype": "value",
+                    "property": "P18",
+                    "hash": "3058bed523650ffcf44214d0ee28c146ffb1ba68",
+                    "datavalue": {
+                      "value": "Map Peloponnesian War 431 BC-en.svg",
+                      "type": "string"
+                    },
+                    "datatype": "commonsMedia"
+                  },
+                  "type": "statement",
+                  "qualifiers": {
+                    "P2096": [
+                      {
+                        "snaktype": "value",
+                        "property": "P2096",
+                        "hash": "45efe473bd7b56f0182ced3bcbffe468fa34e759",
+                        "datavalue": {
+                          "value": {
+                            "text": "E.ə. 431-ci ildə Peloponnes müharibəsi ərəfəsindəki Qədim Yunanıstanın xəritəsi",
+                            "language": "az"
+                          },
+                          "type": "monolingualtext"
+                        },
+                        "datatype": "monolingualtext"
+                      }
+                    ]
+                  },
+                  "qualifiers-order": [
+                    "P2096"
+                  ],
+                  "id": "Q33745$0bb582b7-4754-1453-5156-7ee348f21bd5",
+                  "rank": "normal",
+                  "references": [
+                    {
+                      "hash": "3b6c38a58413bcd2678e9b001d4e7edf2f048f19",
+                      "snaks": {
+                        "P4656": [
+                          {
+                            "snaktype": "value",
+                            "property": "P4656",
+                            "hash": "1a9c0da9dec0a589c6fa33c5e106a31ae23796a6",
+                            "datavalue": {
+                              "value": "https://az.m.wikipedia.org/?oldid=7294820",
+                              "type": "string"
+                            },
+                            "datatype": "url"
+                          }
+                        ]
+                      },
+                      "snaks-order": [
+                        "P4656"
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        },
+        "success": 1
+      }
+    },
+    {
+      "url": "https://www.wikidata.org/w/api.php?action=wbgetentities&ids=Q29788594%7CQ193235%7CQ208742%7CQ389688%7CQ11772%7CQ34575%7CQ51614%7CQ4951156%7CQ1460&props=labels&languages=en&format=json&origin=*",
+      "status": 200,
+      "body": {
+        "entities": {
+          "Q29788594": {
+            "type": "item",
+            "id": "Q29788594",
+            "labels": {
+              "en": {
+                "language": "en",
+                "value": "Peloponnesian Wars"
+              }
+            }
+          },
+          "Q193235": {
+            "type": "item",
+            "id": "Q193235",
+            "labels": {
+              "en": {
+                "language": "en",
+                "value": "Delian League"
+              }
+            }
+          },
+          "Q208742": {
+            "type": "item",
+            "id": "Q208742",
+            "labels": {
+              "en": {
+                "language": "en",
+                "value": "Peloponnesian League"
+              }
+            }
+          },
+          "Q389688": {
+            "type": "item",
+            "id": "Q389688",
+            "labels": {
+              "en": {
+                "language": "en",
+                "value": "Achaemenid Empire"
+              }
+            }
+          },
+          "Q11772": {
+            "type": "item",
+            "id": "Q11772",
+            "labels": {
+              "en": {
+                "language": "en",
+                "value": "Ancient Greece"
+              }
+            }
+          },
+          "Q34575": {
+            "type": "item",
+            "id": "Q34575",
+            "labels": {
+              "en": {
+                "language": "en",
+                "value": "Aegean Sea"
+              }
+            }
+          },
+          "Q51614": {
+            "type": "item",
+            "id": "Q51614",
+            "labels": {
+              "en": {
+                "language": "en",
+                "value": "Anatolia"
+              }
+            }
+          },
+          "Q4951156": {
+            "type": "item",
+            "id": "Q4951156",
+            "labels": {
+              "en": {
+                "language": "en",
+                "value": "Sicily"
+              }
+            }
+          },
+          "Q1460": {
+            "type": "item",
+            "id": "Q1460",
+            "labels": {
+              "en": {
+                "language": "en",
+                "value": "Sicily"
+              }
+            }
+          }
+        },
+        "success": 1
+      }
+    },
+    {
+      "url": "https://www.wikidata.org/w/api.php?action=wbgetentities&sites=enwiki&titles=Decelea&normalize=1&props=claims%7Clabels&languages=en&format=json&origin=*",
+      "status": 200,
+      "body": {
+        "entities": {
+          "Q1006561": {
+            "type": "item",
+            "id": "Q1006561",
+            "labels": {
+              "en": {
+                "language": "en",
+                "value": "Decelea"
+              }
+            },
+            "claims": {
+              "P625": [
+                {
+                  "mainsnak": {
+                    "snaktype": "value",
+                    "property": "P625",
+                    "hash": "16aea48d252546b900d0898f9885fc688997f0f5",
+                    "datavalue": {
+                      "value": {
+                        "latitude": 38.11,
+                        "longitude": 23.77861111,
+                        "altitude": null,
+                        "precision": 0.00027777777777778,
+                        "globe": "http://www.wikidata.org/entity/Q2"
+                      },
+                      "type": "globecoordinate"
+                    },
+                    "datatype": "globe-coordinate"
+                  },
+                  "type": "statement",
+                  "id": "Q1006561$98D434DD-5821-468C-A45D-74BA099A140E",
+                  "rank": "normal",
+                  "references": [
+                    {
+                      "hash": "9a24f7c0208b05d6be97077d855671d1dfdbc0dd",
+                      "snaks": {
+                        "P143": [
+                          {
+                            "snaktype": "value",
+                            "property": "P143",
+                            "hash": "d38375ffe6fe142663ff55cd783aa4df4301d83d",
+                            "datavalue": {
+                              "value": {
+                                "entity-type": "item",
+                                "numeric-id": 48183,
+                                "id": "Q48183"
+                              },
+                              "type": "wikibase-entityid"
+                            },
+                            "datatype": "wikibase-item"
+                          }
+                        ]
+                      },
+                      "snaks-order": [
+                        "P143"
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "P31": [
+                {
+                  "mainsnak": {
+                    "snaktype": "value",
+                    "property": "P31",
+                    "hash": "2917a2c84d0cb0d6a02a8617d64838594d453a55",
+                    "datavalue": {
+                      "value": {
+                        "entity-type": "item",
+                        "numeric-id": 672490,
+                        "id": "Q672490"
+                      },
+                      "type": "wikibase-entityid"
+                    },
+                    "datatype": "wikibase-item"
+                  },
+                  "type": "statement",
+                  "id": "Q1006561$02B97412-19D7-46BB-AB5B-8BE94846FCFD",
+                  "rank": "normal",
+                  "references": [
+                    {
+                      "hash": "d5847b9b6032aa8b13dae3c2dfd9ed5d114d21b3",
+                      "snaks": {
+                        "P143": [
+                          {
+                            "snaktype": "value",
+                            "property": "P143",
+                            "hash": "5a343e7e758a4282a01316d3e959b6e653b767fc",
+                            "datavalue": {
+                              "value": {
+                                "entity-type": "item",
+                                "numeric-id": 11920,
+                                "id": "Q11920"
+                              },
+                              "type": "wikibase-entityid"
+                            },
+                            "datatype": "wikibase-item"
+                          }
+                        ]
+                      },
+                      "snaks-order": [
+                        "P143"
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "P18": [
+                {
+                  "mainsnak": {
+                    "snaktype": "value",
+                    "property": "P18",
+                    "hash": "af7b4567150292b114208d6d0ed40b6ff798621b",
+                    "datavalue": {
+                      "value": "Dekeleia.png",
+                      "type": "string"
+                    },
+                    "datatype": "commonsMedia"
+                  },
+                  "type": "statement",
+                  "id": "Q1006561$eedb9381-4723-aa2d-c3b9-61a80b3f8ca1",
+                  "rank": "normal"
+                }
+              ]
+            }
+          }
+        },
+        "success": 1
+      }
+    },
+    {
+      "url": "https://query.wikidata.org/sparql?query=SELECT+%3Fc+%3Fp+WHERE+%7B+VALUES+%3Fc+%7B+wd%3AQ672490+%7D+%3Fc+wdt%3AP279+%3Fp+%7D&format=json",
+      "status": 403,
+      "body": "<html>\n<head>\n<meta http-equiv=\"Content-Type\" content=\"text/html;charset=utf-8\"/>\n<title>Error 403 Please identify your user agent, see https://meta.wikimedia.org/wiki/User-Agent_policy</title>\n</head>\n<body><h2>HTTP ERROR 403</h2>\n<p>Problem accessing /bigdata/namespace/wdq/sparql. Reason:\n<pre>    Please identify your user agent, see https://meta.wikimedia.org/wiki/User-Agent_policy</pre></p><hr><a href=\"http://eclipse.org/jetty\">Powered by Jetty:// 9.4.12.v20180830</a><hr/>\n\n</body>\n</html>\n"
+    },
+    {
+      "url": "https://api.anthropic.com/v1/messages?beta=true",
+      "body": {
+        "id": "msg_hand_1",
+        "type": "message",
+        "role": "assistant",
+        "model": "claude-opus-5-5",
+        "content": [
+          {
+            "type": "tool_use",
+            "id": "toolu_1",
+            "name": "propose_from_highlight",
+            "input": {
+              "dimension": {
+                "value": "economic",
+                "quote": "the nearby silver mines were totally disrupted"
+              },
+              "entries": [
+                {
+                  "ref": "e1",
+                  "title": "Sparta fortifies Decelea",
+                  "kind": "event",
+                  "start": "413 BCE",
+                  "place": "Decelea",
+                  "category": "war",
+                  "quote": "they fortified Decelea, near Athens",
+                  "why": "The fort that cut Athens off from its land and its silver mines."
+                }
+              ],
+              "connections": [
+                {
+                  "from": "e1",
+                  "to": "i_pelop",
+                  "type": "part-of",
+                  "effect": "escalated",
+                  "quote": "they also resolved to take the war to the Athenians"
+                },
+                {
+                  "from": "e1",
+                  "to": "Decelea",
+                  "type": "related",
+                  "effect": "fortified",
+                  "quote": "they fortified Decelea, near Athens"
+                },
+                {
+                  "from": "e1",
+                  "to": "i_delian",
+                  "type": "caused",
+                  "effect": "drained",
+                  "quote": "With the treasury and emergency reserve of 1,000 talents dwindling"
+                }
+              ]
+            }
+          }
+        ],
+        "stop_reason": "tool_use",
+        "stop_sequence": null,
+        "usage": {
+          "input_tokens": 1,
+          "output_tokens": 1
+        }
+      }
+    },
+    {
+      "url": "https://en.wikipedia.org/w/api.php?action=query&generator=search&gsrsearch=Decelea&gsrlimit=8&gsrnamespace=0&prop=coordinates%7Cdescription&coprimary=primary&format=json&formatversion=2&origin=*",
+      "status": 200,
+      "body": {
+        "batchcomplete": true,
+        "continue": {
+          "gsroffset": 8,
+          "continue": "gsroffset||"
+        },
+        "query": {
+          "pages": [
+            {
+              "pageid": 24121,
+              "ns": 0,
+              "title": "Peloponnesian War",
+              "index": 4,
+              "description": "War between Athens and Sparta (431–404 BC)",
+              "descriptionsource": "local"
+            },
+            {
+              "pageid": 61322,
+              "ns": 0,
+              "title": "Alcibiades",
+              "index": 6,
+              "description": "Athenian general and statesman (c. 450–404 BC)",
+              "descriptionsource": "local"
+            },
+            {
+              "pageid": 302613,
+              "ns": 0,
+              "title": "Attica",
+              "index": 2,
+              "description": "Historical region of Greece, including the city of Athens",
+              "descriptionsource": "local"
+            },
+            {
+              "pageid": 440929,
+              "ns": 0,
+              "title": "Parnitha",
+              "index": 7,
+              "coordinates": [
+                {
+                  "lat": 38.1734,
+                  "lon": 23.7174,
+                  "primary": true,
+                  "globe": "earth"
+                }
+              ],
+              "description": "Mountain range in Attica, Greece",
+              "descriptionsource": "local"
+            },
+            {
+              "pageid": 1025144,
+              "ns": 0,
+              "title": "Akrotiri and Dhekelia",
+              "index": 3,
+              "coordinates": [
+                {
+                  "lat": 34.58333333,
+                  "lon": 32.98333333,
+                  "primary": true,
+                  "globe": "earth"
+                }
+              ],
+              "description": "British Overseas Territory on Cyprus",
+              "descriptionsource": "local"
+            },
+            {
+              "pageid": 1184237,
+              "ns": 0,
+              "title": "Decelea",
+              "index": 1,
+              "coordinates": [
+                {
+                  "lat": 38.11,
+                  "lon": 23.7786,
+                  "primary": true,
+                  "globe": "earth"
+                }
+              ],
+              "description": "Ancient Athenian administrative unit",
+              "descriptionsource": "local"
+            },
+            {
+              "pageid": 22178512,
+              "ns": 0,
+              "title": "Decelea (moth)",
+              "index": 5,
+              "description": "Genus of moths",
+              "descriptionsource": "local"
+            },
+            {
+              "pageid": 35014593,
+              "ns": 0,
+              "title": "Cropia subapicalis",
+              "index": 8,
+              "description": "Species of moth",
+              "descriptionsource": "local"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

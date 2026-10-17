@@ -1,0 +1,110 @@
+# Cases for drafting from a highlight (src/ai/highlight). Promptfoo's format: vars are the
+# recorded article (articles/<key>.json) and the passage Bob highlights in it, on doc.json;
+# each assert is a JavaScript expression over `output` (the DraftSet).
+# Run live with: npm run eval:ai -- highlight   (costs money; see the ai-eval skill)
+# Bar (ROADMAP Phase 2 ticket 5): every case validates; the dimension is right or allowed in
+# at least 4 of 5; every date matches the passage; every connection has an effect and cites
+# its highlight; no number the passage lacks (the validator drops those, so "validates" covers it).
+description: Draft records from a passage Bob highlighted
+tests:
+  - description: tribute-building-programme
+    vars:
+      article: Pericles
+      passage: "It was from the alliance's treasury that Pericles drew the funds necessary to enable his ambitious building plan, centred on the \"Periclean Acropolis\", which included the Propylaea, the Parthenon and the golden statue of Athena, sculpted by Pericles's friend, Phidias. In 449 BC Pericles proposed a decree allowing the use of 9,000 talents to finance the major rebuilding programme of Athenian temples."
+    assert:
+      - type: javascript
+        metric: validates (nothing dropped for its words, dates or numbers)
+        value: "!output.dropped.some((d) => /words it rests on|date|number/.test(d))"
+      - type: javascript
+        metric: the dimension is economic
+        value: "output.dimension?.value === 'economic'"
+      - type: javascript
+        metric: a connection says the league's money funded something
+        value: "output.connections.some((c) => /fund|financ|paid|pay/.test(c.relation.effect))"
+      - type: javascript
+        metric: every date matches the passage (449 BCE)
+        value: "output.entries.filter((e) => !e.item.wikidataId).every((e) => e.item.start.y === -448)"
+      - type: javascript
+        metric: every connection has an effect and cites the highlight
+        value: "output.connections.every((c) => c.relation.effect && c.relation.highlightIds?.includes('h_case'))"
+
+  - description: decelea-and-the-mines
+    vars:
+      article: Peloponnesian_War
+      passage: "On the advice of Alcibiades, they fortified Decelea, near Athens, and prevented the Athenians from making use of their land year round. The fortification of Decelea prevented overland supplies to Athens, and forced all supplies to be brought in by sea at greater expense. More significantly, the nearby silver mines were totally disrupted, with as many as 20,000 Athenian slaves freed by the Spartan hoplites at Decelea."
+    assert:
+      - type: javascript
+        metric: validates (nothing dropped for its words, dates or numbers)
+        value: "!output.dropped.some((d) => /words it rests on|date|number/.test(d))"
+      - type: javascript
+        metric: the dimension is economic
+        value: "output.dimension?.value === 'economic'"
+      - type: javascript
+        metric: a connection says what it weakened
+        value: "output.connections.some((c) => /weaken|disrupt|cut|drain|deprived|ruin/.test(c.relation.effect))"
+      - type: javascript
+        metric: every date matches the passage (the section is 413–404 BC)
+        value: "output.entries.filter((e) => !e.item.wikidataId).every((e) => e.item.start.y >= -412 && e.item.start.y <= -403)"
+      - type: javascript
+        metric: every connection has an effect and cites the highlight
+        value: "output.connections.every((c) => c.relation.effect && c.relation.highlightIds?.includes('h_case'))"
+
+  - description: plague-of-athens
+    vars:
+      article: Peloponnesian_War
+      passage: "In 430 BC, an outbreak of a plague hit Athens. The plague ravaged the densely packed city, and in the long run, was a significant cause of its final defeat. The plague wiped out over 30,000 citizens, sailors and soldiers, including Pericles and his sons."
+    assert:
+      - type: javascript
+        metric: validates (nothing dropped for its words, dates or numbers)
+        value: "!output.dropped.some((d) => /words it rests on|date|number/.test(d))"
+      - type: javascript
+        metric: the dimension is social (religious allowed)
+        value: "['social', 'religious'].includes(output.dimension?.value)"
+      - type: javascript
+        metric: every date matches the passage (430 BCE)
+        value: "output.entries.filter((e) => !e.item.wikidataId).every((e) => e.item.start.y === -429)"
+      - type: javascript
+        metric: every connection has an effect and cites the highlight
+        value: "output.connections.every((c) => c.relation.effect && c.relation.highlightIds?.includes('h_case'))"
+
+  - description: treasury-moved-to-athens
+    vars:
+      article: Pericles
+      passage: "Either because of a genuine fear for its safety after the defeat in Egypt and the revolts of the allies, or as a pretext to gain control of the League's finances, Athens transferred the treasury of the alliance from Delos to Athens in 454–453 BC."
+    assert:
+      - type: javascript
+        metric: validates (nothing dropped for its words, dates or numbers)
+        value: "!output.dropped.some((d) => /words it rests on|date|number/.test(d))"
+      - type: javascript
+        metric: the dimension is political
+        value: "output.dimension?.value === 'political'"
+      - type: javascript
+        metric: drafts the move as a dated entry, 454–453 BCE
+        value: "output.entries.some((e) => !e.item.wikidataId && e.item.start.y === -453)"
+      - type: javascript
+        metric: every date matches the passage
+        value: "output.entries.filter((e) => !e.item.wikidataId).every((e) => e.item.start.y === -453 || e.item.start.y === -452)"
+      - type: javascript
+        metric: every connection has an effect and cites the highlight
+        value: "output.connections.every((c) => c.relation.effect && c.relation.highlightIds?.includes('h_case'))"
+
+  - description: themistocles-naval-law
+    vars:
+      article: Themistocles
+      passage: "In 483 BC, a massive new seam of silver was found in the Athenian mines of Laurion. Themistocles proposed that the silver should be used to build a new fleet of 200 triremes, while Aristides suggested it should instead be distributed among the Athenian citizens."
+    assert:
+      - type: javascript
+        metric: validates (nothing dropped for its words, dates or numbers)
+        value: "!output.dropped.some((d) => /words it rests on|date|number/.test(d))"
+      - type: javascript
+        metric: the dimension is technological or political
+        value: "['technological', 'political'].includes(output.dimension?.value)"
+      - type: javascript
+        metric: drafts an entry in 483–482 BCE
+        value: "output.entries.some((e) => !e.item.wikidataId && (e.item.start.y === -482 || e.item.start.y === -481))"
+      - type: javascript
+        metric: every date matches the passage
+        value: "output.entries.filter((e) => !e.item.wikidataId).every((e) => e.item.start.y === -482 || e.item.start.y === -481)"
+      - type: javascript
+        metric: every connection has an effect and cites the highlight
+        value: "output.connections.every((c) => c.relation.effect && c.relation.highlightIds?.includes('h_case'))"

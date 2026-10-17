@@ -25,6 +25,8 @@ const dir = `tests/ai-evals/${feature}`;
 const cases = parse(readFileSync(`${dir}/cases.yaml`, 'utf8')).tests.filter((t) => !opt('case') || t.description === opt('case'));
 const baseline = existsSync(`${dir}/results.json`) ? JSON.parse(readFileSync(`${dir}/results.json`, 'utf8')) : { cases: {} };
 
+const KEEP_CLAIMS = new Set(['P122', 'P1480', 'P155', 'P156', 'P18', 'P19', 'P20', 'P276', 'P279', 'P31', 'P361', 'P569', 'P570', 'P571', 'P576', 'P580', 'P582', 'P585', 'P625', 'P710', 'P737']);
+
 // Record every response (Anthropic, Wikipedia, Wikidata) so passing runs can be replayed in tests.
 const realFetch = globalThis.fetch;
 let exchanges = [];
@@ -33,7 +35,10 @@ const recordingFetch = async (input, init) => {
   const res = await realFetch(input, init);
   const text = await res.clone().text();
   try {
-    exchanges.push({ url, status: res.status, body: JSON.parse(text) });
+    const body = JSON.parse(text);
+    // Keep only the Wikidata claims Chronicle reads, so recordings stay small.
+    for (const e of Object.values(body?.entities ?? {})) if (e?.claims) e.claims = Object.fromEntries(Object.entries(e.claims).filter(([k]) => KEEP_CLAIMS.has(k)));
+    exchanges.push({ url, status: res.status, body });
   } catch {
     exchanges.push({ url, status: res.status, body: text });
   }
@@ -44,18 +49,18 @@ globalThis.fetch = recordingFetch;
 const vite = await createServer({ server: { middlewareMode: true }, appType: 'custom', logLevel: 'silent' });
 const results = [];
 try {
-  const mod = await vite.ssrLoadModule(`/src/ai/${feature}/index.ts`);
+  // Each feature's cases run through tests/ai-evals/<feature>/run.ts: runCase(vars, opts) → { doc, output }.
+  const mod = await vite.ssrLoadModule(`/${dir}/run.ts`);
   const { createEmptyDoc, parseDoc, serializeDoc } = await vite.ssrLoadModule('/src/model/doc.ts');
   const { acceptEntry, acceptConnection } = await vite.ssrLoadModule('/src/ai/draft.ts');
-  const run = mod.draftEntries;
   for (const c of cases) {
     exchanges = [];
     const started = Date.now();
-    const doc = c.vars.doc ? parseDoc(readFileSync(c.vars.doc, 'utf8')) : createEmptyDoc('Eval');
+    let doc = createEmptyDoc('Eval');
     const checks = [];
     let output;
     try {
-      output = await run({ request: c.vars.request, doc, apiKey, model: opt('model'), today: new Date().toISOString().slice(0, 10) });
+      ({ doc, output } = await mod.runCase(c.vars, { apiKey, model: opt('model'), today: new Date().toISOString().slice(0, 10) }));
     } catch (e) {
       checks.push({ metric: 'drafts without an error', pass: false, reason: e.message });
     }
@@ -79,7 +84,7 @@ try {
       writeFileSync(`${dir}/out/${c.description}.json`, serializeDoc({ ...merged, title: `Draft: ${c.description}`, updatedAt: 0 }));
     }
     const score = checks.filter((x) => x.pass).length / checks.length;
-    results.push({ name: c.description, score, checks, output, model: output?.provenance.model ?? opt('model') ?? 'default', ms: Date.now() - started, exchanges });
+    results.push({ name: c.description, score, checks, output, doc, model: output?.provenance.model ?? opt('model') ?? 'default', ms: Date.now() - started, exchanges });
     console.log(`${score === 1 ? '✓' : '✗'} ${c.description}: ${Math.round(score * 100)}%`);
   }
 
@@ -93,8 +98,12 @@ try {
     lines.push('', `## ${r.name}`, '');
     for (const x of r.checks) lines.push(`- ${x.pass ? '✓' : '✗'} ${x.metric}${x.reason ? `: ${x.reason}` : ''}`);
     if (r.output) {
-      lines.push('', 'Entries:', ...r.output.entries.map((e) => `- ${e.item.title} (${e.item.start ? JSON.stringify(e.item.start) : 'no date'}${e.item.places?.length ? ', on the map' : ''})${e.problems.length ? ` ⚠ ${e.problems.join('; ')}` : ''}: ${e.why}`));
-      if (r.output.connections.length) lines.push('', 'Connections:', ...r.output.connections.map((x) => `- ${x.relation.fromId} ${x.relation.type} ${x.relation.toId}`));
+      const quote = (q) => (q ? ` — “${q}”` : '');
+      if (r.output.dimension) lines.push('', `Dimension: ${r.output.dimension.value}${quote(r.output.dimension.quote)}`);
+      lines.push('', 'Entries:', ...r.output.entries.map((e) => `- ${e.item.title} (${e.item.start ? JSON.stringify(e.item.start) : 'no date'}${e.item.places?.length ? ', on the map' : ''})${e.problems.length ? ` ⚠ ${e.problems.join('; ')}` : ''}: ${e.why}${quote(e.quote)}`));
+      const titles = new Map([...(r.doc?.items ?? []), ...r.output.entries.map((e) => e.item)].map((i) => [i.id, i.title]));
+      const name = (id) => titles.get(id) ?? id;
+      if (r.output.connections.length) lines.push('', 'Connections:', ...r.output.connections.map((x) => `- ${name(x.relation.fromId)} ${x.relation.type}${x.relation.effect ? ` (${x.relation.effect})` : ''} ${name(x.relation.toId)}${quote(x.quote)}`));
       if (r.output.dropped.length) lines.push('', 'Left out:', ...r.output.dropped.map((d) => `- ${d}`));
     }
   }

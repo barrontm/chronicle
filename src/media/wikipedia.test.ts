@@ -19,6 +19,7 @@ import {
   parseSearch,
   parseSummary,
   fetchSubject,
+  lookUpPlace,
 } from './wikipedia';
 
 const time = (t: string, precision = 9) => ({ mainsnak: { snaktype: 'value', datavalue: { value: { time: t, precision } } }, rank: 'normal' });
@@ -186,6 +187,35 @@ describe('place lookup', () => {
   });
 });
 
+describe('asking too fast', () => {
+  afterEach(() => { vi.unstubAllGlobals(); vi.useRealTimers(); });
+  const answers = (...statuses: number[]) => {
+    const fetch = vi.fn(async () => {
+      const status = statuses.shift() ?? 200;
+      return new Response(JSON.stringify({ query: { pages: [{ title: 'Delos', index: 1, coordinates: [{ lat: 37.4, lon: 25.27 }] }] } }), { status });
+    });
+    vi.stubGlobal('fetch', fetch);
+    return fetch;
+  };
+
+  it('waits and asks again when Wikipedia answers 429', async () => {
+    vi.useFakeTimers();
+    const fetch = answers(429, 429);
+    const found = lookUpPlace('Delos');
+    await vi.runAllTimersAsync();
+    expect(await found).toEqual([{ name: 'Delos', lat: 37.4, lon: 25.27 }]);
+    expect(fetch).toHaveBeenCalledTimes(3);
+  });
+
+  it('gives up after two retries', async () => {
+    vi.useFakeTimers();
+    answers(429, 429, 429);
+    const found = lookUpPlace('Delos').catch((e: Error) => e.message);
+    await vi.runAllTimersAsync();
+    expect(await found).toBe('Wikipedia returned 429. Try again in a moment.');
+  });
+});
+
 describe('fetchSubject', () => {
   afterEach(() => vi.unstubAllGlobals());
 
@@ -225,8 +255,12 @@ describe('fetchSubject', () => {
   });
 
   it('still returns the subject when the query service is busy', async () => {
+    vi.useFakeTimers(); // it asks again after a 429, twice
     replay('Battle_of_Salamis', { sparqlFails: true });
-    const s = await fetchSubject('Battle of Salamis');
+    const pending = fetchSubject('Battle of Salamis');
+    await vi.runAllTimersAsync();
+    const s = await pending;
+    vi.useRealTimers();
     expect(s?.qid).toBe('Q178850');
     expect(s?.kind).toBe('event'); // from its date, without classes
   });
