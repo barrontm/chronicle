@@ -13,6 +13,8 @@ AI tickets (🤖, see the decision "AI drafts data, never images") also name a *
 Drop ideas here any time, one line each. Nothing here is promised; each phase checkpoint turns some into tickets.
 - 
 
+Triaged 2026-10-17: history of ideas and schools → Phase 5c; influences between dimensions → v6 fields, Phase 2 suggestions, Phase 4 view; distribution of goods → Phase 5b.
+
 ## Redesign phases
 Each phase ends with a **checkpoint** session (sonnet): triage the inbox, reorder or split the remaining phases, log changes in `docs/decisions.md`, and update `docs/vision.md` if the direction moved.
 
@@ -28,25 +30,45 @@ Each phase ends with a **checkpoint** session (sonnet): triage the inbox, reorde
    Done when: the gallery shows the existing representations from the fixture and a filmstrip of the map playing 480→400 BCE renders as one image.
 
 ### Phase 1 — Reader
-Reader pane on laptop and phone; highlights saved (schema v6, `Excerpt` migrates into a highlight); subject recognition from Wikidata (`src/model/subjects.ts`); offline article cache. Under `ui.next`, the Add button and kind buttons give way to "Open an article". Tickets written at the Phase 0 checkpoint.
+Reader pane on laptop and phone; highlights saved (schema v6, `Excerpt` migrates into a highlight; connections also gain an optional `effect` and `highlightIds` as evidence, for Phase 4's influences); subject recognition from Wikidata (`src/model/subjects.ts`); offline article cache. Under `ui.next`, the Add button and kind buttons give way to "Open an article". Tickets written at the Phase 0 checkpoint.
 
 ### Phase 2 — Highlight → record
-Code path (dates, places and links from Wikidata facts); 🤖 `highlight` feature (claims and a dimension from a highlight, article prompt-cached); review reusing `DraftReview`.
+Code path (dates, places and links from Wikidata facts); 🤖 `highlight` feature (claims and a dimension from a highlight, article prompt-cached; when a passage states a cause, such as "the war drained the treasury", it also suggests a connection with an effect, citing that highlight); review reusing `DraftReview`.
 
 ### Phase 3 — New timeline
 Custom renderer at parity with today's timeline, then levels 0 and 1; vis-timeline removed; `ui.next` becomes the default.
 
-### Phase 4 — Eras and themes
-Era bands with theme chips; 🤖 `themes` feature (groups an era's highlights with a suggested label Bob accepts or edits).
+### Phase 4 — Eras, themes and influences
+Era bands with theme chips; 🤖 `themes` feature (groups an era's highlights with a suggested label Bob accepts or edits); influences between dimensions (the war on the economy, Christianity on politics, technology on the economy, capitalism on who holds power).
+
+Connection endpoints grow with the schema: each bump that adds a record (v6 themes, v7 regimes, v8 economies, v9 institutions) also makes it something a connection can point at, so nothing gets renumbered.
+1. **Prototype: influences across dimensions** · M · opus. An Artifact on fixture data at level 1 (an era's six dimension lanes), in light, dark and phone. A: arrows between items in different lanes, labelled with the effect, with the highlight one tap away. B: an era's "what drove what" grid (six dimensions by six, each cell counting Bob's links) that opens into A. Fixture cases: the Peloponnesian War weakening Athens' economy (Decelea, the Laurion mines), the plague and religion, Delian League tribute paying for the building program. Add any shapes the schema lacks to `tests/fixtures/greece/next.json`.
+   Done when: Bob has picked, and the effect vocabulary (caused, enabled, weakened, strengthened, funded, legitimised, …) and the arrow style are rules in `docs/design.md`.
+2. **Influences between dimensions** · M · opusplan. Looks like: ticket 1's pick. Representation: new `src/ui/representations/influence.ts`. The connection editor gets an effect (open vocabulary, edited in the app) and "Evidence" (pick highlights). Level 1 draws connections whose two ends are in different dimensions. An entry's panel lists "Effects on other dimensions" both ways ("Weakened: Athenian economy", "Weakened by: Peloponnesian War").
+   Files: `src/model/doc.ts` (a cross-dimension query, tested), the connection editor in `src/ui/panels/ItemPanels.tsx`, the renderer's level 1.
+   Done when: an e2e test links the war to the economy as "weakened" with a highlight, and sees the arrow cross lanes at level 1 and the line in both panels. Manual: Connections.
 
 ### Phase 5 — Polities and wars
-Regimes and the power-structure diagram (schema v7, with alliances); regime-styled territories; border morph; campaigns and battles. Folds in paused tickets 3–6, 18 and 20.
+Regimes and the power-structure diagram (schema v7, with alliances); regime-styled territories; border morph; campaigns and battles. Folds in paused tickets 3–6, 18 and 20. Build the power-structure diagram from roles and links in general, not polity ones only, because Phase 5c reuses it for schools.
 
 ### Phase 5b — Economy
-`EconomyProfile` and goods flows (schema v8); sector streamgraph; production sites; economy portrait; 🤖 sector claims from highlights.
+`EconomyProfile` and goods flows (schema v8); sector streamgraph; production sites; economy portrait; 🤖 sector claims from highlights. Alongside what was produced, it also records **how goods reached people**.
+1. **Prototype: how goods were distributed** · S · opus. Adds to prototype (e), the economy portrait. Each snapshot gets a distribution band with relative shares of the mechanisms: kinship and gift, redistribution (palace, temple, state), tribute, householding, market exchange, planning. The vocabulary is open, with Polanyi's reciprocity, redistribution and exchange as a starting point. Add a strip that follows the mechanisms across eras: Mycenaean palace redistribution → Archaic households and gift → Classical Athens, where markets in the agora sit beside liturgies and the grain dole.
+   Done when: Bob has picked, and the vocabulary and the band's look are in `docs/design.md`.
+2. **Distribution in economy profiles** · M · opusplan. Part of the v8 bump, not a bump of its own. `snapshots[].distribution: { mechanism, share?: { measure: 'relative', low?, high? }, institutions?, highlightIds }[]`, where an unknown share stays unknown. Representation: the economy module (band in the portrait, a thin mechanism strip under the sector streamgraph). The 🤖 sector claims also suggest mechanisms.
+   Files: `src/model/types.ts` and the checklist in `src/model/CLAUDE.md`, `doc.ts` (merge), the economy representation.
+   Done when: the fixture's Athens shows markets and liturgies in 431 BCE, the band changes between snapshots, and v7 backups import. Manual: Economies.
 
-### Phase 5c — Spread animations
-Technology and idea spread waves; influence arcs; the tech tree (paused ticket 10).
+### Phase 5c — Ideas, schools and spread
+Technology and idea spread waves; influence arcs; the tech tree (paused ticket 10). Then a history of ideas: where a work or idea was known, lost and revived, how it travelled, and the schools that taught it (schema v9). Bob can still keep a "History of ideas" category for his own topic. This adds a representation, not a kind.
+1. **Prototype: history of ideas** · M · opus. Two Artifacts on fixture data, in light, dark and phone. (f) Aristotle's reception: a thread per region on the timeline that thins where his works were lost and brightens where they came back, plus arrows on the map for the translations (Athens → Alexandria → Baghdad's translation movement → Toledo and Sicily → Paris). (g) Plato's Academy against the University of Paris around 1250, shown with the power-structure diagram: who teaches, who learns, who pays, who licenses, the curriculum, and the ties to the city, the church and the crown. The fixture gets a small medieval appendix (test data only).
+   Done when: Bob has picked both, and `docs/decisions.md` records whether institutions are a subject type of their own that shares the regime diagram.
+2. **Schools and institutions** · M · opusplan. Looks like: (g). v9. An `institution` row in `src/model/subjects.ts` (Wikidata: school, university, academy, madrasa, monastery). `structures` snapshots have the same shape as regimes (roles and links, with link kinds as an open vocabulary: teaches, funds, licenses, governs, examines), plus a curriculum list and `highlightIds`. Representation: new `src/ui/representations/institution.ts` (lifespan bar split by structure, map pin, the diagram morphing between snapshots, two institutions side by side).
+   Files: `src/model/types.ts` and the checklist in `src/model/CLAUDE.md`, `doc.ts`, the shared diagram from Phase 5.
+   Done when: an e2e test compares the Academy and the University of Paris side by side, and v8 backups import. Manual: Schools and institutions.
+3. **Reception and transmission of ideas** · M · opusplan. Looks like: (f). Shares ticket 2's v9 bump, and the two land in the same release. `reception: { where (place, territory or country), from, to?, state: 'known' | 'partial' | 'lost' | 'revived' | 'taught', via?, highlightIds }[]` on idea and work entries. `Flow.subject` gains `'ideas'` for translations and teachers moving, drawn without a rate. A school that teaches a work links to it. Representation: new `src/ui/representations/idea.ts` (reception threads on the timeline, regions tinted by state on the map, transmission arrows).
+   Files: as ticket 2, plus `src/ui/mapData.ts` (state by year, tested).
+   Done when: an e2e test sees Aristotle "lost" in the Latin West in 900, "revived" in 1200, and the Toledo → Paris arrow. Manual: History of ideas.
 
 ### Phase 6 — Other sources
 A Cloudflare Worker proxy with Readability for sites without CORS; a bookmarklet and PWA share target ("send to Chronicle").

@@ -31,13 +31,21 @@ One module per subject type in `src/ui/representations/`, each declaring its tim
 | Person | lifeline | born/died/active pins | none |
 | Technology | point, tech tree | diffusion pins | spread wave as the year plays |
 | Migration | span | flow arrows | moving dashes |
-| Movement/idea | span | influence arcs | arcs spread outward |
+| Movement/idea | span; reception threads per region (thin where lost, bright where revived) | influence arcs; regions tinted by reception; transmission arrows | arcs spread outward; threads brighten on revival |
+| Institution (school, university) | lifespan bar, split by structure | pin | structure diagram morphs between snapshots |
+| Influence (connection across dimensions) | arrow between level-1 lanes, labelled with its effect | none | none |
 
 ### Polity: how it was governed
 `regimes: { from, to?, form, institutions: { id, name, role, selection?, powers? }[], links: { from, to, kind: 'elects' | 'appoints' | 'advises' | 'checks' | 'commands' }[], highlightIds, citations }[]`. `form` is an open vocabulary (monarchy, tyranny, oligarchy, democracy, republic, empire, federation, theocracy, occupied/client, …). Seeded from Wikidata P122; institutions come from Bob's highlights. The timeline bar splits into regime segments, each with a pattern per form, and the territory's edge and texture follow the regime. A power-structure diagram (who elects, appoints and checks whom) morphs as the year plays. Polities can be compared side by side, for example Athens vs Sparta in 431 BCE.
 
 ### Economy: sectors, their nature and size
-`EconomyProfile { id, title, polityId? | regionKeys?, snapshots: { from, to?, sectors: { sector, nature[], size?: { measure: 'output' | 'labour' | 'value' | 'relative', low?, high?, unit? }, places?, highlightIds }[] }[], highlightIds, citations, drafted?, updatedAt }`. Sectors and natures are open vocabularies. Sizes keep their uncertainty (a range, or relative), and an unknown size stays unknown, never invented. Goods move as `Flow`s with `subject: 'goods'`. The views are a sector streamgraph in the economic lane, production sites on the map, and an economy portrait (a treemap with texture for how labour and ownership worked) that animates between snapshots.
+`EconomyProfile { id, title, polityId? | regionKeys?, snapshots: { from, to?, sectors: { sector, nature[], size?: { measure: 'output' | 'labour' | 'value' | 'relative', low?, high?, unit? }, places?, highlightIds }[] }[], highlightIds, citations, drafted?, updatedAt }`. Sectors and natures are open vocabularies. Sizes keep their uncertainty (a range, or relative), and an unknown size stays unknown, never invented. Goods move as `Flow`s with `subject: 'goods'`. The views are a sector streamgraph in the economic lane, production sites on the map, and an economy portrait (a treemap with texture for how labour and ownership worked) that animates between snapshots. Each snapshot also records **how goods reached people**: `distribution: { mechanism, share?, institutions?, highlightIds }[]`, with mechanisms as an open vocabulary (kinship and gift, redistribution, tribute, householding, market exchange, planning), shown as a band in the portrait.
+
+### Ideas and schools
+An idea or work keeps a `reception` by region (known, partial, lost, revived, taught), and transmission is a `Flow` with `subject: 'ideas'`. Schools and universities are institutions whose `structures` have the same shape as regimes (roles, plus links such as teaches, funds, licenses), so one diagram serves the Academy, the University of Paris and Athens' democracy.
+
+### Influences between dimensions
+A connection can carry an `effect` (weakened, funded, legitimised, …) and the highlights that justify it. When its two ends sit in different dimensions, level 1 draws it as an arrow between the lanes. Ends can be entries, themes, regimes, economies or institutions.
 
 ## Timeline with zoom levels
 - Level 0: era bands in the spirit of the 1931 Histomap, with theme chips.
@@ -48,9 +56,12 @@ One module per subject type in `src/ui/representations/`, each declaring its tim
 - One year clock (`useYearClock`) drives the timeline, the map and every animation. Reduced motion is respected.
 
 ## Schema path
-- v6: `highlights`, `dimension`, `themes` on periods.
+- v6: `highlights`, `dimension`, `themes` on periods; `effect` and `highlightIds` on connections.
 - v7: `regimes` on territories, and alliances.
-- v8: `economies`, plus `Flow.subject` and `goods`.
+- v8: `economies` (with `distribution`), plus `Flow.subject` and `goods`.
+- v9: `institutions` with `structures`, `reception` on ideas and works, `Flow.subject: 'ideas'`.
+
+Each bump that adds a record also makes it a valid connection endpoint.
 
 Every bump follows `src/model/CLAUDE.md`. Changes are additive, so old backups always import.
 
@@ -61,10 +72,10 @@ Each phase ships something usable, behind a "Try the new layout" setting (`ui.ne
 1. Reader: reader pane, highlights (v6), recognition, offline cache
 2. Highlight → record: code path, AI `highlight` feature, review
 3. New timeline: renderer at parity, then the zoom levels; vis-timeline removed
-4. Eras and themes
+4. Eras, themes and influences between dimensions
 5. Polities and wars: regimes (v7), border morph, alliances, campaigns, battles
-   - 5b. Economy (v8)
-   - 5c. Spread animations
+   - 5b. Economy, with distribution (v8)
+   - 5c. Ideas, schools and spread (v9)
 6. Other sources: Worker proxy with Readability, bookmarklet / share target
 
 A checkpoint session closes each phase. It triages the ideas inbox, reorders what's left and logs changes.
