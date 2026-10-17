@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { articleCache } from '../../data/articleCache';
 import { fetchArticle, type Article as ArticleData } from '../../media/article';
 import { draftFromWikipedia, searchWikipedia, type ItemDraft, type WikiSearchResult } from '../../media/wikipedia';
+import { passageCandidates } from '../../model/passage';
 import { KIND_LABEL, findInChronicle, subjectPartOf, subjectWhen } from '../../model/subjects';
 import type { Highlight } from '../../model/types';
 import { useDoc } from '../DocContext';
@@ -10,7 +11,7 @@ import { CaptureTray } from './CaptureTray';
 import { HighlightTool, HighlightsForScreenReaders } from './HighlightTool';
 import { InfoboxFold } from './Infobox';
 import { useHighlighting } from './useHighlighting';
-import { useSubject, type SubjectState } from './useSubject';
+import { useSubject, useSubjects, type SubjectState } from './useSubject';
 
 /** An entry or territory Bob already has, to open from the reader. */
 export type RecordRef = { type: 'item' | 'territory'; id: string };
@@ -22,6 +23,7 @@ export interface ArticleRef {
   title: string;
 }
 
+const LOADING: SubjectState = { status: 'loading' };
 const OFFLINE_SEARCH = 'You’re offline. Searching Wikipedia needs a connection.';
 const OFFLINE_READ = 'You’re offline, and this article isn’t saved on this device yet. Articles you’ve opened before can be read offline.';
 const OFFLINE_ADD = 'You’re offline. Adding to the map and timeline needs a connection; your highlight is saved.';
@@ -174,13 +176,22 @@ function Article({ article, onOpen, onOpenRecord, onDraft }: {
   const body = useRef<HTMLDivElement>(null);
   const subject = useSubject(article.key);
   const marks = useHighlighting(body, data, subject.status === 'ready' ? subject.subject.qid : undefined);
+  // Once a highlight is open: what the pages its passage links are about (the article's own comes first).
+  const at = marks.open?.at;
+  const keys = useMemo(
+    () => (at ? passageCandidates(article.key, marks.links, at.start, at.end) : []),
+    [article.key, marks.links, at],
+  );
+  const subjects = useSubjects(keys.slice(1));
+  const known: Record<string, SubjectState> = { ...subjects, [keys[0] ?? article.key]: subject };
+  const candidates = keys.map((key) => ({ key, state: known[key] ?? LOADING }));
 
-  /** The article's subject as a prefilled entry, quoting this highlight and citing the article Bob read. */
-  const addSubject = async (h: Highlight) => {
+  /** A page as a prefilled entry, quoting this highlight and citing the article Bob read. */
+  const addPage = async (h: Highlight, key: string) => {
     if (!navigator.onLine) throw new Error(OFFLINE_ADD);
     let out;
     try {
-      out = await draftFromWikipedia(article.key, {
+      out = await draftFromWikipedia(key, {
         existingItems: doc.items,
         existingSources: doc.sources,
         categoryId: doc.categories[0]?.id ?? '',
@@ -191,7 +202,7 @@ function Article({ article, onOpen, onOpenRecord, onDraft }: {
     }
     if ('duplicateOf' in out) { onOpenRecord?.({ type: 'item', id: out.duplicateOf }); return; }
     const { draft } = out;
-    // The page Bob highlighted is already a source; cite that rather than a second copy of it.
+    // Cite the article Bob read (already a source), not the drafted page: that's where the highlight is.
     const page = new Set(draft.newSources.map((s) => s.id));
     const citations = draft.item.citations?.map((c) => (page.has(c.sourceId) ? { ...c, sourceId: h.sourceId } : c));
     onDraft?.({
@@ -259,7 +270,7 @@ function Article({ article, onOpen, onOpenRecord, onDraft }: {
           {data.modified && <>, as edited on {new Date(data.modified).toLocaleDateString(undefined, { dateStyle: 'long' })}</>}.
         </p>
       )}
-      {data && <CaptureTray marks={marks} subject={subject} articleTitle={data.title} onAdd={addSubject} onOpenRecord={onOpenRecord} />}
+      {data && <CaptureTray marks={marks} candidates={candidates} articleTitle={data.title} onAdd={addPage} onOpenRecord={onOpenRecord} />}
     </article>
   );
 }

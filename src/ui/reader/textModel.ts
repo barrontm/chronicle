@@ -1,4 +1,5 @@
 import type { ArticleText, TextSection } from '../../model/anchor';
+import type { WikiLink } from '../../model/passage';
 
 /**
  * The article on screen as one normalized string (what `src/model/anchor.ts`
@@ -8,6 +9,7 @@ import type { ArticleText, TextSection } from '../../model/anchor';
  *  - the reader's own controls inside the article (`[data-ui]`) are left out
  *  - block boundaries become "\n", so words never run together across paragraphs
  *  - each heading starts a section
+ *  - each wiki link (`a[data-wiki]`) is noted with where its text sits, for `src/model/passage.ts`
  */
 export interface TextModel extends ArticleText {
   nodes: Text[];
@@ -17,6 +19,8 @@ export interface TextModel extends ArticleText {
   /** First and past-last character of each node (-1 when it adds nothing). */
   nodeStart: Int32Array;
   nodeEnd: Int32Array;
+  /** Links to other articles, in reading order. */
+  links: WikiLink[];
 }
 
 const BLOCK = new Set(['P', 'DIV', 'LI', 'UL', 'OL', 'DL', 'DT', 'DD', 'TR', 'TD', 'TH', 'TABLE', 'CAPTION', 'FIGURE', 'FIGCAPTION', 'BLOCKQUOTE', 'SECTION', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'BR', 'HR', 'PRE', 'MATH']);
@@ -31,6 +35,7 @@ export function buildTextModel(root: Element): TextModel {
   const nodeStart: number[] = [];
   const nodeEnd: number[] = [];
   const sections: TextSection[] = [{ title: '', start: 0, end: 0 }];
+  const links: WikiLink[] = [];
   let last = '\n'; // so leading whitespace is dropped
 
   const blockBreak = () => {
@@ -71,7 +76,10 @@ export function buildTextModel(root: Element): TextModel {
     const block = BLOCK.has(e.tagName);
     if (block) blockBreak();
     if (HEADING.test(e.tagName)) sections.push({ title: (e.textContent ?? '').replace(/\s+/g, ' ').trim(), start: chars.length, end: chars.length });
+    const start = chars.length;
     for (let c = e.firstChild; c; c = c.nextSibling) visit(c);
+    const wiki = e.localName === 'a' ? e.getAttribute('data-wiki') : null;
+    if (wiki && chars.length > start) links.push({ start, end: chars.length, key: wiki });
     if (block) blockBreak();
   };
   visit(root);
@@ -86,6 +94,7 @@ export function buildTextModel(root: Element): TextModel {
     offOf: Int32Array.from(offOf),
     nodeStart: Int32Array.from(nodeStart),
     nodeEnd: Int32Array.from(nodeEnd),
+    links,
   };
 }
 

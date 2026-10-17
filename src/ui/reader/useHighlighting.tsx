@@ -28,6 +28,8 @@ interface Highlights { clear(): void; set(name: string, h: unknown): void; delet
 const registry = (): Highlights | null => (typeof CSS !== 'undefined' && 'highlights' in CSS ? (CSS as unknown as { highlights: Highlights }).highlights : null);
 const HighlightCtor = (globalThis as unknown as { Highlight?: new (...r: Range[]) => { priority: number } }).Highlight;
 
+const NO_LINKS: TextModel['links'] = [];
+
 export interface Placed { highlight: Highlight; at: Placement | null; state: MarkState }
 
 /** Where the Highlight / Remove button sits: above a point on the laptop, or docked at the bottom. */
@@ -145,6 +147,16 @@ export function useHighlighting(body: RefObject<HTMLDivElement | null>, article:
     });
   }, [open, readOnly, update]);
 
+  /** Say what the open highlight is about: the candidate Bob chose in "Becomes". */
+  const setSubject = useCallback((qid: string) => {
+    if (!open || readOnly || open.highlight.subjectQid === qid) return;
+    const id = open.highlight.id;
+    update((d) => {
+      const h = d.highlights.find((x) => x.id === id);
+      return h ? upsert(d, 'highlights', { ...h, subjectQid: qid }) : d;
+    });
+  }, [open, readOnly, update]);
+
   /** Make the open highlight evidence for a record Bob already has. */
   const link = useCallback((recordId: string) => {
     if (!open || readOnly) return;
@@ -231,7 +243,10 @@ export function useHighlighting(body: RefObject<HTMLDivElement | null>, article:
     removeOpen,
     keep,
     setDimension,
+    setSubject,
     link,
+    /** The article's wiki links, for the passage's candidates. */
+    links: model?.links ?? NO_LINKS,
     openRect,
     readOnly: !!readOnly,
     onTextClick,

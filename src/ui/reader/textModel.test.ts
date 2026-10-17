@@ -5,6 +5,7 @@ import { gunzipSync } from 'node:zlib';
 import { describe, expect, it } from 'vitest';
 import { findAnchor, makeAnchor } from '../../model/anchor';
 import { sanitizeParsoid } from '../../media/sanitize';
+import { passageCandidates } from '../../model/passage';
 import { buildTextModel, indicesOf, rangeOf, type TextModel } from './textModel';
 
 function modelOf(html: string): TextModel {
@@ -47,6 +48,24 @@ describe('buildTextModel', () => {
     const r = document.createRange();
     r.selectNodeContents(root.childNodes[1]);
     expect(indicesOf(m, r)).toBeNull();
+  });
+});
+
+describe('wiki links in the text model', () => {
+  it('notes where each link sits, in reading order', () => {
+    const m = modelOf('<p>The war of <a data-wiki="Classical_Athens">Athens</a> and <a data-wiki="Sparta"><i>Sparta</i></a>.<a href="#x" class="self">here</a></p>');
+    expect(m.links.map((l) => [m.text.slice(l.start, l.end), l.key])).toEqual([['Athens', 'Classical_Athens'], ['Sparta', 'Sparta']]);
+  });
+
+  it('picks the candidates out of a recorded Pericles passage', () => {
+    const { model } = recorded('Pericles.latest.1379806684');
+    const quote = 'particularly between the Greco-Persian Wars and the Peloponnesian War, and was acclaimed by Thucydides';
+    const s = model.text.indexOf(quote);
+    expect(s).toBeGreaterThan(0);
+    expect(passageCandidates('Pericles', model.links, s, s + quote.length)).toEqual(['Pericles', 'Greco-Persian_Wars', 'Peloponnesian_War', 'Thucydides']);
+    // A highlight that starts inside a link still offers it.
+    const part = s + quote.indexOf('War, and');
+    expect(passageCandidates('Pericles', model.links, part, part + 20)).toEqual(['Pericles', 'Peloponnesian_War']);
   });
 });
 

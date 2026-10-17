@@ -10,7 +10,7 @@
 // Output: screenshots/*.png (git-ignored). Set PW_CHROMIUM_PATH in sandboxes without Playwright browsers.
 import { gunzipSync } from 'node:zlib';
 import { chromium } from '@playwright/test';
-import { mkdirSync, readFileSync, rmSync } from 'node:fs';
+import { mkdirSync, readdirSync, readFileSync, rmSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
 let BASE = process.env.SHOTS_URL ?? 'http://localhost:4173';
@@ -227,12 +227,25 @@ async function reader(p, prefix) {
   // A real article (CC BY-SA, saved by the reader spike) so the shot shows true Wikipedia content.
   const html = gunzipSync(readFileSync(fileURLToPath(new URL('../tests/fixtures/articles/Peloponnesian_War.html.gz', import.meta.url)))).toString('utf8');
   await p.route('https://en.wikipedia.org/w/rest.php/v1/page/*/html', (r) => r.fulfill({ headers: { ...cors, 'Content-Type': 'text/html' }, body: html }));
-  // What the article is about, recorded from Wikidata (no class walk needed for a war).
-  const subject = JSON.parse(readFileSync(fileURLToPath(new URL('../tests/fixtures/subjects/Peloponnesian_War.json', import.meta.url)), 'utf8'));
+  // What the article and the pages it links are about, recorded from Wikidata (tests/fixtures/subjects).
+  const dir = new URL('../tests/fixtures/subjects/', import.meta.url);
+  const recs = readdirSync(dir).map((f) => JSON.parse(readFileSync(new URL(f, dir), 'utf8')));
+  const parents = Object.assign({}, ...recs.map((r) => r.parents));
+  const labels = Object.assign({}, ...recs.map((r) => r.labels));
   await p.route('https://www.wikidata.org/w/api.php**', (r) => {
-    const ids = new URL(r.request().url()).searchParams.get('ids');
-    if (!ids) return r.fulfill({ headers: cors, json: subject.entity });
-    return r.fulfill({ headers: cors, json: { entities: Object.fromEntries(ids.split('|').map((q) => [q, { id: q, labels: subject.labels[q] ? { en: { value: subject.labels[q] } } : {} }])) } });
+    const u = new URL(r.request().url());
+    const title = u.searchParams.get('titles');
+    if (title) {
+      const rec = recs.find((x) => x.title === title);
+      return r.fulfill({ headers: cors, json: rec ? rec.entity : { entities: { '-1': { site: 'enwiki', title, missing: '' } } } });
+    }
+    const ids = (u.searchParams.get('ids') ?? '').split('|');
+    return r.fulfill({ headers: cors, json: { entities: Object.fromEntries(ids.map((q) => [q, { id: q, labels: labels[q] ? { en: { value: labels[q] } } : {} }])) } });
+  });
+  await p.route('https://query.wikidata.org/sparql**', (r) => {
+    const ids = [...(new URL(r.request().url()).searchParams.get('query') ?? '').matchAll(/wd:(Q\d+)/g)].map((m) => m[1]);
+    const entity = (q) => ({ value: `http://www.wikidata.org/entity/${q}` });
+    return r.fulfill({ headers: cors, json: { results: { bindings: ids.flatMap((c) => (parents[c] ?? []).map((x) => ({ c: entity(c), p: entity(x) }))) } } });
   });
   await withFixture(p);
   await p.getByRole('button', { name: 'More' }).click();
