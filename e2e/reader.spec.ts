@@ -555,6 +555,11 @@ test('Claude drafts from the tribute passage: a suggested dimension, an event on
   await expect(funded).toContainText('Delian League funded Decree funding the rebuilding of Athenian temples');
   await expect(funded).toContainText('Accept the entry first.');
   await expect(funded.getByRole('button', { name: 'Accept' })).toBeDisabled();
+  // On the timeline too: the event as a dashed ghost, and the connection as a dashed arrow with its effect.
+  const timeline = page.getByTestId('timeline');
+  await expect(timeline.locator('.tl-draft')).toHaveCount(1);
+  await expect(timeline.locator('path.arc.draft')).toHaveCount(1);
+  await expect(timeline.locator('.tl-arc-label')).toHaveText('funded ?');
 
   // Library says the highlight has drafts waiting.
   await page.getByRole('button', { name: 'Library' }).click();
@@ -572,6 +577,7 @@ test('Claude drafts from the tribute passage: a suggested dimension, an event on
   await funded.getByRole('button', { name: 'Accept' }).click();
   await expect(funded).toContainText('Added');
   await expect(tray.getByRole('button', { name: 'Done' })).toBeVisible();
+  await expect(timeline.locator('.tl-draft, path.arc.draft')).toHaveCount(0);
 
   // Both records are under the highlight in Library, and nothing is waiting.
   await page.getByRole('button', { name: 'Library' }).click();
@@ -617,6 +623,8 @@ test('adding a battle connects it to the war already in Chronicle, with the high
   const tray = page.getByTestId('capture-tray');
   await expect(tray.getByRole('blockquote')).toHaveText(`“${quote}”`);
   await expect(tray.getByRole('radio', { name: /Battle of Salamis/ })).toContainText('This article · Battle');
+  // Not in Chronicle yet: a dashed ghost on the map where it was fought.
+  if (!phone) await expect(page.locator('.map-label.draft-pin', { hasText: 'Battle of Salamis' })).toBeVisible();
   await tray.getByRole('button', { name: 'Add to map and timeline' }).click();
 
   // The editor suggests "part of" the invasion, ticked, citing the highlight.

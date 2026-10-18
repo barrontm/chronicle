@@ -14,7 +14,7 @@ import { DraftConnectionRow, DraftEntryRow, DroppedList } from '../panels/DraftR
 import { useApiKey, useOnline } from '../useAi';
 import { DIMENSION_LABEL } from '../util';
 import { Glyph } from './Glyph';
-import { useHighlightDrafts } from './highlightDrafts';
+import { useHighlightDrafts, type Ghost } from './highlightDrafts';
 import type { RecordRef } from './ReaderPane';
 import { PIGMENT, type useHighlighting } from './useHighlighting';
 import type { SubjectState } from './useSubject';
@@ -80,10 +80,13 @@ export function CaptureTray({ marks, candidates, articleTitle, onAdd, onAsk, onO
   const open = marks.open;
   const openId = open?.highlight.id;
 
-  // The map shows the open highlight's drafts.
-  const { show } = drafts;
+  // The map shows the open highlight's drafts, and a ghost of what it could become (set below, once the candidate is known).
+  const { show, setGhost } = drafts;
   useEffect(() => { show(openId ?? null); }, [openId, show]);
-  useEffect(() => () => show(null), [show]);
+  useEffect(() => () => { show(null); setGhost(null); }, [show, setGhost]);
+  const ghost = useRef<Ghost | null>(null);
+  ghost.current = null;
+  useEffect(() => setGhost(ghost.current));
 
   // A newly opened card starts fresh, and the passage is lifted clear of the tray.
   useLayoutEffect(() => {
@@ -148,6 +151,8 @@ export function CaptureTray({ marks, candidates, articleTitle, onAdd, onAsk, onO
     ?? rows.find((r, i) => i > 0 && r.subject && r.subject.qid === h.subjectQid)?.key
     ?? rows[firstChoice(rows.map((r) => r.subject?.kind))]?.key;
   const chosen = rows.find((r) => r.key === chosenKey) ?? rows[0];
+  const at = chosen?.subject?.facts.coords;
+  if (at && !chosen.have) ghost.current = { qid: chosen.subject!.qid, title: chosen.subject!.label ?? chosen.title, lat: at.lat, lon: at.lon };
 
   const choose = (r: Row) => {
     setPicked((p) => ({ ...p, [h.id]: r.key }));

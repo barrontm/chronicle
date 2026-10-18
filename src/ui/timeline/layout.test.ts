@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { TimelineItem } from '../../model/types';
-import { AXIS_H, hitTest, laneAt, layout, MIN_HIT, prepare, ROW_H, type Env, type View } from './layout';
+import { AXIS_H, describeEntry, hitTest, laneAt, layout, MIN_HIT, prepare, ROW_H, stepActive, type Env, type View } from './layout';
 import type { Measure, Prim, Scene } from './scene';
 
 const measure: Measure = (_font, s) => s.length * 7;
@@ -157,5 +157,100 @@ describe('clusters', () => {
     const t0 = performance.now();
     for (let i = 0; i < 20; i++) at(3000 - i * 100);
     expect((performance.now() - t0) / 20).toBeLessThan(25);
+  });
+});
+
+describe('connections', () => {
+  const people = [sp('socrates', -469, -399, 'person'), sp('plato', -427, -347, 'person'), sp('confucius', -551, -479, 'person', 'war')];
+  const D = prep(people);
+  const roles = new Map([['plato', 'infl-self'], ['socrates', 'infl-by']]);
+  const links = [{ fromId: 'socrates', toId: 'plato', role: 'infl-by' as const }];
+
+  it('lights up the open entry’s connections and fades the rest', () => {
+    const S = layout(D, view(-600, -300, { selected: 'plato', roles, links }), env());
+    const cls = (id: string) => S.z[1].find((p) => p.id === id)!.cls;
+    expect(cls('socrates')).toContain('infl-by');
+    expect(cls('confucius')).toContain('dimmed');
+    const arc = S.z[3].find((p) => p.t === 5)!;
+    expect(arc).toMatchObject({ cls: 'arc infl-by', from: 'socrates', to: 'plato', head: 'infl-by' });
+  });
+  it('draws an arrow only while both ends are in view', () => {
+    const S = layout(D, view(-380, -300, { roles, links }), env());
+    expect(S.z[3].filter((p) => p.t === 5)).toHaveLength(0);
+  });
+  it('runs an arrow off the edge toward an end scrolled out of view', () => {
+    const tall = Array.from({ length: 30 }, (_, i) => sp(`p${i}`, -500, -400 + i));
+    const D2 = prep([...tall, ev('w', -450, 'war')]);
+    const S = layout(D2, view(-600, -300, { links: [{ fromId: 'p0', toId: 'w', role: 'draft', label: 'led to ?' }] }), env(1200, 300));
+    expect(S.boxes.has('w')).toBe(false);
+    expect(S.z[3].filter((p) => p.t === 5)).toHaveLength(1);
+  });
+  it('points at the cluster an end has merged into', () => {
+    const many = Array.from({ length: 6 }, (_, i) => ev(`e${i}`, -500 + i * 0.1));
+    const D2 = prep([...many, ev('later', -300)]);
+    const S = layout(D2, view(-2000, 500, { links: [{ fromId: 'e2', toId: 'later', role: 'linked' }] }), env());
+    expect(S.boxes.get('e2')).toBe(S.boxes.get('e0'));
+    expect(S.z[3].filter((p) => p.t === 5)).toHaveLength(1);
+  });
+  it('labels Claude’s drafted connections, and loops when both ends share a year', () => {
+    const D2 = prep([ev('a', -449), ev('b', -449, 'war')]);
+    const S = layout(D2, view(-460, -440, { links: [{ fromId: 'a', toId: 'b', role: 'draft', label: 'funded ?' }] }), env());
+    const arc = S.z[3].find((p) => p.t === 5) as Prim & { d: string; dash: boolean };
+    expect(arc.d).toContain('C');
+    expect(arc.dash).toBe(true);
+    expect(S.z[3].find((p) => p.t === 2)).toMatchObject({ s: 'funded ?', cls: 'tl-arc-label draft' });
+  });
+});
+
+describe('drafts', () => {
+  it('draws Claude’s drafts as ghosts with a "?", never in a cluster with entries', () => {
+    const items = Array.from({ length: 5 }, (_, i) => ev(`e${i}`, -500 + i * 0.1));
+    const D = prepare(items, LANES, { now: 2026, drafts: [ev('decree', -500.05)] });
+    const S = layout(D, view(-2000, 500), env());
+    expect(S.clusters[0].members).not.toContain('decree');
+    const ghost = S.z[1].find((p) => p.id === 'decree')!;
+    expect(ghost).toMatchObject({ cls: 'tl-draft', dash: true });
+    expect(D.extent).toEqual({ start: -500, end: -499.6 });
+  });
+});
+
+describe('dragging the open entry', () => {
+  const D = prep([sp('war', -430, -403), ev('battle', -424)]);
+  it('offers its body and both ends to drag, only when it is open', () => {
+    const closed = layout(D, view(-450, -390, { editable: true }), env());
+    expect(closed.targets.some((t) => t.grip)).toBe(false);
+    const open = layout(D, view(-450, -390, { editable: true, selected: 'war' }), env());
+    expect(open.targets.filter((t) => t.id === 'war').map((t) => t.grip)).toEqual(['body', 'start', 'end']);
+    const bar = open.boxes.get('war')!;
+    expect(hitTest(open, bar.x + 1, bar.y + 5)?.grip).toBe('start');
+    expect(hitTest(open, bar.x + bar.w / 2, bar.y + 5)?.grip).toBe('body');
+  });
+  it('shows where it would go, its new dates on the axis, and fades where it was', () => {
+    const S = layout(D, view(-450, -390, { editable: true, selected: 'battle', drag: { id: 'battle', s: -420, e: -420, label: '421 BCE', y: AXIS_H } }), env());
+    expect(S.z[1].find((p) => p.id === 'battle')!.a).toBe(0.35);
+    expect(S.z[3].find((p) => p.k === 'dragm')).toBeTruthy();
+    expect(S.axis.find((p) => p.k === 'dragt')).toMatchObject({ s: '421 BCE' });
+  });
+});
+
+describe('the arrow keys', () => {
+  const D = prep([ev('a', -500), ev('b', -400), sp('c', -450, -300), ev('w', -420, 'war')]);
+  const win = { start: -600, end: -200 };
+  it('start at the entry nearest the middle of the view', () => {
+    expect(stepActive(D, undefined, 'ArrowRight', win)).toBe('b');
+  });
+  it('go through a lane in time order, and stop at its ends', () => {
+    expect(stepActive(D, 'a', 'ArrowRight', win)).toBe('c');
+    expect(stepActive(D, 'c', 'ArrowRight', win)).toBe('b');
+    expect(stepActive(D, 'b', 'ArrowRight', win)).toBe('b');
+    expect(stepActive(D, 'b', 'Home', win)).toBe('a');
+  });
+  it('move to the nearest entry in time in the lane below or above', () => {
+    expect(stepActive(D, 'b', 'ArrowDown', win)).toBe('w');
+    expect(stepActive(D, 'w', 'ArrowUp', win)).toBe('b');
+    expect(stepActive(D, 'w', 'ArrowDown', win)).toBe('w');
+  });
+  it('say where they are for screen readers', () => {
+    expect(describeEntry(D, 'c')).toBe('c, 451–301 BCE, Politics & government, 2 of 3');
   });
 });

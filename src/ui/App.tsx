@@ -1,9 +1,9 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { docYearRange, presenceAt } from '../model/atYear';
-import { toDecimalYear } from '../model/dates';
-import { mergeDocs, parseDoc, serializeDoc } from '../model/doc';
+import { formatRange, toDecimalYear } from '../model/dates';
+import { mergeDocs, parseDoc, serializeDoc, upsert } from '../model/doc';
 import { highlightProminence } from '../model/prominence';
-import type { MediaRef, TimelineDoc } from '../model/types';
+import type { HistDate, MediaRef, TimelineDoc, TimelineItem } from '../model/types';
 import type { Area } from '../data/geo';
 import type { DocStore } from '../store/store';
 import { DocProvider, useDoc } from './DocContext';
@@ -12,7 +12,7 @@ import { ItemEditor, ItemView } from './panels/ItemPanels';
 import { Help } from './panels/Help';
 import { Library } from './panels/Library';
 import { WikiImport } from './panels/WikiImport';
-import { pendingWithPlaces, type DraftSet } from '../ai/draft';
+import { pendingOnTimeline, pendingWithPlaces, type DraftSet } from '../ai/draft';
 import { NoteEditor, NoteView } from './panels/NotePanels';
 import { SeriesEditor } from './panels/SeriesEditor';
 import { SourceEditor, SourceView } from './panels/SourcePanels';
@@ -73,10 +73,36 @@ function Workspace() {
   // Claude's drafts from highlights; the map shows the open highlight's.
   const highlightDrafts = useHighlightDraftStore(doc.highlights ?? NO_HIGHLIGHTS);
   const shownDraft = highlightDrafts.shown ? highlightDrafts.sets[highlightDrafts.shown] : null;
-  const draftItems = useMemo(
-    () => [...pendingWithPlaces(aiDraft), ...pendingWithPlaces(shownDraft)].filter((i) => !doc.items.some((x) => x.id === i.id)),
-    [aiDraft, shownDraft, doc.items],
-  );
+  const { ghost } = highlightDrafts;
+  const draftItems = useMemo(() => {
+    const drafted = [...pendingWithPlaces(aiDraft), ...pendingWithPlaces(shownDraft)].filter((i) => !doc.items.some((x) => x.id === i.id));
+    // What the open highlight could become, where it was: a ghost pin until Bob adds it.
+    const candidate: TimelineItem[] = ghost && !doc.items.some((i) => i.wikidataId === ghost.qid)
+      ? [{ id: `ghost-${ghost.qid}`, kind: 'event', title: ghost.title, start: { y: 0 }, categoryId: '', places: [{ lat: ghost.lat, lon: ghost.lon }], updatedAt: 0 }]
+      : [];
+    return [...drafted, ...candidate];
+  }, [aiDraft, shownDraft, doc.items, ghost]);
+  const timelineDrafts = useMemo(() => pendingOnTimeline(doc, [aiDraft, shownDraft]), [doc, aiDraft, shownDraft]);
+  // The last entry Bob dragged to new dates, so he can take it back.
+  const [moved, setMoved] = useState<{ before: TimelineItem; title: string; when: string } | null>(null);
+  useEffect(() => {
+    if (!moved) return;
+    const t = setTimeout(() => setMoved(null), 8000);
+    return () => clearTimeout(t);
+  }, [moved]);
+  const moveItem = (id: string, dates: { start: HistDate; end?: HistDate }) => {
+    const before = doc.items.find((i) => i.id === id);
+    if (!before) return;
+    update((d) => upsert(d, 'items', { ...before, start: dates.start, ...(dates.end ? { end: dates.end } : {}) }));
+    // Several quick moves (Alt + arrow) undo back to where it was before the first.
+    setMoved((m) => ({ before: m?.before.id === id ? m.before : before, title: before.title, when: formatRange(dates.start, dates.end) }));
+  };
+  const undoMove = () => {
+    if (!moved) return;
+    const back = moved.before;
+    update((d) => upsert(d, 'items', back));
+    setMoved(null);
+  };
 
   // ----- Map and the shared current year -----
   const narrow = useMedia('(max-width: 860px)');
@@ -394,7 +420,15 @@ function Workspace() {
             onYear={(y) => { setPlaying(false); setYear(y); }}
             renderer={next ? 'next' : 'classic'}
             prominence={prominence}
+            drafts={timelineDrafts}
+            onMove={readOnly ? undefined : moveItem}
           />
+          {moved && (
+            <div className="notice moved-note" role="status" data-testid="moved-note">
+              <span>Moved {moved.title} to {moved.when}.</span>
+              <button type="button" className="btn small" onClick={undoMove}>Undo</button>
+            </div>
+          )}
           {win && <TimeBar win={win} control={timeline} />}
           <TrendStrips
             series={doc.series}

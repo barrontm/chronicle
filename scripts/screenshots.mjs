@@ -224,6 +224,12 @@ async function newTimeline(p, prefix) {
   await p.getByTestId('time-bar').getByRole('button', { name: 'Zoom the timeline out' }).click();
   await p.waitForTimeout(600);
   await shot(p, `${prefix}-new-timeline-wide`);
+  // Plato open: his influences lit up with arrows, the rest faded.
+  await p.getByTestId('time-bar').getByRole('button', { name: 'All' }).click();
+  await p.waitForTimeout(600);
+  await p.locator('.tl-mark[data-id=i_plato]').click({ force: true });
+  await p.waitForTimeout(700);
+  await shot(p, `${prefix}-new-timeline-plato`);
 }
 if (any('desktop-new-timeline')) await newTimeline(await page('desktop-new-timeline', desktop), 'desktop');
 if (any('dark-new-timeline')) await newTimeline(await page('dark-new-timeline', { ...desktop, colorScheme: 'dark' }), 'dark');

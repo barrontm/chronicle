@@ -1,10 +1,10 @@
-import { jsDateToDecimalYear } from '../../model/dates';
-import type { TimelineItem } from '../../model/types';
+import { formatRange, jsDateToDecimalYear, moveDates, precisionOf, toDecimalYear } from '../../model/dates';
+import type { HistDate, TimelineItem } from '../../model/types';
 import { DEEP_LIMITS, panBy, windowAround, zoomAround, type YearWindow } from '../timeNav';
 import { attachGestures } from './gestures';
-import { hitTest, laneAt, layout, maxScroll, prepare, type LaneInput, type Level, type Prepared, type View } from './layout';
+import { AXIS_H, describeEntry, hitTest, laneAt, layout, maxScroll, prepare, rowSpan, stepActive, type LaneInput, type Level, type Prepared, type StepKey, type View } from './layout';
 import { svgPainter } from './paint';
-import { FONTS, type FontKey, type Measure, type Scene, type Target } from './scene';
+import { FONTS, type FontKey, type Link, type Measure, type Scene, type Target } from './scene';
 
 /**
  * The new timeline renderer: our own layout, SVG painter and gestures, in place of vis-timeline.
@@ -17,7 +17,12 @@ export interface TimelineData {
   lanes: LaneInput[];
   prominence?: (id: string) => number;
   thumbFor?: (item: TimelineItem) => string | undefined;
+  /** Claude's drafts waiting for Bob, drawn as dashed ghosts. */
+  drafts?: TimelineItem[];
 }
+
+/** New dates for an entry Bob dragged (or moved with Alt and an arrow key). */
+export interface MovedDates { start: HistDate; end?: HistDate }
 
 export interface TimelineCallbacks {
   onSelect: (id: string | undefined) => void;
@@ -26,11 +31,15 @@ export interface TimelineCallbacks {
   onWindow: (w: { start: number; end: number; left: number; width: number }) => void;
   /** Bob dragged the playhead, or clicked empty space while it shows. */
   onYear?: (year: number) => void;
+  /** Bob dragged the open entry, or one of its ends, to new dates. Without it entries can't be dragged. */
+  onMove?: (id: string, dates: MovedDates) => void;
 }
 
 export interface TimelineHandle {
   setData(d: TimelineData): void;
   setSelected(id: string | undefined): void;
+  /** The open entry's lit connections (role per id; the rest fade) and every arrow to draw. */
+  setLinks(roles: Map<string, string> | undefined, links: Link[]): void;
   /** The map's year, or undefined to hide the playhead. */
   setPlayYear(year: number | undefined): void;
   setWindow(w: YearWindow, animate?: boolean): void;
@@ -94,6 +103,18 @@ export function createTimeline(host: HTMLElement, cb: TimelineCallbacks, initial
   let tween: { from: YearWindow; to: YearWindow; t0: number | null } | null = null;
   let reported: { start: number; end: number; left: number; width: number } | null = null;
   let hasData = false;
+  let source = new Map<string, TimelineItem>();
+  let draftKey = '';
+  V.editable = !!cb.onMove;
+
+  // Screen readers hear the entry the arrow keys are on through one option node (aria-activedescendant).
+  const optionId = `tl-active-${Math.random().toString(36).slice(2, 8)}`;
+  const option = document.createElement('div');
+  option.id = optionId;
+  option.className = 'sr-only';
+  option.setAttribute('role', 'option');
+  host.setAttribute('role', 'listbox');
+  host.append(option);
 
   const env = () => ({ w: size.w, h: size.h, gutter: size.gutter, measure });
   const render = () => {
@@ -145,13 +166,16 @@ export function createTimeline(host: HTMLElement, cb: TimelineCallbacks, initial
       return { title: `${t.cluster.count} ${noun}${lead ? `, among them ${lead.title}` : ''}`, sub: 'Click to zoom in on them' };
     }
     const it = D.byId.get(t.id);
-    return it ? { title: it.title, sub: it.when } : null;
+    if (!it) return null;
+    if (it.draft) return { title: it.title, sub: `${it.when} · Claude's draft, waiting for you` };
+    if (t.grip === 'start' || t.grip === 'end') return { title: it.title, sub: `Drag to change when it ${t.grip === 'start' ? 'starts' : 'ends'}` };
+    return { title: it.title, sub: t.grip ? `${it.when} · Drag to change its dates` : it.when };
   };
   let tipKey: string | undefined;
   const showTip = (t: Target | undefined, x: number, y: number) => {
     const d = t && t.id !== 'playhead' ? describe(t) : null;
     if (!d) { tip.hidden = true; tipKey = undefined; return; }
-    const key = hoverKey(t);
+    const key = `${hoverKey(t)}${t?.grip ?? ''}`;
     if (key !== tipKey) {
       tip.replaceChildren();
       const b = document.createElement('b');
@@ -166,7 +190,9 @@ export function createTimeline(host: HTMLElement, cb: TimelineCallbacks, initial
     tip.style.transform = `translate(${clamp(x + 12, 4, size.w - tw - 4)}px, ${y + 16}px)`;
   };
 
-  let dragging = false;
+  /** What a press grabbed: the playhead, or a part of the open entry (with where the press began). */
+  let dragging: { what: 'playhead' } | { what: 'entry'; id: string; part: 'body' | 'start' | 'end'; from: number; y: number; moved?: MovedDates } | null = null;
+  const unchanged = (a: MovedDates, it: TimelineItem) => JSON.stringify([a.start, a.end]) === JSON.stringify([it.start, it.end]);
   const detach = attachGestures(host, {
     panPx: (dx) => { tween = null; setWin(panBy(V.win, (-dx / plotW()) * (V.win.end - V.win.start), DEEP_LIMITS)); },
     scrollBy: (dy) => { V.scrollY = clamp(V.scrollY + dy, 0, maxScroll(D, size.h)); schedule(); },
@@ -180,7 +206,8 @@ export function createTimeline(host: HTMLElement, cb: TimelineCallbacks, initial
         setWin(windowAround((s + e) / 2, Math.max((e - s) * 1.3, 20), DEEP_LIMITS), true);
         return;
       }
-      if (t) { cb.onSelect(t.id); return; }
+      if (t && D.byId.get(t.id)?.draft) return;
+      if (t) { setActive(t.id); cb.onSelect(t.id); return; }
       if (y < scene!.plot.y || x < size.gutter) return;
       cb.onSelect(undefined);
       if (V.playYear !== undefined) cb.onYear?.(Math.round(yearAt(x)));
@@ -193,31 +220,102 @@ export function createTimeline(host: HTMLElement, cb: TimelineCallbacks, initial
       if (dragging) return;
       const t = targetAt(x, y);
       const key = hoverKey(t);
-      host.style.cursor = t?.id === 'playhead' ? 'ew-resize' : t ? 'pointer' : '';
+      const draft = t && D.byId.get(t.id)?.draft;
+      host.style.cursor = t?.id === 'playhead' || t?.grip === 'start' || t?.grip === 'end' ? 'ew-resize' : t?.grip ? 'grab' : t && !draft ? 'pointer' : '';
       if (key !== V.hover) { V.hover = key === 'playhead' ? undefined : key; schedule(); }
       showTip(t, x, y);
     },
     leave: () => { if (V.hover) { V.hover = undefined; schedule(); } tip.hidden = true; },
     grab: (x, y) => {
-      dragging = targetAt(x, y)?.id === 'playhead' && !!cb.onYear;
+      const t = targetAt(x, y);
+      V.ring = false;
+      dragging = t?.id === 'playhead' && cb.onYear ? { what: 'playhead' }
+        : t?.grip && cb.onMove && source.has(t.id) ? { what: 'entry', id: t.id, part: t.grip, from: yearAt(x), y: t.y }
+        : null;
       if (dragging) tip.hidden = true;
-      return dragging;
+      if (dragging?.what === 'entry') host.style.cursor = dragging.part === 'body' ? 'grabbing' : 'ew-resize';
+      return !!dragging;
     },
-    drag: (x) => cb.onYear?.(yearAt(clamp(x, size.gutter, size.w))),
-    release: () => { dragging = false; },
+    drag: (x) => {
+      if (dragging?.what === 'playhead') { cb.onYear?.(yearAt(clamp(x, size.gutter, size.w))); return; }
+      if (dragging?.what !== 'entry') return;
+      const it = source.get(dragging.id)!;
+      // Dates move in whole steps of how precisely they're known, so the copy snaps as it goes.
+      const moved = moveDates(it, yearAt(clamp(x, size.gutter, size.w)) - dragging.from, dragging.part);
+      dragging.moved = moved;
+      const s = toDecimalYear(moved.start);
+      const e = it.kind === 'event' ? s : moved.end ? toDecimalYear(moved.end) : V.now;
+      V.drag = { id: it.id, s, e, label: formatRange(moved.start, moved.end), y: dragging.y };
+      schedule();
+    },
+    release: () => {
+      const d = dragging;
+      dragging = null;
+      host.style.cursor = '';
+      if (d?.what !== 'entry') return;
+      V.drag = undefined;
+      schedule();
+      const it = source.get(d.id);
+      if (it && d.moved && !unchanged(d.moved, it)) cb.onMove?.(d.id, d.moved);
+    },
   });
 
-  /* ---------- keys: a start; arrow keys through entries and lanes come with ticket 3 ---------- */
+  /* ---------- keys: arrows through entries and lanes, Enter opens, Shift pans, Alt moves the open entry ---------- */
+  const setActive = (id: string | undefined) => {
+    V.active = id;
+    if (id && D.byId.has(id)) {
+      option.textContent = describeEntry(D, id);
+      option.setAttribute('aria-selected', String(id === V.selected));
+      host.setAttribute('aria-activedescendant', optionId);
+    } else {
+      option.textContent = '';
+      host.removeAttribute('aria-activedescendant');
+    }
+    schedule();
+  };
+  /** Bring an entry into view: its time, and its lane. */
+  const reveal = (id: string) => {
+    const it = D.byId.get(id);
+    if (!it) return;
+    const span = V.win.end - V.win.start;
+    const pad = span * 0.08;
+    if (it.s < V.win.start + pad || it.s > V.win.end - pad) setWin(windowAround(Math.min(it.s + span * 0.3, (it.s + it.e) / 2), span, DEEP_LIMITS), true);
+    const [top, bottom] = rowSpan(D, it);
+    const viewH = size.h - AXIS_H;
+    if (top < V.scrollY) V.scrollY = clamp(top - 4, 0, maxScroll(D, size.h));
+    else if (bottom > V.scrollY + viewH) V.scrollY = clamp(bottom - viewH + 4, 0, maxScroll(D, size.h));
+  };
+  /** One step for Alt + arrow: a twentieth of the view, but at least one unit of how precisely the dates are known. */
+  const nudge = (it: TimelineItem, dir: number): MovedDates => {
+    const unit = { year: 1, month: 1 / 12, day: 1 / 365.25 }[precisionOf(it.start)];
+    return moveDates(it, dir * Math.max((V.win.end - V.win.start) / 20, unit));
+  };
+  const STEP_KEYS = new Set<string>(['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End']);
   const onKey = (e: KeyboardEvent) => {
     const span = V.win.end - V.win.start;
+    const sideways = e.key === 'ArrowLeft' ? -1 : e.key === 'ArrowRight' ? 1 : 0;
     if (e.key === '+' || e.key === '=') setWin(zoomAround(V.win, 0.5, undefined, DEEP_LIMITS), true);
     else if (e.key === '-') setWin(zoomAround(V.win, 2, undefined, DEEP_LIMITS), true);
-    else if (e.key === 'ArrowLeft') setWin(panBy(V.win, -span * 0.1, DEEP_LIMITS));
-    else if (e.key === 'ArrowRight') setWin(panBy(V.win, span * 0.1, DEEP_LIMITS));
+    else if (sideways && e.shiftKey) setWin(panBy(V.win, sideways * span * 0.1, DEEP_LIMITS));
+    else if (sideways && e.altKey) {
+      const it = V.selected ? source.get(V.selected) : undefined;
+      if (!it || !cb.onMove) return;
+      cb.onMove(it.id, nudge(it, sideways));
+    } else if (STEP_KEYS.has(e.key) && !e.metaKey && !e.ctrlKey) {
+      const id = stepActive(D, V.active, e.key as StepKey, V.win);
+      if (!id) return;
+      V.ring = true;
+      reveal(id);
+      setActive(id);
+    } else if ((e.key === 'Enter' || e.key === ' ') && V.active && D.byId.has(V.active)) cb.onSelect(V.active);
+    else if (e.key === 'Escape' && V.selected) cb.onSelect(undefined);
     else return;
     e.preventDefault();
   };
   host.addEventListener('keydown', onKey);
+  // The ring shows only while the keyboard is in use.
+  const onBlur = () => { if (V.ring) { V.ring = false; schedule(); } };
+  host.addEventListener('blur', onBlur);
 
   /* ---------- size and fonts ---------- */
   const resize = () => {
@@ -239,12 +337,30 @@ export function createTimeline(host: HTMLElement, cb: TimelineCallbacks, initial
 
   return {
     setData(d) {
-      D = prepare(d.items, d.lanes, { now: V.now, prominence: d.prominence, thumbFor: d.thumbFor });
+      D = prepare(d.items, d.lanes, { now: V.now, prominence: d.prominence, thumbFor: d.thumbFor, drafts: d.drafts });
+      source = new Map(d.items.map((i) => [i.id, i]));
+      if (V.active) setActive(D.byId.has(V.active) ? V.active : undefined);
+      // New drafts from Claude are brought into view, as the map frames them.
+      const drafts = (d.drafts ?? []).map((x) => x.id).filter((id) => D.byId.get(id)?.draft).join();
+      if (drafts && drafts !== draftKey && size.h) reveal(drafts.split(',')[0]);
+      draftKey = drafts;
       hasData = d.items.length > 0;
       if (!hasData) delete host.dataset.ready;
       schedule();
     },
-    setSelected(id) { V.selected = id; schedule(); },
+    setSelected(id) {
+      V.selected = id;
+      // An entry opened anywhere scrolls its row into view (its time is framed by `focus`).
+      const it = id ? D.byId.get(id) : undefined;
+      if (it && size.h) {
+        const [top, bottom] = rowSpan(D, it);
+        const viewH = size.h - AXIS_H;
+        if (top < V.scrollY || bottom > V.scrollY + viewH) V.scrollY = clamp(bottom - viewH + 8 > top ? top - 4 : bottom - viewH + 8, 0, maxScroll(D, size.h));
+      }
+      // The arrow keys carry on from whatever was opened last.
+      setActive(id ?? V.active);
+    },
+    setLinks(roles, links) { V.roles = roles; V.links = links; schedule(); },
     setPlayYear(year) { V.playYear = year; schedule(); },
     setWindow: (w, animate) => setWin(windowAround((w.start + w.end) / 2, w.end - w.start, DEEP_LIMITS), animate),
     getWindow: () => (tween ? tween.to : V.win),
@@ -264,8 +380,12 @@ export function createTimeline(host: HTMLElement, cb: TimelineCallbacks, initial
       ro.disconnect();
       detach();
       host.removeEventListener('keydown', onKey);
+      host.removeEventListener('blur', onBlur);
       painter.dispose();
       tip.remove();
+      option.remove();
+      host.removeAttribute('role');
+      host.removeAttribute('aria-activedescendant');
       delete host.dataset.ready;
     },
   };

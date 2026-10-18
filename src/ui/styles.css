@@ -112,7 +112,9 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .workspace.next { grid-template-columns: minmax(320px, 40em) 1fr; }
 .workspace.next.with-drawer { grid-template-columns: minmax(320px, 40em) 1fr var(--drawer); }
 .workspace.next .stage { padding-top: 12px; }
-.workspace.next .lanebar { display: none; }
+.workspace.next .lanebar { padding: 0 16px 8px; gap: 4px; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+.workspace.next .lanebar .chip { flex: none; }
+.workspace.next .lanebar .chip { padding-block: 2px; font-size: 12px; }
 .reader { min-width: 0; min-height: 0; overflow: auto; border-right: 1px solid var(--rule); background: var(--panel); padding: 24px 32px 48px; }
 .reader-tools { display: flex; justify-content: flex-end; margin: -8px -8px 8px 0; }
 .reader-search, .reader-article { max-width: 34em; margin: 0 auto; }
@@ -340,6 +342,13 @@ button, input, select, textarea { font: inherit; color: inherit; }
   box-shadow: 0 2px 8px rgb(0 0 0 / 0.12); font-size: 12.5px; line-height: 1.35;
 }
 .tl-tip[hidden] { display: none; }
+/* An open entry with connections: the rest fade; arrowheads take their arrow's color. */
+.tl-svg .dimmed { opacity: 0.3; }
+.tl-svg .tl-head.infl-by { fill: var(--glow-by); }
+.tl-svg .tl-head.infl-on { fill: var(--glow-on); }
+.tl-svg .tl-head.linked { fill: var(--muted); }
+.tl-svg .tl-head.draft { fill: var(--pig-umber); }
+.tl-svg .tl-arc-label { paint-order: stroke; stroke: var(--panel); stroke-width: 3px; stroke-linejoin: round; }
 .tl-tip b { font-family: var(--font-read); font-weight: 600; font-size: 13.5px; }
 .tl-tip span { color: var(--muted); }
 
@@ -424,6 +433,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .zoom-span { font-size: 12px; color: var(--muted); min-width: 11ch; }
 .timeline-pane { position: relative; }
 .focus-chip { position: absolute; top: 8px; right: 16px; z-index: 5; box-shadow: 0 1px 4px color-mix(in srgb, var(--ink) 20%, transparent); }
+.moved-note { position: absolute; left: 50%; bottom: 72px; transform: translateX(-50%); z-index: 5; display: flex; align-items: center; gap: 10px; max-width: calc(100% - 32px); padding: 6px 8px 6px 12px; background: var(--panel); box-shadow: 0 2px 8px color-mix(in srgb, var(--ink) 20%, transparent); }
 @media (max-width: 640px) {
   .time-bar { gap: 8px; padding: 6px 16px; }
   .zoom-bar { width: 100%; justify-content: space-between; }
@@ -599,7 +609,10 @@ dialog h2 { font-family: var(--font-read); margin: 0 0 12px; font-weight: 600; }
 .map-label.pin { margin-top: 8px; font-weight: 500; }
 /* AI drafts waiting for review: a dashed ring in the category's color, and an italic name. */
 .map-label.draft-pin { display: flex; flex-direction: column; align-items: center; gap: 2px; font-style: italic; color: var(--ink-2); }
-.map-label.draft-pin .ring { width: 12px; height: 12px; border-radius: 50%; border: 2px dashed var(--c); background: color-mix(in srgb, var(--c) 18%, transparent); }
+.map-label.draft-pin { color: var(--pig-umber); }
+.map-label.draft-pin .ring { width: 12px; height: 12px; border-radius: 50%; border: 2px dashed var(--pig-umber); background: color-mix(in srgb, var(--pig-umber) 18%, transparent); }
+/* Not in Chronicle yet. */
+.map-label.draft-pin .name::after { content: ' ?'; }
 .map-popup .maplibregl-popup-content { background: var(--panel); color: var(--ink); border: 1px solid var(--rule); border-radius: var(--radius-s); padding: 4px 8px; font-size: 12px; box-shadow: 0 2px 8px rgb(0 0 0 / 0.12); }
 .map-popup .maplibregl-popup-tip { display: none; }
 

@@ -4,9 +4,9 @@ import { DataSet } from 'vis-data/peer';
 import { Timeline, type TimelineOptions } from 'vis-timeline/peer';
 import { decimalYearToJsDate, formatAxisYear, formatYear, jsDateToDecimalYear, toJsDate } from '../model/dates';
 import type { Category, MediaRef, Relation, TimelineItem } from '../model/types';
-import { anchors, arcPath, influenceArrows, influenceClasses } from './influenceLinks';
+import { anchors, arcPath, draftArrows, influenceArrows, influenceClasses } from './influenceLinks';
 import { axisLabelEvery, axisStepYears, labelWidthPx, narrowLabels } from './labels';
-import { createTimeline, type TimelineHandle } from './timeline/createTimeline';
+import { createTimeline, type MovedDates, type TimelineHandle } from './timeline/createTimeline';
 import { focusWindow, panBy as panWindow, TIME_MAX, TIME_MIN, zoomAround, ZOOM_MAX_YEARS, ZOOM_MIN_YEARS, type YearWindow } from './timeNav';
 import { escapeHtml } from './util';
 
@@ -57,7 +57,13 @@ interface Props {
   renderer?: 'classic' | 'next';
   /** How much Bob has made of an entry; a cluster is led by its most prominent member. */
   prominence?: (id: string) => number;
+  /** New renderer: Claude's drafts waiting for Bob, drawn dashed (entries as ghosts, connections as arrows). */
+  drafts?: { items: TimelineItem[]; relations: Relation[] };
+  /** New renderer: Bob dragged the open entry to new dates. */
+  onMove?: (id: string, dates: MovedDates) => void;
 }
+
+const NO_DRAFTS: { items: TimelineItem[]; relations: Relation[] } = { items: [], relations: [] };
 
 export const TimelineView = forwardRef<TimelineControl, Props>(function TimelineView(props, ref) {
   // A different key swaps the renderer cleanly when the setting changes.
@@ -74,11 +80,11 @@ function focusTarget(id: string, items: TimelineItem[], relations: Relation[], s
   return focusWindow(item, items.filter((i) => otherIds.has(i.id) && shown(i.id)));
 }
 
-const NextTimeline = forwardRef<TimelineControl, Props>(function NextTimeline({ items, categories, relations, selectedId, thumbFor, onSelect, onAddAt, onWindow, onCanGoBack, year, onYear, prominence }, ref) {
+const NextTimeline = forwardRef<TimelineControl, Props>(function NextTimeline({ items, categories, relations, selectedId, thumbFor, onSelect, onAddAt, onWindow, onCanGoBack, year, onYear, prominence, drafts = NO_DRAFTS, onMove }, ref) {
   const host = useRef<HTMLDivElement>(null);
   const tl = useRef<TimelineHandle | null>(null);
-  const cb = useRef({ onSelect, onAddAt, onWindow, onYear, onCanGoBack });
-  cb.current = { onSelect, onAddAt, onWindow, onYear, onCanGoBack };
+  const cb = useRef({ onSelect, onAddAt, onWindow, onYear, onCanGoBack, onMove });
+  cb.current = { onSelect, onAddAt, onWindow, onYear, onCanGoBack, onMove };
   const latest = useRef({ items, relations, categories });
   latest.current = { items, relations, categories };
   const beforeFocus = useRef<YearWindow | null>(null);
@@ -89,6 +95,7 @@ const NextTimeline = forwardRef<TimelineControl, Props>(function NextTimeline({ 
       onAddAt: (y, lane) => cb.current.onAddAt(y, lane),
       onWindow: (w) => cb.current.onWindow(w),
       onYear: (y) => cb.current.onYear?.(y),
+      onMove: (id, dates) => cb.current.onMove?.(id, dates),
     }, { window: { start: -800, end: 2030 }, level: 2 });
     tl.current = t;
     return () => { t.dispose(); tl.current = null; };
@@ -100,8 +107,14 @@ const NextTimeline = forwardRef<TimelineControl, Props>(function NextTimeline({ 
       lanes: categories.map((c) => ({ id: c.id, label: c.label, color: c.color })),
       prominence,
       thumbFor: (i) => (i.media?.[0] ? thumbFor(i.media[0]) : undefined),
+      drafts: drafts.items,
     });
-  }, [items, categories, thumbFor, prominence]);
+  }, [items, categories, thumbFor, prominence, drafts.items]);
+
+  // The open entry's connections light up with arrows; Claude's drafted ones show whenever their highlight is open.
+  useEffect(() => {
+    tl.current?.setLinks(influenceClasses(relations, selectedId), [...influenceArrows(relations, selectedId), ...draftArrows(drafts.relations)]);
+  }, [relations, selectedId, drafts.relations]);
 
   useEffect(() => { tl.current?.setPlayYear(year); }, [year]);
 

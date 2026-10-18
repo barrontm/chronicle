@@ -1,7 +1,8 @@
 import { axisTicks, formatRange, formatYear, toDecimalYear } from '../../model/dates';
 import type { TimelineItem } from '../../model/types';
+import { anchors, arcCurve, loopCurve, type Box as Edges } from '../influenceLinks';
 import type { YearWindow } from '../timeNav';
-import { tint, type Cluster, type MarkKind, type Measure, type Prim, type Scene, type Target } from './scene';
+import { tint, type Box, type Cluster, type Link, type MarkKind, type Measure, type Prim, type Scene, type Target } from './scene';
 
 /**
  * The new timeline's layout: pure. `prepare` runs once per data change (lanes, rows, sorted
@@ -23,11 +24,14 @@ export const CLUSTER_PX = 16;
 export const TINY_PX = 4;
 /** A lane stacks its moments in up to this many rows before they have to share. */
 export const MOMENT_ROWS = 3;
+/** The open entry's ends can be dragged within this many px of them. */
+export const GRIP_PX = 8;
 const PAD_TOP = 6;
 const PAD_BOTTOM = 8;
 const LANE_MIN = 44;
 /** Labels shorter than this are hidden rather than cut short (docs/design.md, Density). */
 const MIN_LABEL = 48;
+const UMBER = 'var(--pig-umber)';
 
 export interface LaneInput { id: string; label: string; color: string }
 
@@ -41,6 +45,10 @@ export interface PItem {
   e: number;
   approx: boolean;
   endApprox: boolean;
+  /** A life without an end yet (drawn to today): its end can't be dragged. */
+  open: boolean;
+  /** Claude's draft, waiting for Bob: a dashed umber ghost that can't be opened or moved. */
+  draft: boolean;
   lane: number;
   /** Spans: the row inside the lane. */
   row: number;
@@ -60,6 +68,8 @@ export interface PLane {
   spans: PItem[];
   S: Float64Array;
   PM: Float64Array;
+  /** Every entry (not drafts) by start, the order the arrow keys go in. */
+  order: PItem[];
   spanRows: number;
   momentRows: number;
   /** Offset from the top of the lanes, and height, in px. */
@@ -81,6 +91,8 @@ export interface PrepareOptions {
   now: number;
   prominence?: (id: string) => number;
   thumbFor?: (item: TimelineItem) => string | undefined;
+  /** Claude's drafts waiting for Bob, drawn as ghosts in their lanes. */
+  drafts?: TimelineItem[];
 }
 
 export function prepare(items: TimelineItem[], lanes: LaneInput[], o: PrepareOptions): Prepared {
@@ -88,22 +100,25 @@ export function prepare(items: TimelineItem[], lanes: LaneInput[], o: PrepareOpt
   const laneIx = new Map(lanes.map((l, i) => [l.id, i]));
   const per: PItem[][] = lanes.map(() => []);
   let lo = Infinity, hi = -Infinity;
-  for (const ref of items) {
+  const add = (ref: TimelineItem, draft: boolean) => {
     const li = laneIx.get(ref.categoryId);
-    if (li === undefined) continue;
+    if (li === undefined || byId.has(ref.id)) return;
     const s = toDecimalYear(ref.start);
     // A living person has no end; draw them up to today.
     const e = ref.kind === 'event' ? s : ref.end ? toDecimalYear(ref.end) : o.now;
     const p: PItem = {
       id: ref.id, kind: ref.kind, title: ref.title, when: formatRange(ref.start, ref.end),
-      s, e: Math.max(e, s), approx: !!ref.start.approx, endApprox: !!ref.end?.approx,
-      lane: li, row: 0, nextS: Infinity, thumb: o.thumbFor?.(ref),
+      s, e: Math.max(e, s), approx: !!ref.start.approx, endApprox: !!ref.end?.approx, open: ref.kind !== 'event' && !ref.end, draft,
+      lane: li, row: 0, nextS: Infinity, thumb: draft ? undefined : o.thumbFor?.(ref),
     };
     per[li].push(p);
     byId.set(p.id, p);
+    if (draft) return;
     lo = Math.min(lo, p.s);
     hi = Math.max(hi, p.e);
-  }
+  };
+  for (const ref of items) add(ref, false);
+  for (const ref of o.drafts ?? []) add(ref, true);
   let top = 0;
   const out = lanes.map((l, li): PLane => {
     const events = per[li].filter((i) => i.kind === 'event').sort((a, b) => a.s - b.s || a.id.localeCompare(b.id));
@@ -129,7 +144,8 @@ export function prepare(items: TimelineItem[], lanes: LaneInput[], o: PrepareOpt
     spans.forEach((it, i) => { S[i] = it.s; mx = Math.max(mx, it.e); PM[i] = mx; });
     const momentRows = Math.min(MOMENT_ROWS, events.length);
     const height = Math.max(LANE_MIN, PAD_TOP + (momentRows + rowEnd.length) * ROW_H + PAD_BOTTOM);
-    const lane: PLane = { ...l, events, ES: Float64Array.from(events, (e) => e.s), spans, S, PM, spanRows: rowEnd.length, momentRows, top, height };
+    const order = per[li].filter((i) => !i.draft).sort((a, b) => a.s - b.s || a.e - b.e || a.id.localeCompare(b.id));
+    const lane: PLane = { ...l, events, ES: Float64Array.from(events, (e) => e.s), spans, S, PM, order, spanRows: rowEnd.length, momentRows, top, height };
     top += height;
     return lane;
   });
@@ -156,6 +172,57 @@ export function pickLead(members: PItem[], prominence: (id: string) => number): 
   return best;
 }
 
+/* ---------- the arrow keys ---------- */
+
+export type StepKey = 'ArrowLeft' | 'ArrowRight' | 'ArrowUp' | 'ArrowDown' | 'Home' | 'End';
+
+/**
+ * Where the arrow keys go from `activeId`: ←/→ the previous or next entry in its lane, ↑/↓ the
+ * entry nearest in time in the next lane up or down that has any, Home/End the lane's first or
+ * last. With nothing active yet, any key starts at the entry nearest the middle of the window.
+ */
+export function stepActive(D: Prepared, activeId: string | undefined, key: StepKey, win: YearWindow): string | undefined {
+  const cur = activeId ? D.byId.get(activeId) : undefined;
+  const nearest = (list: PItem[], y: number) => list.reduce<PItem | undefined>((b, it) => (!b || Math.abs(it.s - y) < Math.abs(b.s - y) ? it : b), undefined);
+  if (!cur || cur.draft) {
+    const mid = (win.start + win.end) / 2;
+    return nearest(D.lanes.flatMap((l) => l.order), mid)?.id;
+  }
+  const L = D.lanes[cur.lane];
+  const i = L.order.indexOf(cur);
+  switch (key) {
+    case 'ArrowLeft': return L.order[Math.max(0, i - 1)].id;
+    case 'ArrowRight': return L.order[Math.min(L.order.length - 1, i + 1)].id;
+    case 'Home': return L.order[0].id;
+    case 'End': return L.order[L.order.length - 1].id;
+    default: {
+      const dir = key === 'ArrowUp' ? -1 : 1;
+      for (let li = cur.lane + dir; li >= 0 && li < D.lanes.length; li += dir) {
+        const hit = nearest(D.lanes[li].order, cur.s);
+        if (hit) return hit.id;
+      }
+      return cur.id;
+    }
+  }
+}
+
+/** How far down the lanes an entry's row is, in px from the top of the first lane: a moment can be in any of its lane's moment rows. */
+export function rowSpan(D: Prepared, it: PItem): [number, number] {
+  const L = D.lanes[it.lane];
+  const moments = PAD_TOP + L.momentRows * ROW_H;
+  if (it.kind === 'event') return [L.top, L.top + moments];
+  const top = L.top + moments + it.row * ROW_H;
+  return [top, top + ROW_H];
+}
+
+/** What a screen reader says for an entry: "Plato, 428–348 BCE, Ideas, 3 of 12". */
+export function describeEntry(D: Prepared, id: string): string {
+  const it = D.byId.get(id);
+  if (!it) return '';
+  const L = D.lanes[it.lane];
+  return `${it.title}, ${it.when}, ${L.label}, ${L.order.indexOf(it) + 1} of ${L.order.length}`;
+}
+
 /* ---------- the frame ---------- */
 
 export interface View {
@@ -167,6 +234,17 @@ export interface View {
   playYear?: number;
   /** Today, as a decimal year. */
   now: number;
+  /** When an entry is open and has connections: each lit entry's role; everyone else fades. */
+  roles?: Map<string, string>;
+  /** Arrows between entries, drawn when both ends are in view. */
+  links?: Link[];
+  /** The open entry's dates can be dragged. */
+  editable?: boolean;
+  /** The open entry while it's dragged: where it would go, and its new dates in words. */
+  drag?: { id: string; s: number; e: number; label: string; y: number };
+  /** The entry the arrow keys are on, and whether to ring it (only while the timeline has keyboard focus). */
+  active?: string;
+  ring?: boolean;
 }
 
 export interface Env {
@@ -201,12 +279,22 @@ function placeLabel(M: Measure, font: Parameters<Measure>[0], s: string, room: n
 }
 
 const badgeR = (n: number) => 9 + Math.max(0, String(n).length - 2) * 3;
+/** A draft's name says it's waiting for Bob. */
+const titleOf = (it: PItem) => (it.draft ? `${it.title} ?` : it.title);
+
+/** The extra class an entry gets while an entry with connections is open: its role, or faded. */
+function roleOf(V: View, it: PItem): string {
+  if (!V.roles || it.draft) return '';
+  return ` ${V.roles.get(it.id) ?? 'dimmed'}`;
+}
+/** The outline that lights up an influence: amber for who influenced, blue for whom. */
+const ROLE_STROKE: Record<string, string> = { 'infl-by': 'var(--glow-by)', 'infl-on': 'var(--glow-on)', linked: 'var(--muted)' };
 
 export function layout(D: Prepared, V: View, E: Env, level: Level = 2): Scene {
   void level; // levels 0 and 1 come with their own tickets; everything draws as level 2 until then
   const x0 = E.gutter, x1 = E.w;
   const S: Scene = {
-    z: [[], [], []], gutter: [], axis: [], targets: [], clusters: [],
+    z: [[], [], [], []], gutter: [], axis: [], targets: [], clusters: [], boxes: new Map(),
     plot: { x: x0, y: AXIS_H, w: Math.max(0, x1 - x0), h: Math.max(0, E.h - AXIS_H) },
     gutterBox: { x: 0, y: AXIS_H, w: x0, h: Math.max(0, E.h - AXIS_H) },
     contentH: D.contentH,
@@ -224,6 +312,9 @@ export function layout(D: Prepared, V: View, E: Env, level: Level = 2): Scene {
     moments(c, L, laneTop + PAD_TOP);
     spans(c, L, laneTop + PAD_TOP + L.momentRows * ROW_H);
   }
+  arrows(c);
+  focusRing(c);
+  dragPreview(c);
   axis(c);
   return S;
 }
@@ -255,7 +346,9 @@ function moments(c: Ctx, L: PLane, rowsTop: number) {
   for (let i = lo; i < hi; i++) {
     const it = L.events[i];
     const x = X(it.s);
-    if (cur && x - cur.x < CLUSTER_PX) { cur.members.push(it); cur.last = x; continue; }
+    // Drafts and the open entry never hide in a cluster.
+    const alone = (p: PItem) => p.draft || p.id === V.selected;
+    if (cur && x - cur.x < CLUSTER_PX && !alone(it) && !alone(cur.members[0])) { cur.members.push(it); cur.last = x; continue; }
     cur = { members: [it], x, last: x, r: 5, lead: it, lw: 0, row: 0, room: Infinity, before: -Infinity };
     marks.push(cur);
   }
@@ -265,7 +358,7 @@ function moments(c: Ctx, L: PLane, rowsTop: number) {
   const lastIn = new Array<Mark | null>(L.momentRows).fill(null);
   for (const m of marks) {
     if (m.members.length > 1) { m.lead = pickLead(m.members, D.prominence); m.r = badgeR(m.members.length); }
-    m.lw = M('ui', m.lead.title);
+    m.lw = M('ui', titleOf(m.lead));
     const left = m.x - m.r - 4;
     let r = rightOf.findIndex((v) => v <= left);
     if (r < 0) {
@@ -286,29 +379,38 @@ function moments(c: Ctx, L: PLane, rowsTop: number) {
     // At the right edge a label that won't fit flips to the left of its dot, when nothing is there.
     const edge = x1 - (m.x + m.r + 6) - 4;
     const flip = m.lw > edge && m.lw <= m.room && m.x - m.r - 6 - m.lw > Math.max(x0, m.before + 6);
-    const label = placeLabel(M, 'ui', it.title, flip ? m.lw : Math.min(m.room, edge));
+    const label = placeLabel(M, 'ui', titleOf(it), flip ? m.lw : Math.min(m.room, edge));
     const lw = label ? M('ui', label) : 0;
     const lx = flip ? m.x - m.r - 6 : m.x + m.r + 6;
     const anchor = flip ? 'end' as const : undefined;
     const hx = flip ? lx - lw - 4 : m.x - 12;
     const hitW = label ? (flip ? m.x + 12 - hx : lx + lw + 4 - hx) : 24;
+    const box = { x: m.x - m.r, y: y - m.r, w: m.r * 2, h: m.r * 2 };
     if (m.members.length > 1) {
       const cl: Cluster = { kind: 'event', count: m.members.length, members: m.members.map((x) => x.id), lead: it.id, lane: L.id, s: m.members[0].s, e: m.members[m.members.length - 1].s };
       S.clusters.push(cl);
+      for (const id of cl.members) S.boxes.set(id, box);
       const hot = V.hover === `cluster:${it.id}`;
-      S.z[1].push({ t: 1, k: `mc${it.id}`, a: 1, cls: 'tl-cluster', x: m.x, y, r: m.r, fill: L.color, stroke: hot ? 'var(--ink)' : 'var(--panel)', sw: hot ? 2 : 1.5 });
-      S.z[2].push({ t: 2, k: `mn${it.id}`, a: 1, x: m.x, y: y + 4, s: String(cl.count), f: 'count', fill: 'var(--panel)', anchor: 'middle' });
-      if (label) S.z[2].push({ t: 2, k: `mt${it.id}`, a: 1, cls: 'tl-label', x: lx, y: y + 4, s: label, f: 'ui', fill: 'var(--ink-2)', anchor });
+      const dim = V.roles && !m.members.some((x) => V.roles!.has(x.id)) ? ' dimmed' : '';
+      S.z[1].push({ t: 1, k: `mc${it.id}`, a: 1, cls: `tl-cluster${dim}`, x: m.x, y, r: m.r, fill: L.color, stroke: hot ? 'var(--ink)' : 'var(--panel)', sw: hot ? 2 : 1.5 });
+      S.z[2].push({ t: 2, k: `mn${it.id}`, a: 1, cls: dim.trim() || undefined, x: m.x, y: y + 4, s: String(cl.count), f: 'count', fill: 'var(--panel)', anchor: 'middle' });
+      if (label) S.z[2].push({ t: 2, k: `mt${it.id}`, a: 1, cls: `tl-label${dim}`, x: lx, y: y + 4, s: label, f: 'ui', fill: 'var(--ink-2)', anchor });
       S.targets.push({ id: 'cluster', cluster: cl, lane: L.id, x: hx, y: rowTop, w: hitW, h: ROW_H });
       continue;
     }
+    S.boxes.set(it.id, box);
     const sel = V.selected === it.id, hot = sel || V.hover === it.id;
+    const role = roleOf(V, it);
+    const lit = ROLE_STROKE[role.trim()];
+    const color = it.draft ? UMBER : L.color;
     S.z[1].push({
-      t: 1, k: `m${it.id}`, a: 1, cls: `tl-mark${sel ? ' selected' : ''}`, id: it.id, x: m.x, y, r: sel ? 6 : 5,
-      fill: it.approx ? 'var(--panel)' : L.color, stroke: hot ? 'var(--ink)' : L.color, sw: sel ? 2 : 1.25, dash: it.approx,
+      t: 1, k: `m${it.id}`, a: 1, cls: `${it.draft ? 'tl-draft' : 'tl-mark'}${sel ? ' selected' : ''}${role}`, id: it.id, x: m.x, y, r: sel ? 6 : 5,
+      fill: it.approx || it.draft ? 'var(--panel)' : color, stroke: lit ?? (hot ? 'var(--ink)' : color), sw: lit ? 2.5 : sel ? 2 : 1.25, dash: it.approx || it.draft,
     });
-    if (label) S.z[2].push({ t: 2, k: `mt${it.id}`, a: 1, cls: 'tl-label', id: it.id, x: lx, y: y + 4, s: label, f: 'ui', fill: 'var(--ink)', anchor });
-    S.targets.push({ id: it.id, lane: L.id, x: hx, y: rowTop, w: hitW, h: ROW_H });
+    if (label) S.z[2].push({ t: 2, k: `mt${it.id}`, a: 1, cls: `tl-label${role}`, id: it.id, x: lx, y: y + 4, s: label, f: it.draft ? 'spanI' : 'ui', fill: it.draft ? UMBER : 'var(--ink)', anchor });
+    const target: Target = { id: it.id, lane: L.id, x: hx, y: rowTop, w: hitW, h: ROW_H };
+    if (sel && V.editable) target.grip = 'body';
+    S.targets.push(target);
   }
 }
 
@@ -317,7 +419,7 @@ function moments(c: Ctx, L: PLane, rowsTop: number) {
 interface Sliver { kind: MarkKind; members: PItem[]; left: number; right: number }
 
 function spans(c: Ctx, L: PLane, rowsTop: number) {
-  const { V, S } = c;
+  const { V } = c;
   if (!L.spans.length) return;
   const hi = upperBound(L.S, V.win.end), lo = lowerBound(L.PM, V.win.start);
   const pending = new Array<Sliver | null>(L.spanRows).fill(null);
@@ -334,7 +436,7 @@ function spans(c: Ctx, L: PLane, rowsTop: number) {
     const rowTop = rowsTop + it.row * ROW_H;
     if (rowTop + ROW_H < c.top || rowTop > c.bottom) continue;
     const xa = c.X(it.s), xb = c.X(it.e);
-    if (xb - xa < TINY_PX) {
+    if (xb - xa < TINY_PX && !it.draft && it.id !== V.selected) {
       const g = pending[it.row];
       if (g && g.kind === it.kind && xa - g.right < TINY_PX) { g.members.push(it); g.right = Math.max(g.right, xb); continue; }
       flush(it.row);
@@ -342,10 +444,9 @@ function spans(c: Ctx, L: PLane, rowsTop: number) {
       continue;
     }
     flush(it.row);
-    bar(c, L, it, xa, xb, rowsTop);
+    bar(c, L, it, xa, Math.max(xb, xa + 3), rowsTop);
   }
   for (let r = 0; r < pending.length; r++) flush(r);
-  void S;
 }
 
 function bar(c: Ctx, L: PLane, it: PItem, xa: number, xb: number, rowsTop: number) {
@@ -358,40 +459,59 @@ function bar(c: Ctx, L: PLane, it: PItem, xa: number, xb: number, rowsTop: numbe
   const rx = Math.max(xa, x0 - 4), rr = Math.min(xb, x1 + 4), rw = Math.max(3, rr - rx);
   const va = Math.max(xa, x0), vb = Math.min(xb, x1), vw = vb - va;
   const sel = V.selected === it.id, hot = sel || V.hover === it.id;
-  const cls = `tl-mark${sel ? ' selected' : ''}`;
-  if (person) {
-    S.z[1].push({ t: 0, k: `b${it.id}`, a: 1, cls, id: it.id, x: rx, y: by, w: rw, h: bh, r: bh / 2, fill: hot ? tint(L.color, 12) : 'var(--panel)', stroke: hot ? 'var(--ink)' : tint(L.color, 60), sw: sel ? 2 : 1, dash: it.approx || it.endApprox });
+  const role = roleOf(V, it);
+  const lit = ROLE_STROKE[role.trim()];
+  const cls = `${it.draft ? 'tl-draft' : 'tl-mark'}${sel ? ' selected' : ''}${role}`;
+  S.boxes.set(it.id, { x: rx, y: by, w: rw, h: bh });
+  if (it.draft) {
+    S.z[1].push({ t: 0, k: `b${it.id}`, a: 1, cls, id: it.id, x: rx, y: by, w: rw, h: bh, r: person ? bh / 2 : 2, fill: tint(UMBER, 10), stroke: UMBER, sw: 1.5, dash: true });
+  } else if (person) {
+    S.z[1].push({ t: 0, k: `b${it.id}`, a: 1, cls, id: it.id, x: rx, y: by, w: rw, h: bh, r: bh / 2, fill: hot ? tint(L.color, 12) : 'var(--panel)', stroke: lit ?? (hot ? 'var(--ink)' : tint(L.color, 60)), sw: lit ? 2.5 : sel ? 2 : 1, dash: it.approx || it.endApprox });
   } else {
-    S.z[1].push({ t: 0, k: `b${it.id}`, a: 1, cls, id: it.id, x: rx, y: by, w: rw, h: bh, r: 2, fill: tint(L.color, hot ? 30 : 16), stroke: sel ? 'var(--ink)' : undefined, sw: 2 });
+    S.z[1].push({ t: 0, k: `b${it.id}`, a: 1, cls, id: it.id, x: rx, y: by, w: rw, h: bh, r: 2, fill: tint(L.color, hot ? 30 : 16), stroke: lit ?? (sel ? 'var(--ink)' : undefined), sw: lit ? 2.5 : 2 });
     // The start is a solid edge in the lane's pigment, dashed when it's approximate; so is an approximate end.
-    if (xa >= x0 - 3) S.z[1].push({ t: 3, k: `ba${it.id}`, a: 1, x1: xa + 1.5, y1: by, x2: xa + 1.5, y2: by + bh, stroke: L.color, sw: 3, dash: it.approx });
-    if (it.endApprox && xb <= x1 + 3) S.z[1].push({ t: 3, k: `bz${it.id}`, a: 1, x1: xb - 1, y1: by, x2: xb - 1, y2: by + bh, stroke: L.color, sw: 2, dash: true });
+    if (xa >= x0 - 3) S.z[1].push({ t: 3, k: `ba${it.id}`, a: 1, cls: role.trim() || undefined, x1: xa + 1.5, y1: by, x2: xa + 1.5, y2: by + bh, stroke: L.color, sw: 3, dash: it.approx });
+    if (it.endApprox && xb <= x1 + 3) S.z[1].push({ t: 3, k: `bz${it.id}`, a: 1, cls: role.trim() || undefined, x1: xb - 1, y1: by, x2: xb - 1, y2: by + bh, stroke: L.color, sw: 2, dash: true });
   }
   // Hit target: the bar, at least 24 px wide, and its label when that sits after it.
   let hx = rx, hw = rw;
   if (hw < MIN_HIT) { hx = rx + rw / 2 - MIN_HIT / 2; hw = MIN_HIT; }
   // Label: inside, else just after if there's room before the next bar in the row, else cut short, else hidden.
   if (vw >= 3) {
+    const title = titleOf(it);
     const thumb = it.thumb && vw >= 64 ? it.thumb : undefined;
     const pad = thumb ? 26 : 8;
-    const lw = M('span', it.title);
+    const lw = M('span', title);
     const ty = by + bh / 2 + 4.5;
-    if (thumb) S.z[1].push({ t: 4, k: `bi${it.id}`, a: 1, cls: person ? 'tl-thumb round' : 'tl-thumb', x: va + (person ? 2 : 4), y: by + (bh - 18) / 2, w: 18, h: 18, href: thumb });
+    const ink = it.draft ? UMBER : 'var(--ink)';
+    const lcls = `tl-label${role}`;
+    if (thumb) S.z[1].push({ t: 4, k: `bi${it.id}`, a: 1, cls: `${person ? 'tl-thumb round' : 'tl-thumb'}${role}`, x: va + (person ? 2 : 4), y: by + (bh - 18) / 2, w: 18, h: 18, href: thumb });
     if (lw + pad + 6 <= vw) {
-      S.z[2].push({ t: 2, k: `bt${it.id}`, a: 1, cls: 'tl-label', id: it.id, x: va + pad, y: ty, s: it.title, f: 'span', fill: 'var(--ink)' });
+      S.z[2].push({ t: 2, k: `bt${it.id}`, a: 1, cls: lcls, id: it.id, x: va + pad, y: ty, s: title, f: it.draft ? 'spanI' : 'span', fill: ink });
     } else {
       const room = (it.nextS === Infinity ? Infinity : c.X(it.nextS)) - xb - 12;
-      const after = M('spanI', it.title);
+      const after = M('spanI', title);
       if (xb + 6 + after <= x1 && after <= room) {
-        S.z[2].push({ t: 2, k: `bt${it.id}`, a: 1, cls: 'tl-label', id: it.id, x: xb + 6, y: ty, s: it.title, f: 'spanI', fill: 'var(--ink-2)' });
+        S.z[2].push({ t: 2, k: `bt${it.id}`, a: 1, cls: `${lcls} out`, id: it.id, x: xb + 6, y: ty, s: title, f: 'spanI', fill: it.draft ? UMBER : 'var(--ink-2)' });
         hw = Math.max(hw, xb + 6 + after - hx);
       } else {
-        const s = vw >= MIN_LABEL ? fit(M, 'span', it.title, vw - pad - 6) : '';
-        if (s) S.z[2].push({ t: 2, k: `bt${it.id}`, a: 1, cls: 'tl-label', id: it.id, x: va + pad, y: ty, s, f: 'span', fill: 'var(--ink)' });
+        const s = vw >= MIN_LABEL ? fit(M, 'span', title, vw - pad - 6) : '';
+        if (s) S.z[2].push({ t: 2, k: `bt${it.id}`, a: 1, cls: lcls, id: it.id, x: va + pad, y: ty, s, f: 'span', fill: ink });
       }
     }
   }
-  S.targets.push({ id: it.id, lane: L.id, x: hx, y: rowTop, w: hw, h: ROW_H });
+  const target: Target = { id: it.id, lane: L.id, x: hx, y: rowTop, w: hw, h: ROW_H };
+  S.targets.push(target);
+  if (!sel || !V.editable || it.draft) return;
+  // The open entry can be dragged: its body moves both dates, an end (when the bar is wide enough to tell them apart) only that one.
+  target.grip = 'body';
+  if (rw < GRIP_PX * 4) return;
+  const grip = (part: 'start' | 'end', x: number) => {
+    S.z[2].push({ t: 0, k: `bg${part}${it.id}`, a: 1, cls: 'tl-grip', x: x - 2, y: by + 4, w: 4, h: bh - 8, r: 2, fill: 'var(--ink)' });
+    S.targets.push({ id: it.id, grip: part, lane: L.id, x: x - GRIP_PX, y: rowTop, w: GRIP_PX * 2, h: ROW_H });
+  };
+  if (xa >= x0) grip('start', xa + 1);
+  if (!it.open && xb <= x1) grip('end', xb - 1);
 }
 
 function sliverCluster(c: Ctx, L: PLane, g: Sliver, rowsTop: number) {
@@ -404,17 +524,88 @@ function sliverCluster(c: Ctx, L: PLane, g: Sliver, rowsTop: number) {
   const w = Math.max(g.right - g.left, E.measure('count', n) + 12);
   const hot = V.hover === `cluster:${lead.id}`;
   const by = rowTop + 4;
-  S.z[1].push({ t: 0, k: `sc${lead.id}`, a: 1, cls: 'tl-cluster', x: g.left, y: by, w, h: 20, r: g.kind === 'person' ? 10 : 3, fill: L.color, stroke: hot ? 'var(--ink)' : undefined, sw: 2 });
-  S.z[2].push({ t: 2, k: `sn${lead.id}`, a: 1, x: g.left + w / 2, y: by + 14, s: n, f: 'count', fill: 'var(--panel)', anchor: 'middle' });
+  const dim = V.roles && !g.members.some((x) => V.roles!.has(x.id)) ? ' dimmed' : '';
+  for (const id of cl.members) S.boxes.set(id, { x: g.left, y: by, w, h: 20 });
+  S.z[1].push({ t: 0, k: `sc${lead.id}`, a: 1, cls: `tl-cluster${dim}`, x: g.left, y: by, w, h: 20, r: g.kind === 'person' ? 10 : 3, fill: L.color, stroke: hot ? 'var(--ink)' : undefined, sw: 2 });
+  S.z[2].push({ t: 2, k: `sn${lead.id}`, a: 1, cls: dim.trim() || undefined, x: g.left + w / 2, y: by + 14, s: n, f: 'count', fill: 'var(--panel)', anchor: 'middle' });
   const last = g.members[g.members.length - 1];
   const room = Math.min(last.nextS === Infinity ? Infinity : c.X(last.nextS) - 12, c.x1 - 4) - (g.left + w) - 6;
   const label = placeLabel(E.measure, 'spanI', lead.title, room);
   let hw = Math.max(w, MIN_HIT);
   if (label) {
-    S.z[2].push({ t: 2, k: `st${lead.id}`, a: 1, cls: 'tl-label', x: g.left + w + 6, y: by + 14.5, s: label, f: 'spanI', fill: 'var(--ink-2)' });
+    S.z[2].push({ t: 2, k: `st${lead.id}`, a: 1, cls: `tl-label${dim}`, x: g.left + w + 6, y: by + 14.5, s: label, f: 'spanI', fill: 'var(--ink-2)' });
     hw = w + 6 + E.measure('spanI', label);
   }
   S.targets.push({ id: 'cluster', cluster: cl, lane: L.id, x: g.left, y: rowTop, w: hw, h: ROW_H });
+}
+
+/* ---------- arrows, the keyboard's ring and the dragged entry ---------- */
+
+const edges = (b: Box): Edges => ({ left: b.x, right: b.x + b.w, top: b.y, bottom: b.y + b.h });
+const ARC_STROKE: Record<string, string> = { ...ROLE_STROKE, draft: UMBER };
+
+/**
+ * Where an entry would be drawn when it's in the window's time but scrolled out of view above or
+ * below, so an arrow to it runs off that edge toward it (the plot's clip cuts it there).
+ */
+function offscreen(c: Ctx, id: string): Box | undefined {
+  const { D, V, X } = c;
+  const it = D.byId.get(id);
+  if (!it || it.e < V.win.start || it.s > V.win.end) return undefined;
+  const [top, bottom] = rowSpan(D, it);
+  const y0 = AXIS_H + top - V.scrollY, y1 = AXIS_H + bottom - V.scrollY;
+  if (y1 > c.top && y0 < c.bottom) return undefined;
+  if (it.kind === 'event') return { x: X(it.s) - 5, y: y0 + PAD_TOP + ROW_H / 2 - 5, w: 10, h: 10 };
+  return { x: X(it.s), y: y0 + 3, w: Math.max(3, X(it.e) - X(it.s)), h: 22 };
+}
+
+function arrows(c: Ctx) {
+  const { V, S } = c;
+  for (const l of V.links ?? []) {
+    const from = S.boxes.get(l.fromId) ?? offscreen(c, l.fromId), to = S.boxes.get(l.toId) ?? offscreen(c, l.toId);
+    // Both ends must be in the window's time (one may be scrolled out of view), and not in the same cluster.
+    if (!from || !to || from === to) continue;
+    const { a, b } = anchors(edges(from), edges(to));
+    const curve = Math.abs(a.x - b.x) < 6 ? loopCurve(a, b) : arcCurve(a, b);
+    const k = `${l.role}${l.fromId}>${l.toId}`;
+    const dash = l.role === 'linked' || l.role === 'draft';
+    S.z[3].push({ t: 5, k, a: 0.9, cls: `arc ${l.role}`, d: curve.d, stroke: ARC_STROKE[l.role], sw: dash ? 1.5 : 2, dash, head: l.role, from: l.fromId, to: l.toId });
+    if (!l.label) continue;
+    // The label stays inside the plot, even when the arrow runs off its edge.
+    const half = c.E.measure('arc', l.label) / 2 + 4;
+    const lx = Math.min(Math.max(curve.mid.x, c.x0 + half), c.x1 - half);
+    const ly = Math.min(Math.max(curve.mid.y + 4, c.top + 16), c.bottom - 6);
+    S.z[3].push({ t: 2, k: `${k}t`, a: 1, cls: `tl-arc-label ${l.role}`, x: lx, y: ly, s: l.label, f: 'arc', fill: ARC_STROKE[l.role], anchor: 'middle' });
+  }
+}
+
+function focusRing(c: Ctx) {
+  const { V, S } = c;
+  const b = V.ring && V.active ? S.boxes.get(V.active) : undefined;
+  if (!b) return;
+  S.z[3].push({ t: 0, k: 'ring', a: 1, cls: 'tl-ring', x: b.x - 4, y: b.y - 4, w: b.w + 8, h: b.h + 8, r: 6, stroke: 'var(--focus)', sw: 2 });
+}
+
+/** While the open entry is dragged it stays where it was, faded, and a copy shows where it's going, its new dates on the axis. */
+function dragPreview(c: Ctx) {
+  const { V, D, E, S, X } = c;
+  const g = V.drag && D.byId.get(V.drag.id);
+  if (!V.drag || !g) return;
+  const { s, e, label, y } = V.drag;
+  const L = D.lanes[g.lane];
+  const xa = X(s), xb = Math.max(X(e), xa + 3);
+  for (const p of [...S.z[1], ...S.z[2]]) if (p.id === g.id) p.a = 0.35;
+  if (g.kind === 'event') {
+    S.z[3].push({ t: 1, k: 'dragm', a: 1, cls: 'tl-dragged', x: xa, y: y + ROW_H / 2, r: 6, fill: L.color, stroke: 'var(--ink)', sw: 2 });
+  } else {
+    const bh = g.kind === 'person' ? 20 : 22;
+    const by = y + (ROW_H - bh) / 2;
+    S.z[3].push({ t: 0, k: 'dragb', a: 1, cls: 'tl-dragged', x: xa, y: by, w: xb - xa, h: bh, r: g.kind === 'person' ? bh / 2 : 2, fill: tint(L.color, 30), stroke: 'var(--ink)', sw: 2 });
+  }
+  const w = E.measure('play', label) + 14;
+  const cx = Math.min(Math.max((xa + xb) / 2, c.x0 + w / 2), c.x1 - w / 2);
+  S.axis.push({ t: 0, k: 'dragc', a: 1, x: cx - w / 2, y: AXIS_H - 22, w, h: 19, r: 4, fill: 'var(--focus)' });
+  S.axis.push({ t: 2, k: 'dragt', a: 1, cls: 'tl-drag-date', x: cx, y: AXIS_H - 8.5, s: label, f: 'play', fill: 'var(--panel)', anchor: 'middle' });
 }
 
 /* ---------- axis, today and the playhead ---------- */
@@ -422,17 +613,17 @@ function sliverCluster(c: Ctx, L: PLane, g: Sliver, rowsTop: number) {
 function axis(c: Ctx) {
   const { V, E, S, X, x0, x1 } = c;
   const ts = axisTicks(V.win.start, V.win.end, x1 - x0, 78);
-  S.axis.push({ t: 0, k: 'abg', a: 1, x: x0, y: 0, w: x1 - x0, h: AXIS_H, fill: 'var(--panel)' });
-  S.axis.push({ t: 3, k: 'arule', a: 1, x1: x0, y1: AXIS_H - 0.5, x2: x1, y2: AXIS_H - 0.5, stroke: 'var(--rule)' });
+  S.axis.unshift({ t: 0, k: 'abg', a: 1, x: x0, y: 0, w: x1 - x0, h: AXIS_H, fill: 'var(--panel)' }, { t: 3, k: 'arule', a: 1, x1: x0, y1: AXIS_H - 0.5, x2: x1, y2: AXIS_H - 0.5, stroke: 'var(--rule)' });
+  const ax: Prim[] = [];
   for (const t of ts.ticks) {
     const x = X(t.y);
     if (x < x0 - 40 || x > x1 + 40) continue;
     S.z[0].push({ t: 3, k: `g${t.y}`, a: 1, x1: x, y1: AXIS_H, x2: x, y2: E.h, stroke: t.major ? 'var(--rule)' : 'var(--rule-soft)' });
-    S.axis.push({ t: 3, k: `ak${t.y}`, a: 1, x1: x, y1: AXIS_H - (t.major ? 7 : 4), x2: x, y2: AXIS_H, stroke: 'var(--ink-2)' });
+    ax.push({ t: 3, k: `ak${t.y}`, a: 1, x1: x, y1: AXIS_H - (t.major ? 7 : 4), x2: x, y2: AXIS_H, stroke: 'var(--ink-2)' });
     // A label that would be cut off at either edge is left out; its tick stays.
     const half = E.measure(t.major ? 'tickB' : 'tick', t.label) / 2;
     if (x - half < x0 || x + half > x1) continue;
-    S.axis.push({ t: 2, k: `at${t.y}`, a: 1, cls: 'tl-tick', x, y: ts.heads.length ? 18 : 26, s: t.label, f: t.major ? 'tickB' : 'tick', fill: t.major ? 'var(--ink)' : 'var(--ink-2)', anchor: 'middle' });
+    ax.push({ t: 2, k: `at${t.y}`, a: 1, cls: 'tl-tick', x, y: ts.heads.length ? 18 : 26, s: t.label, f: t.major ? 'tickB' : 'tick', fill: t.major ? 'var(--ink)' : 'var(--ink-2)', anchor: 'middle' });
   }
   // Month or year headings above day or month ticks, pinned to the left edge while they're in view.
   for (let i = 0; i < ts.heads.length; i++) {
@@ -440,8 +631,10 @@ function axis(c: Ctx) {
     const next = i + 1 < ts.heads.length ? X(ts.heads[i + 1].y) : Infinity;
     const x = Math.max(X(h.y), x0) + 4;
     if (next < x0 || x > x1 || next - x < 40) continue;
-    S.axis.push({ t: 2, k: `ah${h.y}`, a: 1, x, y: 34, s: h.label, f: 'head', fill: 'var(--muted)' });
+    ax.push({ t: 2, k: `ah${h.y}`, a: 1, x, y: 34, s: h.label, f: 'head', fill: 'var(--muted)' });
   }
+  // Ticks sit under the drag chip, if there is one.
+  S.axis.splice(2, 0, ...ax);
   const now = X(V.now);
   if (now >= x0 && now <= x1) S.axis.push({ t: 3, k: 'now', a: 0.5, x1: now, y1: AXIS_H, x2: now, y2: E.h, stroke: 'var(--pig-cinnabar)', sw: 2 });
   if (V.playYear !== undefined) {
