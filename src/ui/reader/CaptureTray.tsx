@@ -12,11 +12,11 @@ import { DIMENSIONS, type Dimension, type Highlight, type Relation } from '../..
 import { useDoc } from '../DocContext';
 import { DraftConnectionRow, DraftEntryRow, DroppedList } from '../panels/DraftRows';
 import { useApiKey, useOnline } from '../useAi';
-import { DIMENSION_LABEL } from '../util';
+import { DIMENSION_LABEL, PIGMENT } from '../util';
 import { Glyph } from './Glyph';
 import { useHighlightDrafts, type Ghost } from './highlightDrafts';
 import type { RecordRef } from './ReaderPane';
-import { PIGMENT, type useHighlighting } from './useHighlighting';
+import type { useHighlighting } from './useHighlighting';
 import type { SubjectState } from './useSubject';
 
 type Marks = ReturnType<typeof useHighlighting>;

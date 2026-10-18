@@ -22,6 +22,7 @@
     "@anthropic-ai/sdk": "^0.135.0",
     "@fontsource/public-sans": "^5.3.0",
     "@fontsource/spectral": "^5.3.0",
+    "@fontsource/spectral-sc": "^5.3.0",
     "approx-string-match": "2.0.1",
     "idb": "^8.0.4",
     "maplibre-gl": "6.11.2",

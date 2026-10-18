@@ -15,6 +15,7 @@
   --muted: #74808a;
   --rule: #cfd4cc;
   --rule-soft: #e1e4dd;
+  --band-edge: #c3c9c0;   /* an era band's edge at level 0 */
   --focus: #2f5da8;
   --danger: #a3301c;
 
@@ -54,6 +55,7 @@
     --muted: #8a959b;
     --rule: #33414d;
     --rule-soft: #26323d;
+    --band-edge: #3e4d59;
     --focus: #7fa3e0;
     --danger: #e3725d;
     --pig-lapis: #6f93d6;
@@ -344,6 +346,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .tl-tip[hidden] { display: none; }
 /* An open entry with connections: the rest fade; arrowheads take their arrow's color. */
 .tl-svg .dimmed { opacity: 0.3; }
+.tl-svg .tl-era { transition: stroke var(--motion-quick); }
 .tl-svg .tl-head.infl-by { fill: var(--glow-by); }
 .tl-svg .tl-head.infl-on { fill: var(--glow-on); }
 .tl-svg .tl-head.linked { fill: var(--muted); }
@@ -455,6 +458,9 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .strip-label { padding: 8px 12px; cursor: pointer; background: none; border: 0; text-align: left; }
 .strip-label strong { display: block; font-size: 13px; }
 .strip-label small { color: var(--muted); font-size: 11px; }
+.strips.stacked .strip-label { padding: 8px 4px 0; }
+.strips.stacked .strip-label strong { display: inline; margin-right: 8px; }
+.strips.stacked .strip svg { margin-left: -8px; width: calc(100% + 8px); }
 .strip svg { display: block; width: 100%; height: 64px; overflow: visible; }
 .strip .area { fill: color-mix(in srgb, var(--c) 18%, transparent); }
 .strip .line { fill: none; stroke: var(--c); stroke-width: 1.75; }

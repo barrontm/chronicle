@@ -24,6 +24,11 @@ export const DIMENSION_LABEL: Record<Dimension, string> = {
   political: 'Political', economic: 'Economic', social: 'Social', technological: 'Technological', intellectual: 'Intellectual', religious: 'Religious',
 };
 
+/** Each dimension's pigment (`--pig-…`); umber for none. */
+export const PIGMENT: Record<Dimension | 'none', string> = {
+  political: 'lapis', economic: 'ochre', social: 'madder', technological: 'verdigris', intellectual: 'indigo', religious: 'cinnabar', none: 'umber',
+};
+
 export function titleOf(doc: TimelineDoc, id: string): string | undefined {
   return doc.items.find((i) => i.id === id)?.title ?? doc.series.find((s) => s.id === id)?.title ?? doc.territories.find((t) => t.id === id)?.title ?? doc.flows.find((f) => f.id === id)?.title;
 }

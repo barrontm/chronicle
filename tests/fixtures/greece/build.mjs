@@ -1,8 +1,8 @@
 // Builds the Classical Greece fixture (TEST DATA ONLY, never shipped in the app).
 //   node tests/fixtures/greece/build.mjs
 // Writes, next to this file:
-//   classical-greece.json  a schema-5 doc the app imports today (entries, territories, a migration, trends, notes, sources, connections)
-//   next.json              the shapes the schema does not have yet (highlights, themes, regimes, economy, campaign routes, goods flows),
+//   classical-greece.json  a schema-8 doc the app imports today (entries, eras in a region, highlights, themes, territories, a migration, trends, notes, sources, connections)
+//   next.json              the shapes the schema does not have yet (regimes, economy, campaign routes, goods flows),
 //                          taken from Bob's chosen prototypes in docs/prototypes. Each phase that adds a shape moves its part into the doc.
 // Dates are astronomical years (431 BCE = -430). In this file BCE years are written positive and '~' marks approximate.
 // Facts come from the author's knowledge and the prototypes, not from live Wikidata/Pleiades lookups; coordinates are
@@ -252,7 +252,8 @@ for (const r of rows) {
   if (r.o.at) it.places = [r.o.at];
   const tags = [...(r.o.tags ?? []), ...(DIMTAG[r.dim] ? [DIMTAG[r.dim]] : [])];
   if (tags.length) it.tags = tags;
-  if (r.o.excerpt) it.excerpt = { text: r.o.excerpt.text, sourceId: wpSrc(r.o.excerpt.article) };
+  // Eras are periods in the Greece row of the overview (level 0).
+  if (r.o.tags?.includes('era')) Object.assign(it, { subject: 'period', region: 'Greece' });
   items.push(it);
 }
 const byId = new Set(items.map((i) => i.id));
@@ -343,9 +344,34 @@ const notes = [
   { id: 'n_sparta_shrinks', title: 'Sparta ran out of Spartans', body: 'After Leuctra and the loss of Messenia, Sparta had few citizens and no helots to feed them.', linkedIds: ['sr_spartiates', 't_sparta', ...L('leuctra', 'messene')], updatedAt: NOW },
 ];
 
+// ---------- highlights: the overview's and the war's quotes, on the entries they support ----------
+// The overview prototype's items mostly have an entry here; the rest are highlights on the Classical period itself.
+const HIGHLIGHT_ON = {
+  delian: 'treasury_moved', democracy: 'ephialtes', pelwar: 'pelop', sparta: 'hegemonies', thebes: 'mantinea362', macedon: 'macedon_rises',
+  salamis: 'salamis', thirty: 'thirty', chaeronea: 'chaeronea', silver: 'laurion', decelea: 'decelean', treasure: 'alexander_persia',
+  citlaw: 'citizenship_law', plague: 'plague', triremes: 'trireme', longwalls: 'long_walls', sarissa: 'sarissa', catapult: 'catapult',
+  tragedy: 'oresteia', sophists: 'protagoras', history: 'thucydides_history', academy: 'academy', trial: 'trial_socrates', lyceum: 'lyceum',
+  festivals: 'city_dionysia', parthenon: 'parthenon_built', sacredwar: 'sacred_war', herms: 'herms',
+};
+const highlights = [
+  ...OITEMS.filter((i) => i.q).map((i) => ({ id: `h_${i.id}`, q: i.q, dim: i.dim, on: `i_${HIGHLIGHT_ON[i.id] ?? 'classical'}` })),
+  ...BATTLES.filter((b) => b.q).map((b) => ({ id: `h_${b.id}`, q: b.q, dim: 'pol', on: `i_b_${b.id}` })),
+].map(({ id, q, dim, on }) => {
+  if (!byId.has(on)) throw new Error(`highlight ${id} on ${on}`);
+  return { id, sourceId: wp(q[1]), text: q[0], ...(q[2] ? { anchor: { section: q[2], exact: q[0] } } : {}), dimension: DIMTAG[dim], usedBy: [on], updatedAt: NOW };
+});
+// Bob's themes for the Classical period, over those highlights; each takes the dimension most of its highlights have.
+const hdim = new Map(highlights.map((h) => [h.id, h.dimension]));
+items.find((i) => i.id === 'i_classical').themes = OTHEMES.map((th) => {
+  const highlightIds = th.items.map((x) => `h_${x}`).filter((h) => hdim.has(h));
+  const n = {};
+  for (const h of highlightIds) n[hdim.get(h)] = (n[hdim.get(h)] ?? 0) + 1;
+  return { id: th.id, label: th.label, dimension: Object.entries(n).sort((a, b) => b[1] - a[1])[0][0], highlightIds };
+});
+
 const usedWp = [...wpIds.values()].map((s) => ({ ...s }));
 const doc = {
-  schemaVersion: 5, id: 'doc_classical_greece', title: 'Classical Greece (test fixture)', updatedAt: NOW,
+  schemaVersion: 8, id: 'doc_classical_greece', title: 'Classical Greece (test fixture)', updatedAt: NOW,
   categories: [
     { id: 'politics', label: 'Politics & government', color: 'var(--pig-lapis)' },
     { id: 'war', label: 'War & conflict', color: 'var(--pig-cinnabar)' },
@@ -355,7 +381,7 @@ const doc = {
     { id: 'society', label: 'Society & economy', color: 'var(--pig-madder)' },
     { id: 'arts', label: 'Art & literature', color: 'var(--pig-indigo)' },
   ],
-  items, series, territories, flows, notes,
+  items, series, territories, flows, notes, highlights,
   sources: [...sources, ...usedWp].map((s) => ({ ...s, updatedAt: NOW })),
   relations, deleted: {},
 };
@@ -366,12 +392,7 @@ const resolveLand = (names) => names.map((n) => (typeof n === 'string' ? WPL[n] 
 const itemOf = (id) => (byId.has(`i_${id}`) ? `i_${id}` : undefined);
 const next = {
   note: 'Test data for shapes the schema does not have yet. Years are decimal astronomical years. Each part moves into the doc when its phase adds the shape (see docs/vision.md).',
-  // Phase 1–2: highlights, with the entry each one supports when there is one.
-  highlights: [
-    ...OITEMS.filter((i) => i.q).map((i) => ({ id: `h_${i.id}`, text: i.q[0], article: i.q[1], section: i.q[2], dimension: i.dim })),
-    ...BATTLES.filter((b) => b.q).map((b) => ({ id: `h_${b.id}`, text: b.q[0], article: b.q[1], section: b.q[2], dimension: 'pol', itemId: `i_b_${b.id}` })),
-  ],
-  // Phase 4: Bob's themes over his highlights, and the six dimensions.
+  // Highlights and the Classical period's themes are in the doc now. Phase 4: the six dimensions.
   dimensions: ['pol', 'eco', 'soc', 'tec', 'int', 'rel'].map((d) => ({ id: d, tag: DIMTAG[d] })),
   highlightedItems: OITEMS.map(({ q, ...i }) => ({ ...i, highlightId: q ? `h_${i.id}` : undefined })),
   themes: OTHEMES,
@@ -407,4 +428,4 @@ function regime(r) {
 
 writeFileSync(here('classical-greece.json'), JSON.stringify(doc, null, 1) + '\n');
 writeFileSync(here('next.json'), JSON.stringify(next) + '\n');
-console.log(`${items.length} entries, ${territories.length} territories, ${relations.length} connections, ${doc.sources.length} sources, ${next.highlights.length} highlights`);
+console.log(`${items.length} entries, ${territories.length} territories, ${relations.length} connections, ${doc.sources.length} sources, ${highlights.length} highlights`);

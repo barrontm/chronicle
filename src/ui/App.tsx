@@ -422,6 +422,7 @@ function Workspace() {
             prominence={prominence}
             drafts={timelineDrafts}
             onMove={readOnly ? undefined : moveItem}
+            highlights={doc.highlights}
           />
           {moved && (
             <div className="notice moved-note" role="status" data-testid="moved-note">

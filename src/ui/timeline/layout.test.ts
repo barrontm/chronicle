@@ -1,6 +1,11 @@
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
+import { isDated } from '../../model/dates';
+import { parseDoc } from '../../model/doc';
+import { eraRegions } from '../../model/eras';
+import { highlightProminence } from '../../model/prominence';
 import type { DatedItem, Relation } from '../../model/types';
-import { AXIS_H, describeEntry, hitTest, laneAt, layout, MIN_HIT, prepare, ROW_H, stepActive, type Env, type View } from './layout';
+import { AXIS_H, describeEntry, describeEra, hitTest, laneAt, layout, MIN_HIT, prepare, ROW_H, stepActive, stepEra, type Env, type View } from './layout';
 import type { Measure, Prim, Scene } from './scene';
 
 const measure: Measure = (_font, s) => s.length * 7;
@@ -307,5 +312,67 @@ describe('every kind of thing', () => {
     const S = layout(D, view(-500, -300), env());
     const pieces = prims(S).filter((p) => p.t === 3 && p.k.startsWith('bl') && p.k.endsWith('olynthus'));
     expect(pieces.map((p) => (p as { dash?: boolean }).dash)).toEqual([false, true]);
+  });
+});
+
+describe('level 0: eras', () => {
+  const doc = parseDoc(readFileSync(new URL('../../../tests/fixtures/greece/classical-greece.json', import.meta.url), 'utf8'));
+  const items = doc.items.filter(isDated);
+  const lanes = doc.categories.map((c) => ({ id: c.id, label: c.label, color: c.color }));
+  const prominence = highlightProminence(doc.highlights);
+  const D = prepare(items, lanes, { now: 2026, prominence, relations: doc.relations, eras: eraRegions(items, doc.highlights, doc.relations, 2026) });
+  const textOf = (S: Scene) => [...S.z[2], ...S.gutter].flatMap((p) => (p.t === 2 ? [p.s] : []));
+
+  it('lays out the Greece fixture’s eras in the Greece row, inner eras on a row under the outer ones', () => {
+    expect(D.regions.map((r) => r.label)).toEqual(['Greece']);
+    const row = Object.fromEntries(D.regions[0].eras.map((e) => [e.title, e.row]));
+    expect(row).toEqual({ 'Archaic Greece': 0, 'Classical Greece': 0, 'Hellenistic period': 0, 'The Fifty Years': 1, 'Spartan and Theban supremacy': 1, 'Macedon rises': 1 });
+    expect(D.regions[0].rows).toBe(2);
+    expect(D.eraExtent).toEqual({ start: -799, end: -30 });
+  });
+
+  it('draws the region’s name with its count, and each era as a band with its name, dates and dimension strip', () => {
+    const S = layout(D, view(-820, -10), env(1200, 700), 0);
+    const text = textOf(S);
+    expect(text).toContain('Greece');
+    expect(text).toContain(`${doc.highlights.length} highlights`);
+    expect(text).toContain('Classical Greece');
+    expect(text).toContain('480–323 BCE');
+    const band = S.z[1].find((p) => p.cls?.startsWith('tl-era') && p.id === 'i_classical');
+    expect(band).toBeDefined();
+    const strip = S.z[1].filter((p) => p.k.endsWith('i_classical') && p.cls?.startsWith('tl-era-mix'));
+    expect(strip.map((p) => p.cls!.split(' ')[1])).toEqual(['political', 'economic', 'social', 'technological', 'intellectual', 'religious']);
+    // The Archaic period's start is approximate: a dashed umber edge.
+    expect(S.z[1].find((p) => p.k === 'eai_archaic')).toMatchObject({ dash: true, stroke: 'var(--pig-umber)' });
+    // Clicking a band opens its era; a landmark opens its entry.
+    const t = S.targets.find((x) => x.id === 'i_classical')!;
+    expect(hitTest(S, t.x + 4, t.y + 10)?.id).toBe('i_classical');
+    const lm = S.z[2].find((p) => p.cls?.startsWith('tl-landmark'));
+    expect(lm?.id).toBeDefined();
+    expect(S.targets.some((x) => x.id === lm!.id && x.w >= MIN_HIT)).toBe(true);
+  });
+
+  it('puts eras without a region in an Elsewhere row, last, and says so when there are none', () => {
+    const its = [{ ...sp('rome', -509, -27), subject: 'period', region: 'Rome' }, { ...sp('bronze', -3300, -1200), subject: 'period' }] as DatedItem[];
+    const D2 = prepare(its, LANES, { now: 2026, eras: eraRegions(its, [], [], 2026) });
+    expect(D2.regions.map((r) => r.label)).toEqual(['Rome', 'Elsewhere']);
+    const empty = layout(prepare([], LANES, { now: 2026 }), view(-800, 0), env(), 0);
+    expect(textOf(empty)).toContain('No eras yet');
+  });
+
+  it('puts region names above their rows on a phone, with no gutter', () => {
+    const S = layout(D, view(-820, -10), { ...env(412, 700), gutter: 0 }, 0);
+    expect(S.gutter.length).toBe(0);
+    const name = S.z[2].find((p) => p.t === 2 && p.s === 'Greece')!;
+    const band = S.z[1].find((p) => p.t === 0 && p.id === 'i_archaic')!;
+    expect(name.t === 2 && band.t === 0 && name.y < band.y).toBe(true);
+  });
+
+  it('steps through eras with the arrow keys and describes them', () => {
+    const win = { start: -820, end: -10 };
+    expect(stepEra(D, undefined, 'ArrowRight', win)).toBeDefined();
+    expect(stepEra(D, 'i_archaic', 'ArrowRight', win)).toBe('i_classical');
+    expect(stepEra(D, 'i_classical', 'End', win)).toBe('i_hellenistic');
+    expect(describeEra(D, 'i_classical')).toMatch(/^Classical Greece, 480–323 BCE, Greece, \d+ highlights, 2 of 6$/);
   });
 });

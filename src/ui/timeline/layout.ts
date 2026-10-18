@@ -1,7 +1,9 @@
 import { axisTicks, formatRange, formatYear, toDecimalYear } from '../../model/dates';
+import { ELSEWHERE, type Era, type EraRegion } from '../../model/eras';
 import type { DatedItem, Relation, TimelineItem } from '../../model/types';
 import { anchors, arcCurve, loopCurve, type Box as Edges } from '../influenceLinks';
 import { makerOf, markOf, representationOf, warOf, type Representation } from '../representations';
+import { BAND_H, bandPrims, LANDMARK, LANDMARK_Y } from '../representations/era';
 import type { YearWindow } from '../timeNav';
 import { tint, type Box, type Cluster, type Link, type MarkKind, type Measure, type Prim, type Scene, type Target } from './scene';
 
@@ -9,8 +11,8 @@ import { tint, type Box, type Cluster, type Link, type MarkKind, type Measure, t
  * The new timeline's layout: pure. `prepare` runs once per data change (lanes, rows, sorted
  * indexes); `layout` runs every frame and returns only what is visible.
  *
- * Level 2 (single entries in category lanes) is the only level so far: levels 0 (era bands)
- * and 1 (an era's six lanes) are Phase 3 tickets 5 and 6.
+ * Level 0 is the eras: a row per region, each era a band (`representations/era.ts`). Level 2 is
+ * single entries in category lanes. Level 1 (an era's six lanes) is Phase 3 ticket 6.
  */
 
 export type Level = 0 | 1 | 2;
@@ -89,6 +91,17 @@ export interface PLane {
   height: number;
 }
 
+/** An era at level 0: the row it sits in inside its region, and its landmarks, most prominent first. */
+export interface PEra extends Era { row: number; landmarks: PItem[] }
+export interface PRegion {
+  name: string;
+  /** Its name, or "Elsewhere". */
+  label: string;
+  highlights: number;
+  eras: PEra[];
+  rows: number;
+}
+
 export interface Prepared {
   lanes: PLane[];
   byId: Map<string, PItem>;
@@ -96,6 +109,9 @@ export interface Prepared {
   prominence: (id: string) => number;
   /** From the earliest start to the latest end, for "Show everything". */
   extent?: YearWindow;
+  /** Level 0: regions with their eras, and the years they cover. */
+  regions: PRegion[];
+  eraExtent?: YearWindow;
 }
 
 export interface PrepareOptions {
@@ -107,6 +123,8 @@ export interface PrepareOptions {
   drafts?: DatedItem[];
   /** Connections, for a war's battles (ticks on its bar) and a work's maker (the lifeline it's joined to). */
   relations?: Relation[];
+  /** Level 0: the eras in their regions (`eraRegions`). */
+  eras?: EraRegion[];
 }
 
 export function prepare(items: DatedItem[], lanes: LaneInput[], o: PrepareOptions): Prepared {
@@ -178,7 +196,100 @@ export function prepare(items: DatedItem[], lanes: LaneInput[], o: PrepareOption
     top += height;
     return lane;
   });
-  return { lanes: out, byId, contentH: top, prominence: o.prominence ?? (() => 0), extent: lo <= hi ? { start: lo, end: hi } : undefined };
+  const prominence = o.prominence ?? (() => 0);
+  return { lanes: out, byId, contentH: top, prominence, extent: lo <= hi ? { start: lo, end: hi } : undefined, ...prepareEras(o.eras ?? [], byId, prominence) };
+}
+
+/**
+ * Level 0's rows. Inside a region, eras pack into rows by time only (so rows stay put while
+ * zooming), outer eras above the eras inside them. Landmarks are an era's entries that Bob has
+ * made something of, most prominent first.
+ */
+function prepareEras(input: EraRegion[], byId: Map<string, PItem>, prominence: (id: string) => number): Pick<Prepared, 'regions' | 'eraExtent'> {
+  let lo = Infinity, hi = -Infinity;
+  const regions = input.map((r): PRegion => {
+    const shown = r.eras.filter((e) => byId.has(e.id) && !byId.get(e.id)!.draft);
+    const ids = new Set(shown.map((e) => e.id));
+    const byEra = new Map(shown.map((e) => [e.id, e]));
+    const depth = (e: Era) => { let d = 0; for (let p = e.parent; p && ids.has(p) && d < 50; p = byEra.get(p)!.parent) d++; return d; };
+    const eras = shown.map((e): PEra => ({
+      ...e, row: 0,
+      landmarks: e.members.map((id) => byId.get(id)).filter((p): p is PItem => !!p && !p.draft && prominence(p.id) > 0)
+        .sort((a, b) => prominence(b.id) - prominence(a.id) || a.s - b.s || a.id.localeCompare(b.id)),
+    }));
+    const rowEnd: number[] = [];
+    const levels = [...new Set(eras.map(depth))].sort((a, b) => a - b);
+    for (const d of levels) {
+      const first = rowEnd.length;
+      for (const e of eras) {
+        if (depth(e) !== d) continue;
+        let row = rowEnd.findIndex((end, i) => i >= first && end <= e.s);
+        if (row < 0) row = rowEnd.length;
+        rowEnd[row] = e.e;
+        e.row = row;
+      }
+    }
+    for (const e of eras) { lo = Math.min(lo, e.s); hi = Math.max(hi, e.e); }
+    return { name: r.name, label: r.name === ELSEWHERE ? 'Elsewhere' : r.name, highlights: r.highlights, eras, rows: rowEnd.length };
+  }).filter((r) => r.eras.length);
+  return { regions, eraExtent: lo <= hi ? { start: lo, end: hi } : undefined };
+}
+
+/* ---------- level 0 geometry ---------- */
+
+/** Below this width level 0 has no gutter: each region's name sits above its row. */
+export const PHONE_W = 600;
+const REGION_PAD = 8;
+/** The gap between region rows, kept free for threads (Phase 4). */
+const REGION_GAP = 18;
+const BAND_GAP = 4;
+const HEAD_H = 24;
+
+const regionH = (R: PRegion, phone: boolean) => (phone ? HEAD_H : 0) + REGION_PAD * 2 + R.rows * BAND_H + (R.rows - 1) * BAND_GAP;
+const erasH = (D: Prepared, phone: boolean) => D.regions.reduce((h, R) => h + regionH(R, phone) + REGION_GAP, 0);
+
+/** How far down level 0 an era's band is, in px from the top of the first region. */
+export function eraSpan(D: Prepared, id: string, phone: boolean): [number, number] | undefined {
+  let top = 0;
+  for (const R of D.regions) {
+    const e = R.eras.find((x) => x.id === id);
+    if (e) {
+      const y = top + (phone ? HEAD_H : 0) + REGION_PAD + e.row * (BAND_H + BAND_GAP);
+      return [y, y + BAND_H];
+    }
+    top += regionH(R, phone) + REGION_GAP;
+  }
+  return undefined;
+}
+
+/** The arrow keys at level 0: ←/→ the era before or after in its region, ↑/↓ the nearest in time in the region above or below. */
+export function stepEra(D: Prepared, activeId: string | undefined, key: StepKey, win: YearWindow): string | undefined {
+  const nearest = (list: PEra[], y: number) => list.reduce<PEra | undefined>((b, e) => (!b || Math.abs(e.s - y) < Math.abs(b.s - y) ? e : b), undefined);
+  const ri = D.regions.findIndex((R) => R.eras.some((e) => e.id === activeId));
+  if (ri < 0) return nearest(D.regions.flatMap((R) => R.eras), (win.start + win.end) / 2)?.id;
+  const list = D.regions[ri].eras;
+  const i = list.findIndex((e) => e.id === activeId);
+  switch (key) {
+    case 'ArrowLeft': return list[Math.max(0, i - 1)].id;
+    case 'ArrowRight': return list[Math.min(list.length - 1, i + 1)].id;
+    case 'Home': return list[0].id;
+    case 'End': return list[list.length - 1].id;
+    default: {
+      const R = D.regions[ri + (key === 'ArrowUp' ? -1 : 1)];
+      return R ? nearest(R.eras, list[i].s)!.id : activeId;
+    }
+  }
+}
+
+/** What a screen reader says for an era: "Classical Greece, 480–323 BCE, Greece, 38 highlights, 2 of 6". */
+export function describeEra(D: Prepared, id: string): string {
+  for (const R of D.regions) {
+    const i = R.eras.findIndex((e) => e.id === id);
+    if (i < 0) continue;
+    const e = R.eras[i];
+    return `${e.title}, ${e.when}, ${R.label}, ${e.highlights} ${e.highlights === 1 ? 'highlight' : 'highlights'}, ${i + 1} of ${R.eras.length}`;
+  }
+  return '';
 }
 
 /* ---------- binary search ---------- */
@@ -287,9 +398,10 @@ export interface Env {
 
 interface Ctx { D: Prepared; V: View; E: Env; S: Scene; X: (y: number) => number; x0: number; x1: number; top: number; bottom: number }
 
-/** How far the lanes can scroll. */
-export function maxScroll(D: Prepared, h: number): number {
-  return Math.max(0, D.contentH - (h - AXIS_H) + 8);
+/** How far the lanes (or, at level 0, the regions) can scroll. */
+export function maxScroll(D: Prepared, h: number, level: Level = 2, w = Infinity): number {
+  const content = level === 0 ? erasH(D, w < PHONE_W) : D.contentH;
+  return Math.max(0, content - (h - AXIS_H) + 8);
 }
 
 /** Text cut short with an ellipsis to fit `avail` px, or '' when even that won't fit. */
@@ -321,19 +433,25 @@ function roleOf(V: View, it: PItem): string {
 const ROLE_STROKE: Record<string, string> = { 'infl-by': 'var(--glow-by)', 'infl-on': 'var(--glow-on)', linked: 'var(--muted)' };
 
 export function layout(D: Prepared, V: View, E: Env, level: Level = 2): Scene {
-  void level; // levels 0 and 1 come with their own tickets; everything draws as level 2 until then
   const x0 = E.gutter, x1 = E.w;
   const S: Scene = {
     z: [[], [], [], []], gutter: [], axis: [], targets: [], clusters: [], boxes: new Map(),
     plot: { x: x0, y: AXIS_H, w: Math.max(0, x1 - x0), h: Math.max(0, E.h - AXIS_H) },
     gutterBox: { x: 0, y: AXIS_H, w: x0, h: Math.max(0, E.h - AXIS_H) },
-    contentH: D.contentH,
+    contentH: level === 0 ? erasH(D, E.w < PHONE_W) : D.contentH,
   };
   const span = V.win.end - V.win.start;
   const ppy = (x1 - x0) / span;
   const X = (y: number) => x0 + (y - V.win.start) * ppy;
   const c: Ctx = { D, V, E, S, X, x0, x1, top: AXIS_H, bottom: E.h };
 
+  if (level === 0) {
+    eraRows(c);
+    arrows(c);
+    focusRing(c);
+    axis(c, level);
+    return S;
+  }
   for (const L of D.lanes) {
     const laneTop = AXIS_H + L.top - V.scrollY;
     const laneBot = laneTop + L.height;
@@ -346,8 +464,84 @@ export function layout(D: Prepared, V: View, E: Env, level: Level = 2): Scene {
   arrows(c);
   focusRing(c);
   dragPreview(c);
-  axis(c);
+  axis(c, level);
   return S;
+}
+
+/* ---------- level 0: a row per region, an era a band ---------- */
+
+function eraRows(c: Ctx) {
+  const { D, V, E, S, x0, x1 } = c;
+  if (!D.regions.length) {
+    const cx = (x0 + x1) / 2, cy = AXIS_H + Math.min(120, (E.h - AXIS_H) / 3);
+    S.z[2].push({ t: 2, k: 'empty', a: 1, cls: 'tl-empty', x: cx, y: cy, s: 'No eras yet', f: 'era', fill: 'var(--ink-2)', anchor: 'middle' });
+    S.z[2].push({ t: 2, k: 'empty2', a: 1, cls: 'tl-empty', x: cx, y: cy + 22, s: 'Periods you add show here, in a row for each region.', f: 'ui', fill: 'var(--muted)', anchor: 'middle' });
+    return;
+  }
+  const phone = E.w < PHONE_W;
+  let top = AXIS_H - V.scrollY;
+  for (const R of D.regions) {
+    const h = regionH(R, phone);
+    if (top + h >= AXIS_H && top <= E.h) region(c, R, top, h, phone);
+    top += h + REGION_GAP;
+  }
+}
+
+function region(c: Ctx, R: PRegion, top: number, h: number, phone: boolean) {
+  const { D, V, E, S, X, x0, x1 } = c;
+  const M = E.measure;
+  const bot = top + h;
+  const count = `${R.highlights} ${R.highlights === 1 ? 'highlight' : 'highlights'}`;
+  // A faint rule in the middle of the gap below, where threads will run.
+  const ry = bot + REGION_GAP / 2 - 0.5;
+  S.z[0].push({ t: 3, k: `rr${R.name}`, a: 1, x1: 0, y1: ry, x2: x1, y2: ry, stroke: 'var(--rule-soft)' });
+  if (phone) {
+    const name = fit(M, 'region', R.label, x1 - x0 - 24);
+    S.z[2].push({ t: 2, k: `rn${R.name}`, a: 1, cls: 'tl-region', x: x0 + 12, y: top + 18, s: name, f: 'region', fill: 'var(--ink-2)' });
+    const nx = x0 + 12 + M('region', name) + 10;
+    if (nx + M('ui', count) < x1 - 8) S.z[2].push({ t: 2, k: `rc${R.name}`, a: 1, x: nx, y: top + 18, s: count, f: 'ui', fill: 'var(--muted)' });
+  } else {
+    S.gutter.push({ t: 3, k: `gr${R.name}`, a: 1, x1: 0, y1: ry, x2: E.gutter, y2: ry, stroke: 'var(--rule-soft)' });
+    // The name stays in view while its row scrolls past.
+    const ny = Math.min(Math.max(top + 26, AXIS_H + 26), bot - 22);
+    S.gutter.push({ t: 2, k: `rn${R.name}`, a: 1, cls: 'tl-region', x: 14, y: ny, s: fit(M, 'region', R.label, E.gutter - 24), f: 'region', fill: 'var(--ink-2)' });
+    S.gutter.push({ t: 2, k: `rc${R.name}`, a: 1, x: 14, y: ny + 17, s: count, f: 'ui', fill: 'var(--muted)' });
+  }
+  const bandsTop = top + (phone ? HEAD_H : 0) + REGION_PAD;
+  for (const e of R.eras) {
+    if (e.e < V.win.start || e.s > V.win.end) continue;
+    const y = bandsTop + e.row * (BAND_H + BAND_GAP);
+    if (y + BAND_H < AXIS_H || y > E.h) continue;
+    const xa = X(e.s), xb = Math.max(X(e.e), xa + 3);
+    const role = roleOf(V, D.byId.get(e.id)!);
+    const { marks, text } = bandPrims(e, { xa, xb, x0, x1, y, hot: V.hover === e.id, selected: V.selected === e.id, role }, M);
+    S.z[1].push(...marks);
+    S.z[2].push(...text);
+    const rx = Math.max(xa, x0 - 4), rw = Math.max(MIN_HIT, Math.min(xb, x1 + 4) - rx);
+    S.boxes.set(e.id, { x: rx, y, w: rw, h: BAND_H });
+    S.targets.push({ id: e.id, x: rx, y, w: rw, h: BAND_H });
+    landmarks(c, e, xa, xb, y);
+  }
+}
+
+/** An era's most prominent entries as their glyphs at their time, as many as fit without touching. */
+function landmarks(c: Ctx, e: PEra, xa: number, xb: number, y: number) {
+  const { D, V, S, X, x0, x1 } = c;
+  const lo = Math.max(xa, x0) + 9, hi = Math.min(xb, x1) - 9;
+  if (hi - lo < LANDMARK) return;
+  const cy = y + LANDMARK_Y;
+  const placed: number[] = [];
+  for (const it of e.landmarks) {
+    const x = X(it.kind === 'event' ? it.s : (Math.max(it.s, e.s) + Math.min(it.e, e.e)) / 2);
+    if (x - LANDMARK / 2 < lo || x + LANDMARK / 2 > hi || placed.some((p) => Math.abs(p - x) < LANDMARK + 6)) continue;
+    placed.push(x);
+    const hot = V.hover === it.id;
+    const role = roleOf(V, it);
+    if (hot) S.z[2].push({ t: 1, k: `elh${e.id}:${it.id}`, a: 1, x, y: cy, r: LANDMARK / 2 + 3, fill: 'var(--panel)', stroke: 'var(--ink)', sw: 1.5 });
+    S.z[2].push({ t: 6, k: `el${e.id}:${it.id}`, a: 1, cls: `tl-landmark${role}`, id: it.id, x: x - LANDMARK / 2, y: cy - LANDMARK / 2, w: LANDMARK, g: it.rep.kind, color: D.lanes[it.lane].color });
+    if (!S.boxes.has(it.id)) S.boxes.set(it.id, { x: x - LANDMARK / 2, y: cy - LANDMARK / 2, w: LANDMARK, h: LANDMARK });
+    S.targets.push({ id: it.id, x: x - MIN_HIT / 2, y: cy - MIN_HIT / 2, w: MIN_HIT, h: MIN_HIT });
+  }
 }
 
 function laneFrame(c: Ctx, L: PLane, top: number, bot: number) {
@@ -728,8 +922,10 @@ function dragPreview(c: Ctx) {
 
 /* ---------- axis, today and the playhead ---------- */
 
-function axis(c: Ctx) {
+function axis(c: Ctx, level: Level) {
   const { V, E, S, X, x0, x1 } = c;
+  // Level 0's axis keeps Spectral's old-style numerals.
+  const [minor, major] = level === 0 ? ['tick0', 'tick0B'] as const : ['tick', 'tickB'] as const;
   const ts = axisTicks(V.win.start, V.win.end, x1 - x0, 78);
   S.axis.unshift({ t: 0, k: 'abg', a: 1, x: x0, y: 0, w: x1 - x0, h: AXIS_H, fill: 'var(--panel)' }, { t: 3, k: 'arule', a: 1, x1: x0, y1: AXIS_H - 0.5, x2: x1, y2: AXIS_H - 0.5, stroke: 'var(--rule)' });
   const ax: Prim[] = [];
@@ -739,9 +935,9 @@ function axis(c: Ctx) {
     S.z[0].push({ t: 3, k: `g${t.y}`, a: 1, x1: x, y1: AXIS_H, x2: x, y2: E.h, stroke: t.major ? 'var(--rule)' : 'var(--rule-soft)' });
     ax.push({ t: 3, k: `ak${t.y}`, a: 1, x1: x, y1: AXIS_H - (t.major ? 7 : 4), x2: x, y2: AXIS_H, stroke: 'var(--ink-2)' });
     // A label that would be cut off at either edge is left out; its tick stays.
-    const half = E.measure(t.major ? 'tickB' : 'tick', t.label) / 2;
+    const half = E.measure(t.major ? major : minor, t.label) / 2;
     if (x - half < x0 || x + half > x1) continue;
-    ax.push({ t: 2, k: `at${t.y}`, a: 1, cls: 'tl-tick', x, y: ts.heads.length ? 18 : 26, s: t.label, f: t.major ? 'tickB' : 'tick', fill: t.major ? 'var(--ink)' : 'var(--ink-2)', anchor: 'middle' });
+    ax.push({ t: 2, k: `at${t.y}`, a: 1, cls: 'tl-tick', x, y: ts.heads.length ? 18 : 26, s: t.label, f: t.major ? major : minor, fill: t.major ? 'var(--ink)' : 'var(--ink-2)', anchor: 'middle' });
   }
   // Month or year headings above day or month ticks, pinned to the left edge while they're in view.
   for (let i = 0; i < ts.heads.length; i++) {

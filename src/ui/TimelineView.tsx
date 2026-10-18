@@ -3,10 +3,12 @@ import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState }
 import { DataSet } from 'vis-data/peer';
 import { Timeline, type TimelineOptions } from 'vis-timeline/peer';
 import { decimalYearToJsDate, formatAxisYear, formatYear, isDated, jsDateToDecimalYear, toJsDate } from '../model/dates';
-import type { Category, DatedItem, MediaRef, Relation, TimelineItem } from '../model/types';
+import { eraRegions } from '../model/eras';
+import type { Category, DatedItem, Highlight, MediaRef, Relation, TimelineItem } from '../model/types';
 import { anchors, arcPath, draftArrows, influenceArrows, influenceClasses } from './influenceLinks';
 import { axisLabelEvery, axisStepYears, labelWidthPx, narrowLabels } from './labels';
 import { createTimeline, type MovedDates, type TimelineHandle } from './timeline/createTimeline';
+import type { Level } from './timeline/layout';
 import { focusWindow, panBy as panWindow, TIME_MAX, TIME_MIN, zoomAround, ZOOM_MAX_YEARS, ZOOM_MIN_YEARS, type YearWindow } from './timeNav';
 import { escapeHtml } from './util';
 
@@ -23,6 +25,8 @@ export interface VisibleWindow {
   /** Pixel geometry of the plotting area, relative to the timeline host element. */
   left: number;
   width: number;
+  /** The new renderer's zoom level: 0 the eras, 2 the entries. The classic one has none. */
+  level?: Level;
 }
 
 /** What the time bar and panels can ask of the timeline. Windows are in decimal years. */
@@ -36,6 +40,8 @@ export interface TimelineControl {
   focus: (id: string) => void;
   /** Go back to the window from before the first focus. */
   back: () => void;
+  /** New renderer: show the eras (level 0, fitted to them) or the entries (level 2). */
+  setLevel?: (level: 0 | 2) => void;
 }
 
 interface Props {
@@ -61,12 +67,15 @@ interface Props {
   drafts?: { items: TimelineItem[]; relations: Relation[] };
   /** New renderer: Bob dragged the open entry to new dates. */
   onMove?: (id: string, dates: MovedDates) => void;
+  /** New renderer: Bob's highlights, counted into the eras at level 0. */
+  highlights?: Highlight[];
 }
 
 /** What the renderers get: only entries with a start date (a place with none is on the map only). */
 type Dated = Omit<Props, 'items' | 'drafts'> & { items: DatedItem[]; drafts?: { items: DatedItem[]; relations: Relation[] } };
 
 const NO_DRAFTS: { items: DatedItem[]; relations: Relation[] } = { items: [], relations: [] };
+const NO_HIGHLIGHTS: Highlight[] = [];
 
 export const TimelineView = forwardRef<TimelineControl, Props>(function TimelineView(props, ref) {
   const items = useMemo(() => props.items.filter(isDated), [props.items]);
@@ -86,7 +95,7 @@ function focusTarget(id: string, items: DatedItem[], relations: Relation[], show
   return focusWindow(item, items.filter((i) => otherIds.has(i.id) && shown(i.id)));
 }
 
-const NextTimeline = forwardRef<TimelineControl, Dated>(function NextTimeline({ items, categories, relations, selectedId, thumbFor, onSelect, onAddAt, onWindow, onCanGoBack, year, onYear, prominence, drafts = NO_DRAFTS, onMove }, ref) {
+const NextTimeline = forwardRef<TimelineControl, Dated>(function NextTimeline({ items, categories, relations, selectedId, thumbFor, onSelect, onAddAt, onWindow, onCanGoBack, year, onYear, prominence, drafts = NO_DRAFTS, onMove, highlights = NO_HIGHLIGHTS }, ref) {
   const host = useRef<HTMLDivElement>(null);
   const tl = useRef<TimelineHandle | null>(null);
   const cb = useRef({ onSelect, onAddAt, onWindow, onYear, onCanGoBack, onMove });
@@ -107,6 +116,12 @@ const NextTimeline = forwardRef<TimelineControl, Dated>(function NextTimeline({ 
     return () => { t.dispose(); tl.current = null; };
   }, []);
 
+  // Level 0's eras, from the categories shown.
+  const eras = useMemo(() => {
+    const shown = new Set(categories.map((c) => c.id));
+    return eraRegions(items.filter((i) => shown.has(i.categoryId)), highlights, relations, jsDateToDecimalYear(new Date()));
+  }, [items, categories, highlights, relations]);
+
   useEffect(() => {
     tl.current?.setData({
       items,
@@ -115,8 +130,9 @@ const NextTimeline = forwardRef<TimelineControl, Dated>(function NextTimeline({ 
       thumbFor: (i) => (i.media?.[0] ? thumbFor(i.media[0]) : undefined),
       drafts: drafts.items,
       relations,
+      eras,
     });
-  }, [items, categories, thumbFor, prominence, drafts.items, relations]);
+  }, [items, categories, thumbFor, prominence, drafts.items, relations, eras]);
 
   // The open entry's connections light up with arrows; Claude's drafted ones show whenever their highlight is open.
   useEffect(() => {
@@ -155,6 +171,10 @@ const NextTimeline = forwardRef<TimelineControl, Dated>(function NextTimeline({ 
       if (beforeFocus.current) tl.current?.setWindow(beforeFocus.current, true);
       beforeFocus.current = null;
       cb.current.onCanGoBack(false);
+    },
+    setLevel: (l) => {
+      tl.current?.setLevel(l);
+      if (l === 0) tl.current?.fit();
     },
   }));
 

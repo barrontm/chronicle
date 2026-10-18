@@ -37,12 +37,22 @@ describe('Classical Greece fixture', () => {
     expect(areaAt('t_sparta', -300)).toBe(1);
   });
 
-  it('keeps the shapes the schema lacks in the sidecar, tied to real entries', () => {
-    const ids = new Set(doc.items.map((i) => i.id));
+  it('keeps the shapes the schema lacks in the sidecar', () => {
     expect(next.regimes.athens.length).toBeGreaterThanOrEqual(8);
     expect(next.regimes.sparta).toHaveLength(1);
     expect(next.economy.athens.snapshots.length).toBeGreaterThanOrEqual(5);
     expect(next.war.routes.length).toBeGreaterThan(15);
-    for (const h of next.highlights) if (h.itemId) expect([h.id, ids.has(h.itemId)]).toEqual([h.id, true]);
+  });
+
+  it('has its eras in the Greece row, with highlights on the entries they support', () => {
+    const ids = new Set(doc.items.map((i) => i.id));
+    expect(doc.items.filter((i) => i.subject === 'period' && i.region === 'Greece').map((i) => i.id)).toContain('i_classical');
+    expect(doc.highlights.length).toBeGreaterThanOrEqual(40);
+    for (const h of doc.highlights) {
+      expect([h.id, !!h.dimension]).toEqual([h.id, true]);
+      for (const id of h.usedBy) expect([h.id, ids.has(id)]).toEqual([h.id, true]);
+    }
+    const hids = new Set(doc.highlights.map((h) => h.id));
+    for (const t of doc.items.find((i) => i.id === 'i_classical')!.themes ?? []) for (const h of t.highlightIds) expect([t.id, hids.has(h)]).toEqual([t.id, true]);
   });
 });

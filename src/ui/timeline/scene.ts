@@ -18,8 +18,18 @@ export const FONTS = {
   count: '600 11px "Public Sans", system-ui, sans-serif',
   play: '12px Spectral, Georgia, serif',
   arc: 'italic 600 12px "Public Sans", system-ui, sans-serif',
+  // Level 0: era and region names in spaced small caps, dates and the axis in old-style numerals.
+  era: '600 15px "Spectral SC", Spectral, Georgia, serif',
+  region: '600 14px "Spectral SC", Spectral, Georgia, serif',
+  eraDates: '12.5px Spectral, Georgia, serif',
+  tick0: '12.5px Spectral, Georgia, serif',
+  tick0B: '600 12.5px Spectral, Georgia, serif',
 } as const;
 export type FontKey = keyof typeof FONTS;
+/** Letter spacing in px, which the font shorthand can't carry: the painter sets it and the layout measures with it. */
+export const SPACING: Partial<Record<FontKey, number>> = { era: 0.75, region: 1.7 };
+/** Fonts drawn with old-style numerals. */
+export const OLDSTYLE = new Set<FontKey>(['eraDates', 'tick0', 'tick0B']);
 
 /** Width of `s` in `font`, in px. The app measures with a canvas; tests pass a stub. */
 export type Measure = (font: FontKey, s: string) => number;

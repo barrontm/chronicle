@@ -5,6 +5,7 @@ import { newId, upsert, remove } from '../../model/doc';
 import { sentenceAt, sentencesOf } from '../../model/sentences';
 import type { Dimension, Highlight } from '../../model/types';
 import { useDoc } from '../DocContext';
+import { PIGMENT } from '../util';
 import { buildTextModel, indexAtPoint, indicesOf, rangeOf, type TextModel } from './textModel';
 
 /**
@@ -17,9 +18,6 @@ import { buildTextModel, indexAtPoint, indicesOf, rangeOf, type TextModel } from
  */
 
 type MarkState = 'open' | 'kept' | 'added';
-export const PIGMENT: Record<Dimension | 'none', string> = {
-  political: 'lapis', economic: 'ochre', social: 'madder', technological: 'verdigris', intellectual: 'indigo', religious: 'cinnabar', none: 'umber',
-};
 const MARK = 'chronicle-mark';
 const UNSURE = 'chronicle-unsure';
 const PRIORITY: Record<MarkState, number> = { kept: 0, added: 1, open: 2 };
