@@ -64,6 +64,21 @@ async function mockArticles(page: Page) {
 
 const QIDS: Record<string, string> = { Pericles: 'Q80398', Peloponnesian_War: 'Q33745', Sparta: 'Q5690' };
 
+/** An entry as saved on this device. */
+async function savedItem(page: Page, title: string) {
+  return page.evaluate((t) => new Promise<unknown>((resolve) => {
+    const req = indexedDB.open('chronicle');
+    req.onsuccess = () => {
+      const tx = req.result.transaction(['docs', 'meta']);
+      const id = tx.objectStore('meta').get('activeDocId');
+      id.onsuccess = () => {
+        const doc = tx.objectStore('docs').get(id.result);
+        doc.onsuccess = () => { req.result.close(); resolve(doc.result?.items.find((i: { title: string }) => i.title === t)); };
+      };
+    };
+  }), title);
+}
+
 /** The page summaries "Add to map and timeline" starts from. */
 async function mockSummaries(page: Page) {
   await page.route('https://en.wikipedia.org/api/rest_v1/page/summary/**', (route) => {
@@ -339,11 +354,14 @@ test('the capture tray keeps a highlight, gives it a dimension, and adds the art
   await tray.getByRole('button', { name: 'Add to map and timeline' }).click();
   const editor = page.getByTestId('item-editor');
   await expect(editor.getByLabel('Name')).toHaveValue('Pericles');
+  await expect(editor.getByLabel('Kind of thing')).toHaveValue('person');
   await expect(editor.getByTestId('excerpt')).toContainText(quote);
   await editor.getByRole('button', { name: 'Add to timeline' }).click();
 
   const entry = page.getByTestId('item-view');
   await expect(entry.getByRole('heading', { name: 'Pericles' })).toBeVisible();
+  // Saved as what it is, so the new timeline can draw it as a person.
+  await expect.poll(() => savedItem(page, 'Pericles')).toMatchObject({ subject: 'person' });
   await expect(entry.getByTestId('excerpt')).toContainText(quote);
   await expect(entry.getByTestId('excerpt')).toContainText('Political');
   // The card now says it's on the entry; closing it leaves an added mark.

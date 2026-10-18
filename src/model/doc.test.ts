@@ -24,6 +24,7 @@ const fixtureV2Json = readFileSync(new URL('../../tests/fixtures/sample-history-
 const fixtureV3Json = readFileSync(new URL('../../tests/fixtures/sample-history-v3.json', import.meta.url), 'utf8');
 const fixtureV4Json = readFileSync(new URL('../../tests/fixtures/sample-history-v4.json', import.meta.url), 'utf8');
 const fixtureV5Json = readFileSync(new URL('../../tests/fixtures/sample-history-v5.json', import.meta.url), 'utf8');
+const fixtureV6Json = readFileSync(new URL('../../tests/fixtures/sample-history-v6.json', import.meta.url), 'utf8');
 
 describe('parseDoc', () => {
   it('accepts the fixture and round-trips it', () => {
@@ -254,6 +255,32 @@ describe('mergeDocs', () => {
   });
 });
 
+describe('what an entry is (v7)', () => {
+  it('upgrades a schema 6 backup with every entry as it was, none given a kind of thing or a region', () => {
+    const v6 = JSON.parse(fixtureV6Json);
+    expect(v6.schemaVersion).toBe(6);
+    const doc = parseDoc(fixtureV6Json);
+    expect(doc.schemaVersion).toBe(7);
+    expect(doc.items).toEqual(v6.items);
+    expect(doc.items.some((i) => i.subject || i.region)).toBe(false);
+  });
+
+  it('keeps the kind of thing and the region through export, import and merge', () => {
+    const doc = fixture();
+    expect(doc.items.find((i) => i.id === 'i_indrev')).toMatchObject({ subject: 'period', region: 'Britain' });
+    const again = parseDoc(serializeDoc(doc));
+    expect(again.items.find((i) => i.id === 'i_indrev')).toMatchObject({ subject: 'period', region: 'Britain' });
+    const other = upsert(doc, 'items', { ...doc.items.find((i) => i.id === 'i_indrev')!, region: 'Great Britain' });
+    expect(mergeDocs(doc, other).items.find((i) => i.id === 'i_indrev')?.region).toBe('Great Britain');
+  });
+
+  it('rejects an unknown kind of thing', () => {
+    const bad = JSON.parse(fixtureJson);
+    bad.items[0].subject = 'dragon';
+    expect(() => parseDoc(JSON.stringify(bad))).toThrow(/unknown kind of thing "dragon"/);
+  });
+});
+
 describe('draft provenance', () => {
   it('imports a schema 4 backup as it is', () => {
     expect(JSON.parse(fixtureV4Json).schemaVersion).toBe(4);
@@ -266,7 +293,7 @@ describe('draft provenance', () => {
     const v5 = JSON.parse(fixtureV5Json);
     expect(v5.schemaVersion).toBe(5);
     const doc = parseDoc(fixtureV5Json);
-    expect(doc.schemaVersion).toBe(6);
+    expect(doc.schemaVersion).toBe(SCHEMA_VERSION);
     expect(doc.items.some((i) => 'excerpt' in i)).toBe(false);
     expect(doc.highlights).toEqual([
       { id: 'h_i_magna', sourceId: 's_wp_magna', text: 'Fixture excerpt: a royal charter of rights agreed at Runnymede.', usedBy: ['i_magna'], updatedAt: 1760000000000 },

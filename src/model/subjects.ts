@@ -1,6 +1,8 @@
 import { formatRange, fromWikidataTime } from './dates';
 import { newId } from './doc';
-import type { HistDate, Relation, RelationType } from './types';
+import type { HistDate, Relation, RelationType, SubjectKind, TimelineItem } from './types';
+
+export type { SubjectKind };
 
 /**
  * What an article is about, from Wikidata: its classes (P31 "instance of" and
@@ -8,10 +10,6 @@ import type { HistDate, Relation, RelationType } from './types';
  * plus the facts the capture tray shows. Pure; the fetching is in
  * `src/media/wikipedia.ts` (`fetchSubject`).
  */
-
-export type SubjectKind =
-  | 'person' | 'polity' | 'period' | 'war' | 'battle' | 'event'
-  | 'idea' | 'technology' | 'economy' | 'work' | 'place' | 'migration';
 
 export const KIND_LABEL: Record<SubjectKind, string> = {
   person: 'Person', polity: 'Polity', period: 'Period', war: 'War', battle: 'Battle', event: 'Event',
@@ -107,7 +105,7 @@ export const P = {
   instanceOf: 'P31', subclassOf: 'P279', born: 'P569', died: 'P570', start: 'P580', end: 'P582', pointInTime: 'P585',
   inception: 'P571', dissolved: 'P576', coords: 'P625', image: 'P18', birthPlace: 'P19', deathPlace: 'P20',
   location: 'P276', circumstances: 'P1480', influencedBy: 'P737',
-  partOf: 'P361', follows: 'P155', followedBy: 'P156', participants: 'P710', government: 'P122',
+  partOf: 'P361', follows: 'P155', followedBy: 'P156', participants: 'P710', government: 'P122', country: 'P17', continent: 'P30',
 } as const;
 
 const CIRCA = 'Q5727902';
@@ -163,6 +161,9 @@ export interface SubjectFacts {
   government: string[];
   /** P737 "influenced by". Missing on subjects cached before it was read. */
   influencedBy?: string[];
+  /** P17 country and P30 continent, which seed a period's region. Missing on subjects cached before they were read. */
+  country?: string[];
+  continent?: string[];
 }
 
 /** An article's subject. Cached with the article, so it shows offline too. */
@@ -210,6 +211,8 @@ export function parseSubjectEntity(json: unknown): SubjectEntity | undefined {
       locations: idsOf(c, P.location),
       government: idsOf(c, P.government),
       influencedBy: idsOf(c, P.influencedBy),
+      country: idsOf(c, P.country),
+      continent: idsOf(c, P.continent),
     },
   };
 }
@@ -243,6 +246,18 @@ function kindFromFacts(f: SubjectFacts): SubjectKind | undefined {
 export function toSubject(e: SubjectEntity, parents: ClassParents, labels: Record<string, string>): Subject {
   const kind = classify(e.classIds, parents) ?? kindFromFacts(e.facts);
   return { qid: e.qid, ...(e.label ? { label: e.label } : {}), ...(kind ? { kind } : {}), facts: e.facts, labels };
+}
+
+/** The regions Bob has given his periods, in his spelling, A to Z. */
+export function regionsIn(items: TimelineItem[]): string[] {
+  return [...new Set(items.flatMap((i) => (i.region?.trim() ? [i.region.trim()] : [])))].sort((a, b) => a.localeCompare(b));
+}
+
+/** A period's region from Wikidata: its country, else its continent, spelled the way Bob already spells it when he has used it. */
+export function seedRegion(f: SubjectFacts, labels: Record<string, string>, earlier: string[]): string | undefined {
+  const name = [...(f.country ?? []), ...(f.continent ?? [])].map((q) => labels[q]).find(Boolean);
+  if (!name) return undefined;
+  return earlier.find((r) => r.toLowerCase() === name.toLowerCase()) ?? name;
 }
 
 /** Items the facts point at, whose labels the header and tray show. Wikidata takes 50 ids per call. */
