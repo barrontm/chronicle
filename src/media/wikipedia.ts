@@ -2,7 +2,7 @@ import { compareHistDate } from '../model/dates';
 import { newId } from '../model/doc';
 import {
   P, classParentsQuery, classesToFetch, claimsFor, coordsOf, dateClaim, factRelations, firstValue, idOf, idsOf, linkedIds,
-  parseClassParents, parseSubjectEntity, toSubject, type ClassParents, type Claims, type Subject,
+  parseClassParents, parseSubjectEntity, regionsIn, seedRegion, toSubject, type ClassParents, type Claims, type Subject,
 } from '../model/subjects';
 import type { Highlight, HistDate, ItemKind, Place, Relation, Source, TimelineItem } from '../model/types';
 import { fetchCommonsFile, resultToMedia } from './commons';
@@ -344,7 +344,11 @@ export async function suggestInfluences(qid: string, existingItems: TimelineItem
  */
 export async function draftFromWikipedia(
   key: string,
-  opts: { existingItems: TimelineItem[]; existingSources: Source[]; categoryId: string; today: string; signal?: AbortSignal },
+  opts: {
+    existingItems: TimelineItem[]; existingSources: Source[]; categoryId: string; today: string; signal?: AbortSignal;
+    /** What the page is about, when the caller has already looked it up (the reader has); saves walking its classes again. */
+    subject?: Subject;
+  },
 ): Promise<{ duplicateOf: string } | { draft: ItemDraft }> {
   const summary = await fetchSummary(key, opts.signal);
   const dup = summary.qid && opts.existingItems.find((i) => i.wikidataId === summary.qid);
@@ -359,6 +363,20 @@ export async function draftFromWikipedia(
     places = await fetchPlaces(facts, opts.signal);
   }
   const draft = buildDraft({ summary, facts, places, existingSources: opts.existingSources, categoryId: opts.categoryId, today: opts.today });
+  // What kind of thing it is, so the timeline can draw it as one; a period also gets the row it sits in.
+  if (entity) {
+    const kind = opts.subject?.qid === entity.qid ? opts.subject.kind : toSubject(entity, await walkClasses(entity.classIds, opts.signal), {}).kind;
+    if (kind) draft.item.subject = kind;
+    if (kind === 'period') {
+      const ids = [...(entity.facts.country ?? []), ...(entity.facts.continent ?? [])].slice(0, 50);
+      try {
+        const region = ids.length ? seedRegion(entity.facts, parseLabels(await getJson(buildLabelsUrl(ids), opts.signal)), regionsIn(opts.existingItems)) : undefined;
+        if (region) draft.item.region = region;
+      } catch (e) {
+        if ((e as Error).name === 'AbortError') throw e;
+      }
+    }
+  }
   // Connections are a bonus too: what Wikidata says links the new entry to entries already on the timeline.
   if (entity) {
     let influenced: string[] = [];
@@ -384,6 +402,19 @@ export async function draftFromWikipedia(
   return { draft };
 }
 
+/** Walk an entity's classes up until one Chronicle knows. If the query service fails, what's known so far. */
+async function walkClasses(classIds: string[], signal?: AbortSignal): Promise<ClassParents> {
+  const parents: ClassParents = {};
+  try {
+    for (let need = classesToFetch(classIds, parents); need.length; need = classesToFetch(classIds, parents)) {
+      Object.assign(parents, parseClassParents(await getJson(buildClassParentsUrl(need), signal), need));
+    }
+  } catch (e) {
+    if ((e as Error).name === 'AbortError') throw e;
+  }
+  return parents;
+}
+
 /**
  * What an article is about: its Wikidata item, classified by walking its
  * classes up (usually no further than the item itself), and labels for its
@@ -393,14 +424,7 @@ export async function draftFromWikipedia(
 export async function fetchSubject(title: string, signal?: AbortSignal): Promise<Subject | undefined> {
   const entity = parseSubjectEntity(await getJson(buildSubjectUrl(title), signal));
   if (!entity) return undefined;
-  const parents: ClassParents = {};
-  try {
-    for (let need = classesToFetch(entity.classIds, parents); need.length; need = classesToFetch(entity.classIds, parents)) {
-      Object.assign(parents, parseClassParents(await getJson(buildClassParentsUrl(need), signal), need));
-    }
-  } catch (e) {
-    if ((e as Error).name === 'AbortError') throw e;
-  }
+  const parents = await walkClasses(entity.classIds, signal);
   let labels: Record<string, string> = {};
   const ids = linkedIds(entity.facts);
   try {

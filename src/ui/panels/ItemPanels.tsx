@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { bibliographyFor, describeRelation, highlightsFor, newId, notesFor, relationsFor, remove, upsert, RELATION_TYPES } from '../../model/doc';
 import { compareHistDate, formatRange, formatHistDate, toDecimalYear } from '../../model/dates';
 import type { ItemDraft } from '../../media/wikipedia';
-import type { Citation, Dimension, Highlight, HistDate, ItemKind, MediaRef, Relation, RelationType, Source, TimelineItem } from '../../model/types';
+import { KIND_LABEL as SUBJECT_LABEL, regionsIn } from '../../model/subjects';
+import { SUBJECT_KINDS, type Citation, type Dimension, type Highlight, type HistDate, type ItemKind, type MediaRef, type Relation, type RelationType, type Source, type SubjectKind, type TimelineItem } from '../../model/types';
 import { useDoc } from '../DocContext';
 import { CitationsEditor, DateField, Field, RecordPicker } from '../fields';
 import { ImagePicker } from '../ImagePicker';
@@ -217,11 +218,12 @@ export function ItemEditor({ id, init, draft: prefill, nav }: {
   // A Wikipedia draft quotes the page's intro; it's saved as a highlight unless Bob removes it.
   const [quote, setQuote] = useState<Highlight | undefined>(prefill?.highlight);
   const needsEnd = draft.kind === 'span';
+  const isPeriod = draft.subject ? draft.subject === 'period' : draft.kind === 'span';
   const endBeforeStart = draft.start && draft.end && compareHistDate(draft.end, draft.start) < 0;
   const canSave = draft.title.trim() && valid.start && draft.start && valid.end && (!needsEnd || draft.end) && !endBeforeStart;
 
   const save = () => {
-    const item: TimelineItem = { ...draft, title: draft.title.trim(), end: draft.kind === 'event' ? undefined : draft.end };
+    const item: TimelineItem = { ...draft, title: draft.title.trim(), end: draft.kind === 'event' ? undefined : draft.end, region: isPeriod ? draft.region?.trim() || undefined : undefined };
     const keep = new Set(relations.map((r) => r.id));
     const cited = new Set([...(item.citations ?? []).map((c) => c.sourceId), quote?.sourceId]);
     update((d) => {
@@ -259,6 +261,18 @@ export function ItemEditor({ id, init, draft: prefill, nav }: {
           {doc.categories.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
         </select>
       </Field>
+      <Field label="Kind of thing" hint="How the new timeline draws it.">
+        <select value={draft.subject ?? ''} onChange={(e) => set('subject', (e.target.value || undefined) as SubjectKind | undefined)}>
+          <option value="">Not set</option>
+          {SUBJECT_KINDS.map((k) => <option key={k} value={k}>{SUBJECT_LABEL[k]}</option>)}
+        </select>
+      </Field>
+      {isPeriod && (
+        <Field label="Region" hint="The row this period sits in on the overview, such as Greece.">
+          <input value={draft.region ?? ''} onChange={(e) => set('region', e.target.value || undefined)} list="regions" />
+        </Field>
+      )}
+      {isPeriod && <datalist id="regions">{regionsIn(doc.items).map((r) => <option key={r} value={r} />)}</datalist>}
       <div className="row">
         <DateField
           label={draft.kind === 'person' ? 'Born' : draft.kind === 'span' ? 'From' : 'Date'}

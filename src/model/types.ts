@@ -77,6 +77,10 @@ export interface Excerpt {
 export const DIMENSIONS = ['political', 'economic', 'social', 'technological', 'intellectual', 'religious'] as const;
 export type Dimension = (typeof DIMENSIONS)[number];
 
+/** What kind of thing an entry is, so the timeline and map can draw it as one (see `subjects.ts`). */
+export const SUBJECT_KINDS = ['person', 'polity', 'period', 'war', 'battle', 'event', 'idea', 'technology', 'economy', 'work', 'place', 'migration'] as const;
+export type SubjectKind = (typeof SUBJECT_KINDS)[number];
+
 /**
  * Where a highlight sits in an article, as a quote with its context (the W3C
  * TextQuoteSelector idea), so it can be found again after the page is edited.
@@ -150,6 +154,10 @@ export interface TimelineItem {
   places?: Place[];
   /** Which of the six dimensions this entry is mostly about. */
   dimension?: Dimension;
+  /** What kind of thing it is. Missing on older entries, which draw as their `kind`. */
+  subject?: SubjectKind;
+  /** Periods only: the row this era sits in on the overview, such as "Greece". Bob's own words. */
+  region?: string;
   /** Periods only: what the era is known for, built from Bob's highlights. */
   themes?: Theme[];
   /** Wikidata id (e.g. "Q913") when the entry came from Wikipedia. Used to spot duplicates. */
@@ -316,7 +324,7 @@ export interface Flow {
   updatedAt: number;
 }
 
-export const SCHEMA_VERSION = 6;
+export const SCHEMA_VERSION = 7;
 
 export interface TimelineDoc {
   schemaVersion: number;

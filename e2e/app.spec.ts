@@ -487,6 +487,7 @@ test('“How drawing works” opens the manual at territories', async ({ page })
 // ---------- Carrying data into later versions ----------
 
 const FIXTURE_V5 = fileURLToPath(new URL('../tests/fixtures/sample-history-v5.json', import.meta.url));
+const FIXTURE_V6 = fileURLToPath(new URL('../tests/fixtures/sample-history-v6.json', import.meta.url));
 
 /** Replace the saved doc in IndexedDB, as an older or newer version of the app would have left it. */
 async function seedSavedDoc(page: Page, doc: Record<string, unknown>) {
@@ -524,10 +525,23 @@ test('a timeline saved by an older version opens upgraded, with a copy kept', as
   await page.reload();
   await expect(page.getByTestId('save-state')).toHaveText('Saved on this device');
   await expect(page.locator('.vis-item', { hasText: 'Aristotle' })).toBeVisible();
-  await expect.poll(() => savedState(page)).toMatchObject({ schemaVersion: 6, backups: 1 });
+  await expect.poll(() => savedState(page)).toMatchObject({ schemaVersion: 7, backups: 1 });
   // The v5 excerpt is now a highlight, still shown on its entry.
   await page.locator('.vis-item', { hasText: 'Magna Carta' }).click();
   await expect(page.getByTestId('item-view').getByTestId('excerpt')).toContainText('royal charter of rights');
+});
+
+test('a timeline saved before entries said what they are opens upgraded, each entry as it was', async ({ page }) => {
+  await open(page);
+  const { readFileSync } = await import('node:fs');
+  await seedSavedDoc(page, JSON.parse(readFileSync(FIXTURE_V6, 'utf8')));
+  await page.reload();
+  await expect(page.getByTestId('save-state')).toHaveText('Saved on this device');
+  await expect.poll(() => savedState(page)).toMatchObject({ schemaVersion: 7, backups: 1 });
+  await page.locator('.vis-item', { hasText: 'Industrial Revolution' }).click();
+  await page.getByTestId('item-view').getByRole('button', { name: 'Edit' }).click();
+  await expect(page.getByTestId('item-editor').getByLabel('Kind of thing')).toHaveValue('');
+  await expect(page.getByTestId('item-editor').getByLabel('Region')).toHaveValue('');
 });
 
 test('an older copy of the app never overwrites data from a newer one', async ({ page }) => {

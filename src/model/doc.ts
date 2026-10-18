@@ -3,6 +3,7 @@ import { isValidHistDate, compareHistDate } from './dates';
 import {
   DIMENSIONS,
   SCHEMA_VERSION,
+  SUBJECT_KINDS,
   type Citation,
   type Excerpt,
   type Highlight,
@@ -88,6 +89,8 @@ export function validateItem(item: TimelineItem, categoryIds: Set<string>): stri
     if (!Number.isFinite(pl.lat) || !Number.isFinite(pl.lon) || Math.abs(pl.lat) > 90 || Math.abs(pl.lon) > 180) p.push(`${name} has a place with invalid coordinates`);
   }
   if (item.dimension !== undefined && !DIMENSIONS.includes(item.dimension)) p.push(`${name} has unknown dimension "${item.dimension}"`);
+  if (item.subject !== undefined && !SUBJECT_KINDS.includes(item.subject)) p.push(`${name} is an unknown kind of thing "${item.subject}"`);
+  if (item.region !== undefined && typeof item.region !== 'string') p.push(`${name} has a malformed region`);
   for (const t of item.themes ?? []) {
     if (!t.label?.trim()) p.push(`${name} has a theme with no label`);
     if (!Array.isArray(t.highlightIds)) p.push(`${name} has a theme with malformed highlights`);
@@ -245,6 +248,7 @@ export function parseDoc(json: string): TimelineDoc {
   if (r.schemaVersion === 3) r = migrate3to4(r);
   if (r.schemaVersion === 4) r = migrate4to5(r);
   if (r.schemaVersion === 5) r = migrate5to6(r);
+  if (r.schemaVersion === 6) r = migrate6to7(r);
   const doc: TimelineDoc = {
     schemaVersion: SCHEMA_VERSION,
     id: r.id ?? newId('doc'),
@@ -329,6 +333,11 @@ function migrate5to6(r: Partial<TimelineDoc>): Partial<TimelineDoc> {
     return rest;
   });
   return { ...r, schemaVersion: 6, items, highlights };
+}
+
+/** v7 adds optional `subject` and `region` on entries; older entries keep neither and draw as their `kind`. */
+function migrate6to7(r: Partial<TimelineDoc>): Partial<TimelineDoc> {
+  return { ...r, schemaVersion: 7 };
 }
 
 export function serializeDoc(doc: TimelineDoc): string {

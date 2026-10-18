@@ -19,7 +19,6 @@ Nothing appears until Bob has read and highlighted it. The app still ships no co
 - AI features (rules in `src/ai/CLAUDE.md`):
   - `highlight`: from a highlight and its section, extract claims (dates, place names for the gazetteers, actors, quantities, institutions for regimes, sectors for economies) and a dimension. The article text is prompt-cached.
   - `themes`: group an era's highlights into themes with a suggested short label. Bob accepts or edits each.
-  - `socrates`: Bob talks about any subject with Plato's Socrates, who questions rather than tells (elenchus, analogies from the crafts, aporia), drawing only on the article, linked articles, Bob's highlights and notes, and later his own books. Dialogues are kept with the entry, never as notes.
 
 ## Representations
 One module per subject type in `src/ui/representations/`, each declaring its timeline glyph, map layers and animation.
@@ -61,17 +60,31 @@ An idea or work keeps a `reception` by region (known, partial, lost, revived, ta
 A connection can carry an `effect` (weakened, funded, legitimised, …) and the highlights that justify it. When its two ends sit in different dimensions, level 1 draws it as an arrow between the lanes. Ends can be entries, themes, regimes, economies or institutions.
 
 ## Timeline with zoom levels
-- Level 0: era bands in the spirit of the 1931 Histomap, with theme chips.
+- Level 0: era bands in the spirit of the 1931 Histomap, one row per region (a period's `region`), with theme chips.
 - Level 1: inside an era, six dimension lanes showing change.
-- Level 2: individual entries.
-- A custom renderer (d3-scale/d3-zoom, SVG, canvas if density needs it) replaces vis-timeline behind the same one-importer boundary, and lifts the ±271k-year limit. This is the one hard-to-undo step, so it gets a spike first.
+- Level 2: individual entries, each drawn as its `subject` (falling back to its `kind`).
+- A custom renderer replaces vis-timeline behind the same one-importer boundary, and lifts the ±271k-year limit. The spike settled it: a pure layout plus an SVG painter (the hybrid only if a real phone needs it), our own Pointer Events driver instead of d3-zoom, and time in decimal years.
 - Dimensions live on highlights and entries and are the default lanes at level 1. Categories stay Bob's own topics.
 - One year clock (`useYearClock`) drives the timeline, the map and every animation. Reduced motion is respected.
 
+## Long range: many things, still clear
+Bob will add thousands of things across millennia. Zoomed out, the timeline should stay calm and still show what matters and how it connects (Bob, 2026-10-18). Speed isn't the problem: the spike's layout takes 0.1–2 ms a frame at 50,000 entries. What needs a plan is what to draw. The look is settled in Phase 4's "long range" prototype; until then these are the ideas it tests.
+
+- **Prominence** comes from Bob's own work, never from an outside ranking: the highlights, connections and notes on an entry (weights set in the prototype), plus an optional **landmark** star he sets. One pure `prominence(entry, doc)` in `src/model/` decides landmarks, which entry leads a cluster, and which labels win when they collide.
+- **Landmarks in bands.** At level 0 each era band shows its most prominent wars, people and events (as many as fit) as their kind's glyph. The rest are in the band's count.
+- **Clusters that split.** Entries that would overlap merge into a badge in their kind's glyph with a count ("12 battles", "8 people"), labelled with its most prominent member. Zooming in splits it over `--motion-move` (a fade with reduced motion); tapping one zooms to fit it. A cluster holds one kind in one row, so a badge always says one thing.
+- **Threads.** Connections are rolled up by the eras their ends fall in: an end belongs to the era of its region whose dates contain it, or the era it is `part of`. Each pair of eras gets one ribbon, its width the number of links, coloured by the main effect's dimension, labelled "4 · influenced". Ribbons run in the gutters between region rows, never over a band's text.
+  - **On focus** by default: hover (laptop) or tap (phone) an era, landmark, cluster or theme chip and its threads light up across every era and region, while unrelated bands fade. Esc or tapping empty space clears it.
+  - **"Show all threads"** (a setting, remembered per device) draws every ribbon faintly, and focus brightens its own. Laptop only; the phone stays on focus.
+  - Tapping a ribbon lists the connections inside it, with their effects and evidence. Zooming in turns ribbons back into single arrows (levels 1 and 2).
+- **Threads on the map, over time.** The same focus drives the map, both ways, and the year clock plays it. A thread is an arc between its ends' places that draws in the year its connection happened, then settles to a faint trace. For an idea or work, the regions it reached are tinted by its reception (known, lost, revived; Phase 5c). Played through, Bob sees a story move: Greek philosophy from Athens to Alexandria and Baghdad's translators, the Latin West fading to "lost" for centuries, then its return through Córdoba and Toledo to Paris. Arcs follow known routes (sea legs from `scripts/sea-route.mjs`), otherwise great circles. "Show all threads" also applies here: every arc active in the year, faint. This is the same map layer as Phase 5c's transmission arrows, generalised to any connection.
+- **Lenses.** Chips above level 0 (Wars, People, Ideas, Trade, and any of Bob's categories), each adding a thin strip under every region row: war ticks, how many people lived then, idea spans. Off by default and remembered per device. They add strips and never move the bands.
+- **Collapsible regions.** Regions can have a parent (Mediterranean › Greece, Rome). A parent row folds its children into one, unfolds on tap, and remembers. A row is as tall as its content, so an almost empty region is thin.
+
 ## Schema path
 - v6: `highlights`, `dimension`, `themes` on periods; `effect` and `highlightIds` on connections.
-- v7: `dialogues` (talking with Socrates).
-- v8: `regimes` on territories, and alliances.
+- v7: `subject` and `region` on entries, for the new timeline.
+- v8: `regimes` on territories, and alliances; also a landmark star on entries and regions with a parent, if the long-range prototype keeps them.
 - v9: `economies` (with `distribution`), plus `Flow.subject` and `goods`.
 - v10: `institutions` with `structures`, `reception` on ideas and works, `Flow.subject: 'ideas'`.
 - v11: kinds of border (`edge` on territory snapshots), walls, forces on wars and battles.
@@ -86,9 +99,8 @@ Each phase ships something usable, behind a "Try the new layout" setting (`ui.ne
 0. Design and spikes: design language, prototypes, spikes, rich fixture
 1. Reader: reader pane, highlights (v6), recognition, offline cache
 2. Highlight → record: code path, AI `highlight` feature, review
-   - 2b. Talk with Socrates: dialogues (v7), the AI `socrates` feature
-3. New timeline: renderer at parity, then the zoom levels; vis-timeline removed
-4. Eras, themes and influences between dimensions
+3. New timeline: `subject` and `region` (v7), renderer at parity, every kind drawn as itself, then the zoom levels; vis-timeline removed
+4. Eras, themes and influences between dimensions; eras on the map
 5. Polities and wars: regimes (v8), border morph, alliances, campaigns, battles
    - 5b. Economy, with distribution (v9)
    - 5c. Ideas, schools and spread (v10)

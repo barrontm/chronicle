@@ -18,6 +18,8 @@ Chronicle is your own history timeline. It starts empty: you fill it in as you r
 - Approximate dates (`c.`) show with a dashed edge on the timeline.
 - Zoomed far out, a short life or period is drawn too thin to hold its name, so the name runs on past it and entries spread onto more lines so names don't overlap. Zoom in and names go back inside their bars. Names near the right edge move left so they stay on screen, and the years along the top space themselves out so they never run together, even on a phone zoomed all the way out.
 - Each entry has a **category** (politics, war, ideas, science, technology, society, arts). The colored chips under the top bar show or hide a category everywhere, on the timeline and on the map.
+- **Kind of thing** says what an entry is: a person, a war, a battle, a period, an idea, a place and so on. The new timeline will draw each kind its own way. Entries added from Wikipedia or the reader fill it in for you; you can change it, or leave it as **Not set** and the entry is drawn as an event, period or person, as it is now.
+- A period also has a **Region**, such as Greece or China: the row it sits in on the overview. Type your own, or pick one you've used before. From Wikipedia, a period's region starts as its country or continent, spelled the way you already spell it.
 - Click an entry to open it, then **Edit** to change it or **Show on map** to jump to its year on the map.
 
 ### Moving through time
@@ -77,7 +79,7 @@ The new layout is unfinished. Everything you've saved stays the same whichever l
 
 ## Adding from Wikipedia
 
-**Add → From Wikipedia…** searches Wikipedia. Pick a page and you get a new entry filled in: kind and dates from Wikidata, places for the map, a picture with its credit, the intro as a quotation, and the page as a source. Nothing is saved until you check it and press **Add to timeline**. If you already have that entry, Chronicle tells you.
+**Add → From Wikipedia…** searches Wikipedia. Pick a page and you get a new entry filled in: kind, what kind of thing it is, and dates from Wikidata, places for the map, a picture with its credit, the intro as a quotation, and the page as a source. Nothing is saved until you check it and press **Add to timeline**. If you already have that entry, Chronicle tells you.
 
 The intro is kept as a **highlight**: a passage quoted from its source, shown on the entry and never mixed with your own notes. Quotes saved by earlier versions of Chronicle become highlights too when you open or import them.
 

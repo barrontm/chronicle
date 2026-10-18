@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 6,
+  "schemaVersion": 7,
   "id": "doc_fixture",
   "title": "Test fixture",
   "updatedAt": 1760000000000,
@@ -12,9 +12,9 @@
     { "id": "society", "label": "Society & economy", "color": "var(--pig-madder)" }
   ],
   "items": [
-    { "id": "i_pelop", "kind": "span", "title": "Peloponnesian War", "start": { "y": -430 }, "end": { "y": -403 }, "categoryId": "war", "description": "Athens and its empire against Sparta and the Peloponnesian League.", "updatedAt": 1760000000000 },
+    { "id": "i_pelop", "kind": "span", "subject": "war", "title": "Peloponnesian War", "start": { "y": -430 }, "end": { "y": -403 }, "categoryId": "war", "description": "Athens and its empire against Sparta and the Peloponnesian League.", "updatedAt": 1760000000000 },
     { "id": "i_confucius", "kind": "person", "title": "Confucius", "start": { "y": -550, "approx": true }, "end": { "y": -478 }, "categoryId": "ideas", "updatedAt": 1760000000000 },
-    { "id": "i_socrates", "kind": "person", "title": "Socrates", "start": { "y": -469, "approx": true }, "end": { "y": -398 }, "categoryId": "ideas", "wikidataId": "Q99999911", "updatedAt": 1760000000000 },
+    { "id": "i_socrates", "kind": "person", "subject": "person", "title": "Socrates", "start": { "y": -469, "approx": true }, "end": { "y": -398 }, "categoryId": "ideas", "wikidataId": "Q99999911", "updatedAt": 1760000000000 },
     { "id": "i_plato", "kind": "person", "title": "Plato", "start": { "y": -427, "approx": true }, "end": { "y": -347, "approx": true }, "categoryId": "ideas", "wikidataId": "Q99999910", "updatedAt": 1760000000000 },
     { "id": "i_aristotle", "kind": "person", "title": "Aristotle", "start": { "y": -383 }, "end": { "y": -321 }, "categoryId": "ideas", "description": "Student of Plato, tutor of Alexander.", "citations": [{ "sourceId": "s_barnes", "locator": "ch. 1" }], "wikidataId": "Q99999912", "updatedAt": 1760000000000 },
     { "id": "i_rome_falls", "kind": "event", "title": "Deposition of Romulus Augustulus", "start": { "y": 476 }, "categoryId": "politics", "updatedAt": 1760000000000 },
@@ -23,7 +23,7 @@
     { "id": "i_press", "kind": "event", "title": "Gutenberg's printing press", "start": { "y": 1440, "approx": true }, "categoryId": "technology", "updatedAt": 1760000000000 },
     { "id": "i_newton", "kind": "person", "title": "Isaac Newton", "start": { "y": 1643, "m": 1, "d": 4 }, "end": { "y": 1727, "m": 3, "d": 31 }, "categoryId": "science", "updatedAt": 1760000000000 },
     { "id": "i_principia", "kind": "event", "title": "Principia published", "start": { "y": 1687 }, "categoryId": "science", "drafted": { "model": "claude-opus-5-5", "prompt": "entries@1", "draftedAt": 1760000000000 }, "updatedAt": 1760000000000 },
-    { "id": "i_indrev", "kind": "span", "title": "Industrial Revolution", "start": { "y": 1760, "approx": true }, "end": { "y": 1840, "approx": true }, "categoryId": "society", "updatedAt": 1760000000000 },
+    { "id": "i_indrev", "kind": "span", "subject": "period", "region": "Britain", "title": "Industrial Revolution", "start": { "y": 1760, "approx": true }, "end": { "y": 1840, "approx": true }, "categoryId": "society", "updatedAt": 1760000000000 },
     { "id": "i_frenchrev", "kind": "span", "title": "French Revolution", "start": { "y": 1789 }, "end": { "y": 1799 }, "categoryId": "politics", "updatedAt": 1760000000000 },
     { "id": "i_darwin", "kind": "person", "title": "Charles Darwin", "start": { "y": 1809, "m": 2, "d": 12 }, "end": { "y": 1882, "m": 4, "d": 19 }, "categoryId": "science", "updatedAt": 1760000000000 },
     { "id": "i_origin", "kind": "event", "title": "On the Origin of Species", "start": { "y": 1859, "m": 11, "d": 24 }, "categoryId": "science", "updatedAt": 1760000000000 },

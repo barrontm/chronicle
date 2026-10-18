@@ -10,6 +10,8 @@ TimelineDoc
 │     ├── citations[]   → sources (with locator: "pp. 12–15")
 │     ├── places[]      {name?, lat, lon, role: site | born | died} for the map
 │     ├── dimension     political | economic | social | technological | intellectual | religious
+│     ├── subject       what kind of thing it is: person | polity | period | war | battle | event | idea | technology | economy | work | place | migration
+│     ├── region        periods only: the overview row it sits in ("Greece"), Bob's own words
 │     ├── themes[]      periods only: {id, label, dimension?, highlightIds[]}, what the era is known for
 │     └── wikidataId    "Q7259" when added from Wikipedia; spots duplicates
 ├── notes[]        Bob's write-ups
@@ -54,6 +56,7 @@ TimelineDoc
 
 ## Version history
 
+- **7** (2026-10-18): optional `subject` and `region` on entries. Both stay empty on upgrade, so an older entry draws as its `kind` does; nothing else changes (`tests/fixtures/sample-history-v6.json`).
 - **6** (2026-10-17): `highlights` (with text-quote anchors), `dimension` on entries and highlights, `themes` on periods, `effect` and `highlightIds` on connections. Each entry's `excerpt` becomes a highlight with id `h_<entry id>` used by that entry, so two devices upgrading the same timeline agree (`tests/fixtures/sample-history-v5.json`).
 - **5** (2026-10-16): optional `drafted` provenance (`{ model, prompt, draftedAt }`) on entries, connections, territories and flows, set when Bob accepts an AI draft. Nothing else changes, so v4 files import as they are (`tests/fixtures/sample-history-v4.json`).
 - **4** (2026-10-15): `flows` (migrations). Older files get an empty list (`tests/fixtures/sample-history-v3.json` must keep importing).

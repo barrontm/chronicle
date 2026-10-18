@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import type { Relation, TimelineItem } from './types';
 import {
-  classesToFetch, classify, factRelations, findInChronicle, linkedIds, parseClassParents, parseSubjectEntity, subjectFacts, subjectPartOf, subjectWhen, toSubject,
+  classesToFetch, classify, factRelations, findInChronicle, linkedIds, parseClassParents, parseSubjectEntity, regionsIn, seedRegion, subjectFacts, subjectPartOf, subjectWhen, toSubject,
   type ClassParents, type Subject,
 } from './subjects';
 
@@ -122,6 +122,30 @@ describe('walking the class chain', () => {
       { c: { value: 'http://www.wikidata.org/entity/Q1261499' }, p: { value: 'http://www.wikidata.org/entity/Q178561' } },
     ] } };
     expect(parseClassParents(json, ['Q1261499', 'Q9'])).toEqual({ Q1261499: ['Q178561'], Q9: [] });
+  });
+});
+
+describe('regions', () => {
+  const facts = { partOf: [], follows: [], followedBy: [], participants: [], locations: [], government: [] };
+  const period = (region?: string) => ({ id: region ?? 'x', kind: 'span', title: 'P', start: { y: -500 }, end: { y: -400 }, categoryId: 'c', ...(region ? { region } : {}), updatedAt: 1 }) as TimelineItem;
+
+  it('lists the regions Bob has used, once each, A to Z', () => {
+    expect(regionsIn([period('Greece'), period(), period('Egypt'), period('Greece'), period('  ')])).toEqual(['Egypt', 'Greece']);
+  });
+
+  it('seeds a period’s region from its country, else its continent, in Bob’s spelling', () => {
+    const labels = { Q41: 'Greece', Q46: 'Europe' };
+    expect(seedRegion({ ...facts, country: ['Q41'], continent: ['Q46'] }, labels, [])).toBe('Greece');
+    expect(seedRegion({ ...facts, continent: ['Q46'] }, labels, [])).toBe('Europe');
+    expect(seedRegion({ ...facts, country: ['Q41'] }, labels, ['GREECE'])).toBe('GREECE');
+    expect(seedRegion(facts, labels, [])).toBeUndefined();
+  });
+
+  it('reads country and continent from Wikidata', () => {
+    const e = parseSubjectEntity({ entities: { Q1: { id: 'Q1', claims: {
+      P17: [{ mainsnak: { snaktype: 'value', datavalue: { value: { id: 'Q41' } } } }], P30: [{ mainsnak: { snaktype: 'value', datavalue: { value: { id: 'Q46' } } } }],
+    } } } })!;
+    expect(e.facts).toMatchObject({ country: ['Q41'], continent: ['Q46'] });
   });
 });
 

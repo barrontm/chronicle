@@ -203,6 +203,7 @@ function Article({ article, onOpen, onOpenRecord, onDraft, onShowYear, onOpenDra
         existingSources: doc.sources,
         categoryId: doc.categories[0]?.id ?? '',
         today: new Date().toISOString().slice(0, 10),
+        subject: known[key]?.status === 'ready' ? known[key].subject : undefined,
       });
     } catch (e) {
       throw navigator.onLine ? e : new Error(OFFLINE_ADD);

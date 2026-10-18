@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { Source } from '../model/types';
+import type { Source, TimelineItem } from '../model/types';
 import {
   buildCoordsUrl,
   buildDraft,
@@ -18,6 +18,7 @@ import {
   parsePages,
   parseSearch,
   parseSummary,
+  draftFromWikipedia,
   fetchSubject,
   lookUpPlace,
 } from './wikipedia';
@@ -263,5 +264,55 @@ describe('fetchSubject', () => {
     vi.useRealTimers();
     expect(s?.qid).toBe('Q178850');
     expect(s?.kind).toBe('event'); // from its date, without classes
+  });
+});
+
+describe('draftFromWikipedia: what the entry is', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  /** Wikipedia and Wikidata for one recorded page, with extra claims added to its entity. */
+  function replay(key: string, extraClaims: object = {}) {
+    const r = JSON.parse(readFileSync(new URL(`../../tests/fixtures/subjects/${key}.json`, import.meta.url), 'utf8'));
+    const [qid, e] = Object.entries(r.entity.entities as Record<string, { claims: object }>)[0];
+    const entity = { entities: { [qid]: { ...e, claims: { ...e.claims, ...extraClaims } } } };
+    const asked: string[] = [];
+    vi.stubGlobal('fetch', vi.fn(async (url: string) => {
+      const u = new URL(url);
+      asked.push(u.host);
+      const json = (body: unknown) => new Response(JSON.stringify(body), { status: 200 });
+      if (u.pathname.includes('/page/summary/')) return json({ title: key.replace(/_/g, ' '), wikibase_item: qid });
+      if (u.host === 'query.wikidata.org') {
+        const ids = [...(u.searchParams.get('query') ?? '').matchAll(/wd:(Q\d+)/g)].map((m) => m[1]);
+        return json({ results: { bindings: ids.flatMap((c) => (r.parents[c] ?? []).map((p: string) => ({
+          c: { value: `http://www.wikidata.org/entity/${c}` }, p: { value: `http://www.wikidata.org/entity/${p}` },
+        }))) } });
+      }
+      if (u.searchParams.get('ids') === qid) return json(entity);
+      return json({ entities: { Q41: { labels: { en: { value: 'Greece' } } } } });
+    }));
+    return { asked, qid };
+  }
+  const opts = (existingItems = [] as TimelineItem[]) => ({ existingItems, existingSources: [], categoryId: 'c', today: '2026-10-18' });
+  const country = { P17: [{ mainsnak: { snaktype: 'value', datavalue: { value: { id: 'Q41' } } } }] };
+
+  it('says a period is a period, and seeds its region from its country', async () => {
+    replay('Archaic_Greece', country);
+    const out = await draftFromWikipedia('Archaic_Greece', opts());
+    expect('draft' in out && out.draft.item).toMatchObject({ subject: 'period', region: 'Greece' });
+  });
+
+  it('spells the region the way Bob already does', async () => {
+    replay('Archaic_Greece', country);
+    const mine = { id: 'i_x', kind: 'span', title: 'Bronze Age', start: { y: -3000 }, end: { y: -1100 }, categoryId: 'c', region: 'greece', updatedAt: 1 } as TimelineItem;
+    const out = await draftFromWikipedia('Archaic_Greece', opts([mine]));
+    expect('draft' in out && out.draft.item.region).toBe('greece');
+  });
+
+  it('uses the subject the reader already looked up instead of walking classes again', async () => {
+    const { asked, qid } = replay('Battle_of_Salamis');
+    const out = await draftFromWikipedia('Battle_of_Salamis', { ...opts(), subject: { qid, kind: 'battle', facts: { partOf: [], follows: [], followedBy: [], participants: [], locations: [], government: [] }, labels: {} } });
+    expect('draft' in out && out.draft.item.subject).toBe('battle');
+    expect('draft' in out && out.draft.item.region).toBeUndefined();
+    expect(asked).not.toContain('query.wikidata.org');
   });
 });

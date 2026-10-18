@@ -66,7 +66,7 @@ export async function toDraft(args: {
     else if (subject?.kind && CANT_ADD[subject.kind]) out = new Error(CANT_ADD[subject.kind]!.split('.')[0] + '.');
     else {
       try {
-        const r = await draftFromWikipedia(page, { existingItems: doc.items, existingSources: known, categoryId: categoryFor(subject, catIds), today, signal });
+        const r = await draftFromWikipedia(page, { existingItems: doc.items, existingSources: known, categoryId: categoryFor(subject, catIds), today, signal, subject });
         if ('duplicateOf' in r) out = r.duplicateOf;
         else {
           const { item, newSources } = r.draft;
