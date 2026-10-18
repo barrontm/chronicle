@@ -79,7 +79,7 @@ export function matchingEntries(doc: Pick<TimelineDoc, 'items'>, candidates: Can
   return [...byQid, ...byName].slice(0, max);
 }
 
-const when = (i: TimelineItem) => formatRange(i.start, i.end);
+const when = (i: TimelineItem) => (i.start ? formatRange(i.start, i.end) : 'dates not known');
 
 /** The highlight and its section, what its pages are about, and what Bob already has. */
 export function userMessage(h: Highlight, candidates: Candidate[], matching: TimelineItem[], doc: Pick<TimelineDoc, 'items'>): string {

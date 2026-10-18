@@ -63,6 +63,7 @@ export function DraftReview({ nav, draft, onDraft }: { nav: Nav; draft: DraftSet
   const setEntry = (id: string, status: DraftStatus) => draft && onDraft({ ...draft, entries: draft.entries.map((e) => (e.item.id === id ? { ...e, status } : e)) });
   const setConnection = (id: string, status: DraftStatus) => draft && onDraft({ ...draft, connections: draft.connections.map((c) => (c.relation.id === id ? { ...c, status } : c)) });
   const firstOnMap = draft?.entries.find((e) => statusIn(doc, e) === 'pending' && e.item.places?.length && e.item.start);
+  const mapYear = firstOnMap?.item.start && Math.round(toDecimalYear(firstOnMap.item.start));
   const pending = waiting(doc, draft);
 
   return (
@@ -154,7 +155,7 @@ export function DraftReview({ nav, draft, onDraft }: { nav: Nav; draft: DraftSet
           <DroppedList dropped={draft.dropped} />
 
           <div className="actions">
-            {firstOnMap && <button className="btn" onClick={() => nav.showOnMap(Math.round(toDecimalYear(firstOnMap.item.start)))}>Show on map</button>}
+            {mapYear !== undefined && <button className="btn" onClick={() => nav.showOnMap(mapYear)}>Show on map</button>}
             <button className="btn quiet" onClick={() => { onDraft(null); setRequest(''); }}>{pending ? 'Discard the rest' : 'Done'}</button>
           </div>
           <p className="notice subtle">Drafted by {draft.provenance.model} ({draft.provenance.prompt}). Dashed pins on the map are waiting for you.</p>

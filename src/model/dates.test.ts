@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  formatItemDates,
   axisTicks,
   compareHistDate,
   moveDates,
@@ -235,5 +236,16 @@ describe('moving dates', () => {
     expect(moveDates(life, 200, 'start')).toEqual({ start: { y: -347 }, end: { y: -347 } });
     expect(moveDates(life, -200, 'end')).toEqual({ start: { y: -427 }, end: { y: -427 } });
     expect(moveDates({ start: { y: 1950 } }, 5, 'end')).toEqual({ start: { y: 1950 } });
+  });
+});
+
+describe('formatItemDates', () => {
+  it('says what is known of a place, and when the living were born', () => {
+    expect(formatItemDates({ kind: 'span', subject: 'place' })).toBe('Dates not known');
+    expect(formatItemDates({ kind: 'span', subject: 'place', end: { y: -347 } })).toBe('Abandoned 348 BCE');
+    expect(formatItemDates({ kind: 'span', subject: 'place', start: { y: -330 } })).toBe('Founded 331 BCE');
+    expect(formatItemDates({ kind: 'span', subject: 'place', start: { y: -431 }, end: { y: -347 } })).toBe(formatRange({ y: -431 }, { y: -347 }));
+    expect(formatItemDates({ kind: 'person', start: { y: 1950 } })).toBe('Born 1950');
+    expect(formatItemDates({ kind: 'event', start: { y: 0 } })).toBe('1 BCE');
   });
 });

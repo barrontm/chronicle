@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { TimelineItem } from '../../model/types';
+import type { DatedItem, Relation } from '../../model/types';
 import { AXIS_H, describeEntry, hitTest, laneAt, layout, MIN_HIT, prepare, ROW_H, stepActive, type Env, type View } from './layout';
 import type { Measure, Prim, Scene } from './scene';
 
@@ -11,12 +11,12 @@ const LANES = [
 const env = (w = 1200, h = 600): Env => ({ w, h, gutter: 188, measure });
 const view = (start: number, end: number, extra: Partial<View> = {}): View => ({ win: { start, end }, scrollY: 0, now: 2026, ...extra });
 
-const ev = (id: string, y: number, categoryId = 'politics'): TimelineItem => ({ id, kind: 'event', title: id, start: { y }, categoryId, updatedAt: 0 } as TimelineItem);
-const sp = (id: string, a: number, b: number, kind: 'span' | 'person' = 'span', categoryId = 'politics'): TimelineItem =>
-  ({ id, kind, title: id, start: { y: a }, end: { y: b }, categoryId, updatedAt: 0 } as TimelineItem);
+const ev = (id: string, y: number, categoryId = 'politics'): DatedItem => ({ id, kind: 'event', title: id, start: { y }, categoryId, updatedAt: 0 } as DatedItem);
+const sp = (id: string, a: number, b: number, kind: 'span' | 'person' = 'span', categoryId = 'politics'): DatedItem =>
+  ({ id, kind, title: id, start: { y: a }, end: { y: b }, categoryId, updatedAt: 0 } as DatedItem);
 
 const drawnIds = (S: Scene) => new Set([...S.z[1], ...S.z[2]].flatMap((p: Prim) => (p.id ? [p.id] : [])));
-const prep = (items: TimelineItem[], prominence?: (id: string) => number) => prepare(items, LANES, { now: 2026, prominence });
+const prep = (items: DatedItem[], prominence?: (id: string) => number) => prepare(items, LANES, { now: 2026, prominence });
 
 describe('prepare', () => {
   it('packs overlapping spans into rows, periods above lives, and lets ones that follow share a row', () => {
@@ -118,7 +118,7 @@ describe('layout', () => {
 
 describe('clusters', () => {
   // 2,000 entries across three millennia: a moment and a span every year and a half, in two lanes.
-  const big: TimelineItem[] = [];
+  const big: DatedItem[] = [];
   for (let i = 0; i < 1000; i++) {
     const y = -2000 + Math.round(i * 3);
     big.push(ev(`e${i}`, y, i % 2 ? 'war' : 'politics'));
@@ -252,5 +252,60 @@ describe('the arrow keys', () => {
   });
   it('say where they are for screen readers', () => {
     expect(describeEntry(D, 'c')).toBe('c, 451–301 BCE, Politics & government, 2 of 3');
+  });
+});
+
+describe('every kind of thing', () => {
+  const as = <T extends DatedItem>(it: T, subject: DatedItem['subject']): T => ({ ...it, subject });
+  const rel = (fromId: string, toId: string, type: Relation['type']): Relation => ({ id: `${fromId}>${toId}`, fromId, toId, type, updatedAt: 0 });
+  const prims = (S: Scene) => [...S.z[0], ...S.z[1], ...S.z[2]];
+  const glyphs = (S: Scene) => prims(S).flatMap((p) => (p.t === 6 ? [[p.id, p.g]] : []));
+
+  it('draws a battle that is part of a war as a tick on the war’s bar, one to tap and step to', () => {
+    const items = [as(sp('invasion', -480, -479, 'span', 'war'), 'war'), as(ev('salamis', -480, 'politics'), 'battle'), as(ev('marathon', -490, 'war'), 'battle')];
+    const D = prepare(items, LANES, { now: 2026, relations: [rel('salamis', 'invasion', 'part-of')] });
+    expect(D.byId.get('salamis')!.war).toBe('invasion');
+    expect(D.lanes[0].events.map((e) => e.id)).toEqual([]);
+    const S = layout(D, view(-495, -470), env());
+    const tick = prims(S).find((p) => p.id === 'salamis');
+    expect(tick).toMatchObject({ t: 3, cls: expect.stringContaining('tl-tick-mark') });
+    const t = S.targets.find((x) => x.id === 'salamis')!;
+    expect(t.w).toBeGreaterThanOrEqual(MIN_HIT);
+    expect(hitTest(S, t.x + t.w / 2, t.y + t.h / 2)?.id).toBe('salamis');
+    expect(describeEntry(D, 'salamis')).toContain('War & conflict');
+    expect(stepActive(D, 'marathon', 'ArrowRight', view(-495, -470).win)).toBe('salamis');
+    // A battle without a war in Chronicle is a point of its own, in its glyph.
+    expect(glyphs(S)).toContainEqual(['marathon', 'battle']);
+  });
+
+  it('draws technology and works as their glyphs, and joins a work to its maker’s lifeline', () => {
+    const items = [as(ev('trireme', -480), 'technology'), as(ev('histories', -430), 'work'), as(sp('herodotus', -484, -425, 'person'), 'person')];
+    const D = prepare(items, LANES, { now: 2026, relations: [rel('herodotus', 'histories', 'related')] });
+    const S = layout(D, view(-500, -400), env());
+    expect(glyphs(S)).toEqual(expect.arrayContaining([['trireme', 'technology'], ['histories', 'work']]));
+    const tie = prims(S).find((p) => p.cls === 'tl-tie' && p.t === 3);
+    expect(tie).toBeDefined();
+    const work = S.boxes.get('histories')!, life = S.boxes.get('herodotus')!;
+    expect(tie).toMatchObject({ y1: work.y + work.h, y2: life.y });
+  });
+
+  it('draws an idea as a thread, a migration as an arrow, a place as a ground line and an economy with its coins', () => {
+    const items = [as(sp('sophists', -460, -380), 'idea'), as(sp('ionian', -1050, -950), 'migration'), as(sp('olynthus', -431, -347), 'place'), as(sp('laurion', -483, -413), 'economy')];
+    const D = prepare(items, LANES, { now: 2026 });
+    const S = layout(D, view(-1100, -300), env());
+    expect(glyphs(S)).toEqual(expect.arrayContaining([['sophists', 'idea'], ['olynthus', 'place'], ['laurion', 'economy'], ['ionian', 'migration']]));
+    expect(prims(S).find((p) => p.t === 7 && p.id === 'ionian')).toBeDefined();
+    const lines = (id: string) => prims(S).filter((p) => p.t === 3 && p.k.endsWith(id) && p.k.startsWith('bl'));
+    expect(lines('sophists')).toHaveLength(1);
+    expect(lines('olynthus')[0]).toMatchObject({ sw: 5 });
+    // Every one is still a target as tall as its row.
+    for (const id of ['sophists', 'ionian', 'olynthus', 'laurion']) expect(S.targets.find((t) => t.id === id)?.h).toBe(ROW_H);
+  });
+
+  it('dashes the approximate end of a place’s ground line', () => {
+    const D = prepare([{ ...as(sp('olynthus', -431, -347), 'place'), end: { y: -347, approx: true } }], LANES, { now: 2026 });
+    const S = layout(D, view(-500, -300), env());
+    const pieces = prims(S).filter((p) => p.t === 3 && p.k.startsWith('bl') && p.k.endsWith('olynthus'));
+    expect(pieces.map((p) => (p as { dash?: boolean }).dash)).toEqual([false, true]);
   });
 });

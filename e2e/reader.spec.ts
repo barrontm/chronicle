@@ -644,3 +644,76 @@ test('adding a battle connects it to the war already in Chronicle, with the high
   await expect(entry.getByRole('heading', { name: 'Second Persian invasion of Greece' })).toBeVisible();
   await expect(entry.getByTestId('evidence')).toHaveText(`Evidence: “${quote}”`);
 });
+
+test('a place and a battle draw as what they are: Athens on its ground line with a pin, Salamis a tick on the war’s bar', async ({ page }) => {
+  test.slow();
+  await mockArticles(page);
+  Object.assign(QIDS, { Battle_of_Salamis: 'Q178850', Athens: 'Q1524' });
+  await mockSummaries(page);
+  const PAGES: Record<string, { description: string; text: string }> = {
+    Athens: { description: 'Capital of Greece', text: 'Athens was the leading city of the Delian League. Its harbour at Piraeus held the fleet.' },
+    Battle_of_Salamis: { description: 'Naval battle in 480 BC', text: 'The Greek fleet met the Persians in the straits. The battle turned the war in 480 BC.' },
+  };
+  await page.route('https://en.wikipedia.org/w/rest.php/v1/search/page**', (route) => {
+    const q = new URL(route.request().url()).searchParams.get('q') ?? '';
+    const key = /salamis/i.test(q) ? 'Battle_of_Salamis' : 'Athens';
+    return route.fulfill({ headers: cors, json: { pages: [{ key, title: key.replace(/_/g, ' '), description: PAGES[key].description, thumbnail: null }] } });
+  });
+  for (const [key, p] of Object.entries(PAGES)) {
+    await page.route(`https://en.wikipedia.org/w/rest.php/v1/page/${key}/html`, (route) => route.fulfill({
+      headers: { ...cors, 'Content-Type': 'text/html' },
+      body: `<!DOCTYPE html><html about="https://en.wikipedia.org/wiki/Special:Redirect/revision/7"><head><title>${key.replace(/_/g, ' ')}</title></head><body>` +
+        `<section data-mw-section-id="0"><p>${p.text}</p></section></body></html>`,
+    }));
+  }
+  await open(page);
+  // A timeline that already has the Persian invasion, as a war.
+  const doc = JSON.parse(readFileSync(new URL('../tests/fixtures/sample-history.json', import.meta.url), 'utf8'));
+  doc.items.push({ ...doc.items[0], id: 'invasion', kind: 'span', subject: 'war', title: 'Second Persian invasion of Greece', wikidataId: 'Q1122337', start: { y: -479 }, end: { y: -478 }, places: undefined });
+  await page.getByTestId('import-input').setInputFiles({ name: 'mine.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(doc)) });
+  await page.getByRole('button', { name: 'More' }).click();
+  await page.getByRole('menuitemcheckbox', { name: 'Try the new layout' }).click();
+
+  const tray = page.getByTestId('capture-tray');
+  const editor = page.getByTestId('item-editor');
+  const entry = page.getByTestId('item-view');
+  const highlightAndAdd = async (q: string, title: string, words: string, kind: string) => {
+    await search(page, q, title);
+    await expect(page.getByTestId('reader').getByText(words)).toBeVisible();
+    await findText(page, words, true);
+    await expect(page.getByRole('button', { name: 'Highlight' })).toBeVisible();
+    await page.keyboard.press('h');
+    await expect(tray.getByRole('radio', { name: new RegExp(title) })).toContainText(`This article · ${kind}`);
+    await tray.getByRole('button', { name: 'Add to map and timeline' }).click();
+    await expect(editor.getByLabel('Title')).toHaveValue(title);
+  };
+
+  // A place can be added now: Wikidata's founding date is kept, and it has no end, as it's still there.
+  await highlightAndAdd('athens', 'Athens', 'leading city', 'Place');
+  await expect(editor.getByLabel('Kind of thing')).toHaveValue('place');
+  await expect(editor.getByLabel('Founded')).not.toHaveValue('');
+  await expect(editor.getByLabel('Abandoned')).toHaveValue('');
+  await editor.getByRole('button', { name: 'Add to timeline' }).click();
+  await expect(entry.getByRole('heading', { name: 'Athens' })).toBeVisible();
+  await expect(entry).toContainText('Founded');
+  await expect.poll(() => savedItem(page, 'Athens')).toMatchObject({ subject: 'place', places: [expect.objectContaining({ role: 'site' })] });
+  const athens = (await savedItem(page, 'Athens')) as { id: string };
+  await entry.getByRole('button', { name: 'Show its time' }).click();
+  const svg = page.locator('.tl-svg');
+  await expect(svg.locator(`use[data-id="${athens.id}"]`)).toHaveAttribute('href', /-g-place$/);
+  await expect(page.locator('.map-label.pin', { hasText: 'Athens' })).toBeVisible();
+
+  // The battle is part of the war already in Chronicle, so it's a tick on the war's bar.
+  await page.getByRole('button', { name: 'Open an article' }).click();
+  await highlightAndAdd('salamis', 'Battle of Salamis', 'turned the war', 'Battle');
+  await expect(editor.getByTestId('suggested-connections').getByRole('checkbox', { name: 'Part of Second Persian invasion of Greece' })).toBeChecked();
+  await editor.getByRole('button', { name: 'Add to timeline' }).click();
+  await expect(entry.getByRole('heading', { name: 'Battle of Salamis' })).toBeVisible();
+  await expect.poll(() => savedItem(page, 'Battle of Salamis')).toBeDefined();
+  const salamis = (await savedItem(page, 'Battle of Salamis')) as { id: string };
+  await entry.getByRole('button', { name: 'Show its time' }).click();
+  // A line has no width, so Playwright calls it hidden: it is drawn when it is in the scene.
+  await expect(svg.locator(`line.tl-tick-mark[data-id="${salamis.id}"]`)).toBeAttached();
+  await expect(svg.locator(`circle[data-id="${salamis.id}"]`)).toHaveCount(0);
+  await expect(svg.locator('rect[data-id="invasion"]')).toBeVisible();
+});

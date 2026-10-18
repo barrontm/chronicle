@@ -195,7 +195,7 @@ function Workspace() {
     },
     showOnMap: (y) => {
       setPlaying(false);
-      setYearState(y);
+      if (y !== undefined) setYearState(y);
       revealMap();
     },
     draw: (onDone) => {
@@ -224,7 +224,7 @@ function Workspace() {
     setStack([{ type: 'item', id }]);
     // With the map open, jump to the entry's year if it isn't on the map right now.
     const item = doc.items.find((i) => i.id === id);
-    if (showMap && item && !playing && presenceAt(item, year, fadeYears, mapOptions.keepPast) === 0) setYearState(toDecimalYear(item.start));
+    if (showMap && item?.start && !playing && presenceAt(item, year, fadeYears, mapOptions.keepPast) === 0) setYearState(toDecimalYear(item.start));
   };
 
   // Escape closes menus first, then the drawer.

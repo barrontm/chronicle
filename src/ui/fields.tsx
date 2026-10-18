@@ -68,7 +68,7 @@ export function RecordPicker({ doc, onPick, exclude = [], placeholder = 'Search 
   const listId = useId();
   const options = useMemo(() => {
     const all = [
-      ...doc.items.map((i) => ({ id: i.id, label: i.title, sub: formatHistDate(i.start) })),
+      ...doc.items.map((i) => ({ id: i.id, label: i.title, sub: i.start ? formatHistDate(i.start) : 'Dates not known' })),
       ...(includeSeries ? doc.series.map((s) => ({ id: s.id, label: s.title, sub: 'Trend' })) : []),
     ].filter((o) => !exclude.includes(o.id));
     const needle = q.trim().toLowerCase();

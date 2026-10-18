@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Source, TimelineItem } from '../model/types';
 import {
+  asPlace,
   buildCoordsUrl,
   buildDraft,
   buildEntityUrl,
@@ -98,6 +99,19 @@ describe('parsing responses', () => {
     expect(parseCoords({ claims: { P625: [{ mainsnak: { snaktype: 'value', datavalue: { value: { latitude: 51.5, longitude: -0.12 } } } }] } })).toEqual({ lat: 51.5, lon: -0.12 });
     expect(parseCoords({ claims: {} })).toBeUndefined();
     expect(parseLabels({ entities: { Q84: { labels: { en: { value: 'London' } } }, Q2: { labels: {} } } })).toEqual({ Q84: 'London' });
+  });
+});
+
+describe('asPlace', () => {
+  const item: TimelineItem = { id: 'i', kind: 'event', title: 'Olynthus', start: undefined as never, categoryId: 'c', updatedAt: 0 };
+  it('makes a lifespan from founding to abandonment, either of which may be unknown', () => {
+    expect(asPlace(item, { start: { y: -431 }, end: { y: -347 } } as never)).toMatchObject({ kind: 'span', subject: 'place', start: { y: -431 }, end: { y: -347 } });
+    const none = asPlace(item, undefined);
+    expect(none).toMatchObject({ kind: 'span', subject: 'place' });
+    expect('start' in none || 'end' in none).toBe(false);
+    expect(asPlace(item, { start: { y: -330 } } as never)).not.toHaveProperty('end');
+    // An abandonment before the founding is a muddle in the data: keep the founding only.
+    expect(asPlace(item, { start: { y: -330 }, end: { y: -400 } } as never)).not.toHaveProperty('end');
   });
 });
 

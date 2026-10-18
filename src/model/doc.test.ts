@@ -14,6 +14,7 @@ import {
   remove,
   serializeDoc,
   upsert,
+  validateDoc,
 } from './doc';
 import { SCHEMA_VERSION, type Relation, type TimelineItem } from './types';
 
@@ -25,6 +26,7 @@ const fixtureV3Json = readFileSync(new URL('../../tests/fixtures/sample-history-
 const fixtureV4Json = readFileSync(new URL('../../tests/fixtures/sample-history-v4.json', import.meta.url), 'utf8');
 const fixtureV5Json = readFileSync(new URL('../../tests/fixtures/sample-history-v5.json', import.meta.url), 'utf8');
 const fixtureV6Json = readFileSync(new URL('../../tests/fixtures/sample-history-v6.json', import.meta.url), 'utf8');
+const fixtureV7Json = readFileSync(new URL('../../tests/fixtures/sample-history-v7.json', import.meta.url), 'utf8');
 
 describe('parseDoc', () => {
   it('accepts the fixture and round-trips it', () => {
@@ -255,12 +257,42 @@ describe('mergeDocs', () => {
   });
 });
 
+describe('places without dates (v8)', () => {
+  const place = (extra: Partial<TimelineItem> = {}): TimelineItem => ({
+    id: 'i_knossos', kind: 'span', subject: 'place', title: 'Knossos', categoryId: 'society',
+    places: [{ name: 'Knossos', lat: 35.298, lon: 25.163, role: 'site' }], updatedAt: 1, ...extra,
+  });
+
+  it('upgrades a schema 7 backup with every entry as it was', () => {
+    const v7 = JSON.parse(fixtureV7Json);
+    expect(v7.schemaVersion).toBe(7);
+    const doc = parseDoc(fixtureV7Json);
+    expect(doc.schemaVersion).toBe(8);
+    expect(doc.items).toEqual(v7.items);
+  });
+
+  it('accepts a place with no dates, or with only its founding, and keeps it through export, import and merge', () => {
+    const base = fixture();
+    const doc = upsert(upsert(base, 'items', place()), 'items', place({ id: 'i_alex', title: 'Alexandria', start: { y: -330 } }));
+    expect(validateDoc(doc)).toEqual([]);
+    const again = parseDoc(serializeDoc(doc));
+    expect(again.items.find((i) => i.id === 'i_knossos')).toMatchObject({ subject: 'place', places: [{ name: 'Knossos' }] });
+    expect(again.items.find((i) => i.id === 'i_knossos')?.start).toBeUndefined();
+    expect(mergeDocs(base, doc).items.find((i) => i.id === 'i_alex')?.start).toEqual({ y: -330 });
+  });
+
+  it('still wants a start date on anything that isn’t a place', () => {
+    const doc = upsert(fixture(), 'items', place({ subject: 'event' }));
+    expect(validateDoc(doc)).toEqual(['"Knossos" has an invalid start date', '"Knossos" is a span but has no end date']);
+  });
+});
+
 describe('what an entry is (v7)', () => {
   it('upgrades a schema 6 backup with every entry as it was, none given a kind of thing or a region', () => {
     const v6 = JSON.parse(fixtureV6Json);
     expect(v6.schemaVersion).toBe(6);
     const doc = parseDoc(fixtureV6Json);
-    expect(doc.schemaVersion).toBe(7);
+    expect(doc.schemaVersion).toBe(SCHEMA_VERSION);
     expect(doc.items).toEqual(v6.items);
     expect(doc.items.some((i) => i.subject || i.region)).toBe(false);
   });

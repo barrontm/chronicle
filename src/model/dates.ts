@@ -133,6 +133,17 @@ export function fromJsDate(dt: Date): HistDate {
   return { y: dt.getUTCFullYear(), m: dt.getUTCMonth() + 1, d: dt.getUTCDate() };
 }
 
+/** An entry's dates in words: a range, "Born …" for the living, "Founded …" for a place still there, or what's known of a place. */
+export function formatItemDates(i: { kind: string; subject?: string; start?: HistDate; end?: HistDate }): string {
+  if (!i.start) return i.end ? `Abandoned ${formatHistDate(i.end)}` : 'Dates not known';
+  if (!i.end && i.kind === 'person') return `Born ${formatHistDate(i.start)}`;
+  if (!i.end && i.subject === 'place') return `Founded ${formatHistDate(i.start)}`;
+  return formatRange(i.start, i.end);
+}
+
+/** Has a start date, so it can go on the timeline (only a place may lack one). */
+export const isDated = <T extends { start?: HistDate }>(i: T): i is T & { start: HistDate } => !!i.start;
+
 /** Fractional astronomical year, for positioning series points and comparing dates. */
 export function toDecimalYear(d: HistDate): number {
   if (!d.m) return d.y;

@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import type { TimelineItem } from '../model/types';
+import type { DatedItem } from '../model/types';
 import { currentStop, focusWindow, panBy, sliderToSpan, spanLabel, spanToSlider, SLIDER_MAX, TIME_MAX, TIME_MIN, zoomAround, ZOOM_MAX_YEARS, ZOOM_MIN_YEARS } from './timeNav';
 
-const item = (id: string, kind: TimelineItem['kind'], start: number, end?: number): TimelineItem => ({
+const item = (id: string, kind: DatedItem['kind'], start: number, end?: number): DatedItem => ({
   id, kind, title: id, start: { y: start }, ...(end !== undefined ? { end: { y: end } } : {}), categoryId: 'c', updatedAt: 1,
 });
 

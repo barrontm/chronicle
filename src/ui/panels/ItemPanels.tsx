@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { bibliographyFor, describeRelation, highlightsFor, newId, notesFor, relationsFor, remove, upsert, RELATION_TYPES } from '../../model/doc';
-import { compareHistDate, formatRange, formatHistDate, toDecimalYear } from '../../model/dates';
+import { compareHistDate, formatItemDates, toDecimalYear } from '../../model/dates';
 import type { ItemDraft } from '../../media/wikipedia';
 import { KIND_LABEL as SUBJECT_LABEL, regionsIn } from '../../model/subjects';
 import { SUBJECT_KINDS, type Citation, type Dimension, type Highlight, type HistDate, type ItemKind, type MediaRef, type Relation, type RelationType, type Source, type SubjectKind, type TimelineItem } from '../../model/types';
@@ -57,7 +57,7 @@ export function ItemView({ id, nav }: { id: string; nav: Nav }) {
   const { outgoing, incoming } = relationsFor(doc, id);
   const sources = new Map(doc.sources.map((s) => [s.id, s]));
   const bib = bibliographyFor(doc, id);
-  const years = item.end ? Math.round(compareHistDate(item.end, item.start)) : null;
+  const years = item.end && item.start ? Math.round(compareHistDate(item.end, item.start)) : null;
   const territories = doc.territories.filter((t) => t.itemId === id);
   const flows = doc.flows.filter((f) => f.itemId === id);
   const evidence = (r: Relation) => (r.highlightIds ?? []).flatMap((hid) => doc.highlights.filter((h) => h.id === hid));
@@ -69,7 +69,7 @@ export function ItemView({ id, nav }: { id: string; nav: Nav }) {
       <div className="meta">
         <span style={{ '--c': cat?.color } as React.CSSProperties}><span className="swatch" />{cat?.label}</span>
         <span>{KIND_LABEL[item.kind]}</span>
-        <span>{item.kind === 'person' && !item.end ? `Born ${formatHistDate(item.start)}` : formatRange(item.start, item.end)}</span>
+        <span>{formatItemDates(item)}</span>
         {years !== null && years > 0 && <span>{years} {years === 1 ? 'year' : 'years'}{item.kind === 'person' ? ' old' : ''}</span>}
       </div>
       {item.description && <p className="prose">{item.description}</p>}
@@ -160,8 +160,8 @@ export function ItemView({ id, nav }: { id: string; nav: Nav }) {
 
       <div className="actions">
         <button className="btn primary" onClick={() => nav.replace({ type: 'item', id, edit: true })}>Edit</button>
-        <button className="btn" onClick={() => nav.showTime(id)}>{item.kind === 'person' ? 'Show their time' : 'Show its time'}</button>
-        {(item.places?.length || territories.length > 0 || flows.length > 0) && <button className="btn" onClick={() => nav.showOnMap(toDecimalYear(item.start))}>Show on map</button>}
+        {item.start && <button className="btn" onClick={() => nav.showTime(id)}>{item.kind === 'person' ? 'Show their time' : 'Show its time'}</button>}
+        {(item.places?.length || territories.length > 0 || flows.length > 0) && <button className="btn" onClick={() => nav.showOnMap(item.start && toDecimalYear(item.start))}>Show on map</button>}
         <button
           className="btn danger"
           onClick={() => {
@@ -217,10 +217,13 @@ export function ItemEditor({ id, init, draft: prefill, nav }: {
   const set = <K extends keyof TimelineItem>(k: K, v: TimelineItem[K]) => setDraft((d) => ({ ...d, [k]: v }));
   // A Wikipedia draft quotes the page's intro; it's saved as a highlight unless Bob removes it.
   const [quote, setQuote] = useState<Highlight | undefined>(prefill?.highlight);
-  const needsEnd = draft.kind === 'span';
+  // A place's dates are its founding and abandonment, either of which may be unknown.
+  const place = draft.subject === 'place';
+  const needsEnd = draft.kind === 'span' && !place;
   const isPeriod = draft.subject ? draft.subject === 'period' : draft.kind === 'span';
   const endBeforeStart = draft.start && draft.end && compareHistDate(draft.end, draft.start) < 0;
-  const canSave = draft.title.trim() && valid.start && draft.start && valid.end && (!needsEnd || draft.end) && !endBeforeStart;
+  const startOk = place ? valid.start || !draft.start : valid.start && !!draft.start;
+  const canSave = draft.title.trim() && startOk && valid.end && (!needsEnd || draft.end) && !endBeforeStart;
 
   const save = () => {
     const item: TimelineItem = { ...draft, title: draft.title.trim(), end: draft.kind === 'event' ? undefined : draft.end, region: isPeriod ? draft.region?.trim() || undefined : undefined };
@@ -262,7 +265,11 @@ export function ItemEditor({ id, init, draft: prefill, nav }: {
         </select>
       </Field>
       <Field label="Kind of thing" hint="How the new timeline draws it.">
-        <select value={draft.subject ?? ''} onChange={(e) => set('subject', (e.target.value || undefined) as SubjectKind | undefined)}>
+        <select value={draft.subject ?? ''} onChange={(e) => {
+          const subject = (e.target.value || undefined) as SubjectKind | undefined;
+          // A place is drawn as a lifespan, so it's a period of time with dates that may be unknown.
+          setDraft((d) => ({ ...d, subject, ...(subject === 'place' ? { kind: 'span' as const } : {}) }));
+        }}>
           <option value="">Not set</option>
           {SUBJECT_KINDS.map((k) => <option key={k} value={k}>{SUBJECT_LABEL[k]}</option>)}
         </select>
@@ -275,20 +282,22 @@ export function ItemEditor({ id, init, draft: prefill, nav }: {
       {isPeriod && <datalist id="regions">{regionsIn(doc.items).map((r) => <option key={r} value={r} />)}</datalist>}
       <div className="row">
         <DateField
-          label={draft.kind === 'person' ? 'Born' : draft.kind === 'span' ? 'From' : 'Date'}
+          label={place ? 'Founded' : draft.kind === 'person' ? 'Born' : draft.kind === 'span' ? 'From' : 'Date'}
           value={draft.start}
+          optional={place}
           onChange={(d, ok) => { set('start', d as HistDate); setValid((v) => ({ ...v, start: ok })); }}
         />
         {draft.kind !== 'event' && (
           <DateField
-            label={draft.kind === 'person' ? 'Died' : 'To'}
+            label={place ? 'Abandoned' : draft.kind === 'person' ? 'Died' : 'To'}
             value={draft.end}
-            optional={draft.kind === 'person'}
+            optional={draft.kind === 'person' || place}
             onChange={(d, ok) => { set('end', d); setValid((v) => ({ ...v, end: ok })); }}
           />
         )}
       </div>
       {endBeforeStart && <div className="notice bad">The end date is before the start date.</div>}
+      {place && !draft.start && <small className="hint">With no founding date it’s on the map but not the timeline.</small>}
       <Field label="Summary" hint="A sentence or two. Longer thinking goes in a note.">
         <textarea value={draft.description ?? ''} onChange={(e) => set('description', e.target.value || undefined)} rows={3} />
       </Field>
@@ -370,7 +379,7 @@ export function ItemEditor({ id, init, draft: prefill, nav }: {
       {quickSource && <QuickSource onDone={(sourceId) => { setQuickSource(false); if (sourceId) set('citations', [...(draft.citations ?? []), { sourceId }]); }} />}
 
       <div className="actions">
-        <button className="btn primary" disabled={!canSave}>{existing ? 'Save changes' : 'Add to timeline'}</button>
+        <button className="btn primary" disabled={!canSave}>{existing ? 'Save changes' : place && !draft.start ? 'Add to map' : 'Add to timeline'}</button>
         <button type="button" className="btn" onClick={() => (existing ? nav.replace({ type: 'item', id: draft.id }) : nav.back())}>Cancel</button>
       </div>
     </form>

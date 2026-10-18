@@ -40,6 +40,29 @@ describe('pins', () => {
   });
 });
 
+describe('places', () => {
+  const place = (over: Partial<TimelineItem>) => item({ id: 'olynthus', kind: 'span', subject: 'place', title: 'Olynthus', places: [{ name: 'Olynthus', lat: 40.29, lon: 23.35, role: 'site' }], ...over });
+  const opacityIn = (it: TimelineItem, year: number, keepPast = false) => pinsAt([it], year, { fadeYears: 20, keepPast, colorOf }).features[0]?.properties.opacity ?? 0;
+
+  it('fades a place’s pin in from its founding and out after it was abandoned', () => {
+    const olynthus = place({ start: { y: -431 }, end: { y: -347 } });
+    expect(opacityIn(olynthus, -432)).toBe(0);
+    expect(opacityIn(olynthus, -431)).toBeCloseTo(0.3);
+    expect(opacityIn(olynthus, -421)).toBeCloseTo(0.65);
+    expect(opacityIn(olynthus, -400)).toBe(1);
+    expect(opacityIn(olynthus, -346)).toBe(1);
+    expect(opacityIn(olynthus, -336)).toBeCloseTo(0.5);
+    expect(opacityIn(olynthus, -320)).toBe(0);
+    expect(opacityIn(olynthus, -320, true)).toBeCloseTo(0.4);
+  });
+  it('shows a place with no dates in every year, and one still there from its founding on', () => {
+    expect(opacityIn(place({ start: undefined }), -3000)).toBe(1);
+    expect(opacityIn(place({ start: undefined }), 2000)).toBe(1);
+    expect(opacityIn(place({ start: { y: -330 } }), 2000)).toBe(1);
+    expect(opacityIn(place({ start: undefined, end: { y: -347 } }), -320)).toBe(0);
+  });
+});
+
 describe('territories and values', () => {
   it('draws the snapshot in effect and changes its key only when the snapshot changes', () => {
     const doc = fixture();

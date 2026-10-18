@@ -1,3 +1,4 @@
+import { REPRESENTATIONS } from '../representations';
 import { ARC_ROLES, FONTS, type Box, type Prim, type Scene } from './scene';
 
 /**
@@ -16,7 +17,7 @@ export interface Painter {
 }
 
 const NS = 'http://www.w3.org/2000/svg';
-const TAGS = ['rect', 'circle', 'text', 'line', 'image', 'path'] as const;
+const TAGS = ['rect', 'circle', 'text', 'line', 'image', 'path', 'use', 'path'] as const;
 type Tag = (typeof TAGS)[number];
 
 interface Rec { el: SVGElement; tag: Tag; gen: number; last: Map<string, string | number>; text?: string }
@@ -48,6 +49,15 @@ export function svgPainter(): Painter {
     head.setAttribute('class', `tl-head ${role}`);
     m.append(head);
     defs.append(m);
+  }
+  // Each kind's glyph once, as a symbol the marks <use>: the same markup the tray draws.
+  for (const [kind, rep] of Object.entries(REPRESENTATIONS)) {
+    const sym = document.createElementNS(NS, 'symbol');
+    sym.id = `${id}-g-${kind}`;
+    sym.setAttribute('viewBox', '0 0 18 18');
+    sym.setAttribute('overflow', 'visible');
+    sym.innerHTML = rep.glyph;
+    defs.append(sym);
   }
   const group = (clipName: string) => {
     const g = document.createElementNS(NS, 'g');
@@ -139,6 +149,17 @@ export function svgPainter(): Painter {
         set(r, 'marker-end', p.head ? `url(#${id}-head-${p.head})` : undefined);
         set(r, 'data-from', p.from);
         set(r, 'data-to', p.to);
+        break;
+      case 6:
+        set(r, 'x', p.x); set(r, 'y', p.y); set(r, 'width', p.w); set(r, 'height', p.w);
+        set(r, 'href', `#${id}-g-${p.g}`);
+        style(r, 'color', p.color);
+        break;
+      case 7:
+        set(r, 'd', p.d);
+        style(r, 'fill', p.fill);
+        style(r, 'stroke', p.stroke ?? 'none');
+        set(r, 'stroke-width', p.stroke ? p.sw ?? 1 : undefined);
         break;
     }
   };

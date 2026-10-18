@@ -1,6 +1,7 @@
 import { axisTicks, formatRange, formatYear, toDecimalYear } from '../../model/dates';
-import type { TimelineItem } from '../../model/types';
+import type { DatedItem, Relation, TimelineItem } from '../../model/types';
 import { anchors, arcCurve, loopCurve, type Box as Edges } from '../influenceLinks';
+import { makerOf, markOf, representationOf, warOf, type Representation } from '../representations';
 import type { YearWindow } from '../timeNav';
 import { tint, type Box, type Cluster, type Link, type MarkKind, type Measure, type Prim, type Scene, type Target } from './scene';
 
@@ -18,6 +19,8 @@ export const AXIS_H = 44;
 /** Every row is a hit target at least this tall (spans and points need 24 px to tap). */
 export const ROW_H = 28;
 export const MIN_HIT = 24;
+/** A moment drawn as its kind's glyph is this many px across. */
+export const GLYPH = 16;
 /** Moments closer than this many px merge into a cluster. */
 export const CLUSTER_PX = 16;
 /** Spans narrower than this many px, this close together, merge into a cluster. */
@@ -37,7 +40,10 @@ export interface LaneInput { id: string; label: string; color: string }
 
 export interface PItem {
   id: string;
+  /** Its mark: a moment, a span or a life. */
   kind: MarkKind;
+  /** How its kind of thing is drawn. */
+  rep: Representation;
   title: string;
   /** Its dates in words, for the tooltip. */
   when: string;
@@ -55,6 +61,12 @@ export interface PItem {
   /** Spans: where the next span in the same row starts (Infinity if none), so a label can sit after this one. */
   nextS: number;
   thumb?: string;
+  /** A battle drawn as a tick on this war's bar instead of a point of its own. */
+  war?: string;
+  /** A war: its battles' ticks, earliest first. */
+  ticks?: PItem[];
+  /** A work: the lifeline it's joined to. */
+  maker?: string;
 }
 
 export interface PLane {
@@ -92,36 +104,53 @@ export interface PrepareOptions {
   prominence?: (id: string) => number;
   thumbFor?: (item: TimelineItem) => string | undefined;
   /** Claude's drafts waiting for Bob, drawn as ghosts in their lanes. */
-  drafts?: TimelineItem[];
+  drafts?: DatedItem[];
+  /** Connections, for a war's battles (ticks on its bar) and a work's maker (the lifeline it's joined to). */
+  relations?: Relation[];
 }
 
-export function prepare(items: TimelineItem[], lanes: LaneInput[], o: PrepareOptions): Prepared {
+export function prepare(items: DatedItem[], lanes: LaneInput[], o: PrepareOptions): Prepared {
   const byId = new Map<string, PItem>();
   const laneIx = new Map(lanes.map((l, i) => [l.id, i]));
   const per: PItem[][] = lanes.map(() => []);
+  const refs = new Map<string, DatedItem>();
   let lo = Infinity, hi = -Infinity;
-  const add = (ref: TimelineItem, draft: boolean) => {
+  const add = (ref: DatedItem, draft: boolean) => {
     const li = laneIx.get(ref.categoryId);
     if (li === undefined || byId.has(ref.id)) return;
     const s = toDecimalYear(ref.start);
-    // A living person has no end; draw them up to today.
+    // A living person, or a place still there, has no end; draw them up to today.
     const e = ref.kind === 'event' ? s : ref.end ? toDecimalYear(ref.end) : o.now;
     const p: PItem = {
-      id: ref.id, kind: ref.kind, title: ref.title, when: formatRange(ref.start, ref.end),
+      id: ref.id, kind: markOf(ref), rep: representationOf(ref), title: ref.title, when: formatRange(ref.start, ref.end),
       s, e: Math.max(e, s), approx: !!ref.start.approx, endApprox: !!ref.end?.approx, open: ref.kind !== 'event' && !ref.end, draft,
       lane: li, row: 0, nextS: Infinity, thumb: draft ? undefined : o.thumbFor?.(ref),
     };
-    per[li].push(p);
     byId.set(p.id, p);
-    if (draft) return;
-    lo = Math.min(lo, p.s);
-    hi = Math.max(hi, p.e);
+    if (!draft) refs.set(p.id, ref);
   };
   for (const ref of items) add(ref, false);
   for (const ref of o.drafts ?? []) add(ref, true);
+  // A battle that is part of a war in view is a tick on the war's bar, in the war's lane.
+  const rels = o.relations ?? [];
+  for (const [bid, wid] of warOf([...refs.values()], rels)) {
+    const b = byId.get(bid)!, w = byId.get(wid)!;
+    b.war = wid;
+    b.lane = w.lane;
+    (w.ticks ??= []).push(b);
+  }
+  for (const w of byId.values()) w.ticks?.sort((a, b) => a.s - b.s || a.id.localeCompare(b.id));
+  const dated = [...refs.values()].map((r) => ({ ...r, s: byId.get(r.id)!.s, e: byId.get(r.id)!.e }));
+  for (const [wid, pid] of makerOf(dated, rels)) byId.get(wid)!.maker = pid;
+  for (const p of byId.values()) {
+    per[p.lane].push(p);
+    if (p.draft) continue;
+    lo = Math.min(lo, p.s);
+    hi = Math.max(hi, p.e);
+  }
   let top = 0;
   const out = lanes.map((l, li): PLane => {
-    const events = per[li].filter((i) => i.kind === 'event').sort((a, b) => a.s - b.s || a.id.localeCompare(b.id));
+    const events = per[li].filter((i) => i.kind === 'event' && !i.war).sort((a, b) => a.s - b.s || a.id.localeCompare(b.id));
     const spans = per[li].filter((i) => i.kind !== 'event').sort((a, b) => a.s - b.s || b.e - a.e || a.id.localeCompare(b.id));
     // Pack into rows by time only, so rows stay put while zooming: periods first, then lives,
     // so each row holds one kind and slivers of it can merge into one cluster.
@@ -208,6 +237,7 @@ export function stepActive(D: Prepared, activeId: string | undefined, key: StepK
 
 /** How far down the lanes an entry's row is, in px from the top of the first lane: a moment can be in any of its lane's moment rows. */
 export function rowSpan(D: Prepared, it: PItem): [number, number] {
+  if (it.war) return rowSpan(D, D.byId.get(it.war)!);
   const L = D.lanes[it.lane];
   const moments = PAD_TOP + L.momentRows * ROW_H;
   if (it.kind === 'event') return [L.top, L.top + moments];
@@ -312,6 +342,7 @@ export function layout(D: Prepared, V: View, E: Env, level: Level = 2): Scene {
     moments(c, L, laneTop + PAD_TOP);
     spans(c, L, laneTop + PAD_TOP + L.momentRows * ROW_H);
   }
+  ties(c);
   arrows(c);
   focusRing(c);
   dragPreview(c);
@@ -349,7 +380,7 @@ function moments(c: Ctx, L: PLane, rowsTop: number) {
     // Drafts and the open entry never hide in a cluster.
     const alone = (p: PItem) => p.draft || p.id === V.selected;
     if (cur && x - cur.x < CLUSTER_PX && !alone(it) && !alone(cur.members[0])) { cur.members.push(it); cur.last = x; continue; }
-    cur = { members: [it], x, last: x, r: 5, lead: it, lw: 0, row: 0, room: Infinity, before: -Infinity };
+    cur = { members: [it], x, last: x, r: it.rep.point === 'glyph' ? GLYPH / 2 : 5, lead: it, lw: 0, row: 0, room: Infinity, before: -Infinity };
     marks.push(cur);
   }
   // Each mark takes the first row its dot and label fit in; failing that, the row that frees up
@@ -403,10 +434,19 @@ function moments(c: Ctx, L: PLane, rowsTop: number) {
     const role = roleOf(V, it);
     const lit = ROLE_STROKE[role.trim()];
     const color = it.draft ? UMBER : L.color;
-    S.z[1].push({
-      t: 1, k: `m${it.id}`, a: 1, cls: `${it.draft ? 'tl-draft' : 'tl-mark'}${sel ? ' selected' : ''}${role}`, id: it.id, x: m.x, y, r: sel ? 6 : 5,
-      fill: it.approx || it.draft ? 'var(--panel)' : color, stroke: lit ?? (hot ? 'var(--ink)' : color), sw: lit ? 2.5 : sel ? 2 : 1.25, dash: it.approx || it.draft,
-    });
+    const cls = `${it.draft ? 'tl-draft' : 'tl-mark'}${sel ? ' selected' : ''}${role}`;
+    if (it.rep.point === 'glyph') {
+      // The kind's glyph on a disc of the panel's colour; the disc's edge says open, hovered or approximate.
+      const ring = lit ?? (hot ? 'var(--ink)' : it.approx || it.draft ? color : undefined);
+      S.z[1].push({ t: 1, k: `m${it.id}`, a: 1, cls, id: it.id, x: m.x, y, r: GLYPH / 2 + 2, fill: 'var(--panel)', stroke: ring, sw: lit ? 2.5 : sel ? 2 : 1.25, dash: !lit && !hot && (it.approx || it.draft) });
+      const g = sel ? GLYPH + 2 : GLYPH - 2;
+      S.z[1].push({ t: 6, k: `mg${it.id}`, a: 1, cls: `tl-glyph${role}`, id: it.id, x: m.x - g / 2, y: y - g / 2, w: g, g: it.rep.kind, color });
+    } else {
+      S.z[1].push({
+        t: 1, k: `m${it.id}`, a: 1, cls, id: it.id, x: m.x, y, r: sel ? 6 : 5,
+        fill: it.approx || it.draft ? 'var(--panel)' : color, stroke: lit ?? (hot ? 'var(--ink)' : color), sw: lit ? 2.5 : sel ? 2 : 1.25, dash: it.approx || it.draft,
+      });
+    }
     if (label) S.z[2].push({ t: 2, k: `mt${it.id}`, a: 1, cls: `tl-label${role}`, id: it.id, x: lx, y: y + 4, s: label, f: it.draft ? 'spanI' : 'ui', fill: it.draft ? UMBER : 'var(--ink)', anchor });
     const target: Target = { id: it.id, lane: L.id, x: hx, y: rowTop, w: hitW, h: ROW_H };
     if (sel && V.editable) target.grip = 'body';
@@ -453,39 +493,82 @@ function bar(c: Ctx, L: PLane, it: PItem, xa: number, xb: number, rowsTop: numbe
   const { V, E, S, x0, x1 } = c;
   const M = E.measure;
   const rowTop = rowsTop + it.row * ROW_H;
+  const look = it.rep.bar;
   const person = it.kind === 'person';
+  // Threads and ground lines are thin, with their name above; the rest are bars with it inside.
+  const thin = look === 'thread' || look === 'ground';
   const bh = person ? 20 : 22;
   const by = rowTop + (ROW_H - bh) / 2;
+  const ly = rowTop + 21.5;
   const rx = Math.max(xa, x0 - 4), rr = Math.min(xb, x1 + 4), rw = Math.max(3, rr - rx);
   const va = Math.max(xa, x0), vb = Math.min(xb, x1), vw = vb - va;
   const sel = V.selected === it.id, hot = sel || V.hover === it.id;
   const role = roleOf(V, it);
   const lit = ROLE_STROKE[role.trim()];
   const cls = `${it.draft ? 'tl-draft' : 'tl-mark'}${sel ? ' selected' : ''}${role}`;
-  S.boxes.set(it.id, { x: rx, y: by, w: rw, h: bh });
-  if (it.draft) {
+  const rcls = role.trim() || undefined;
+  const color = it.draft ? UMBER : L.color;
+  S.boxes.set(it.id, thin ? { x: rx, y: rowTop + 4, w: rw, h: ROW_H - 6 } : { x: rx, y: by, w: rw, h: bh });
+  if (it.draft && !thin) {
     S.z[1].push({ t: 0, k: `b${it.id}`, a: 1, cls, id: it.id, x: rx, y: by, w: rw, h: bh, r: person ? bh / 2 : 2, fill: tint(UMBER, 10), stroke: UMBER, sw: 1.5, dash: true });
   } else if (person) {
     S.z[1].push({ t: 0, k: `b${it.id}`, a: 1, cls, id: it.id, x: rx, y: by, w: rw, h: bh, r: bh / 2, fill: hot ? tint(L.color, 12) : 'var(--panel)', stroke: lit ?? (hot ? 'var(--ink)' : tint(L.color, 60)), sw: lit ? 2.5 : sel ? 2 : 1, dash: it.approx || it.endApprox });
+  } else if (thin) {
+    // A thread (an idea) or a ground line (a place): a line along the bottom of the row, dashed
+    // where a date is approximate, under a hit area as tall as the row.
+    const sw = look === 'ground' ? 5 : hot ? 3.5 : 2.5;
+    const stroke = lit ?? (look === 'ground' ? tint(color, sel ? 90 : hot ? 70 : 45) : hot && !it.draft ? 'var(--ink)' : color);
+    S.z[1].push({ t: 0, k: `b${it.id}`, a: 1, cls, id: it.id, x: rx, y: rowTop + 4, w: rw, h: ROW_H - 6, fill: 'transparent' });
+    const cut = Math.min(24, (xb - xa) / 3);
+    const pieces: [number, number, boolean][] = [];
+    const a0 = it.approx ? xa + cut : xa, b0 = it.endApprox ? xb - cut : xb;
+    if (it.approx || it.draft) pieces.push([xa, it.draft ? xb : a0, true]);
+    if (!it.draft) pieces.push([a0, b0, false]);
+    if (it.endApprox && !it.draft) pieces.push([b0, xb, true]);
+    pieces.forEach(([p, q, dash], n) => {
+      const pa = Math.max(p, x0 - 8), pb = Math.min(q, x1 + 8);
+      if (pb > pa) S.z[1].push({ t: 3, k: `bl${n}${it.id}`, a: 1, cls: rcls, x1: pa, y1: ly, x2: pb, y2: ly, stroke, sw, dash });
+    });
+  } else if (look === 'arrow' && xb <= x1 + 4 && xb - xa > 14) {
+    // A migration: the bar ends in an arrow point.
+    const tip = Math.min(10, (xb - xa) / 3);
+    S.z[1].push({ t: 7, k: `b${it.id}`, a: 1, cls, id: it.id, d: `M${rx} ${by}H${xb - tip}L${xb} ${by + bh / 2}L${xb - tip} ${by + bh}H${rx}Z`, fill: tint(L.color, hot ? 30 : 16), stroke: lit ?? (sel ? 'var(--ink)' : undefined), sw: lit ? 2.5 : 2 });
   } else {
     S.z[1].push({ t: 0, k: `b${it.id}`, a: 1, cls, id: it.id, x: rx, y: by, w: rw, h: bh, r: 2, fill: tint(L.color, hot ? 30 : 16), stroke: lit ?? (sel ? 'var(--ink)' : undefined), sw: lit ? 2.5 : 2 });
+  }
+  if (!thin && !person && !it.draft) {
     // The start is a solid edge in the lane's pigment, dashed when it's approximate; so is an approximate end.
-    if (xa >= x0 - 3) S.z[1].push({ t: 3, k: `ba${it.id}`, a: 1, cls: role.trim() || undefined, x1: xa + 1.5, y1: by, x2: xa + 1.5, y2: by + bh, stroke: L.color, sw: 3, dash: it.approx });
-    if (it.endApprox && xb <= x1 + 3) S.z[1].push({ t: 3, k: `bz${it.id}`, a: 1, cls: role.trim() || undefined, x1: xb - 1, y1: by, x2: xb - 1, y2: by + bh, stroke: L.color, sw: 2, dash: true });
+    if (xa >= x0 - 3) S.z[1].push({ t: 3, k: `ba${it.id}`, a: 1, cls: rcls, x1: xa + 1.5, y1: by, x2: xa + 1.5, y2: by + bh, stroke: L.color, sw: 3, dash: it.approx });
+    if (it.endApprox && xb <= x1 + 3) S.z[1].push({ t: 3, k: `bz${it.id}`, a: 1, cls: rcls, x1: xb - 1, y1: by, x2: xb - 1, y2: by + bh, stroke: L.color, sw: 2, dash: true });
+  }
+  // Its kind's glyph: at the start of a bar that has one, where a thread starts, or standing on a ground line.
+  let pad = 8, gx = 0;
+  if (thin && xa >= x0 - GLYPH) {
+    const g = look === 'ground' ? 18 : 15;
+    gx = xa;
+    const gy = look === 'ground' ? ly - g + 1 : ly - g / 2;
+    if (look === 'thread') S.z[1].push({ t: 1, k: `bd${it.id}`, a: 1, cls: rcls, x: xa, y: ly, r: g / 2 + 1, fill: 'var(--panel)' });
+    S.z[1].push({ t: 6, k: `bg${it.id}`, a: 1, cls: `tl-glyph${role}`, id: it.id, x: xa - g / 2, y: gy, w: g, g: it.rep.kind, color });
+  } else if (it.rep.badge && vw >= 24) {
+    S.z[1].push({ t: 6, k: `bg${it.id}`, a: 1, cls: `tl-glyph${role}`, id: it.id, x: va + 6, y: by + (bh - 14) / 2, w: 14, g: it.rep.kind, color });
+    pad = 24;
   }
   // Hit target: the bar, at least 24 px wide, and its label when that sits after it.
   let hx = rx, hw = rw;
   if (hw < MIN_HIT) { hx = rx + rw / 2 - MIN_HIT / 2; hw = MIN_HIT; }
-  // Label: inside, else just after if there's room before the next bar in the row, else cut short, else hidden.
+  // Label: inside (above a thin line), else just after if there's room before the next bar in the row, else cut short, else hidden.
   if (vw >= 3) {
     const title = titleOf(it);
-    const thumb = it.thumb && vw >= 64 ? it.thumb : undefined;
-    const pad = thumb ? 26 : 8;
+    const thumb = !thin && it.thumb && vw >= 64 + pad - 8 ? it.thumb : undefined;
+    if (thumb) {
+      S.z[1].push({ t: 4, k: `bi${it.id}`, a: 1, cls: `${person ? 'tl-thumb round' : 'tl-thumb'}${role}`, x: va + pad - 4 + (person ? -2 : 0), y: by + (bh - 18) / 2, w: 18, h: 18, href: thumb });
+      pad += 18;
+    }
+    if (thin) pad = gx && va <= gx + 1 ? 12 : 4;
     const lw = M('span', title);
-    const ty = by + bh / 2 + 4.5;
+    const ty = thin ? rowTop + 15 : by + bh / 2 + 4.5;
     const ink = it.draft ? UMBER : 'var(--ink)';
     const lcls = `tl-label${role}`;
-    if (thumb) S.z[1].push({ t: 4, k: `bi${it.id}`, a: 1, cls: `${person ? 'tl-thumb round' : 'tl-thumb'}${role}`, x: va + (person ? 2 : 4), y: by + (bh - 18) / 2, w: 18, h: 18, href: thumb });
     if (lw + pad + 6 <= vw) {
       S.z[2].push({ t: 2, k: `bt${it.id}`, a: 1, cls: lcls, id: it.id, x: va + pad, y: ty, s: title, f: it.draft ? 'spanI' : 'span', fill: ink });
     } else {
@@ -502,6 +585,7 @@ function bar(c: Ctx, L: PLane, it: PItem, xa: number, xb: number, rowsTop: numbe
   }
   const target: Target = { id: it.id, lane: L.id, x: hx, y: rowTop, w: hw, h: ROW_H };
   S.targets.push(target);
+  if (look === 'war') ticks(c, L, it, by, bh, rowTop);
   if (!sel || !V.editable || it.draft) return;
   // The open entry can be dragged: its body moves both dates, an end (when the bar is wide enough to tell them apart) only that one.
   target.grip = 'body';
@@ -512,6 +596,40 @@ function bar(c: Ctx, L: PLane, it: PItem, xa: number, xb: number, rowsTop: numbe
   };
   if (xa >= x0) grip('start', xa + 1);
   if (!it.open && xb <= x1) grip('end', xb - 1);
+}
+
+/** A war's battles: a tick each across its bar, a target 24 px wide on top of the bar's. */
+function ticks(c: Ctx, L: PLane, w: PItem, by: number, bh: number, rowTop: number) {
+  const { V, S, X, x0, x1 } = c;
+  for (const b of w.ticks ?? []) {
+    const x = X(b.s);
+    if (x < x0 - 2 || x > x1 + 2) continue;
+    const sel = V.selected === b.id, hot = sel || V.hover === b.id;
+    const role = roleOf(V, b);
+    const lit = ROLE_STROKE[role.trim()];
+    S.z[2].push({ t: 3, k: `tk${b.id}`, a: 1, cls: `tl-mark tl-tick-mark${sel ? ' selected' : ''}${role}`, id: b.id, x1: x, y1: by - (hot ? 3 : 1), x2: x, y2: by + bh + (hot ? 3 : 1), stroke: lit ?? 'var(--ink)', sw: hot ? 4 : 2.5, dash: b.approx });
+    S.boxes.set(b.id, { x: x - 2, y: by, w: 4, h: bh });
+    const t: Target = { id: b.id, lane: L.id, x: x - MIN_HIT / 2, y: rowTop, w: MIN_HIT, h: ROW_H };
+    if (sel && V.editable) t.grip = 'body';
+    S.targets.push(t);
+  }
+}
+
+/** A work's point joined to its maker's lifeline by a thin line, when both are drawn. */
+function ties(c: Ctx) {
+  const { D, S } = c;
+  for (const L of D.lanes) for (const w of L.events) {
+    if (!w.maker) continue;
+    const a = S.boxes.get(w.id), b = S.boxes.get(w.maker);
+    if (!a || !b) continue;
+    const x = a.x + a.w / 2;
+    if (x < b.x || x > b.x + b.w) continue;
+    const down = b.y > a.y;
+    const y1 = down ? a.y + a.h : a.y, y2 = down ? b.y : b.y + b.h;
+    const color = D.lanes[D.byId.get(w.maker)!.lane].color;
+    S.z[0].push({ t: 3, k: `tie${w.id}`, a: 1, cls: 'tl-tie', x1: x, y1, x2: x, y2, stroke: tint(color, 70), sw: 1.25 });
+    S.z[0].push({ t: 1, k: `tied${w.id}`, a: 1, cls: 'tl-tie', x, y: y2, r: 2, fill: color });
+  }
 }
 
 function sliverCluster(c: Ctx, L: PLane, g: Sliver, rowsTop: number) {

@@ -42,7 +42,6 @@ export function passageCandidates(articleKey: string, links: WikiLink[], start: 
 
 /** Kinds that can't be drawn from Wikipedia yet, and why (docs/design.md, Becomes). */
 export const CANT_ADD: Partial<Record<SubjectKind, string>> = {
-  place: 'A place on its own isn’t an event. Keep the highlight, or highlight what happened there.',
   idea: 'Ideas can’t be drawn on the map and timeline yet. Keep the highlight.',
   polity: 'Polities come from the territory tools for now. Keep the highlight.',
 };

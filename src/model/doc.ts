@@ -77,9 +77,11 @@ export function validateItem(item: TimelineItem, categoryIds: Set<string>): stri
   if (!item.id) p.push('an item is missing its id');
   if (!item.title?.trim()) p.push(`${name} has no title`);
   if (!KINDS.includes(item.kind)) p.push(`${name} has unknown kind "${item.kind}"`);
-  if (!item.start || !isValidHistDate(item.start)) p.push(`${name} has an invalid start date`);
+  // A place may have no dates (on the map, not the timeline), or only its founding (still there).
+  const place = item.subject === 'place';
+  if (item.start ? !isValidHistDate(item.start) : !place) p.push(`${name} has an invalid start date`);
   if (item.end && !isValidHistDate(item.end)) p.push(`${name} has an invalid end date`);
-  if (item.kind === 'span' && !item.end) p.push(`${name} is a span but has no end date`);
+  if (item.kind === 'span' && !item.end && !place) p.push(`${name} is a span but has no end date`);
   if (item.kind === 'event' && item.end) p.push(`${name} is an event but has an end date`);
   if (item.start && item.end && isValidHistDate(item.start) && isValidHistDate(item.end) && compareHistDate(item.end, item.start) < 0) {
     p.push(`${name} ends before it starts`);
@@ -249,6 +251,7 @@ export function parseDoc(json: string): TimelineDoc {
   if (r.schemaVersion === 4) r = migrate4to5(r);
   if (r.schemaVersion === 5) r = migrate5to6(r);
   if (r.schemaVersion === 6) r = migrate6to7(r);
+  if (r.schemaVersion === 7) r = migrate7to8(r);
   const doc: TimelineDoc = {
     schemaVersion: SCHEMA_VERSION,
     id: r.id ?? newId('doc'),
@@ -338,6 +341,11 @@ function migrate5to6(r: Partial<TimelineDoc>): Partial<TimelineDoc> {
 /** v7 adds optional `subject` and `region` on entries; older entries keep neither and draw as their `kind`. */
 function migrate6to7(r: Partial<TimelineDoc>): Partial<TimelineDoc> {
   return { ...r, schemaVersion: 7 };
+}
+
+/** v8 lets a place (`subject: 'place'`) have no dates, or only its founding; every v7 entry is already valid. */
+function migrate7to8(r: Partial<TimelineDoc>): Partial<TimelineDoc> {
+  return { ...r, schemaVersion: 8 };
 }
 
 export function serializeDoc(doc: TimelineDoc): string {

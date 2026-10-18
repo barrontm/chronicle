@@ -1,5 +1,5 @@
 import { formatRange, jsDateToDecimalYear, moveDates, precisionOf, toDecimalYear } from '../../model/dates';
-import type { HistDate, TimelineItem } from '../../model/types';
+import type { DatedItem, HistDate, Relation, TimelineItem } from '../../model/types';
 import { DEEP_LIMITS, panBy, windowAround, zoomAround, type YearWindow } from '../timeNav';
 import { attachGestures } from './gestures';
 import { AXIS_H, describeEntry, hitTest, laneAt, layout, maxScroll, prepare, rowSpan, stepActive, type LaneInput, type Level, type Prepared, type StepKey, type View } from './layout';
@@ -13,12 +13,14 @@ import { FONTS, type FontKey, type Link, type Measure, type Scene, type Target }
  */
 
 export interface TimelineData {
-  items: TimelineItem[];
+  items: DatedItem[];
   lanes: LaneInput[];
   prominence?: (id: string) => number;
   thumbFor?: (item: TimelineItem) => string | undefined;
   /** Claude's drafts waiting for Bob, drawn as dashed ghosts. */
-  drafts?: TimelineItem[];
+  drafts?: DatedItem[];
+  /** Connections: a war's battles become ticks on its bar, a work is joined to its maker. */
+  relations?: Relation[];
 }
 
 /** New dates for an entry Bob dragged (or moved with Alt and an arrow key). */
@@ -103,7 +105,7 @@ export function createTimeline(host: HTMLElement, cb: TimelineCallbacks, initial
   let tween: { from: YearWindow; to: YearWindow; t0: number | null } | null = null;
   let reported: { start: number; end: number; left: number; width: number } | null = null;
   let hasData = false;
-  let source = new Map<string, TimelineItem>();
+  let source = new Map<string, DatedItem>();
   let draftKey = '';
   V.editable = !!cb.onMove;
 
@@ -286,7 +288,7 @@ export function createTimeline(host: HTMLElement, cb: TimelineCallbacks, initial
     else if (bottom > V.scrollY + viewH) V.scrollY = clamp(bottom - viewH + 4, 0, maxScroll(D, size.h));
   };
   /** One step for Alt + arrow: a twentieth of the view, but at least one unit of how precisely the dates are known. */
-  const nudge = (it: TimelineItem, dir: number): MovedDates => {
+  const nudge = (it: DatedItem, dir: number): MovedDates => {
     const unit = { year: 1, month: 1 / 12, day: 1 / 365.25 }[precisionOf(it.start)];
     return moveDates(it, dir * Math.max((V.win.end - V.win.start) / 20, unit));
   };
@@ -337,7 +339,7 @@ export function createTimeline(host: HTMLElement, cb: TimelineCallbacks, initial
 
   return {
     setData(d) {
-      D = prepare(d.items, d.lanes, { now: V.now, prominence: d.prominence, thumbFor: d.thumbFor, drafts: d.drafts });
+      D = prepare(d.items, d.lanes, { now: V.now, prominence: d.prominence, thumbFor: d.thumbFor, drafts: d.drafts, relations: d.relations });
       source = new Map(d.items.map((i) => [i.id, i]));
       if (V.active) setActive(D.byId.has(V.active) ? V.active : undefined);
       // New drafts from Claude are brought into view, as the map frames them.

@@ -1,3 +1,5 @@
+import type { SubjectKind } from '../../model/types';
+
 /**
  * The scene is the contract between the layout (pure) and the painter. Every frame the layout
  * turns (entries, window, size, level) into flat lists of primitives in screen pixels, already
@@ -39,7 +41,11 @@ export interface Ln extends Base { t: 3; x1: number; y1: number; x2: number; y2:
 export interface Img extends Base { t: 4; x: number; y: number; w: number; h: number; href: string }
 /** An arrow between two entries: its ends' ids, and the arrowhead (a marker per role). */
 export interface Arc extends Base { t: 5; d: string; stroke: string; sw?: number; dash?: boolean; head?: ArcRole; from?: string; to?: string }
-export type Prim = Rect | Dot | Txt | Ln | Img | Arc;
+/** A kind's glyph (its representation's), `w` px square, drawn in `color`. */
+export interface Use extends Base { t: 6; x: number; y: number; w: number; g: SubjectKind; color: string }
+/** A filled path, such as a migration's bar ending in an arrow point. */
+export interface Shape extends Base { t: 7; d: string; fill: string; stroke?: string; sw?: number }
+export type Prim = Rect | Dot | Txt | Ln | Img | Arc | Use | Shape;
 
 /** Who an arrow links: influenced by, influenced, otherwise connected, or Claude's draft. */
 export type ArcRole = 'infl-by' | 'infl-on' | 'linked' | 'draft';

@@ -1,0 +1,393 @@
+{
+ "schemaVersion": 8,
+ "id": "doc_kinds",
+ "title": "Every kind (test fixture)",
+ "categories": [
+  {
+   "id": "politics",
+   "label": "Politics & government",
+   "color": "var(--pig-lapis)"
+  },
+  {
+   "id": "war",
+   "label": "War & conflict",
+   "color": "var(--pig-cinnabar)"
+  },
+  {
+   "id": "ideas",
+   "label": "Ideas & works",
+   "color": "var(--pig-indigo)"
+  },
+  {
+   "id": "society",
+   "label": "Society & economy",
+   "color": "var(--pig-ochre)"
+  }
+ ],
+ "items": [
+  {
+   "id": "athens_p",
+   "kind": "span",
+   "title": "Athens",
+   "categoryId": "politics",
+   "subject": "polity",
+   "updatedAt": 1760000000000,
+   "start": {
+    "y": -507
+   },
+   "end": {
+    "y": -321
+   }
+  },
+  {
+   "id": "delian",
+   "kind": "span",
+   "title": "Delian League",
+   "categoryId": "politics",
+   "subject": "polity",
+   "updatedAt": 1760000000000,
+   "start": {
+    "y": -477
+   },
+   "end": {
+    "y": -403
+   }
+  },
+  {
+   "id": "classical",
+   "kind": "span",
+   "title": "Classical Greece",
+   "categoryId": "politics",
+   "subject": "period",
+   "updatedAt": 1760000000000,
+   "start": {
+    "y": -479
+   },
+   "end": {
+    "y": -322
+   }
+  },
+  {
+   "id": "ostracism",
+   "kind": "event",
+   "title": "Ostracism of Themistocles",
+   "categoryId": "politics",
+   "subject": "event",
+   "updatedAt": 1760000000000,
+   "start": {
+    "y": -470,
+    "approx": true
+   }
+  },
+  {
+   "id": "persian",
+   "kind": "span",
+   "title": "Second Persian invasion of Greece",
+   "categoryId": "war",
+   "subject": "war",
+   "updatedAt": 1760000000000,
+   "start": {
+    "y": -479
+   },
+   "end": {
+    "y": -478
+   }
+  },
+  {
+   "id": "pelop",
+   "kind": "span",
+   "title": "Peloponnesian War",
+   "categoryId": "war",
+   "subject": "war",
+   "updatedAt": 1760000000000,
+   "start": {
+    "y": -430
+   },
+   "end": {
+    "y": -403
+   }
+  },
+  {
+   "id": "salamis",
+   "kind": "event",
+   "title": "Battle of Salamis",
+   "categoryId": "war",
+   "subject": "battle",
+   "updatedAt": 1760000000000,
+   "start": {
+    "y": -479
+   }
+  },
+  {
+   "id": "plataea",
+   "kind": "event",
+   "title": "Battle of Plataea",
+   "categoryId": "war",
+   "subject": "battle",
+   "updatedAt": 1760000000000,
+   "start": {
+    "y": -478
+   }
+  },
+  {
+   "id": "amphipolis",
+   "kind": "event",
+   "title": "Battle of Amphipolis",
+   "categoryId": "war",
+   "subject": "battle",
+   "updatedAt": 1760000000000,
+   "start": {
+    "y": -421
+   }
+  },
+  {
+   "id": "aegos",
+   "kind": "event",
+   "title": "Battle of Aegospotami",
+   "categoryId": "war",
+   "subject": "battle",
+   "updatedAt": 1760000000000,
+   "start": {
+    "y": -404
+   }
+  },
+  {
+   "id": "mantinea",
+   "kind": "event",
+   "title": "Battle of Mantinea",
+   "categoryId": "war",
+   "subject": "battle",
+   "updatedAt": 1760000000000,
+   "start": {
+    "y": -361
+   }
+  },
+  {
+   "id": "sophists",
+   "kind": "span",
+   "title": "Sophists",
+   "categoryId": "ideas",
+   "subject": "idea",
+   "updatedAt": 1760000000000,
+   "start": {
+    "y": -459,
+    "approx": true
+   },
+   "end": {
+    "y": -379,
+    "approx": true
+   }
+  },
+  {
+   "id": "histories",
+   "kind": "event",
+   "title": "Histories",
+   "categoryId": "ideas",
+   "subject": "work",
+   "updatedAt": 1760000000000,
+   "start": {
+    "y": -429,
+    "approx": true
+   }
+  },
+  {
+   "id": "republic",
+   "kind": "event",
+   "title": "Republic",
+   "categoryId": "ideas",
+   "subject": "work",
+   "updatedAt": 1760000000000,
+   "start": {
+    "y": -374,
+    "approx": true
+   }
+  },
+  {
+   "id": "herodotus",
+   "kind": "person",
+   "title": "Herodotus",
+   "categoryId": "ideas",
+   "subject": "person",
+   "updatedAt": 1760000000000,
+   "start": {
+    "y": -483,
+    "approx": true
+   },
+   "end": {
+    "y": -424,
+    "approx": true
+   }
+  },
+  {
+   "id": "plato",
+   "kind": "person",
+   "title": "Plato",
+   "categoryId": "ideas",
+   "subject": "person",
+   "updatedAt": 1760000000000,
+   "start": {
+    "y": -427
+   },
+   "end": {
+    "y": -347
+   }
+  },
+  {
+   "id": "trireme",
+   "kind": "event",
+   "title": "Trireme fleet of Themistocles",
+   "categoryId": "society",
+   "subject": "technology",
+   "updatedAt": 1760000000000,
+   "start": {
+    "y": -482
+   }
+  },
+  {
+   "id": "laurion",
+   "kind": "span",
+   "title": "Laurion silver boom",
+   "categoryId": "society",
+   "subject": "economy",
+   "updatedAt": 1760000000000,
+   "start": {
+    "y": -482
+   },
+   "end": {
+    "y": -412
+   }
+  },
+  {
+   "id": "cleruchies",
+   "kind": "span",
+   "title": "Athenian cleruchies",
+   "categoryId": "society",
+   "subject": "migration",
+   "updatedAt": 1760000000000,
+   "start": {
+    "y": -449,
+    "approx": true
+   },
+   "end": {
+    "y": -404
+   }
+  },
+  {
+   "id": "olynthus",
+   "kind": "span",
+   "title": "Olynthus",
+   "categoryId": "society",
+   "subject": "place",
+   "updatedAt": 1760000000000,
+   "start": {
+    "y": -431
+   },
+   "end": {
+    "y": -347
+   },
+   "places": [
+    {
+     "name": "Olynthus",
+     "lat": 40.295,
+     "lon": 23.354,
+     "role": "site"
+    }
+   ]
+  },
+  {
+   "id": "athens",
+   "kind": "span",
+   "title": "Athens",
+   "categoryId": "society",
+   "subject": "place",
+   "updatedAt": 1760000000000,
+   "start": {
+    "y": -3000,
+    "approx": true
+   },
+   "places": [
+    {
+     "name": "Athens",
+     "lat": 37.984,
+     "lon": 23.728,
+     "role": "site"
+    }
+   ]
+  },
+  {
+   "id": "knossos",
+   "kind": "span",
+   "title": "Knossos",
+   "categoryId": "society",
+   "subject": "place",
+   "updatedAt": 1760000000000,
+   "places": [
+    {
+     "name": "Knossos",
+     "lat": 35.298,
+     "lon": 25.163,
+     "role": "site"
+    }
+   ]
+  }
+ ],
+ "series": [],
+ "territories": [],
+ "flows": [],
+ "notes": [],
+ "sources": [],
+ "relations": [
+  {
+   "id": "r_1",
+   "fromId": "salamis",
+   "toId": "persian",
+   "type": "part-of",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_2",
+   "fromId": "plataea",
+   "toId": "persian",
+   "type": "part-of",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_3",
+   "fromId": "amphipolis",
+   "toId": "pelop",
+   "type": "part-of",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_4",
+   "fromId": "aegos",
+   "toId": "pelop",
+   "type": "part-of",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_5",
+   "fromId": "herodotus",
+   "toId": "histories",
+   "type": "related",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_6",
+   "fromId": "plato",
+   "toId": "republic",
+   "type": "related",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_7",
+   "fromId": "laurion",
+   "toId": "trireme",
+   "type": "caused",
+   "updatedAt": 1760000000000
+  }
+ ],
+ "highlights": [],
+ "deleted": {},
+ "updatedAt": 1760000000000
+}
