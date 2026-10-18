@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
+  axisTicks,
   compareHistDate,
+  formatTickYear,
+  toDecimalYear,
   formatYear,
   fromOwidYear,
   formatAxisYear,
@@ -67,6 +70,16 @@ describe('formatting', () => {
     expect(formatAxisYear(-500)).toBe('500 BCE');
     expect(formatAxisYear(0)).toBe('1 CE');
     expect(formatAxisYear(1500)).toBe('1500');
+  });
+  it('labels year 0 as the round "1 CE" between centuries, and as 1 BCE when the ticks are single years', () => {
+    expect(axisTicks(-250, 250, 1000).ticks.find((t) => t.y === 0)?.label).toBe('1 CE');
+    expect(axisTicks(-6, 6, 1000).ticks.find((t) => t.y === 0)?.label).toBe('1 BCE');
+    expect(axisTicks(-6, 6, 1000).ticks.find((t) => t.y === -2)?.label).toBe('3 BCE');
+  });
+  it('reads deep time in words', () => {
+    expect(formatTickYear(-2_800_000, 1e5)).toBe('2.8 million BCE');
+    expect(formatTickYear(-250_000, 5e4)).toBe('250,000 BCE');
+    expect(formatTickYear(-5000, 1000)).toBe('5000 BCE');
   });
   it('collapses plain BCE ranges', () => {
     expect(formatRange({ y: -430 }, { y: -403 })).toBe('431–404 BCE');
@@ -143,5 +156,45 @@ describe('fromOwidYear', () => {
     expect(fromOwidYear(0)).toBe(0);
     expect(fromOwidYear(1)).toBe(1);
     expect(fromOwidYear(2023)).toBe(2023);
+  });
+});
+
+describe('axis ticks', () => {
+  const steps = (s: number, e: number, w = 1200) => axisTicks(s, e, w);
+  it('spans deep time with sensible steps', () => {
+    const t = steps(-3_000_000, 2100);
+    expect(t.unit).toBe('year');
+    expect(t.step).toBe(200_000);
+    expect(t.ticks[1].label).toBe('2.8 million BCE');
+    expect(t.ticks[0].label).toBe('3 million BCE');
+    expect(t.ticks.at(-1)!.label).toBe('1 CE');
+  });
+  it('steps down through millennia, centuries and decades', () => {
+    expect(steps(-800, 2030).step).toBe(200);
+    expect(steps(-500, -400).step).toBe(10);
+    expect(steps(-500, -400).ticks.map((t) => t.label).slice(0, 3)).toEqual(['500 BCE', '490 BCE', '480 BCE']);
+    expect(steps(1900, 1920).step).toBe(2);
+  });
+  it('switches to months with the year as a heading', () => {
+    const t = steps(1914, 1916);
+    expect(t.unit).toBe('month');
+    expect(t.ticks[0]).toEqual({ y: 1914, label: 'Jan', major: true });
+    expect(t.heads.map((h) => h.label)).toEqual(['1914', '1915', '1916']);
+  });
+  it('goes down to days, with the month as a heading', () => {
+    const start = toDecimalYear({ y: 1944, m: 6, d: 3 });
+    const end = toDecimalYear({ y: 1944, m: 6, d: 10 });
+    const t = steps(start, end);
+    expect(t.unit).toBe('day');
+    expect(t.ticks.map((x) => x.label)).toEqual(['3', '4', '5', '6', '7', '8', '9', '10']);
+    expect(t.heads[0].label).toBe('June 1944');
+  });
+  it('counts days across a leap February in a BCE year', () => {
+    const t = steps(toDecimalYear({ y: -4, m: 2, d: 25 }), toDecimalYear({ y: -4, m: 3, d: 2 }));
+    expect(t.ticks.map((x) => x.label)).toEqual(['25', '26', '27', '28', '29', '1', '2']);
+    expect(t.heads.map((h) => h.label)).toEqual(['February 5 BCE', 'March 5 BCE']);
+  });
+  it('never makes more than a few hundred ticks', () => {
+    expect(steps(-3_200_000, 2200, 20_000).ticks.length).toBeLessThanOrEqual(401);
   });
 });

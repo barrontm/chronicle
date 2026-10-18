@@ -6,12 +6,14 @@ import { decimalYearToJsDate, formatAxisYear, formatYear, jsDateToDecimalYear, t
 import type { Category, MediaRef, Relation, TimelineItem } from '../model/types';
 import { anchors, arcPath, influenceArrows, influenceClasses } from './influenceLinks';
 import { axisLabelEvery, axisStepYears, labelWidthPx, narrowLabels } from './labels';
+import { createTimeline, type TimelineHandle } from './timeline/createTimeline';
 import { focusWindow, panBy as panWindow, TIME_MAX, TIME_MIN, zoomAround, ZOOM_MAX_YEARS, ZOOM_MIN_YEARS, type YearWindow } from './timeNav';
 import { escapeHtml } from './util';
 
 /**
- * Adapter around vis-timeline. This is the ONLY file that imports vis-timeline,
- * so the renderer can be swapped (e.g. for deep time) without touching the rest.
+ * The timeline. This is the ONLY file that imports a renderer: vis-timeline for the classic
+ * layout, and our own (`./timeline/`) under "Try the new layout", so the rest of the app talks
+ * to either through `TimelineControl`.
  */
 
 export interface VisibleWindow {
@@ -51,7 +53,93 @@ interface Props {
   /** The map's current year as a draggable playhead. Omit when the map is hidden. */
   year?: number;
   onYear?: (year: number) => void;
+  /** 'next' draws with the new renderer (the new layout); vis-timeline otherwise. */
+  renderer?: 'classic' | 'next';
+  /** How much Bob has made of an entry; a cluster is led by its most prominent member. */
+  prominence?: (id: string) => number;
 }
+
+export const TimelineView = forwardRef<TimelineControl, Props>(function TimelineView(props, ref) {
+  // A different key swaps the renderer cleanly when the setting changes.
+  return props.renderer === 'next'
+    ? <NextTimeline key="next" ref={ref} {...props} />
+    : <ClassicTimeline key="classic" ref={ref} {...props} />;
+});
+
+/** The window that frames an entry with its connected entries, counting only the ones shown. */
+function focusTarget(id: string, items: TimelineItem[], relations: Relation[], shown: (id: string) => boolean): YearWindow | undefined {
+  const item = items.find((i) => i.id === id);
+  if (!item || !shown(id)) return undefined;
+  const otherIds = new Set(relations.flatMap((r) => (r.fromId === id ? [r.toId] : r.toId === id ? [r.fromId] : [])));
+  return focusWindow(item, items.filter((i) => otherIds.has(i.id) && shown(i.id)));
+}
+
+const NextTimeline = forwardRef<TimelineControl, Props>(function NextTimeline({ items, categories, relations, selectedId, thumbFor, onSelect, onAddAt, onWindow, onCanGoBack, year, onYear, prominence }, ref) {
+  const host = useRef<HTMLDivElement>(null);
+  const tl = useRef<TimelineHandle | null>(null);
+  const cb = useRef({ onSelect, onAddAt, onWindow, onYear, onCanGoBack });
+  cb.current = { onSelect, onAddAt, onWindow, onYear, onCanGoBack };
+  const latest = useRef({ items, relations, categories });
+  latest.current = { items, relations, categories };
+  const beforeFocus = useRef<YearWindow | null>(null);
+
+  useEffect(() => {
+    const t = createTimeline(host.current!, {
+      onSelect: (id) => cb.current.onSelect(id),
+      onAddAt: (y, lane) => cb.current.onAddAt(y, lane),
+      onWindow: (w) => cb.current.onWindow(w),
+      onYear: (y) => cb.current.onYear?.(y),
+    }, { window: { start: -800, end: 2030 }, level: 2 });
+    tl.current = t;
+    return () => { t.dispose(); tl.current = null; };
+  }, []);
+
+  useEffect(() => {
+    tl.current?.setData({
+      items,
+      lanes: categories.map((c) => ({ id: c.id, label: c.label, color: c.color })),
+      prominence,
+      thumbFor: (i) => (i.media?.[0] ? thumbFor(i.media[0]) : undefined),
+    });
+  }, [items, categories, thumbFor, prominence]);
+
+  useEffect(() => { tl.current?.setPlayYear(year); }, [year]);
+
+  const focus = (id: string) => {
+    const t = tl.current;
+    const { items, relations, categories } = latest.current;
+    const shownCats = new Set(categories.map((c) => c.id));
+    const byId = new Map(items.map((i) => [i.id, i]));
+    const target = t && focusTarget(id, items, relations, (x) => shownCats.has(byId.get(x)?.categoryId ?? ''));
+    if (!t || !target) return;
+    if (!beforeFocus.current) {
+      beforeFocus.current = t.getWindow();
+      cb.current.onCanGoBack(true);
+    }
+    t.setWindow(target, true);
+  };
+
+  useEffect(() => {
+    tl.current?.setSelected(selectedId);
+    // Opening an entry, from the timeline or a link, zooms to its time with its connections in view.
+    if (selectedId) focus(selectedId);
+  }, [selectedId]);
+
+  useImperativeHandle(ref, () => ({
+    setWindow: (w, animate) => tl.current?.setWindow(w, animate),
+    zoomBy: (f) => tl.current?.zoomBy(f),
+    panBy: (years) => tl.current?.panBy(years),
+    fit: () => tl.current?.fit(),
+    focus,
+    back: () => {
+      if (beforeFocus.current) tl.current?.setWindow(beforeFocus.current, true);
+      beforeFocus.current = null;
+      cb.current.onCanGoBack(false);
+    },
+  }));
+
+  return <div ref={host} className="timeline-host tl-host" data-testid="timeline" tabIndex={0} aria-label="Timeline. Drag or scroll to move through time; Ctrl or ⌘ and scroll, or pinch, to zoom." />;
+});
 
 const YEAR_MS = 365.25 * 24 * 3600 * 1000;
 
@@ -155,7 +243,7 @@ function makeArrowLayer(center: Element): SVGSVGElement {
   return svg;
 }
 
-export const TimelineView = forwardRef<TimelineControl, Props>(function TimelineView({ items, categories, relations, selectedId, thumbFor, onSelect, onAddAt, onWindow, onCanGoBack, year, onYear }, ref) {
+const ClassicTimeline = forwardRef<TimelineControl, Props>(function ClassicTimeline({ items, categories, relations, selectedId, thumbFor, onSelect, onAddAt, onWindow, onCanGoBack, year, onYear }, ref) {
   const host = useRef<HTMLDivElement>(null);
   // Names are measured again once the font arrives, so long names aren't cut off at the edge.
   const [fontReady, setFontReady] = useState(false);
