@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { parseDoc } from './doc';
-import { eraRegions, ELSEWHERE, isEra } from './eras';
+import { entryDimensions, eraRegions, ELSEWHERE, isEra } from './eras';
 import type { Highlight, Relation, TimelineItem } from './types';
 
 const NOW = 2026.8;
@@ -77,5 +77,17 @@ describe('eraRegions', () => {
     expect(eraRegions([ev('x', 1)], [], [], NOW)).toEqual([]);
     const [r] = eraRegions([{ ...span('modern', 1900, 0, { subject: 'period' }), end: undefined }], [], [], NOW);
     expect(r.eras[0].e).toBe(NOW);
+  });
+});
+
+describe('entryDimensions', () => {
+  it('takes an entry’s own dimension, else the one most of its highlights have, first in pigment order on a tie', () => {
+    const items = [ev('own', 1, { dimension: 'religious' }), ev('voted', 2), ev('tie', 3), ev('none', 4)];
+    const hs = [hl('h1', ['own', 'voted'], 'economic'), hl('h2', ['voted'], 'social'), hl('h3', ['voted'], 'social'), hl('h4', ['tie'], 'social'), hl('h5', ['tie'], 'political'), hl('h6', ['none'])];
+    const dims = entryDimensions(items, hs);
+    expect(dims.get('own')).toBe('religious');
+    expect(dims.get('voted')).toBe('social');
+    expect(dims.get('tie')).toBe('political');
+    expect(dims.has('none')).toBe(false);
   });
 });

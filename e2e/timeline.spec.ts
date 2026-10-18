@@ -192,6 +192,7 @@ test('the Eras stop shows each era in its region’s row, with its dimension str
   const eras = page.getByTestId('time-bar').getByRole('button', { name: 'Eras' });
   await eras.click();
   await expect(eras).toHaveAttribute('aria-pressed', 'true');
+  await expect(timeline).toHaveAttribute('data-level', '0');
   const region = timeline.locator('text.tl-region', { hasText: 'Greece' });
   const band = timeline.locator('.tl-era[data-id=i_classical]');
   await expect(region).toBeVisible();
@@ -206,12 +207,62 @@ test('the Eras stop shows each era in its region’s row, with its dimension str
   expect(await strip.count()).toBeGreaterThanOrEqual(4);
   await expect(strip.first()).toHaveClass(/political/);
 
-  // Clicking it opens the era; the Century stop goes back to the entries.
+  // Clicking it opens it into its lanes, where its name opens the era; the Century stop goes back to the entries.
   await band.click({ position: { x: 20, y: 10 }, force: true }); // the timeline hit-tests by position
+  await expect(eras).toHaveAttribute('aria-pressed', 'false');
+  await expect(timeline).toHaveAttribute('data-level', '1');
+  await timeline.locator('text.tl-era-head', { hasText: 'Classical Greece' }).click({ force: true });
   await expect(page.getByTestId('item-view').getByRole('heading', { name: 'Classical Greece' })).toBeVisible();
   if (isMobile) await page.getByRole('button', { name: 'Close panel' }).click();
   await page.getByTestId('time-bar').getByRole('button', { name: 'Century' }).click();
   await expect(eras).toHaveAttribute('aria-pressed', 'false');
   await expect(timeline.locator('.tl-era')).toHaveCount(0);
   await expect(timeline.locator('.tl-mark').first()).toBeVisible();
+});
+
+test('an era opens into its six lanes, says when one is empty, and Esc goes back @phone', async ({ page, isMobile }) => {
+  await page.goto('/');
+  await expect(page.getByTestId('save-state')).toHaveText('Saved on this device');
+  await page.getByTestId('import-input').setInputFiles(fileURLToPath(new URL('../tests/fixtures/greece/classical-greece.json', import.meta.url)));
+  await expect(page.locator('.doc-title')).toHaveValue(/Classical Greece/);
+  await page.getByRole('button', { name: 'More' }).click();
+  await page.getByRole('menuitemcheckbox', { name: 'Try the new layout' }).click();
+  if (isMobile) await page.getByTestId('reader').getByRole('button', { name: 'Map' }).click();
+  // Without Technology and Science, nothing technological is left in the Classical period.
+  const cats = page.getByRole('group', { name: 'Show or hide categories' });
+  await cats.getByRole('button', { name: 'Technology' }).click();
+  await cats.getByRole('button', { name: 'Science' }).click();
+  const timeline = page.locator('[data-testid=timeline][data-ready]');
+  await expect(timeline).toBeVisible();
+
+  await page.getByTestId('time-bar').getByRole('button', { name: 'Eras' }).click();
+  // The Eras stop frames every era over a moment; the band is clicked once it's still.
+  await expect(timeline).toHaveAttribute('data-level', '0');
+  await timeline.locator('.tl-era[data-id=i_classical]').click({ position: { x: 20, y: 10 }, force: true });
+  await expect(timeline).toHaveAttribute('data-level', '1');
+  await expect(timeline.locator('text.tl-era-head', { hasText: 'Classical Greece' })).toBeVisible();
+  await expect(timeline.locator('.tl-era')).toHaveCount(0);
+  await expect(timeline.locator('text.tl-lane-name', { hasText: 'POLITICAL' })).toBeVisible();
+
+  // Down the lanes (Shift and the wheel scroll them): the economic lane's silver owls, and the empty technological lane.
+  const box = (await timeline.boundingBox())!;
+  const scrollTo = async (target: ReturnType<typeof timeline.locator>) => {
+    for (let i = 0; i < 150 && !(await target.count()); i++) {
+      // Sent to the timeline itself (a phone's emulated mouse wheel doesn't reach it), then two frames so it's drawn.
+      await timeline.evaluate(async (el, at) => {
+        el.dispatchEvent(new WheelEvent('wheel', { deltaY: 40, shiftKey: true, clientX: at.x, clientY: at.y, bubbles: true, cancelable: true }));
+        await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+      }, { x: box.x + box.width / 2, y: box.y + box.height / 2 });
+    }
+    await expect(target.first()).toBeVisible();
+  };
+  await scrollTo(timeline.locator(isMobile ? '.tl-list-item[data-id=i_owls]' : '.tl-phase[data-id=i_owls]'));
+  await scrollTo(timeline.locator('text.tl-lane-empty', { hasText: 'Nothing technological highlighted here yet.' }));
+
+  // Esc folds the lanes back into the eras.
+  await timeline.press('Escape');
+  await expect(timeline).toHaveAttribute('data-level', '0');
+  await expect(timeline.locator('.tl-era[data-id=i_classical]')).toBeVisible();
+  await expect(timeline.locator('text.tl-era-head')).toHaveCount(0);
+  await expect(page.getByTestId('time-bar').getByRole('button', { name: 'Eras' })).toHaveAttribute('aria-pressed', 'true');
 });

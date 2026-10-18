@@ -20,8 +20,8 @@ export function TimeBar({ win, control }: { win: VisibleWindow; control: RefObje
   const center = (win.start + win.end) / 2;
   const stop = currentStop(span);
   const eras = win.level === 0;
-  /** The stops show the entries; at the eras, they come back to them first. */
-  const entries = () => { if (eras) control.current?.setLevel?.(2); };
+  /** The stops show the entries; at the eras, or inside one, they come back to them first. */
+  const entries = () => { if (win.level !== undefined && win.level !== 2) control.current?.setLevel?.(2); };
   const zoomTo = (years: number) => { entries(); control.current?.setWindow(windowAround(center, years), true); };
 
   return (

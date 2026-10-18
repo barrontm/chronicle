@@ -59,6 +59,18 @@ export function svgPainter(): Painter {
     sym.innerHTML = rep.glyph;
     defs.append(sym);
   }
+  // Level 1's key moments, in the lane's pigment (`color`), with a ring of the panel's colour so overlapping ones stay apart.
+  const diamonds = {
+    diamond: '<path d="M9 1.5 16.5 9 9 16.5 1.5 9Z" fill="currentColor" stroke="var(--panel)" stroke-width="1.5"/>',
+    'diamond-approx': '<path d="M9 2.5 15.5 9 9 15.5 2.5 9Z" fill="var(--panel)" stroke="currentColor" stroke-width="1.6" stroke-dasharray="2.2 1.6"/>',
+  };
+  for (const [name, markup] of Object.entries(diamonds)) {
+    const sym = document.createElementNS(NS, 'symbol');
+    sym.id = `${id}-g-${name}`;
+    sym.setAttribute('viewBox', '0 0 18 18');
+    sym.innerHTML = markup;
+    defs.append(sym);
+  }
   const group = (clipName: string) => {
     const g = document.createElementNS(NS, 'g');
     g.setAttribute('clip-path', `url(#${id}-${clipName})`);

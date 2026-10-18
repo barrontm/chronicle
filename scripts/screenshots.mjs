@@ -264,6 +264,51 @@ async function eras(p, prefix) {
   await p.waitForTimeout(300);
   await shot(p, `${prefix}-eras-hover`);
 }
+// Level 1: the Classical period opened into its six lanes. With `era-zoom`, the opening itself as
+// a filmstrip of frames 50 ms apart (the page's clock is paused and stepped, so frames are exact).
+async function eraLanes(p, prefix) {
+  await p.getByTestId('import-input').setInputFiles(GREECE);
+  await p.getByRole('button', { name: 'More' }).click();
+  await p.getByRole('menuitemcheckbox', { name: 'Try the new layout' }).click();
+  if (prefix === 'phone') await p.getByTestId('reader').getByRole('button', { name: 'Map' }).click();
+  const timeline = p.locator('[data-testid=timeline][data-ready]');
+  await timeline.waitFor();
+  await p.getByTestId('time-bar').getByRole('button', { name: 'Eras' }).click();
+  await p.waitForTimeout(700);
+  const box = await p.locator('.tl-era[data-id=i_classical]').boundingBox();
+  const film = wanted(`${prefix}-era-zoom`);
+  if (film) {
+    await p.clock.install();
+    await p.clock.pauseAt(new Date(Date.now() + 1000));
+  }
+  await p.mouse.click(box.x + 30, box.y + 12);
+  if (film) {
+    const frames = [];
+    for (let i = 0; i <= 8; i++) {
+      frames.push({ caption: `${i * 50} ms`, png: (await timeline.screenshot()).toString('base64') });
+      await p.clock.runFor(50);
+    }
+    await p.clock.resume();
+    const sheet = await (await browser.newContext({ viewport: { width: 1500, height: 100 } })).newPage();
+    const w = Math.floor(1480 / 3) - 8;
+    await sheet.setContent(`<style>body{margin:8px;font:14px system-ui;display:flex;flex-wrap:wrap;gap:8px}figure{margin:0}img{width:${w}px;display:block;border:1px solid #ccc}figcaption{padding:2px 0;font-weight:600}</style>${frames.map((f) => `<figure><img src="data:image/png;base64,${f.png}"><figcaption>${f.caption}</figcaption></figure>`).join('')}`);
+    await sheet.screenshot({ path: `${OUT}${prefix}-era-zoom.png`, fullPage: true });
+    taken.push(`${prefix}-era-zoom`);
+  }
+  await p.waitForTimeout(700);
+  await shot(p, `${prefix}-era-lanes`);
+  // Further down the lanes: the quieter dimensions and an empty lane's note.
+  const t = await timeline.boundingBox();
+  await p.mouse.move(t.x + t.width / 2, t.y + t.height / 2);
+  await p.keyboard.down('Shift');
+  await p.mouse.wheel(0, prefix === 'phone' ? 900 : 330);
+  await p.keyboard.up('Shift');
+  await p.waitForTimeout(300);
+  await shot(p, `${prefix}-era-lanes-below`);
+}
+if (any('desktop-era-lanes') || any('desktop-era-zoom')) await eraLanes(await page('desktop-era-lanes', desktop), 'desktop');
+if (any('dark-era-lanes')) await eraLanes(await page('dark-era-lanes', { ...desktop, colorScheme: 'dark' }), 'dark');
+if (any('phone-era-lanes') || any('phone-era-zoom')) await eraLanes(await page('phone-era-lanes', { viewport: { width: 412, height: 860 }, isMobile: true, hasTouch: true }), 'phone');
 if (any('desktop-eras')) await eras(await page('desktop-eras', desktop), 'desktop');
 if (any('dark-eras')) await eras(await page('dark-eras', { ...desktop, colorScheme: 'dark' }), 'dark');
 if (any('phone-eras')) await eras(await page('phone-eras', { viewport: { width: 412, height: 860 }, isMobile: true, hasTouch: true }), 'phone');

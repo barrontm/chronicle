@@ -250,6 +250,7 @@ for (const r of rows) {
   if (r.o.w) cites.push({ sourceId: wpSrc(r.o.w) });
   if (cites.length) it.citations = cites;
   if (r.o.at) it.places = [r.o.at];
+  if (DIMTAG[r.dim]) it.dimension = DIMTAG[r.dim];
   const tags = [...(r.o.tags ?? []), ...(DIMTAG[r.dim] ? [DIMTAG[r.dim]] : [])];
   if (tags.length) it.tags = tags;
   // Eras are periods in the Greece row of the overview (level 0).
