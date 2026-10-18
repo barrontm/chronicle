@@ -27,6 +27,7 @@ function Seeded({ preset }: { preset: Preset }) {
       localStorage.setItem('chronicle.mapView', JSON.stringify(preset.camera ?? { center: [20, 35], zoom: 1.6 }));
       localStorage.setItem('chronicle.mapFlows', JSON.stringify({ show: true, hiddenCauses: [] }));
       localStorage.removeItem('chronicle.mapData');
+      localStorage.setItem('chronicle.uiNext', JSON.stringify(!!preset.next));
     } catch { /* the app falls back to its own defaults */ }
     const s = new MemoryStore();
     void s.save(parseDoc(fixtureJson));
@@ -42,7 +43,7 @@ function fitTimelineWhenReady() {
   const tick = (tries: number) => {
     if (stopped || tries > 60) return;
     const more = [...document.querySelectorAll('button')].find((b) => b.textContent === 'More');
-    if (!more || !document.querySelector('.vis-item')) return void setTimeout(() => tick(tries + 1), 100);
+    if (!more || !document.querySelector('.vis-item, [data-testid=timeline][data-ready]')) return void setTimeout(() => tick(tries + 1), 100);
     more.click();
     setTimeout(() => [...document.querySelectorAll('[role=menuitem]')].find((m) => m.textContent === 'Show everything')?.dispatchEvent(new MouseEvent('click', { bubbles: true })), 50);
   };

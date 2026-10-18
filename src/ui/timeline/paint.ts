@@ -1,0 +1,158 @@
+import { FONTS, type Box, type Prim, type Scene } from './scene';
+
+/**
+ * The SVG painter. Every primitive has a stable key, so each frame updates the same elements
+ * (only attributes that changed are touched); elements no longer drawn go back to a pool.
+ * Colors go in `style`, so CSS variables and color-mix() follow the theme by themselves.
+ *
+ * The timeline spike measured SVG at 60 fps on a throttled phone with 2,000 entries. If Bob's
+ * iPhone shows otherwise, the hybrid (canvas marks, DOM labels) replaces this file only.
+ */
+export interface Painter {
+  el: SVGSVGElement;
+  resize(w: number, h: number): void;
+  draw(scene: Scene): void;
+  dispose(): void;
+}
+
+const NS = 'http://www.w3.org/2000/svg';
+const TAGS = ['rect', 'circle', 'text', 'line', 'image'] as const;
+type Tag = (typeof TAGS)[number];
+
+interface Rec { el: SVGElement; tag: Tag; gen: number; last: Map<string, string | number>; text?: string }
+
+let uid = 0;
+
+export function svgPainter(): Painter {
+  const id = `tl${++uid}`;
+  const svg = document.createElementNS(NS, 'svg');
+  svg.classList.add('tl-svg');
+  svg.setAttribute('aria-hidden', 'true');
+  const defs = document.createElementNS(NS, 'defs');
+  const clip = (name: string) => {
+    const cp = document.createElementNS(NS, 'clipPath');
+    cp.id = `${id}-${name}`;
+    const r = document.createElementNS(NS, 'rect');
+    cp.append(r);
+    defs.append(cp);
+    return r;
+  };
+  const plotClip = clip('plot'), gutterClip = clip('gutter'), rightClip = clip('right');
+  const group = (clipName: string) => {
+    const g = document.createElementNS(NS, 'g');
+    g.setAttribute('clip-path', `url(#${id}-${clipName})`);
+    return g;
+  };
+  const plot = group('plot');
+  const z = [0, 1, 2].map(() => { const g = document.createElementNS(NS, 'g'); plot.append(g); return g; });
+  const gutter = group('gutter');
+  const axis = group('right');
+  svg.append(defs, plot, gutter, axis);
+
+  const live = new Map<string, Rec>();
+  const pool = new Map<Tag, SVGElement[]>();
+  let gen = 0;
+
+  const set = (r: Rec, name: string, v: string | number | undefined) => {
+    if (r.last.get(name) === v) return;
+    if (v === undefined) r.el.removeAttribute(name);
+    else r.el.setAttribute(name, String(v));
+    r.last.set(name, v as string | number);
+  };
+  const style = (r: Rec, name: string, v: string | undefined) => {
+    const key = `style:${name}`;
+    if (r.last.get(key) === v) return;
+    if (v === undefined) r.el.style.removeProperty(name);
+    else r.el.style.setProperty(name, v);
+    r.last.set(key, v as string);
+  };
+  const tagOf = (p: Prim): Tag => TAGS[p.t];
+
+  const paint = (p: Prim, parent: SVGGElement, layer: string) => {
+    const key = `${layer}${p.t}${p.k}`;
+    let r = live.get(key);
+    if (!r) {
+      const tag = tagOf(p);
+      const el = pool.get(tag)?.pop() ?? document.createElementNS(NS, tag);
+      r = { el, tag, gen, last: new Map() };
+      live.set(key, r);
+    }
+    // New elements go on top. Within a layer marks don't overlap, and what must sit above something
+    // (an edge above its bar, text above a badge) is created with it or lives in a later layer.
+    if (r.el.parentNode !== parent) parent.append(r.el);
+    r.gen = gen;
+    set(r, 'opacity', p.a === 1 ? undefined : p.a);
+    set(r, 'class', p.cls);
+    set(r, 'data-id', p.id);
+    switch (p.t) {
+      case 0:
+        set(r, 'x', p.x); set(r, 'y', p.y); set(r, 'width', Math.max(0, p.w)); set(r, 'height', Math.max(0, p.h));
+        set(r, 'rx', p.r);
+        style(r, 'fill', p.fill ?? 'none');
+        style(r, 'stroke', p.stroke ?? 'none');
+        set(r, 'stroke-width', p.stroke ? p.sw ?? 1 : undefined);
+        set(r, 'stroke-dasharray', p.stroke && p.dash ? '4 3' : undefined);
+        break;
+      case 1:
+        set(r, 'cx', p.x); set(r, 'cy', p.y); set(r, 'r', p.r);
+        style(r, 'fill', p.fill ?? 'none');
+        style(r, 'stroke', p.stroke ?? 'none');
+        set(r, 'stroke-width', p.stroke ? p.sw ?? 1 : undefined);
+        set(r, 'stroke-dasharray', p.stroke && p.dash ? '2 2' : undefined);
+        break;
+      case 2:
+        set(r, 'x', p.x); set(r, 'y', p.y);
+        set(r, 'text-anchor', p.anchor);
+        style(r, 'fill', p.fill);
+        style(r, 'font', FONTS[p.f]);
+        if (r.text !== p.s) { r.el.textContent = p.s; r.text = p.s; }
+        break;
+      case 3:
+        set(r, 'x1', p.x1); set(r, 'y1', p.y1); set(r, 'x2', p.x2); set(r, 'y2', p.y2);
+        style(r, 'stroke', p.stroke);
+        set(r, 'stroke-width', p.sw ?? 1);
+        set(r, 'stroke-dasharray', p.dash ? '4 3' : undefined);
+        break;
+      case 4:
+        set(r, 'x', p.x); set(r, 'y', p.y); set(r, 'width', p.w); set(r, 'height', p.h);
+        set(r, 'href', p.href);
+        set(r, 'preserveAspectRatio', 'xMidYMid slice');
+        break;
+    }
+  };
+
+  const fitClip = (r: SVGRectElement, b: Box) => {
+    r.setAttribute('x', String(b.x)); r.setAttribute('y', String(b.y));
+    r.setAttribute('width', String(Math.max(0, b.w))); r.setAttribute('height', String(Math.max(0, b.h)));
+  };
+
+  return {
+    el: svg,
+    resize(w, h) {
+      svg.setAttribute('width', String(w));
+      svg.setAttribute('height', String(h));
+      svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+    },
+    draw(scene) {
+      gen++;
+      fitClip(plotClip, scene.plot);
+      fitClip(gutterClip, scene.gutterBox);
+      fitClip(rightClip, { x: scene.plot.x, y: 0, w: scene.plot.w, h: scene.plot.y + scene.plot.h });
+      for (let i = 0; i < 3; i++) for (const p of scene.z[i]) paint(p, z[i], `z${i}`);
+      for (const p of scene.gutter) paint(p, gutter, 'g');
+      for (const p of scene.axis) paint(p, axis, 'a');
+      // What wasn't drawn this frame goes back to the pool, stripped, for reuse.
+      for (const [k, r] of live) {
+        if (r.gen === gen) continue;
+        live.delete(k);
+        r.el.remove();
+        for (const a of Array.from(r.el.attributes)) r.el.removeAttribute(a.name);
+        if (r.tag === 'text') r.el.textContent = '';
+        let list = pool.get(r.tag);
+        if (!list) pool.set(r.tag, (list = []));
+        list.push(r.el);
+      }
+    },
+    dispose() { svg.remove(); },
+  };
+}

@@ -15,6 +15,11 @@ export const ZOOM_MAX_YEARS = 12_000;
 export const TIME_MIN = -12_000;
 export const TIME_MAX = 2200;
 
+/** How far the window may go: the classic timeline's limits, or deep time for the new renderer. */
+export interface TimeLimits { min: number; max: number; minSpan: number; maxSpan: number }
+export const CLASSIC_LIMITS: TimeLimits = { min: TIME_MIN, max: TIME_MAX, minSpan: ZOOM_MIN_YEARS, maxSpan: ZOOM_MAX_YEARS };
+export const DEEP_LIMITS: TimeLimits = { min: -3_200_000, max: TIME_MAX, minSpan: ZOOM_MIN_YEARS, maxSpan: TIME_MAX + 3_200_000 };
+
 export const ZOOM_STOPS = [
   { label: 'Year', years: 1 },
   { label: 'Decade', years: 10 },
@@ -40,9 +45,9 @@ export function sliderToSpan(value: number): number {
 }
 
 /** A window of `span` years around `center`, kept within the timeline's limits. */
-export function windowAround(center: number, span: number): YearWindow {
-  const s = clamp(span, ZOOM_MIN_YEARS, ZOOM_MAX_YEARS);
-  const start = clamp(center - s / 2, TIME_MIN, TIME_MAX - s);
+export function windowAround(center: number, span: number, l = CLASSIC_LIMITS): YearWindow {
+  const s = clamp(span, l.minSpan, l.maxSpan);
+  const start = clamp(center - s / 2, l.min, l.max - s);
   return { start, end: start + s };
 }
 
@@ -50,18 +55,18 @@ export function windowAround(center: number, span: number): YearWindow {
  * Zoom by `factor` (2 = twice as many years in view) around `at`, which keeps
  * its place on screen: the middle by default, or the point under the pointer.
  */
-export function zoomAround(w: YearWindow, factor: number, at = (w.start + w.end) / 2): YearWindow {
+export function zoomAround(w: YearWindow, factor: number, at = (w.start + w.end) / 2, l = CLASSIC_LIMITS): YearWindow {
   const span = w.end - w.start;
-  const next = clamp(span * factor, ZOOM_MIN_YEARS, ZOOM_MAX_YEARS);
+  const next = clamp(span * factor, l.minSpan, l.maxSpan);
   const frac = span > 0 ? (at - w.start) / span : 0.5;
-  const start = clamp(at - frac * next, TIME_MIN, TIME_MAX - next);
+  const start = clamp(at - frac * next, l.min, l.max - next);
   return { start, end: start + next };
 }
 
 /** Move the window by `years` without changing the zoom. */
-export function panBy(w: YearWindow, years: number): YearWindow {
+export function panBy(w: YearWindow, years: number, l = CLASSIC_LIMITS): YearWindow {
   const span = w.end - w.start;
-  const start = clamp(w.start + years, TIME_MIN, TIME_MAX - span);
+  const start = clamp(w.start + years, l.min, l.max - span);
   return { start, end: start + span };
 }
 

@@ -210,6 +210,25 @@ if (any('desktop-places')) await places(await page('desktop-places', desktop), '
 if (any('dark-places')) await places(await page('dark-places', { ...desktop, colorScheme: 'dark' }), 'dark');
 if (any('phone-places')) await places(await page('phone-places', { viewport: { width: 412, height: 860 }, isMobile: true, hasTouch: true }), 'phone');
 
+// The new timeline renderer, under "Try the new layout": everything in view, then zoomed out far enough to cluster.
+async function newTimeline(p, prefix) {
+  await p.getByTestId('import-input').setInputFiles(FIXTURE);
+  await p.locator('.vis-item', { hasText: 'Aristotle' }).waitFor();
+  await p.getByRole('button', { name: 'More' }).click();
+  await p.getByRole('menuitemcheckbox', { name: 'Try the new layout' }).click();
+  if (prefix === 'phone') await p.getByTestId('reader').getByRole('button', { name: 'Map' }).click();
+  await p.locator('[data-testid=timeline][data-ready]').waitFor();
+  await p.getByTestId('time-bar').getByRole('button', { name: 'All' }).click();
+  await p.waitForTimeout(600);
+  await shot(p, `${prefix}-new-timeline`);
+  await p.getByTestId('time-bar').getByRole('button', { name: 'Zoom the timeline out' }).click();
+  await p.waitForTimeout(600);
+  await shot(p, `${prefix}-new-timeline-wide`);
+}
+if (any('desktop-new-timeline')) await newTimeline(await page('desktop-new-timeline', desktop), 'desktop');
+if (any('dark-new-timeline')) await newTimeline(await page('dark-new-timeline', { ...desktop, colorScheme: 'dark' }), 'dark');
+if (any('phone-new-timeline')) await newTimeline(await page('phone-new-timeline', { viewport: { width: 412, height: 860 }, isMobile: true, hasTouch: true }), 'phone');
+
 // The manual.
 async function help(p, prefix) {
   await p.getByRole('button', { name: 'Help' }).click();

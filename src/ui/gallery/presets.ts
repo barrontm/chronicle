@@ -9,6 +9,8 @@ export interface Preset {
   camera?: { center: [number, number]; zoom: number };
   /** Zoom the timeline out to show everything once it has opened. */
   fit?: boolean;
+  /** Open in the new layout ("Try the new layout"), with the new timeline renderer. */
+  next?: boolean;
 }
 
 const AEGEAN = { center: [24.5, 38.6] as [number, number], zoom: 5.8 };
@@ -23,6 +25,7 @@ export const PRESETS: Preset[] = [
   { id: 'map-colonies', label: 'Colonies, 600 BCE', device: 'desktop', view: 'map', year: -599, camera: WEST },
   { id: 'map-macedon', label: 'Map, 336 BCE', device: 'desktop', view: 'map', year: -335, camera: AEGEAN },
   { id: 'phone-timeline', label: 'Timeline on a phone', device: 'phone', view: 'timeline', year: -430, fit: true },
+  { id: 'next-timeline', label: 'New layout: timeline', device: 'desktop', view: 'split', year: -430, camera: AEGEAN, fit: true, next: true },
   { id: 'phone-map', label: 'Map on a phone, 431 BCE', device: 'phone', view: 'map', year: -430, camera: AEGEAN_PHONE },
 ];
 

@@ -2,6 +2,7 @@ import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } fro
 import { docYearRange, presenceAt } from '../model/atYear';
 import { toDecimalYear } from '../model/dates';
 import { mergeDocs, parseDoc, serializeDoc } from '../model/doc';
+import { highlightProminence } from '../model/prominence';
 import type { MediaRef, TimelineDoc } from '../model/types';
 import type { Area } from '../data/geo';
 import type { DocStore } from '../store/store';
@@ -185,6 +186,7 @@ function Workspace() {
   }), [stack.length, view, narrow, setView, next]);
 
   const categories = useMemo(() => doc.categories.filter((c) => !hidden.has(c.id)), [doc.categories, hidden]);
+  const prominence = useMemo(() => highlightProminence(doc.highlights ?? []), [doc.highlights]);
   const thumbFor = useCallback((m: MediaRef) => mediaUrl(m, true), [mediaUrl]);
   const selectedId = panel?.type === 'item' ? panel.id : undefined;
 
@@ -390,6 +392,8 @@ function Workspace() {
             onCanGoBack={setCanGoBackInTime}
             year={showMap ? year : undefined}
             onYear={(y) => { setPlaying(false); setYear(y); }}
+            renderer={next ? 'next' : 'classic'}
+            prominence={prominence}
           />
           {win && <TimeBar win={win} control={timeline} />}
           <TrendStrips

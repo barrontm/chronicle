@@ -326,6 +326,23 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .chip[aria-pressed='false'] { opacity: 0.45; }
 .chip[aria-pressed='false'] .swatch { background: transparent; box-shadow: inset 0 0 0 2px var(--c); }
 
+/* ---------- the new timeline renderer (src/ui/timeline/) ---------- */
+.tl-host { position: relative; overflow: hidden; touch-action: none; user-select: none; -webkit-user-select: none; background: var(--panel); }
+.tl-host:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+.tl-svg { display: block; }
+.tl-svg text { font-variant-numeric: lining-nums; }
+.tl-svg .tl-thumb { clip-path: inset(0 round 3px); }
+.tl-svg .tl-thumb.round { clip-path: circle(50%); }
+.tl-tip {
+  position: absolute; left: 0; top: 0; z-index: 3; pointer-events: none; max-width: 32ch;
+  display: flex; flex-direction: column; gap: 1px; padding: 5px 8px;
+  background: var(--panel); color: var(--ink); border: 1px solid var(--rule); border-radius: var(--radius-s);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.12); font-size: 12.5px; line-height: 1.35;
+}
+.tl-tip[hidden] { display: none; }
+.tl-tip b { font-family: var(--font-read); font-weight: 600; font-size: 13.5px; }
+.tl-tip span { color: var(--muted); }
+
 /* ---------- vis-timeline overrides ---------- */
 .timeline-host { flex: 1 1 auto; min-height: 320px; padding: 0 8px; }
 .timeline-host .vis-timeline { border: 0; font-family: var(--font-ui); }

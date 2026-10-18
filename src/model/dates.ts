@@ -154,6 +154,91 @@ export function jsDateToDecimalYear(dt: Date): number {
   return dt.getUTCFullYear() + (inYear2000 - Date.UTC(2000, 0, 1)) / (366 * 86_400_000);
 }
 
+/* ---------- Axis ticks (the new timeline: no JS Date, so deep time works) ---------- */
+
+export interface AxisTick {
+  /** Decimal year. */
+  y: number;
+  label: string;
+  major: boolean;
+}
+
+export interface AxisTicks {
+  ticks: AxisTick[];
+  /** Month or year headings for a second row when the ticks are days or months. */
+  heads: AxisTick[];
+  unit: 'day' | 'week' | 'month' | 'quarter' | 'year';
+  /** Years between ticks when the unit is 'year'. */
+  step: number;
+}
+
+const MONTHS_LONG = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+const YEAR_STEPS = [1e6, 5e5, 2e5, 1e5, 5e4, 2e4, 1e4, 5000, 2000, 1000, 500, 200, 100, 50, 20, 10, 5, 2, 1];
+const isLeap = (y: number) => (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0;
+const daysIn = (y: number, m: number) => (m === 2 ? (isLeap(y) ? 29 : 28) : [4, 6, 9, 11].includes(m) ? 30 : 31);
+
+/**
+ * A tick's year label. Steps of 10 years or more use round numbers (`formatAxisYear`);
+ * finer steps name the exact year. Deep time reads in words: "2.8 million BCE".
+ */
+export function formatTickYear(y: number, step = 1): string {
+  const a = Math.abs(y);
+  if (a >= 10_000) {
+    const era = y < 0 ? 'BCE' : 'CE';
+    if (a >= 1_000_000) return `${+(a / 1e6).toFixed(1)} million ${era}`;
+    return `${a.toLocaleString('en-US')} ${era}`;
+  }
+  return step >= 10 ? formatAxisYear(y) : formatYear(y);
+}
+
+/**
+ * Ticks for the window `start`..`end` (decimal years) drawn `widthPx` wide: the finest
+ * unit whose ticks are still at least `minPx` apart, from a million years down to a day.
+ */
+export function axisTicks(start: number, end: number, widthPx: number, minPx = 74): AxisTicks {
+  const span = end - start;
+  const ppy = widthPx / Math.max(span, 1e-9);
+  const ticks: AxisTick[] = [];
+  const heads: AxisTick[] = [];
+  const y0 = Math.floor(start), y1 = Math.floor(end);
+  // Days (a day is 1/366 of a year in toDecimalYear).
+  const dayPx = ppy / 366;
+  if (span < 3 && dayPx * 7 >= minPx * 0.6) {
+    const step = dayPx >= 28 ? 1 : 7;
+    for (let y = y0; y <= y1; y++) {
+      for (let m = 1; m <= 12; m++) {
+        const first = toDecimalYear({ y, m, d: 1 });
+        if (first > end || first + 32 / 366 < start) continue;
+        heads.push({ y: first, label: `${MONTHS_LONG[m - 1]} ${formatYear(y)}`, major: true });
+        for (let d = 1; d <= daysIn(y, m); d += step) {
+          const t = toDecimalYear({ y, m, d });
+          if (t >= start && t <= end) ticks.push({ y: t, label: String(d), major: d === 1 });
+        }
+      }
+    }
+    return { ticks, heads, unit: step === 1 ? 'day' : 'week', step: 0 };
+  }
+  // Months, then quarters.
+  for (const step of [1, 3]) {
+    if (span < 60 && (ppy / 12) * step >= minPx * 0.55) {
+      for (let y = y0; y <= y1; y++) {
+        for (let m = 1; m <= 12; m += step) {
+          const t = toDecimalYear({ y, m, d: 1 });
+          if (t >= start && t <= end) ticks.push({ y: t, label: MONTHS[m - 1], major: m === 1 });
+        }
+        heads.push({ y, label: formatYear(y), major: true });
+      }
+      return { ticks, heads, unit: step === 1 ? 'month' : 'quarter', step: 0 };
+    }
+  }
+  // Years: the finest round step that leaves room for the labels.
+  const step = YEAR_STEPS.slice().reverse().find((s) => s * ppy >= minPx) ?? YEAR_STEPS[0];
+  for (let y = Math.ceil(start / step) * step; y <= end && ticks.length <= 400; y += step) {
+    ticks.push({ y, label: formatTickYear(y, step), major: y % (step * 5) === 0 });
+  }
+  return { ticks, heads, unit: 'year', step };
+}
+
 export function compareHistDate(a: HistDate, b: HistDate): number {
   return toDecimalYear(a) - toDecimalYear(b);
 }
