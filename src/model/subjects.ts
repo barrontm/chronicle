@@ -1,4 +1,4 @@
-import { formatRange, fromWikidataTime } from './dates';
+import { formatRange, fromWikidataTime, toDecimalYear } from './dates';
 import { newId } from './doc';
 import type { HistDate, Relation, RelationType, SubjectKind, TimelineItem } from './types';
 
@@ -119,11 +119,37 @@ export function claimsFor(claims: Claims, prop: string): Claim[] {
 
 export const firstValue = <T>(claims: Claims, prop: string): T | undefined => claimsFor(claims, prop)[0]?.mainsnak?.datavalue?.value as T | undefined;
 
+type TimeValue = { time?: string; precision?: number; calendarmodel?: string };
+const timeOf = (c: Claim) => c.mainsnak?.datavalue?.value as TimeValue | undefined;
+const GREGORIAN = 'Q1985727';
+const JULIAN = 'Q1985786';
+const calendarOf = (v: TimeValue) => v.calendarmodel?.split('/').pop();
+
+/**
+ * A date claim. Wikidata often gives a person's dates twice, Julian (often the
+ * preferred one) and Gregorian. Like Wikipedia, Chronicle uses the Gregorian
+ * date from 1583 on and the Julian before; it only swaps to another claim that
+ * is the same day in the other calendar, never a different date.
+ */
 export function dateClaim(claims: Claims, prop: string): HistDate | undefined {
   const c = claimsFor(claims, prop)[0];
-  const v = c?.mainsnak?.datavalue?.value as { time?: string; precision?: number } | undefined;
+  const date = c && readDate(c);
+  if (!date || !date.d) return date;
+  const want = date.y > 1582 ? GREGORIAN : JULIAN;
+  const cal = calendarOf(timeOf(c)!);
+  if (!cal || cal === want) return date;
+  // The same day in the other calendar: 10–13 days apart in these centuries.
+  const twin = (claims[prop] ?? [])
+    .filter((o) => o.rank !== 'deprecated' && calendarOf(timeOf(o) ?? {}) === want)
+    .map(readDate)
+    .find((o) => o?.d && Math.abs(toDecimalYear(o) - toDecimalYear(date)) < 15 / 365);
+  return twin ?? date;
+}
+
+function readDate(c: Claim): HistDate | undefined {
+  const v = c.mainsnak?.snaktype === 'value' ? timeOf(c) : undefined;
   if (!v?.time) return undefined;
-  const circa = (c?.qualifiers?.[P.circumstances] ?? []).some((q) => (q.datavalue?.value as { id?: string })?.id === CIRCA);
+  const circa = (c.qualifiers?.[P.circumstances] ?? []).some((q) => (q.datavalue?.value as { id?: string })?.id === CIRCA);
   return fromWikidataTime(v.time, v.precision ?? 9, circa) ?? undefined;
 }
 

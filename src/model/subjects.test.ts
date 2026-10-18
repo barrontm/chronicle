@@ -2,8 +2,8 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import type { Relation, TimelineItem } from './types';
 import {
-  classesToFetch, classify, factRelations, findInChronicle, linkedIds, parseClassParents, parseSubjectEntity, regionsIn, seedRegion, subjectFacts, subjectPartOf, subjectWhen, toSubject,
-  type ClassParents, type Subject,
+  classesToFetch, classify, dateClaim, factRelations, findInChronicle, linkedIds, parseClassParents, parseSubjectEntity, regionsIn, seedRegion, subjectFacts, subjectPartOf, subjectWhen, toSubject,
+  type ClassParents, type Claim, type Subject,
 } from './subjects';
 
 /** Recorded with `node scripts/record-subjects.mjs <keys>`. */
@@ -213,5 +213,34 @@ describe('connections from facts', () => {
     expect(subjectOf('Pericles').facts.influencedBy).toBeInstanceOf(Array);
     const old = { partOf: [], follows: [], followedBy: [], participants: [], locations: [], government: [] };
     expect(factRelations('x', old, { items: [entry('y', 'Q1')], relations: [] })).toEqual([]);
+  });
+});
+
+describe('dates in two calendars', () => {
+  const W = 'http://www.wikidata.org/entity/';
+  const claim = (time: string, cal: 'Q1985727' | 'Q1985786', rank = 'normal', precision = 11): Claim =>
+    ({ rank, mainsnak: { snaktype: 'value', datavalue: { value: { time, precision, calendarmodel: W + cal } } } } as Claim);
+  const born = (...c: Claim[]) => dateClaim({ P569: c }, 'P569');
+
+  it('uses the Gregorian date after 1582, even when Wikidata prefers the Julian (Newton, Peter the Great)', () => {
+    expect(born(claim('+1642-12-25T00:00:00Z', 'Q1985786', 'preferred'), claim('+1643-01-04T00:00:00Z', 'Q1985727'), claim('+1642-00-00T00:00:00Z', 'Q1985727', 'normal', 9)))
+      .toEqual({ y: 1643, m: 1, d: 4 });
+    expect(born(claim('+1672-05-30T00:00:00Z', 'Q1985786', 'preferred'), claim('+1672-06-09T00:00:00Z', 'Q1985727'))).toEqual({ y: 1672, m: 6, d: 9 });
+  });
+
+  it('uses the Julian date before 1583 (Dante), and in BCE', () => {
+    const dante = [claim('+1321-09-22T00:00:00Z', 'Q1985727'), claim('+1321-09-14T00:00:00Z', 'Q1985786', 'preferred')];
+    expect(dateClaim({ P570: dante }, 'P570')).toEqual({ y: 1321, m: 9, d: 14 });
+    expect(born(claim('-0356-07-30T00:00:00Z', 'Q1985727'), claim('-0356-07-20T00:00:00Z', 'Q1985786'))).toEqual({ y: -355, m: 7, d: 20 });
+    expect(born(claim('+0050-03-01T00:00:00Z', 'Q1985727'))).toEqual({ y: 50, m: 3, d: 1 });
+  });
+
+  it('keeps a lone Julian date, and never swaps for a different date or a deprecated one (Shakespeare)', () => {
+    expect(born(claim('+1616-04-23T00:00:00Z', 'Q1985786'), claim('+1616-05-03T00:00:00Z', 'Q1985727', 'deprecated'))).toEqual({ y: 1616, m: 4, d: 23 });
+    expect(born(claim('+1700-01-01T00:00:00Z', 'Q1985786', 'preferred'), claim('+1702-01-12T00:00:00Z', 'Q1985727'))).toEqual({ y: 1700, m: 1, d: 1 });
+  });
+
+  it('works across a leap day', () => {
+    expect(born(claim('+1700-02-19T00:00:00Z', 'Q1985786', 'preferred'), claim('+1700-03-02T00:00:00Z', 'Q1985727'))).toEqual({ y: 1700, m: 3, d: 2 });
   });
 });
