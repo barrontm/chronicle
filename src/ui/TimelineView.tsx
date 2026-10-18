@@ -3,7 +3,7 @@ import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState }
 import { DataSet } from 'vis-data/peer';
 import { Timeline, type TimelineOptions } from 'vis-timeline/peer';
 import { decimalYearToJsDate, formatAxisYear, formatYear, isDated, jsDateToDecimalYear, toJsDate } from '../model/dates';
-import { eraRegions } from '../model/eras';
+import { entryDimensions, eraRegions } from '../model/eras';
 import type { Category, DatedItem, Highlight, MediaRef, Relation, TimelineItem } from '../model/types';
 import { anchors, arcPath, draftArrows, influenceArrows, influenceClasses } from './influenceLinks';
 import { axisLabelEvery, axisStepYears, labelWidthPx, narrowLabels } from './labels';
@@ -25,7 +25,7 @@ export interface VisibleWindow {
   /** Pixel geometry of the plotting area, relative to the timeline host element. */
   left: number;
   width: number;
-  /** The new renderer's zoom level: 0 the eras, 2 the entries. The classic one has none. */
+  /** The new renderer's zoom level: 0 the eras, 1 an era's six lanes, 2 the entries. The classic one has none. */
   level?: Level;
 }
 
@@ -121,6 +121,8 @@ const NextTimeline = forwardRef<TimelineControl, Dated>(function NextTimeline({ 
     const shown = new Set(categories.map((c) => c.id));
     return eraRegions(items.filter((i) => shown.has(i.categoryId)), highlights, relations, jsDateToDecimalYear(new Date()));
   }, [items, categories, highlights, relations]);
+  // Level 1's lanes: each entry's dimension.
+  const dimensions = useMemo(() => entryDimensions(items, highlights), [items, highlights]);
 
   useEffect(() => {
     tl.current?.setData({
@@ -131,8 +133,9 @@ const NextTimeline = forwardRef<TimelineControl, Dated>(function NextTimeline({ 
       drafts: drafts.items,
       relations,
       eras,
+      dimensions,
     });
-  }, [items, categories, thumbFor, prominence, drafts.items, relations, eras]);
+  }, [items, categories, thumbFor, prominence, drafts.items, relations, eras, dimensions]);
 
   // The open entry's connections light up with arrows; Claude's drafted ones show whenever their highlight is open.
   useEffect(() => {
@@ -157,8 +160,9 @@ const NextTimeline = forwardRef<TimelineControl, Dated>(function NextTimeline({ 
 
   useEffect(() => {
     tl.current?.setSelected(selectedId);
-    // Opening an entry, from the timeline or a link, zooms to its time with its connections in view.
-    if (selectedId) focus(selectedId);
+    // Opening an entry, from the timeline or a link, zooms to its time with its connections in view
+    // (inside an open era it's already in view, on the era's time scale).
+    if (selectedId && !tl.current?.inEra(selectedId)) focus(selectedId);
   }, [selectedId]);
 
   useImperativeHandle(ref, () => ({

@@ -10,8 +10,8 @@
 export interface GestureApi {
   panPx(dx: number): void;
   scrollBy(dy: number): void;
-  /** factor 2 = twice as many years in view; x in px from the host's left edge. */
-  zoomAt(factor: number, x: number): void;
+  /** factor 2 = twice as many years in view; x and y in px from the host's top left (over an era, zooming in opens it). */
+  zoomAt(factor: number, x: number, y: number): void;
   tap(x: number, y: number): void;
   doubleTap(x: number, y: number): void;
   hover(x: number, y: number): void;
@@ -48,7 +48,7 @@ export function attachGestures(el: HTMLElement, api: GestureApi): () => void {
     e.preventDefault();
     const p = local(e);
     const k = wheelPx(e);
-    if (e.ctrlKey || e.metaKey) api.zoomAt(zoomFactor(e), p.x);
+    if (e.ctrlKey || e.metaKey) api.zoomAt(zoomFactor(e), p.x, p.y);
     // Some browsers turn Shift + wheel sideways; either way it scrolls the lanes.
     else if (e.shiftKey) api.scrollBy((Math.abs(e.deltaY) > Math.abs(e.deltaX) ? e.deltaY : e.deltaX) * k);
     else api.panPx(-(Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY) * k);
@@ -80,7 +80,7 @@ export function attachGestures(el: HTMLElement, api: GestureApi): () => void {
       const d = Math.hypot(p.x - other.x, p.y - other.y);
       const mid = (p.x + other.x) / 2, prevMid = (prev.x + other.x) / 2;
       api.panPx(mid - prevMid);
-      if (pinchD > 0 && d > 0) api.zoomAt(pinchD / d, mid);
+      if (pinchD > 0 && d > 0) api.zoomAt(pinchD / d, mid, (p.y + other.y) / 2);
       pinchD = d;
     }
     ptrs.set(e.pointerId, p);

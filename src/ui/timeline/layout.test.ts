@@ -2,10 +2,13 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { isDated } from '../../model/dates';
 import { parseDoc } from '../../model/doc';
-import { eraRegions } from '../../model/eras';
+import { entryDimensions, eraRegions } from '../../model/eras';
 import { highlightProminence } from '../../model/prominence';
 import type { DatedItem, Relation } from '../../model/types';
-import { AXIS_H, describeEntry, describeEra, hitTest, laneAt, layout, MIN_HIT, prepare, ROW_H, stepActive, stepEra, type Env, type View } from './layout';
+import {
+  AXIS_H, describeEntry, describeEra, describeLane1, eraLanes, ERAS_BACK, HEAD1_H, hitTest, laneAt, layout, maxScroll, MIN_HIT, NO_DIMENSION, prepare, ROW_H, stepActive, stepEra, stepLane1,
+  type Env, type View,
+} from './layout';
 import type { Measure, Prim, Scene } from './scene';
 
 const measure: Measure = (_font, s) => s.length * 7;
@@ -374,5 +377,109 @@ describe('level 0: eras', () => {
     expect(stepEra(D, 'i_archaic', 'ArrowRight', win)).toBe('i_classical');
     expect(stepEra(D, 'i_classical', 'End', win)).toBe('i_hellenistic');
     expect(describeEra(D, 'i_classical')).toMatch(/^Classical Greece, 480–323 BCE, Greece, \d+ highlights, 2 of 6$/);
+  });
+});
+
+describe('level 1: an era’s six lanes', () => {
+  const doc = parseDoc(readFileSync(new URL('../../../tests/fixtures/greece/classical-greece.json', import.meta.url), 'utf8'));
+  const items = doc.items.filter(isDated);
+  const lanes = doc.categories.map((c) => ({ id: c.id, label: c.label, color: c.color }));
+  const D = prepare(items, lanes, { now: 2026, relations: doc.relations, eras: eraRegions(items, doc.highlights, doc.relations, 2026) });
+  const dims = entryDimensions(items, doc.highlights);
+  const EL = eraLanes(D, 'i_classical', dims)!;
+  const win = { start: -490, end: -312 };
+  const open = (extra: Partial<View> = {}, e = env(1200, 2400)) => layout(D, view(win.start, win.end, { era: EL, ...extra }), e, 1);
+  const textOf = (S: Scene) => [...S.z[2], ...S.z[3], ...S.gutter].flatMap((p) => (p.t === 2 ? [p.s] : []));
+
+  it('puts the era’s entries, and its inner eras, in their dimensions’ lanes in pigment order', () => {
+    expect(EL.lanes.map((l) => l.id)).toEqual(['political', 'economic', 'social', 'technological', 'intellectual', 'religious']);
+    const lane = (id: string) => EL.lanes[EL.laneOf.get(id)!].id;
+    expect(lane('i_owls')).toBe('economic');
+    expect(lane('i_plato')).toBe('intellectual');
+    expect(lane('i_pentecontaetia')).toBe('political'); // an inner era
+    expect(EL.laneOf.has('i_classical')).toBe(false);
+    expect(EL.laneOf.has('i_hoplite')).toBe(false); // Archaic
+    const eco = EL.lanes[1];
+    expect(eco.spans.map((x) => x.id)).toContain('i_owls');
+    expect(eco.moments.every((m) => m.kind === 'event')).toBe(true);
+    // Lane counts are the era's highlights in each dimension, as level 0's strip counts them.
+    expect(EL.lanes.map((l) => l.count)).toEqual(['political', 'economic', 'social', 'technological', 'intellectual', 'religious'].map((d) => EL.era.mix[d as keyof typeof EL.era.mix]));
+    // Spans that overlap take different rows; one that follows can share.
+    for (const L of EL.lanes) for (const a of L.spans) for (const b of L.spans) {
+      if (a !== b && EL.rowOf.get(a.id) === EL.rowOf.get(b.id)) expect(a.e <= b.s || b.e <= a.s).toBe(true);
+    }
+  });
+
+  it('gives entries with no dimension a lane of their own at the bottom, and says when a lane is empty', () => {
+    const fewer = new Map([...dims].filter(([id, d]) => d !== 'technological' && id !== 'i_plato'));
+    const E2 = eraLanes(D, 'i_classical', fewer)!;
+    expect(E2.lanes.map((l) => l.id).at(-1)).toBe(NO_DIMENSION);
+    expect(E2.lanes.at(-1)!.label).toBe('No dimension yet');
+    expect(E2.lanes.at(-1)!.order.map((x) => x.id)).toContain('i_plato');
+    const S = layout(D, view(win.start, win.end, { era: E2 }), env(1200, 2400), 1);
+    expect(textOf(S)).toContain('Nothing technological highlighted here yet.');
+    expect(textOf(S)).toContain('NO DIMENSION YET');
+  });
+
+  it('draws a header with the era’s name and "All eras", lane names with counts, named spans and diamonds', () => {
+    const S = open();
+    const text = textOf(S);
+    expect(text).toContain('Classical Greece');
+    expect(text).toContain('‹ All eras');
+    expect(text).toContain('ECONOMIC');
+    expect(text).toContain(`${EL.era.mix.political} highlights`);
+    expect(text).toContain('Athenian silver “owls”');
+    const owls = S.z[1].find((p) => p.id === 'i_owls' && p.cls?.includes('tl-phase'))!;
+    expect(owls.t === 0 && owls.dash).toBe(true); // it starts c. 510 BCE
+    expect(S.z[1].some((p) => p.t === 6 && p.g.startsWith('diamond'))).toBe(true);
+    // "All eras" answers in the gutter; the era's name opens the era; spans are 24 px to tap.
+    const back = S.targets.find((t) => t.id === ERAS_BACK)!;
+    expect(hitTest(S, back.x + 10, back.y + 10)?.id).toBe(ERAS_BACK);
+    const name = S.targets.find((t) => t.id === 'i_classical')!;
+    expect(hitTest(S, name.x + 10, name.y + 10)?.id).toBe('i_classical');
+    const t = S.targets.find((x) => x.id === 'i_owls')!;
+    expect(t.w).toBeGreaterThanOrEqual(MIN_HIT);
+    expect(t.h).toBeGreaterThanOrEqual(MIN_HIT);
+    expect(hitTest(S, t.x + 4, t.y + t.h / 2)?.id).toBe('i_owls');
+    // The lanes scroll under the header.
+    expect(maxScroll(D, 400, 1, 1200, EL)).toBeGreaterThan(0);
+    expect(owls.t === 0 && owls.y).toBeGreaterThan(AXIS_H + HEAD1_H);
+  });
+
+  it('is a vertical list on a phone: names above, bars without labels, then a dated list to tap', () => {
+    const S = open({}, { ...env(412, 6000), gutter: 0 });
+    expect(S.gutter.length).toBe(0);
+    const row = S.targets.find((x) => x.id === 'i_owls')!;
+    expect(row.w).toBeGreaterThan(300);
+    expect(row.h).toBeGreaterThanOrEqual(MIN_HIT);
+    const item = S.z[2].find((p) => p.t === 2 && p.id === 'i_owls' && p.cls?.startsWith('tl-list-item'));
+    expect(item).toBeDefined();
+    // The bar above the list has no label of its own.
+    expect(S.z[2].some((p) => p.k === 'qbti_owls')).toBe(false);
+  });
+
+  it('grows out of the era’s band while it opens: the other rows fade and nothing answers a tap', () => {
+    const S = open({ zoom: { t: 0.3, fade: false, scroll0: 0 } }, env(1200, 700));
+    const band = S.z[1].find((p) => p.cls?.startsWith('tl-era') && p.id === 'i_archaic')!;
+    expect(band.a).toBeCloseTo(0.7);
+    // The political lane is squeezed into the band, on its way to full height.
+    const wash = (X: Scene) => X.z[0].find((p) => p.k === 'qwpolitical')!;
+    const now = wash(S), done = wash(open({}, env(1200, 700)));
+    expect(now.t === 0 && done.t === 0 && now.h < done.h * 0.6).toBe(true);
+    expect(S.targets.filter((t) => t.id !== 'playhead')).toEqual([]);
+    // With reduced motion it only fades.
+    const F = open({ zoom: { t: 0.3, fade: true, scroll0: 0 } }, env(1200, 700));
+    const header = F.z[3].find((p) => p.k === 'qhn')!;
+    expect(header.t === 2 && header.y).toBe(AXIS_H + 24);
+    expect(header.a).toBeCloseTo(0.3);
+  });
+
+  it('steps through a lane in time order, between lanes by time, and says where it is', () => {
+    expect(stepLane1(EL, undefined, 'ArrowRight', win)).toBeDefined();
+    const eco = EL.lanes[1].order;
+    expect(stepLane1(EL, eco[0].id, 'ArrowRight', win)).toBe(eco[1].id);
+    expect(stepLane1(EL, eco[0].id, 'Home', win)).toBe(eco[0].id);
+    expect(EL.laneOf.get(stepLane1(EL, eco[0].id, 'ArrowDown', win)!)).toBe(2);
+    expect(describeLane1(EL, 'i_owls')).toMatch(/^Athenian silver “owls”, c\. 510 BCE – 322 BCE, Economic, \d+ of \d+$/);
   });
 });

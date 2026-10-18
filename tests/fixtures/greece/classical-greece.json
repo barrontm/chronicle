@@ -55,6 +55,7 @@
     "y": -479
    },
    "description": "City-states, colonies, tyrants and the alphabet.",
+   "dimension": "political",
    "tags": [
     "era",
     "political"
@@ -80,6 +81,7 @@
      "sourceId": "s_wp_classical_greece"
     }
    ],
+   "dimension": "political",
    "tags": [
     "era",
     "political"
@@ -187,6 +189,7 @@
     "y": -430
    },
    "description": "Athens grows from leader of an alliance into an empire.",
+   "dimension": "political",
    "tags": [
     "era",
     "political"
@@ -206,6 +209,7 @@
    "end": {
     "y": -361
    },
+   "dimension": "political",
    "tags": [
     "era",
     "political"
@@ -225,6 +229,7 @@
    "end": {
     "y": -322
    },
+   "dimension": "political",
    "tags": [
     "era",
     "political"
@@ -244,6 +249,7 @@
    "end": {
     "y": -30
    },
+   "dimension": "political",
    "tags": [
     "era",
     "political"
@@ -272,6 +278,7 @@
      "sourceId": "s_wp_greco_persian_wars"
     }
    ],
+   "dimension": "political",
    "tags": [
     "political"
    ]
@@ -301,6 +308,7 @@
      "role": "site"
     }
    ],
+   "dimension": "political",
    "tags": [
     "political"
    ]
@@ -327,6 +335,7 @@
      "role": "site"
     }
    ],
+   "dimension": "political",
    "tags": [
     "political"
    ]
@@ -357,6 +366,7 @@
      "role": "site"
     }
    ],
+   "dimension": "political",
    "tags": [
     "political"
    ]
@@ -378,6 +388,7 @@
      "sourceId": "s_wp_darius_the_great"
     }
    ],
+   "dimension": "political",
    "tags": [
     "political"
    ]
@@ -399,6 +410,7 @@
      "sourceId": "s_wp_xerxes_i"
     }
    ],
+   "dimension": "political",
    "tags": [
     "political"
    ]
@@ -421,6 +433,7 @@
      "sourceId": "s_hdt"
     }
    ],
+   "dimension": "political",
    "tags": [
     "political"
    ]
@@ -450,6 +463,7 @@
      "role": "site"
     }
    ],
+   "dimension": "political",
    "tags": [
     "political"
    ]
@@ -476,6 +490,7 @@
      "role": "site"
     }
    ],
+   "dimension": "political",
    "tags": [
     "political"
    ]
@@ -506,6 +521,7 @@
      "role": "site"
     }
    ],
+   "dimension": "political",
    "tags": [
     "political"
    ]
@@ -535,6 +551,7 @@
      "role": "site"
     }
    ],
+   "dimension": "political",
    "tags": [
     "political"
    ]
@@ -561,6 +578,7 @@
      "role": "site"
     }
    ],
+   "dimension": "political",
    "tags": [
     "political"
    ]
@@ -591,6 +609,7 @@
      "role": "site"
     }
    ],
+   "dimension": "political",
    "tags": [
     "political"
    ]
@@ -613,6 +632,7 @@
      "role": "site"
     }
    ],
+   "dimension": "political",
    "tags": [
     "political"
    ]
@@ -640,6 +660,7 @@
      "role": "site"
     }
    ],
+   "dimension": "political",
    "tags": [
     "political"
    ]
@@ -662,6 +683,7 @@
      "role": "site"
     }
    ],
+   "dimension": "social",
    "tags": [
     "social"
    ]
@@ -687,6 +709,7 @@
      "role": "site"
     }
    ],
+   "dimension": "social",
    "tags": [
     "social"
    ]
@@ -717,6 +740,7 @@
      "role": "site"
     }
    ],
+   "dimension": "political",
    "tags": [
     "political"
    ]
@@ -730,6 +754,7 @@
    },
    "categoryId": "politics",
    "updatedAt": 1760000000000,
+   "dimension": "political",
    "tags": [
     "political"
    ]
@@ -762,6 +787,7 @@
      "role": "site"
     }
    ],
+   "dimension": "technological",
    "tags": [
     "technological"
    ]
@@ -785,6 +811,7 @@
      "sourceId": "s_thuc"
     }
    ],
+   "dimension": "political",
    "tags": [
     "political"
    ]
@@ -806,6 +833,7 @@
      "role": "site"
     }
    ],
+   "dimension": "political",
    "tags": [
     "political"
    ]
@@ -833,6 +861,7 @@
      "role": "site"
     }
    ],
+   "dimension": "economic",
    "tags": [
     "economic"
    ]
@@ -852,6 +881,7 @@
      "sourceId": "s_ath"
     }
    ],
+   "dimension": "social",
    "tags": [
     "social"
    ]
@@ -872,6 +902,7 @@
      "sourceId": "s_wp_peace_of_callias"
     }
    ],
+   "dimension": "political",
    "tags": [
     "political"
    ]
@@ -891,6 +922,7 @@
     "approx": true
    },
    "description": "Poorer citizens can afford to sit on juries.",
+   "dimension": "social",
    "tags": [
     "social"
    ]
@@ -924,6 +956,7 @@
      "role": "site"
     }
    ],
+   "dimension": "religious",
    "tags": [
     "religious"
    ]
@@ -948,6 +981,7 @@
      "role": "site"
     }
    ],
+   "dimension": "religious",
    "tags": [
     "religious"
    ]
@@ -961,6 +995,7 @@
    },
    "categoryId": "politics",
    "updatedAt": 1760000000000,
+   "dimension": "political",
    "tags": [
     "political"
    ]
@@ -988,6 +1023,7 @@
      "role": "site"
     }
    ],
+   "dimension": "economic",
    "tags": [
     "economic"
    ]
@@ -1012,6 +1048,7 @@
      "role": "site"
     }
    ],
+   "dimension": "political",
    "tags": [
     "political"
    ]
@@ -1025,6 +1062,7 @@
    },
    "categoryId": "politics",
    "updatedAt": 1760000000000,
+   "dimension": "political",
    "tags": [
     "political"
    ]
@@ -1046,6 +1084,7 @@
      "role": "site"
     }
    ],
+   "dimension": "political",
    "tags": [
     "political"
    ]
@@ -1067,6 +1106,7 @@
      "role": "site"
     }
    ],
+   "dimension": "political",
    "tags": [
     "political"
    ]
@@ -1081,6 +1121,7 @@
    "categoryId": "politics",
    "updatedAt": 1760000000000,
    "description": "Megarian merchants are shut out of Athens’ harbours and markets.",
+   "dimension": "economic",
    "tags": [
     "economic"
    ]
@@ -1106,6 +1147,7 @@
      "sourceId": "s_wp_peloponnesian_war"
     }
    ],
+   "dimension": "political",
    "tags": [
     "political"
    ]
@@ -1123,6 +1165,7 @@
     "y": -420
    },
    "description": "Sparta invades Attica each summer; Athens raids the coast.",
+   "dimension": "political",
    "tags": [
     "political"
    ]
@@ -1144,6 +1187,7 @@
      "sourceId": "s_wp_peace_of_nicias"
     }
    ],
+   "dimension": "political",
    "tags": [
     "political"
    ]
@@ -1169,6 +1213,7 @@
      "sourceId": "s_wp_sicilian_expedition"
     }
    ],
+   "dimension": "political",
    "tags": [
     "political"
    ]
@@ -1185,6 +1230,7 @@
    "end": {
     "y": -403
    },
+   "dimension": "political",
    "tags": [
     "political"
    ]
@@ -1212,6 +1258,7 @@
      "role": "site"
     }
    ],
+   "dimension": "political",
    "tags": [
     "political"
    ]
@@ -1245,6 +1292,7 @@
      "role": "site"
     }
    ],
+   "dimension": "social",
    "tags": [
     "social"
    ]
@@ -1267,6 +1315,7 @@
      "role": "site"
     }
    ],
+   "dimension": "religious",
    "tags": [
     "religious"
    ]
@@ -1280,6 +1329,7 @@
    },
    "categoryId": "politics",
    "updatedAt": 1760000000000,
+   "dimension": "political",
    "tags": [
     "political"
    ]
@@ -1307,6 +1357,7 @@
      "role": "site"
     }
    ],
+   "dimension": "political",
    "tags": [
     "political"
    ]
@@ -1329,6 +1380,7 @@
      "role": "site"
     }
    ],
+   "dimension": "social",
    "tags": [
     "social"
    ]
@@ -1359,6 +1411,7 @@
      "role": "site"
     }
    ],
+   "dimension": "political",
    "tags": [
     "political"
    ]
@@ -1386,6 +1439,7 @@
      "role": "site"
     }
    ],
+   "dimension": "political",
    "tags": [
     "political"
    ]
@@ -1413,6 +1467,7 @@
      "role": "site"
     }
    ],
+   "dimension": "political",
    "tags": [
     "political"
    ]
@@ -1440,6 +1495,7 @@
      "role": "site"
     }
    ],
+   "dimension": "political",
    "tags": [
     "political"
    ]
@@ -1467,6 +1523,7 @@
      "role": "site"
     }
    ],
+   "dimension": "political",
    "tags": [
     "political"
    ]
@@ -1494,6 +1551,7 @@
      "role": "site"
     }
    ],
+   "dimension": "political",
    "tags": [
     "political"
    ]
@@ -1521,6 +1579,7 @@
      "role": "site"
     }
    ],
+   "dimension": "political",
    "tags": [
     "political"
    ]
@@ -1548,6 +1607,7 @@
      "role": "site"
     }
    ],
+   "dimension": "political",
    "tags": [
     "political"
    ]
@@ -1575,6 +1635,7 @@
      "role": "site"
     }
    ],
+   "dimension": "political",
    "tags": [
     "political"
    ]
@@ -1602,6 +1663,7 @@
      "role": "site"
     }
    ],
+   "dimension": "political",
    "tags": [
     "political"
    ]
@@ -1629,6 +1691,7 @@
      "role": "site"
     }
    ],
+   "dimension": "political",
    "tags": [
     "political"
    ]
@@ -1656,6 +1719,7 @@
      "role": "site"
     }
    ],
+   "dimension": "political",
    "tags": [
     "political"
    ]
@@ -1683,6 +1747,7 @@
      "role": "site"
     }
    ],
+   "dimension": "political",
    "tags": [
     "political"
    ]
@@ -1710,6 +1775,7 @@
      "role": "site"
     }
    ],
+   "dimension": "political",
    "tags": [
     "political"
    ]
@@ -1737,6 +1803,7 @@
      "role": "site"
     }
    ],
+   "dimension": "political",
    "tags": [
     "political"
    ]
@@ -1764,6 +1831,7 @@
      "role": "site"
     }
    ],
+   "dimension": "political",
    "tags": [
     "political"
    ]
@@ -1791,6 +1859,7 @@
      "role": "site"
     }
    ],
+   "dimension": "political",
    "tags": [
     "political"
    ]
@@ -1818,6 +1887,7 @@
      "role": "site"
     }
    ],
+   "dimension": "political",
    "tags": [
     "political"
    ]
@@ -1845,6 +1915,7 @@
      "role": "site"
     }
    ],
+   "dimension": "political",
    "tags": [
     "political"
    ]
@@ -1872,6 +1943,7 @@
      "role": "site"
     }
    ],
+   "dimension": "political",
    "tags": [
     "political"
    ]
@@ -1899,6 +1971,7 @@
      "role": "site"
     }
    ],
+   "dimension": "political",
    "tags": [
     "political"
    ]
@@ -1926,6 +1999,7 @@
      "role": "site"
     }
    ],
+   "dimension": "political",
    "tags": [
     "political"
    ]
@@ -1951,6 +2025,7 @@
      "sourceId": "s_wp_anabasis_xenophon"
     }
    ],
+   "dimension": "political",
    "tags": [
     "political"
    ]
@@ -1978,6 +2053,7 @@
      "role": "site"
     }
    ],
+   "dimension": "intellectual",
    "tags": [
     "intellectual"
    ]
@@ -2000,6 +2076,7 @@
      "role": "site"
     }
    ],
+   "dimension": "technological",
    "tags": [
     "technological"
    ]
@@ -2021,6 +2098,7 @@
      "sourceId": "s_wp_corinthian_war"
     }
    ],
+   "dimension": "political",
    "tags": [
     "political"
    ]
@@ -2040,6 +2118,7 @@
      "sourceId": "s_wp_king_s_peace"
     }
    ],
+   "dimension": "political",
    "tags": [
     "political"
    ]
@@ -2066,6 +2145,7 @@
      "role": "site"
     }
    ],
+   "dimension": "intellectual",
    "tags": [
     "intellectual"
    ]
@@ -2087,6 +2167,7 @@
      "role": "site"
     }
    ],
+   "dimension": "political",
    "tags": [
     "political"
    ]
@@ -2100,6 +2181,7 @@
    },
    "categoryId": "politics",
    "updatedAt": 1760000000000,
+   "dimension": "political",
    "tags": [
     "political"
    ]
@@ -2130,6 +2212,7 @@
      "role": "site"
     }
    ],
+   "dimension": "political",
    "tags": [
     "political"
    ]
@@ -2152,6 +2235,7 @@
      "role": "site"
     }
    ],
+   "dimension": "social",
    "tags": [
     "social"
    ]
@@ -2179,6 +2263,7 @@
      "role": "site"
     }
    ],
+   "dimension": "political",
    "tags": [
     "political"
    ]
@@ -2196,6 +2281,7 @@
     "y": -354
    },
    "description": "Athens’ allies break away.",
+   "dimension": "political",
    "tags": [
     "political"
    ]
@@ -2226,6 +2312,7 @@
      "role": "site"
     }
    ],
+   "dimension": "religious",
    "tags": [
     "religious"
    ]
@@ -2247,6 +2334,7 @@
      "role": "site"
     }
    ],
+   "dimension": "political",
    "tags": [
     "political"
    ]
@@ -2268,6 +2356,7 @@
      "role": "site"
     }
    ],
+   "dimension": "political",
    "tags": [
     "political"
    ]
@@ -2290,6 +2379,7 @@
      "sourceId": "s_wp_sarissa"
     }
    ],
+   "dimension": "technological",
    "tags": [
     "technological"
    ]
@@ -2316,6 +2406,7 @@
      "role": "site"
     }
    ],
+   "dimension": "political",
    "tags": [
     "political"
    ]
@@ -2329,6 +2420,7 @@
    },
    "categoryId": "politics",
    "updatedAt": 1760000000000,
+   "dimension": "political",
    "tags": [
     "political"
    ]
@@ -2359,6 +2451,7 @@
      "role": "site"
     }
    ],
+   "dimension": "political",
    "tags": [
     "political"
    ]
@@ -2380,6 +2473,7 @@
      "role": "site"
     }
    ],
+   "dimension": "political",
    "tags": [
     "political"
    ]
@@ -2401,6 +2495,7 @@
      "role": "site"
     }
    ],
+   "dimension": "political",
    "tags": [
     "political"
    ]
@@ -2422,6 +2517,7 @@
      "role": "site"
     }
    ],
+   "dimension": "intellectual",
    "tags": [
     "intellectual"
    ]
@@ -2443,6 +2539,7 @@
      "role": "site"
     }
    ],
+   "dimension": "political",
    "tags": [
     "political"
    ]
@@ -2464,6 +2561,7 @@
      "sourceId": "s_wp_wars_of_alexander_the_great"
     }
    ],
+   "dimension": "political",
    "tags": [
     "political"
    ]
@@ -2485,6 +2583,7 @@
      "role": "site"
     }
    ],
+   "dimension": "political",
    "tags": [
     "political"
    ]
@@ -2506,6 +2605,7 @@
      "role": "site"
     }
    ],
+   "dimension": "political",
    "tags": [
     "political"
    ]
@@ -2527,6 +2627,7 @@
      "role": "site"
     }
    ],
+   "dimension": "political",
    "tags": [
     "political"
    ]
@@ -2549,6 +2650,7 @@
      "sourceId": "s_wp_lamian_war"
     }
    ],
+   "dimension": "political",
    "tags": [
     "political"
    ]
@@ -2571,6 +2673,7 @@
      "role": "site"
     }
    ],
+   "dimension": "political",
    "tags": [
     "political"
    ]
@@ -2601,6 +2704,7 @@
      "role": "site"
     }
    ],
+   "dimension": "economic",
    "tags": [
     "economic"
    ]
@@ -2619,6 +2723,7 @@
     "y": -321
    },
    "description": "Coins stamped with Athena’s owl become a common currency around the Aegean.",
+   "dimension": "economic",
    "tags": [
     "economic"
    ]
@@ -2641,6 +2746,7 @@
      "sourceId": "s_wp_trireme"
     }
    ],
+   "dimension": "technological",
    "tags": [
     "technological"
    ]
@@ -2664,6 +2770,7 @@
      "sourceId": "s_wp_hoplite"
     }
    ],
+   "dimension": "technological",
    "tags": [
     "technological"
    ]
@@ -2687,6 +2794,7 @@
      "role": "site"
     }
    ],
+   "dimension": "social",
    "tags": [
     "social"
    ]
@@ -2708,6 +2816,7 @@
      "role": "site"
     }
    ],
+   "dimension": "religious",
    "tags": [
     "religious"
    ]
@@ -2730,6 +2839,7 @@
      "role": "site"
     }
    ],
+   "dimension": "intellectual",
    "tags": [
     "intellectual"
    ]
@@ -2743,6 +2853,7 @@
    },
    "categoryId": "arts",
    "updatedAt": 1760000000000,
+   "dimension": "intellectual",
    "tags": [
     "intellectual"
    ]
@@ -2756,6 +2867,7 @@
    },
    "categoryId": "arts",
    "updatedAt": 1760000000000,
+   "dimension": "intellectual",
    "tags": [
     "intellectual"
    ]
@@ -2770,6 +2882,7 @@
    },
    "categoryId": "arts",
    "updatedAt": 1760000000000,
+   "dimension": "intellectual",
    "tags": [
     "intellectual"
    ]
@@ -2784,6 +2897,7 @@
    "categoryId": "arts",
    "updatedAt": 1760000000000,
    "description": "A comedy that makes fun of Socrates.",
+   "dimension": "intellectual",
    "tags": [
     "intellectual"
    ]
@@ -2804,6 +2918,7 @@
      "sourceId": "s_hdt"
     }
    ],
+   "dimension": "intellectual",
    "tags": [
     "intellectual"
    ]
@@ -2822,6 +2937,7 @@
      "sourceId": "s_thuc"
     }
    ],
+   "dimension": "intellectual",
    "tags": [
     "intellectual"
    ]
@@ -2837,6 +2953,7 @@
    "categoryId": "ideas",
    "updatedAt": 1760000000000,
    "description": "The spring festival where tragedies and comedies compete.",
+   "dimension": "religious",
    "tags": [
     "religious"
    ]
@@ -2861,6 +2978,7 @@
      "sourceId": "s_wp_cleisthenes"
     }
    ],
+   "dimension": "political",
    "tags": [
     "political"
    ]
@@ -2885,6 +3003,7 @@
      "sourceId": "s_wp_themistocles"
     }
    ],
+   "dimension": "political",
    "tags": [
     "political"
    ]
@@ -2902,6 +3021,7 @@
    "end": {
     "y": -467
    },
+   "dimension": "political",
    "tags": [
     "political"
    ]
@@ -2924,6 +3044,7 @@
      "sourceId": "s_wp_leonidas_i"
     }
    ],
+   "dimension": "political",
    "tags": [
     "political"
    ]
@@ -2940,6 +3061,7 @@
    "end": {
     "y": -449
    },
+   "dimension": "political",
    "tags": [
     "political"
    ]
@@ -2965,6 +3087,7 @@
      "sourceId": "s_wp_pericles"
     }
    ],
+   "dimension": "political",
    "tags": [
     "political"
    ]
@@ -2983,6 +3106,7 @@
     "y": -399,
     "approx": true
    },
+   "dimension": "social",
    "tags": [
     "social"
    ]
@@ -3006,6 +3130,7 @@
      "sourceId": "s_wp_phidias"
     }
    ],
+   "dimension": "religious",
    "tags": [
     "religious"
    ]
@@ -3023,6 +3148,7 @@
    "end": {
     "y": -427
    },
+   "dimension": "intellectual",
    "tags": [
     "intellectual"
    ]
@@ -3041,6 +3167,7 @@
     "y": -419,
     "approx": true
    },
+   "dimension": "intellectual",
    "tags": [
     "intellectual"
    ]
@@ -3064,6 +3191,7 @@
      "sourceId": "s_wp_herodotus"
     }
    ],
+   "dimension": "intellectual",
    "tags": [
     "intellectual"
    ]
@@ -3088,6 +3216,7 @@
      "sourceId": "s_wp_thucydides"
     }
    ],
+   "dimension": "intellectual",
    "tags": [
     "intellectual"
    ]
@@ -3109,6 +3238,7 @@
      "sourceId": "s_wp_aeschylus"
     }
    ],
+   "dimension": "intellectual",
    "tags": [
     "intellectual"
    ]
@@ -3130,6 +3260,7 @@
      "sourceId": "s_wp_sophocles"
     }
    ],
+   "dimension": "intellectual",
    "tags": [
     "intellectual"
    ]
@@ -3151,6 +3282,7 @@
      "sourceId": "s_wp_euripides"
     }
    ],
+   "dimension": "intellectual",
    "tags": [
     "intellectual"
    ]
@@ -3174,6 +3306,7 @@
      "sourceId": "s_wp_aristophanes"
     }
    ],
+   "dimension": "intellectual",
    "tags": [
     "intellectual"
    ]
@@ -3192,6 +3325,7 @@
     "y": -437,
     "approx": true
    },
+   "dimension": "intellectual",
    "tags": [
     "intellectual"
    ]
@@ -3215,6 +3349,7 @@
      "sourceId": "s_wp_hippocrates"
     }
    ],
+   "dimension": "intellectual",
    "tags": [
     "intellectual"
    ]
@@ -3233,6 +3368,7 @@
     "y": -369,
     "approx": true
    },
+   "dimension": "intellectual",
    "tags": [
     "intellectual"
    ]
@@ -3251,6 +3387,7 @@
     "y": -407,
     "approx": true
    },
+   "dimension": "technological",
    "tags": [
     "technological"
    ]
@@ -3282,6 +3419,7 @@
      "role": "site"
     }
    ],
+   "dimension": "intellectual",
    "tags": [
     "intellectual"
    ]
@@ -3305,6 +3443,7 @@
      "sourceId": "s_wp_plato"
     }
    ],
+   "dimension": "intellectual",
    "tags": [
     "intellectual"
    ]
@@ -3327,6 +3466,7 @@
      "sourceId": "s_wp_aristotle"
     }
    ],
+   "dimension": "intellectual",
    "tags": [
     "intellectual"
    ]
@@ -3345,6 +3485,7 @@
     "y": -374,
     "approx": true
    },
+   "dimension": "intellectual",
    "tags": [
     "intellectual"
    ]
@@ -3362,6 +3503,7 @@
    "end": {
     "y": -322
    },
+   "dimension": "intellectual",
    "tags": [
     "intellectual"
    ]
@@ -3385,6 +3527,7 @@
      "sourceId": "s_wp_xenophon"
     }
    ],
+   "dimension": "intellectual",
    "tags": [
     "intellectual"
    ]
@@ -3410,6 +3553,7 @@
      "sourceId": "s_wp_alcibiades"
     }
    ],
+   "dimension": "political",
    "tags": [
     "political"
    ]
@@ -3427,6 +3571,7 @@
    "end": {
     "y": -412
    },
+   "dimension": "political",
    "tags": [
     "political"
    ]
@@ -3449,6 +3594,7 @@
      "sourceId": "s_wp_lysander"
     }
    ],
+   "dimension": "political",
    "tags": [
     "political"
    ]
@@ -3466,6 +3612,7 @@
    "end": {
     "y": -359
    },
+   "dimension": "political",
    "tags": [
     "political"
    ]
@@ -3483,6 +3630,7 @@
    "end": {
     "y": -387
    },
+   "dimension": "political",
    "tags": [
     "political"
    ]
@@ -3505,6 +3653,7 @@
      "sourceId": "s_wp_epaminondas"
     }
    ],
+   "dimension": "political",
    "tags": [
     "political"
    ]
@@ -3522,6 +3671,7 @@
    "end": {
     "y": -363
    },
+   "dimension": "political",
    "tags": [
     "political"
    ]
@@ -3540,6 +3690,7 @@
     "y": -379,
     "approx": true
    },
+   "dimension": "social",
    "tags": [
     "social"
    ]
@@ -3556,6 +3707,7 @@
    "end": {
     "y": -337
    },
+   "dimension": "intellectual",
    "tags": [
     "intellectual"
    ]
@@ -3574,6 +3726,7 @@
     "y": -329,
     "approx": true
    },
+   "dimension": "intellectual",
    "tags": [
     "intellectual"
    ]
@@ -3592,6 +3745,7 @@
     "y": -419,
     "approx": true
    },
+   "dimension": "intellectual",
    "tags": [
     "intellectual"
    ]
@@ -3617,6 +3771,7 @@
      "role": "site"
     }
    ],
+   "dimension": "political",
    "tags": [
     "political"
    ]
@@ -3639,6 +3794,7 @@
      "sourceId": "s_wp_demosthenes"
     }
    ],
+   "dimension": "political",
    "tags": [
     "political"
    ]
@@ -3660,6 +3816,7 @@
      "sourceId": "s_wp_philip_ii_of_macedon"
     }
    ],
+   "dimension": "political",
    "tags": [
     "political"
    ]
@@ -3681,6 +3838,7 @@
      "sourceId": "s_wp_alexander_the_great"
     }
    ],
+   "dimension": "political",
    "tags": [
     "political"
    ]

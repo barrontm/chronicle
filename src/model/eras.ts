@@ -54,6 +54,30 @@ const exact = (d: HistDate): HistDate => ({ ...d, approx: undefined });
 const emptyMix = () => Object.fromEntries(DIMENSIONS.map((d) => [d, 0])) as Record<Dimension, number>;
 
 /**
+ * Each entry's dimension, for its lane inside an era (level 1): its own, else the one most of
+ * the highlights it uses have (the first in pigment order on a tie). Entries with neither are left out.
+ */
+export function entryDimensions(items: TimelineItem[], highlights: Highlight[]): Map<string, Dimension> {
+  const votes = new Map<string, Record<Dimension, number>>();
+  for (const h of highlights) {
+    if (!h.dimension) continue;
+    for (const id of h.usedBy) {
+      let v = votes.get(id);
+      if (!v) votes.set(id, (v = emptyMix()));
+      v[h.dimension]++;
+    }
+  }
+  const out = new Map<string, Dimension>();
+  for (const it of items) {
+    const v = votes.get(it.id);
+    const top = v && DIMENSIONS.reduce<Dimension | undefined>((b, d) => (v[d] && (!b || v[d] > v[b]) ? d : b), undefined);
+    const dim = it.dimension ?? top;
+    if (dim) out.set(it.id, dim);
+  }
+  return out;
+}
+
+/**
  * Regions with their eras, the most highlighted region first and "Elsewhere" last; eras earliest
  * first. `now` (a decimal year) is where an era without an end stops.
  */

@@ -24,10 +24,15 @@ export const FONTS = {
   eraDates: '12.5px Spectral, Georgia, serif',
   tick0: '12.5px Spectral, Georgia, serif',
   tick0B: '600 12.5px Spectral, Georgia, serif',
+  // Level 1: lane names in spaced capitals with their counts, an empty lane's note, the phone's list.
+  dim: '600 11.5px "Public Sans", system-ui, sans-serif',
+  dimCount: '11px "Public Sans", system-ui, sans-serif',
+  note: 'italic 14px Spectral, Georgia, serif',
+  item: '14px Spectral, Georgia, serif',
 } as const;
 export type FontKey = keyof typeof FONTS;
 /** Letter spacing in px, which the font shorthand can't carry: the painter sets it and the layout measures with it. */
-export const SPACING: Partial<Record<FontKey, number>> = { era: 0.75, region: 1.7 };
+export const SPACING: Partial<Record<FontKey, number>> = { era: 0.75, region: 1.7, dim: 0.7 };
 /** Fonts drawn with old-style numerals. */
 export const OLDSTYLE = new Set<FontKey>(['eraDates', 'tick0', 'tick0B']);
 
@@ -51,8 +56,10 @@ export interface Ln extends Base { t: 3; x1: number; y1: number; x2: number; y2:
 export interface Img extends Base { t: 4; x: number; y: number; w: number; h: number; href: string }
 /** An arrow between two entries: its ends' ids, and the arrowhead (a marker per role). */
 export interface Arc extends Base { t: 5; d: string; stroke: string; sw?: number; dash?: boolean; head?: ArcRole; from?: string; to?: string }
-/** A kind's glyph (its representation's), `w` px square, drawn in `color`. */
-export interface Use extends Base { t: 6; x: number; y: number; w: number; g: SubjectKind; color: string }
+/** A kind's glyph (its representation's), or level 1's diamond for a key moment, `w` px square, drawn in `color`. */
+export interface Use extends Base { t: 6; x: number; y: number; w: number; g: SubjectKind | Diamond; color: string }
+/** Level 1's key moment: solid, or hollow with a dashed edge when its date is approximate. */
+export type Diamond = 'diamond' | 'diamond-approx';
 /** A filled path, such as a migration's bar ending in an arrow point. */
 export interface Shape extends Base { t: 7; d: string; fill: string; stroke?: string; sw?: number }
 export type Prim = Rect | Dot | Txt | Ln | Img | Arc | Use | Shape;
@@ -87,6 +94,8 @@ export interface Target {
   x: number; y: number; w: number; h: number;
   lane?: string;
   cluster?: Cluster;
+  /** It sits in the gutter (level 1's "All eras"), where nothing else answers. */
+  gutter?: boolean;
 }
 
 export interface Box { x: number; y: number; w: number; h: number }
