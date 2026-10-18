@@ -2,6 +2,9 @@
 
 A log of choices that shouldn't be re-litigated every session. Newest first. To change a decision, add a new entry that supersedes the old one.
 
+## 2026-10-18 — Socrates dropped
+Bob doesn't want a Socrates chatbot in the app. Phase 2b is gone, along with its prototype, the `Dialogue` record and the `socrates` AI feature. This supersedes the Socrates half of "Socrates: a dialogue, not content; a living map" (the living map, Phase 5d, stands). "AI drafts data, never images" is back to what it said: Claude drafts records Bob accepts one by one, and doesn't talk with him. v7 keeps only `subject` and `region` on entries, and becomes Phase 3 ticket 1, since the new timeline needs them; v8 to v11 are unchanged. PDFs and EPUBs (Phase 6) are for reading and highlighting only.
+
 ## 2026-10-17 — Phase 2 checkpoint: six timeline tickets, `subject` and `region` in v7, the tray's block lifted kind by kind
 Phase 3 is six tickets plus its checkpoint: the renderer's layout, painter and gestures; parity with today's timeline; every kind drawn as itself; level 0's era bands; level 1's six lanes; then the switch-over that removes vis-timeline and makes the new layout the default. The first two are split because porting the spike and matching every feature of today's timeline are each a full session. The new renderer runs under `ui.next` alone until ticket 6, so the old layout is never half-migrated. Ticket 1 starts with Bob running the spike demo on his iPhone; only if it misses 60 fps does the painter become the hybrid.
 

@@ -19,7 +19,6 @@ Nothing appears until Bob has read and highlighted it. The app still ships no co
 - AI features (rules in `src/ai/CLAUDE.md`):
   - `highlight`: from a highlight and its section, extract claims (dates, place names for the gazetteers, actors, quantities, institutions for regimes, sectors for economies) and a dimension. The article text is prompt-cached.
   - `themes`: group an era's highlights into themes with a suggested short label. Bob accepts or edits each.
-  - `socrates`: Bob talks about any subject with Plato's Socrates, who questions rather than tells (elenchus, analogies from the crafts, aporia), drawing only on the article, linked articles, Bob's highlights and notes, and later his own books. Dialogues are kept with the entry, never as notes.
 
 ## Representations
 One module per subject type in `src/ui/representations/`, each declaring its timeline glyph, map layers and animation.
@@ -70,7 +69,7 @@ A connection can carry an `effect` (weakened, funded, legitimised, …) and the 
 
 ## Schema path
 - v6: `highlights`, `dimension`, `themes` on periods; `effect` and `highlightIds` on connections.
-- v7: `dialogues` (talking with Socrates); `subject` and `region` on entries, for the new timeline.
+- v7: `subject` and `region` on entries, for the new timeline.
 - v8: `regimes` on territories, and alliances.
 - v9: `economies` (with `distribution`), plus `Flow.subject` and `goods`.
 - v10: `institutions` with `structures`, `reception` on ideas and works, `Flow.subject: 'ideas'`.
@@ -86,8 +85,7 @@ Each phase ships something usable, behind a "Try the new layout" setting (`ui.ne
 0. Design and spikes: design language, prototypes, spikes, rich fixture
 1. Reader: reader pane, highlights (v6), recognition, offline cache
 2. Highlight → record: code path, AI `highlight` feature, review
-   - 2b. Talk with Socrates: dialogues (v7), the AI `socrates` feature
-3. New timeline: renderer at parity, every kind drawn as itself, then the zoom levels; vis-timeline removed
+3. New timeline: `subject` and `region` (v7), renderer at parity, every kind drawn as itself, then the zoom levels; vis-timeline removed
 4. Eras, themes and influences between dimensions; eras on the map
 5. Polities and wars: regimes (v8), border morph, alliances, campaigns, battles
    - 5b. Economy, with distribution (v9)
