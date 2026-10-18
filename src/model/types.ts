@@ -142,7 +142,8 @@ export interface TimelineItem {
   id: string;
   kind: ItemKind;
   title: string;
-  start: HistDate;
+  /** Missing only on a place whose founding isn't known: it is on the map, not the timeline. */
+  start?: HistDate;
   /** Required for span and person (unless the person is living); absent for event. */
   end?: HistDate;
   categoryId: string;
@@ -167,6 +168,9 @@ export interface TimelineItem {
   /** Epoch ms of the last edit. Drives per-item merge when syncing devices. */
   updatedAt: number;
 }
+
+/** An entry with a start date: everything the timeline draws. */
+export type DatedItem = TimelineItem & { start: HistDate };
 
 // ---------- Learning layer: notes, sources, connections ----------
 
@@ -324,7 +328,7 @@ export interface Flow {
   updatedAt: number;
 }
 
-export const SCHEMA_VERSION = 7;
+export const SCHEMA_VERSION = 8;
 
 export interface TimelineDoc {
   schemaVersion: number;

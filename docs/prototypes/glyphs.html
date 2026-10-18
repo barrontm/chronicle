@@ -1,0 +1,340 @@
+<title>Kind glyphs</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600&family=Spectral+SC:wght@500;600&family=Spectral:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+<style>
+/* Layout: one section per kind still on a stand-in glyph, three option cards each (tray glyph + its timeline mark), then the whole set on one lane. Phase 3 ticket 4. */
+:root {
+  --bg: #eef0ec; --panel: #fbfbf8; --ink: #1d2b3a; --ink-2: #4d5b66; --muted: #74808a;
+  --rule: #cfd4cc; --rule-soft: #e1e4dd; --focus: #2f5da8;
+  --lapis: #2f5da8; --cinnabar: #c23b22; --umber: #7a5a3a; --verdigris: #2e8b74; --ochre: #b8860b; --madder: #a33b6b; --indigo: #4b3f8c;
+  --font-read: 'Spectral', Georgia, serif;
+  --font-sc: 'Spectral SC', 'Spectral', Georgia, serif;
+  --font-ui: 'Public Sans', system-ui, sans-serif;
+  --motion-quick: 150ms; --ease: cubic-bezier(.2,.7,.2,1);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #131b23; --panel: #1a242e; --ink: #e3e6e0; --ink-2: #b7bfbf; --muted: #8a959b;
+    --rule: #33414d; --rule-soft: #26323d; --focus: #7fa3e0;
+    --lapis: #6f93d6; --cinnabar: #e0664c; --umber: #b9936b; --verdigris: #58b89d; --ochre: #dcae45; --madder: #d06d9a; --indigo: #9184d6;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #131b23; --panel: #1a242e; --ink: #e3e6e0; --ink-2: #b7bfbf; --muted: #8a959b;
+  --rule: #33414d; --rule-soft: #26323d; --focus: #7fa3e0;
+  --lapis: #6f93d6; --cinnabar: #e0664c; --umber: #b9936b; --verdigris: #58b89d; --ochre: #dcae45; --madder: #d06d9a; --indigo: #9184d6;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font: 15px/1.5 var(--font-read); }
+.wrap { max-width: 1120px; margin: 0 auto; padding-block: 28px 64px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: grid; gap: 36px; }
+header { display: grid; gap: 8px; max-width: 68ch; }
+h1 { font: 600 30px/1.15 var(--font-sc); letter-spacing: .04em; margin: 0; text-wrap: balance; }
+h2 { font: 600 20px/1.2 var(--font-sc); letter-spacing: .05em; margin: 0; }
+p { margin: 0; }
+.lede { color: var(--ink-2); }
+.bar-top { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font: 13px var(--font-ui); color: var(--muted); }
+button.theme { font: 500 13px var(--font-ui); color: var(--ink); background: var(--panel); border: 1px solid var(--rule); border-radius: 6px; padding: 5px 10px; cursor: pointer; }
+button:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+section.kind { display: grid; gap: 12px; }
+.kind-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; }
+.kind-head .what { font: 13px var(--font-ui); color: var(--muted); }
+.opts { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; }
+.opt { all: unset; box-sizing: border-box; display: grid; gap: 10px; align-content: start; background: var(--panel); border: 1px solid var(--rule); border-radius: 8px; padding: 14px; cursor: pointer; min-width: 0; transition: border-color var(--motion-quick) var(--ease), box-shadow var(--motion-quick) var(--ease); }
+.opt:hover { border-color: var(--muted); }
+.opt[aria-pressed="true"] { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); }
+.opt:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.opt-top { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center; }
+.big { width: 40px; height: 40px; color: var(--lane); }
+.letter { font: 600 12px var(--font-ui); color: var(--muted); letter-spacing: .06em; }
+.opt[aria-pressed="true"] .letter { color: var(--ink); }
+.opt-name { font: 600 15px var(--font-read); }
+.tray-row { display: flex; align-items: center; gap: 8px; font: 13px var(--font-ui); color: var(--ink-2); border-top: 1px solid var(--rule-soft); padding-top: 8px; }
+.tray-row svg { width: 18px; height: 18px; flex: none; color: var(--ink); }
+.tray-row b { font: 500 14px var(--font-read); color: var(--ink); }
+.note { font: 13px/1.45 var(--font-ui); color: var(--ink-2); }
+.tl { display: block; width: 100%; height: auto; border-radius: 4px; }
+
+.set { display: grid; gap: 14px; background: var(--panel); border: 1px solid var(--rule); border-radius: 8px; padding: 16px; }
+.set-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px 16px; font: 13px var(--font-ui); }
+.set-list div { display: flex; align-items: center; gap: 8px; }
+.set-list svg { width: 18px; height: 18px; color: var(--ink); flex: none; }
+.set-list .fixed { color: var(--muted); }
+.scroll { overflow-x: auto; }
+.scroll svg { display: block; min-width: 760px; width: 100%; height: auto; }
+.picks { font: 600 13px var(--font-ui); letter-spacing: .02em; }
+@media (prefers-reduced-motion: reduce) { .opt { transition: none; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Kind glyphs</h1>
+    <p class="lede">Pick one glyph for each kind below. Each card shows the glyph as the tray draws it, and the mark the kind makes on the timeline. War, battle, event, person, polity and alliance are already settled. They're in the set at the bottom, next to your picks, so you can check that no two kinds look alike.</p>
+    <div class="bar-top"><button class="theme" id="theme" type="button">Switch to dark</button><span>Colours come from the lane, not the kind.</span></div>
+  </header>
+  <div id="kinds" style="display:grid;gap:36px"></div>
+  <section class="kind">
+    <div class="kind-head"><h2>Your set</h2><span class="picks" id="picks"></span></div>
+    <div class="set">
+      <div class="set-list" id="setList"></div>
+      <div class="scroll"><svg id="setLane" viewBox="0 0 760 214" role="img" aria-label="Every kind on one lane"></svg></div>
+    </div>
+  </section>
+</div>
+
+<script>
+// Glyphs on an 18×18 grid in currentColor, as src/ui/reader/Glyph.tsx draws them.
+function gear(cx, cy, ro, ri, n) {
+  let d = '';
+  for (let i = 0; i < n * 2; i++) {
+    const a0 = (i / (n * 2)) * Math.PI * 2 - Math.PI / 2, a1 = ((i + 1) / (n * 2)) * Math.PI * 2 - Math.PI / 2;
+    const r = i % 2 ? ri : ro;
+    const p = (a) => `${(cx + r * Math.cos(a)).toFixed(2)} ${(cy + r * Math.sin(a)).toFixed(2)}`;
+    d += (i ? 'L' : 'M') + p(a0 + 0.06) + 'L' + p(a1 - 0.06);
+  }
+  return d + 'Z';
+}
+const S = 'stroke="currentColor"', N = 'fill="none"', F = 'fill="currentColor"';
+const G = {
+  // settled
+  war: `<rect x="1.5" y="6" width="15" height="6" rx="1" ${F} opacity=".35"/><path d="M6 3.5v11M12 3.5v11" ${S} stroke-width="1.8"/>`,
+  battle: `<circle cx="9" cy="9" r="7.5" ${F}/><path d="M6 6l6 6M12 6l-6 6" stroke="var(--panel)" stroke-width="1.8"/>`,
+  event: `<circle cx="9" cy="9" r="5" ${F}/>`,
+  person: `<path d="M3 9h12" ${S} stroke-width="1.8"/><circle cx="3.5" cy="9" r="2.3" ${F}/><circle cx="14.5" cy="9" r="2.3" ${F}/>`,
+  polity: `<rect x="4" y="4" width="10" height="10" ${F}/>`,
+  alliance: `<circle cx="6.5" cy="9" r="4.2" ${N} ${S} stroke-width="1.5"/><circle cx="11.5" cy="9" r="4.2" ${N} ${S} stroke-width="1.5"/>`,
+  // period
+  periodA: `<rect x="1.5" y="6" width="15" height="6" rx="1" ${N} ${S} stroke-width="1.6"/>`,
+  periodB: `<rect x="2" y="7" width="14" height="4" ${F} opacity=".3"/><path d="M5 4.5H2v9h3M13 4.5h3v9h-3" ${N} ${S} stroke-width="1.6"/>`,
+  periodC: `<rect x="1.5" y="7.5" width="15" height="5.5" ${F} opacity=".3"/><path d="M1.5 5.5h15" ${S} stroke-width="2.2"/>`,
+  // idea
+  ideaA: `<path d="M9 2.5l6.5 6.5L9 15.5 2.5 9z" ${N} ${S} stroke-width="1.6"/>`,
+  ideaB: `<path d="M9 1.8l1.7 5.5 5.5 1.7-5.5 1.7L9 16.2l-1.7-5.5L1.8 9l5.5-1.7z" ${N} ${S} stroke-width="1.4" stroke-linejoin="round"/>`,
+  ideaC: `<circle cx="3.8" cy="9" r="2" ${F}/><path d="M7 5.2a4.8 4.8 0 0 1 0 7.6M10.2 2.6a8.6 8.6 0 0 1 0 12.8" ${N} ${S} stroke-width="1.6" stroke-linecap="round"/>`,
+  // technology
+  techA: `<path d="M9 3l7 12H2z" ${N} ${S} stroke-width="1.6" stroke-linejoin="round"/>`,
+  techB: `<path d="${gear(9, 9, 7.6, 5.4, 7)}M9 6.6a2.4 2.4 0 1 0 0 4.8a2.4 2.4 0 1 0 0-4.8z" ${F} fill-rule="evenodd"/>`,
+  techC: `<path d="M9 2l6.1 3.5v7L9 16l-6.1-3.5v-7z" ${N} ${S} stroke-width="1.6" stroke-linejoin="round"/><circle cx="9" cy="9" r="2" ${F}/>`,
+  // economy
+  econA: `<circle cx="9" cy="9" r="6.5" ${N} ${S} stroke-width="1.6"/><path d="M9 5.5v7" ${S} stroke-width="1.6"/>`,
+  econB: `<path d="M1.5 8.5C4.5 5 7 10.5 10 7S14.5 5 16.5 7v5.5c-2.5 1.5-5.5-1.5-8.5.5S3.5 14 1.5 12.5z" ${F} opacity=".85"/>`,
+  econC: `<path d="M9 3v11.5M5.5 15h7M3 5h12M3 5l-2 5M3 5l2 5M15 5l-2 5M15 5l2 5" ${N} ${S} stroke-width="1.3" stroke-linecap="round"/><path d="M.8 10h4.4a2.2 2.2 0 0 1-4.4 0zM12.8 10h4.4a2.2 2.2 0 0 1-4.4 0z" ${F}/>`,
+  // Bob asked for coins that read as coins (2026-10-18): a stack, two coins, a stack with a coin standing.
+  econD: [12.6, 9.4, 6.2].map((y) => `<path d="M2.5 ${y}v2.1a6.5 2.2 0 0 0 13 0V${y}" style="fill:var(--panel)" ${S} stroke-width="1.3"/><ellipse cx="9" cy="${y}" rx="6.5" ry="2.2" style="fill:var(--panel)" ${S} stroke-width="1.3"/>`).join('') + `<ellipse cx="9" cy="6.2" rx="3.2" ry=".9" ${F} opacity=".55"/>`,
+  econE: `<circle cx="11.4" cy="6.8" r="5.3" ${N} ${S} stroke-width="1.4"/><circle cx="6.8" cy="11.2" r="5.6" style="fill:var(--panel)" ${S} stroke-width="1.5"/><circle cx="6.8" cy="11.2" r="3.4" ${N} ${S} stroke-width="1"/><circle cx="6.8" cy="11.2" r="1.2" ${F}/>`,
+  econF: [13.4, 10.4].map((y) => `<path d="M1.2 ${y}v1.9a5 1.7 0 0 0 10 0V${y}" style="fill:var(--panel)" ${S} stroke-width="1.2"/><ellipse cx="6.2" cy="${y}" rx="5" ry="1.7" style="fill:var(--panel)" ${S} stroke-width="1.2"/>`).join('') + `<circle cx="12.4" cy="6.4" r="4.8" style="fill:var(--panel)" ${S} stroke-width="1.4"/><circle cx="12.4" cy="6.4" r="2.6" ${N} ${S} stroke-width="1"/>`,
+  // work
+  workA: `<path d="M3 3.5h8.5a3 3 0 0 1 3 3v8H6a3 3 0 0 1-3-3z" ${N} ${S} stroke-width="1.6"/><path d="M6 7h5.5" ${S} stroke-width="1.4"/>`,
+  workB: `<path d="M4 2h7l4 4v10H4z" ${N} ${S} stroke-width="1.6" stroke-linejoin="round"/><path d="M11 2v4h4" ${N} ${S} stroke-width="1.4" stroke-linejoin="round"/>`,
+  workC: `<rect x="2" y="2.5" width="14" height="13" ${N} ${S} stroke-width="1.6"/><path d="M4.5 13l3.5-4.5 2.5 3 1.5-1.8 2 3.3z" ${F}/>`,
+  // migration
+  migA: `<path d="M2 12c4-6 9-6 13-2M12 7l3 3-4 1" ${N} ${S} stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>`,
+  migB: `<path d="M3 4.5l4.5 4.5-4.5 4.5M9.5 4.5L14 9l-4.5 4.5" ${N} ${S} stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>`,
+  migC: `<path d="M2 13.5c3.5-6.5 8.5-7.5 11.5-4.5" ${N} ${S} stroke-width="1.7" stroke-dasharray="1.6 2.6" stroke-linecap="round"/><path d="M10.6 10.6l3.6-.6-.8-3.6" ${N} ${S} stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>`,
+  // place
+  placeA: `<path d="M9 2a5 5 0 0 1 5 5c0 4-5 9-5 9s-5-5-5-9a5 5 0 0 1 5-5z" ${N} ${S} stroke-width="1.6"/>`,
+  placeB: `<path d="M9 2a5 5 0 0 1 5 5c0 4-5 9-5 9s-5-5-5-9a5 5 0 0 1 5-5z" ${N} ${S} stroke-width="1.6"/><circle cx="9" cy="7" r="1.9" ${F}/>`,
+  placeC: `<path d="M5 16.5V2.2" ${S} stroke-width="1.6" stroke-linecap="round"/><path d="M5.8 2.8h9l-2.6 3.2 2.6 3.2h-9z" ${F} opacity=".85"/>`,
+};
+const icon = (g, cls = '') => `<svg viewBox="0 0 18 18" aria-hidden="true" class="${cls}">${G[g]}</svg>`;
+// A glyph placed inside a timeline drawing, in the lane's pigment.
+const at = (g, x, y, size, color = 'var(--lane)') => `<svg x="${x}" y="${y}" width="${size}" height="${size}" viewBox="0 0 18 18" style="color:${color};overflow:visible">${G[g]}</svg>`;
+const mix = (p) => `color-mix(in srgb, var(--lane) ${p}%, var(--panel))`;
+
+// Timeline drawing helpers: one lane, rows 28 px tall, bars 22 px, as src/ui/timeline/layout.ts draws them.
+const W = 360;
+const wash = (h) => `<rect width="${W}" height="${h}" style="fill:${mix(5)}"/>` + [60, 120, 180, 240, 300].map((x) => `<line x1="${x}" y1="0" x2="${x}" y2="${h}" style="stroke:var(--rule-soft)"/>`).join('');
+const span = (x, y, s, ink = 'var(--ink)') => `<text x="${x}" y="${y}" style="font:13px var(--font-read);fill:${ink}">${s}</text>`;
+const moment = (x, y, s, ink = 'var(--ink)') => `<text x="${x}" y="${y}" style="font:12px var(--font-ui);fill:${ink}">${s}</text>`;
+const bar = (x0, x1, y, pct = 16) => `<rect x="${x0}" y="${y - 11}" width="${x1 - x0}" height="22" rx="2" style="fill:${mix(pct)}"/>`;
+const edge = (x, y) => `<line x1="${x + 1.5}" y1="${y - 11}" x2="${x + 1.5}" y2="${y + 11}" style="stroke:var(--lane)" stroke-width="3"/>`;
+const lifeline = (x0, x1, y, s) => `<rect x="${x0}" y="${y - 10}" width="${x1 - x0}" height="20" rx="10" style="fill:var(--panel);stroke:${mix(60)}"/>` + span(x0 + 10, y + 4.5, s);
+const eventDot = (x, y, s) => `<circle cx="${x}" cy="${y}" r="5" style="fill:var(--lane)"/>` + moment(x + 11, y + 4, s, 'var(--ink-2)');
+let gid = 0;
+function stream(x0, x1, y) {
+  const pts = [], n = 24, top = [], bot = [];
+  for (let i = 0; i <= n; i++) {
+    const t = i / n, x = x0 + (x1 - x0) * t;
+    const h = 4 + 7 * Math.sin(Math.PI * t) * (0.7 + 0.3 * Math.sin(t * 9));
+    top.push(`${x.toFixed(1)} ${(y - h).toFixed(1)}`); bot.unshift(`${x.toFixed(1)} ${(y + h * 0.9).toFixed(1)}`);
+  }
+  return `<path d="M${top.join('L')}L${bot.join('L')}Z" style="fill:${mix(34)}"/>`;
+}
+function chevrons(x0, x1, y, pct) {
+  let d = '';
+  for (let x = x0; x < x1 - 6; x += 15) d += `M${x} ${y - 6}l5 6-5 6`;
+  return `<path d="${d}" fill="none" style="stroke:${mix(pct)}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>`;
+}
+function heads(x0, x1, y) {
+  let d = '';
+  for (let x = x0; x < x1 - 4; x += 10) d += `M${x} ${y - 3.5}l5 3.5-5 3.5z`;
+  return `<path d="${d}" style="fill:var(--lane)"/>`;
+}
+function mark(g, x, y, size = 14) { return at(g, x - size / 2, y - size / 2, size); }
+
+// Timeline marks, one per option. Each returns [height, svg body].
+const TL = {
+  periodA: () => [56, bar(30, 320, 28) + edge(30, 28) + span(38, 32.5, 'Archaic period')],
+  periodB: () => [56, bar(30, 320, 28, 10) + `<path d="M37 17H31.5V39H37M313 17H318.5V39H313" fill="none" style="stroke:var(--lane)" stroke-width="2.5"/>` + span(42, 32.5, 'Archaic period')],
+  periodC: () => [56, `<rect x="30" y="19" width="290" height="20" style="fill:${mix(16)}"/><line x1="30" y1="18" x2="320" y2="18" style="stroke:var(--lane)" stroke-width="3"/>` + span(38, 33.5, 'Archaic period')],
+
+  ideaA: () => [56, `<line x1="54" y1="33" x2="300" y2="33" style="stroke:var(--lane)" stroke-width="2.5" stroke-linecap="round"/>` + mark('ideaA', 48, 33, 15) + span(62, 26, 'Sophists')],
+  ideaB: () => [56, `<line x1="54" y1="33" x2="300" y2="33" style="stroke:var(--lane)" stroke-width="3" stroke-linecap="round"/>` + `<circle cx="48" cy="33" r="9" style="fill:var(--panel)"/>` + mark('ideaB', 48, 33, 17) + span(62, 26, 'Sophists')],
+  ideaC: () => { const id = `fade${++gid}`; return [56, `<defs><linearGradient id="${id}"><stop offset="0" style="stop-color:var(--lane);stop-opacity:.32"/><stop offset="1" style="stop-color:var(--lane);stop-opacity:0"/></linearGradient></defs><rect x="40" y="17" width="270" height="22" rx="2" fill="url(#${id})"/>` + edge(40, 28) + at('ideaC', 47, 21, 14) + span(66, 32.5, 'Sophists')]; },
+
+  techA: () => [56, `<path d="M70 21l7.5 13h-15z" style="fill:var(--lane)" stroke-linejoin="round"/>` + moment(84, 32, 'Trireme') + eventDot(230, 28, 'An event')],
+  techB: () => [56, `<circle cx="70" cy="28" r="8.5" style="fill:var(--panel)"/>` + mark('techB', 70, 28, 16) + moment(84, 32, 'Trireme') + eventDot(230, 28, 'An event')],
+  techC: () => [56, `<path d="M70 20.5l6.9 4v8L70 36.5l-6.9-4v-8z" style="fill:var(--lane)" stroke-linejoin="round"/><circle cx="70" cy="28.5" r="2.2" style="fill:var(--panel)"/>` + moment(84, 32, 'Trireme') + eventDot(230, 28, 'An event')],
+
+  econA: () => [56, bar(40, 320, 28) + edge(40, 28) + at('econA', 47, 21, 14) + span(66, 32.5, 'Laurion silver boom')],
+  econB: () => [56, stream(40, 320, 28) + at('econB', 47, 21, 14) + span(66, 32.5, 'Laurion silver boom')],
+  econC: () => [56, bar(40, 320, 28) + edge(40, 28) + at('econC', 47, 21, 14) + span(66, 32.5, 'Laurion silver boom')],
+  econD: () => [56, bar(40, 320, 28) + edge(40, 28) + at('econD', 46, 20, 16) + span(68, 32.5, 'Laurion silver boom')],
+  econE: () => [56, bar(40, 320, 28) + edge(40, 28) + at('econE', 46, 20, 16) + span(68, 32.5, 'Laurion silver boom')],
+  econF: () => [56, bar(40, 320, 28) + edge(40, 28) + at('econF', 46, 20, 16) + span(68, 32.5, 'Laurion silver boom')],
+
+  workA: () => [84, work('workA')],
+  workB: () => [84, work('workB')],
+  workC: () => [84, work('workC')],
+
+  migA: () => [56, bar(40, 320, 28) + edge(40, 28) + at('migA', 47, 21, 14) + span(66, 32.5, 'Ionian migration') + chevrons(186, 318, 28, 45)],
+  migB: () => [56, `<path d="M40 17H306L320 28 306 39H40z" style="fill:${mix(18)}"/>` + edge(40, 28) + at('migB', 47, 21, 14) + span(66, 32.5, 'Ionian migration')],
+  migC: () => [56, heads(44, 320, 34) + at('migC', 40, 14, 14) + span(58, 26, 'Ionian migration')],
+
+  placeA: () => [56, bar(60, 300, 28, 10) + `<line x1="60" y1="37.75" x2="300" y2="37.75" style="stroke:var(--lane)" stroke-width="2.5"/>` + at('placeA', 66, 20, 15) + span(86, 32.5, 'Olynthus')],
+  placeB: () => [56, `<rect x="60" y="33" width="240" height="5" rx="2.5" style="fill:${mix(45)}"/>` + at('placeB', 51, 16, 18) + span(74, 28, 'Olynthus')],
+  placeC: () => [56, bar(60, 300, 28, 10) + edge(60, 28) + at('placeC', 67, 21, 14) + span(86, 32.5, 'Olynthus')],
+};
+function work(g) {
+  // A work is a point at its making, tied to its maker's lifeline below (moments sit above lives).
+  return `<line x1="216" y1="31" x2="216" y2="52" style="stroke:var(--lane)" stroke-width="1.2"/><circle cx="216" cy="52" r="2" style="fill:var(--lane)"/>`
+    + lifeline(40, 290, 62, 'Herodotus')
+    + `<circle cx="216" cy="24" r="10" style="fill:var(--panel)"/>` + at(g, 207, 15, 18) + moment(230, 28, 'Histories');
+}
+
+const KINDS = [
+  { id: 'period', name: 'Period', lane: 'lapis', what: 'A span of time. At level 0 it becomes an era band.', opts: [
+    ['A', 'Open bar', 'Today’s span bar, unchanged: a tinted bar with a solid start edge. The glyph is the bar’s outline.'],
+    ['B', 'Brackets', 'Both ends are brackets, like a span marked off on a ruler. The fill is lighter, so the brackets carry it.'],
+    ['C', 'Bar under a rule', 'A heavy rule along the top, like the head of an era band. It reads as “a stretch of time” more than “a thing”.'],
+  ] },
+  { id: 'idea', name: 'Movement or idea', lane: 'indigo', what: 'A span. Later, reception threads per region.', opts: [
+    ['A', 'Diamond', 'A diamond where it starts, then a thin thread for as long as it lasted. The thread is what later splits per region.'],
+    ['B', 'Spark', 'A four-pointed spark where it starts, on a slightly heavier thread.'],
+    ['C', 'Ripple', 'Rings spreading from a point, on a bar that fades as it goes, the way an idea spreads and thins out.'],
+  ] },
+  { id: 'tech', name: 'Technology', lane: 'verdigris', what: 'A point. Later, a tech tree and diffusion on the map.', opts: [
+    ['A', 'Triangle', 'A solid triangle on the timeline, outlined in the tray. Next to an event’s dot it reads as a different thing.'],
+    ['B', 'Cog', 'A cog, the most literal of the three. At 16 px its teeth still show; smaller than that they blur into a dot.'],
+    ['C', 'Nut', 'A hexagon with a hole. It stays crisp at any size, but means less at a glance.'],
+  ] },
+  { id: 'econ', name: 'Economy', lane: 'ochre', what: 'A span. Later, the economic lane as a sector streamgraph.', opts: [
+    ['D', 'Stack of coins', 'Three coins stacked, seen from the side: the usual sign for money. On an ordinary bar.'],
+    ['E', 'Two coins', 'Two coins face on, the front one with a rim and a stamp. On an ordinary bar.'],
+    ['F', 'Stack and a coin', 'A short stack with one coin standing behind it. The busiest of the three at 14 px.'],
+  ] },
+  { id: 'work', name: 'Work', lane: 'madder', what: 'A point at its making, joined to its maker’s lifeline. Books, plays, artworks, buildings.', opts: [
+    ['A', 'Book', 'A book. Clear for writing, less so for a temple or a statue.'],
+    ['B', 'Page', 'A page with a folded corner: “something made”, whether text or not.'],
+    ['C', 'Picture', 'A framed picture. Clear for art and buildings, less so for a book.'],
+  ] },
+  { id: 'mig', name: 'Migration', lane: 'cinnabar', what: 'A span. Later, flow arrows on the map with moving dashes.', opts: [
+    ['A', 'Curved arrow', 'A curved arrow at the start, and chevrons running along the bar after its name.'],
+    ['B', 'Chevrons', 'Chevrons in the tray, and a bar that ends in an arrow point.'],
+    ['C', 'Arrowheads', 'A dotted arrow in the tray, and a line of small arrowheads on the timeline: the moving dashes of the map, standing still.'],
+  ] },
+  { id: 'place', name: 'Place', lane: 'lapis', what: 'A lifespan bar from founding to abandonment, when known. A pin on the map.', opts: [
+    ['A', 'Pin', 'The map’s pin at the start of a pale bar standing on a ground line.'],
+    ['B', 'Pin with a dot', 'A pin standing on a thin ground line, with its name above it. Lighter than the other bars, so places don’t crowd the lane.'],
+    ['C', 'Flag', 'A flag planted at the founding, on an ordinary bar. It doesn’t match the map’s pin.'],
+  ] },
+];
+
+const KEY = 'chronicle-glyph-picks';
+let picks = {};
+try { picks = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch { picks = {}; }
+// Bob's picks of 2026-10-18; economy is still open.
+const BOB = { period: 'A', idea: 'B', tech: 'B', econ: 'D', work: 'B', mig: 'B', place: 'B' };
+for (const k of KINDS) if (!k.opts.some(([L]) => L === picks[k.id])) picks[k.id] = BOB[k.id];
+
+const kindsEl = document.getElementById('kinds');
+kindsEl.innerHTML = KINDS.map((k) => `
+  <section class="kind" style="--lane:var(--${k.lane})">
+    <div class="kind-head"><h2>${k.name}</h2><span class="what">${k.what}</span></div>
+    <div class="opts">${k.opts.map(([L, name, note]) => {
+      const g = k.id + L, [h, body] = TL[g]();
+      return `<button type="button" class="opt" data-kind="${k.id}" data-opt="${L}" aria-pressed="${picks[k.id] === L}" id="opt-${g}">
+        <div class="opt-top">${icon(g, 'big')}<span class="opt-name">${name}</span><span class="letter">${L}</span></div>
+        <svg class="tl" viewBox="0 0 ${W} ${h}" aria-hidden="true">${wash(h)}${body}</svg>
+        <div class="tray-row">${icon(g)}<b>${sample(k.id)}</b><span>· ${k.name.toLowerCase()}</span></div>
+        <p class="note">${note}</p>
+      </button>`;
+    }).join('')}</div>
+  </section>`).join('');
+function sample(id) { return { period: 'Archaic period', idea: 'Sophists', tech: 'Trireme', econ: 'Laurion silver boom', work: 'Histories', mig: 'Ionian migration', place: 'Olynthus' }[id]; }
+
+kindsEl.addEventListener('click', (e) => {
+  const b = e.target.closest('.opt');
+  if (!b) return;
+  picks[b.dataset.kind] = b.dataset.opt;
+  try { localStorage.setItem(KEY, JSON.stringify(picks)); } catch {}
+  for (const o of kindsEl.querySelectorAll(`.opt[data-kind="${b.dataset.kind}"]`)) o.setAttribute('aria-pressed', String(o === b));
+  renderSet();
+});
+
+function renderSet() {
+  const p = (id) => id + picks[id];
+  document.getElementById('picks').textContent = KINDS.map((k) => `${k.name.split(' ')[0]} ${picks[k.id]}`).join(' · ');
+  const list = [['war', 'War', 1], ['battle', 'Battle', 1], ['event', 'Event', 1], ['person', 'Person', 1], ['polity', 'Polity', 1], ['alliance', 'Alliance', 1],
+    [p('period'), 'Period'], [p('idea'), 'Movement or idea'], [p('tech'), 'Technology'], [p('econ'), 'Economy'], [p('work'), 'Work'], [p('mig'), 'Migration'], [p('place'), 'Place']];
+  document.getElementById('setList').innerHTML = list.map(([g, n, fixed]) => `<div class="${fixed ? 'fixed' : ''}">${icon(g)}<span>${n}${fixed ? '' : ` · ${g.slice(-1)}`}</span></div>`).join('');
+
+  // One lane, as level 2 stacks it: moments on top, then periods, then lives.
+  const parts = [];
+  const H = 214, LW = 760;
+  parts.push(`<rect width="${LW}" height="${H}" style="fill:${mix(5)}"/>`);
+  for (let x = 95; x < LW; x += 95) parts.push(`<line x1="${x}" y1="0" x2="${x}" y2="${H}" style="stroke:var(--rule-soft)"/>`);
+  // moments
+  parts.push(eventDot(70, 24, 'Ostracism of Aristides'));
+  parts.push(techMark(picks.tech, 300, 24) + moment(314, 28, 'Trireme'));
+  parts.push(`<line x1="610" y1="31" x2="610" y2="182" style="stroke:var(--lane)" stroke-width="1.2"/><circle cx="610" cy="182" r="2" style="fill:var(--lane)"/>`);
+  parts.push(`<circle cx="610" cy="24" r="10" style="fill:var(--panel)"/>` + at(p('work'), 601, 15, 18) + moment(624, 28, 'Histories'));
+  // periods
+  parts.push(TLat(p('period'), 0, 52));
+  // war with battle ticks
+  parts.push(bar(30, 300, 80, 16) + edge(30, 80) + span(40, 84.5, 'Second Persian invasion'));
+  for (const [x, c] of [[205, 'var(--lane)'], [235, 'var(--ink)'], [262, 'var(--ink)']]) parts.push(`<line x1="${x}" y1="69" x2="${x}" y2="91" style="stroke:${c}" stroke-width="2.5"/>`);
+  parts.push(TLat(p('idea'), 330, 80));
+  parts.push(TLat(p('econ'), -10, 108));
+  parts.push(TLat(p('mig'), 360, 108));
+  // polity: a lifespan bar with its square
+  parts.push(bar(30, 330, 136, 22) + edge(30, 136) + at('polity', 38, 129, 14) + span(58, 140.5, 'Athens (polity)'));
+  parts.push(TLat(p('place'), 340, 136));
+  // lives
+  parts.push(lifeline(470, 720, 192, 'Herodotus'));
+  const lane = document.getElementById('setLane');
+  lane.style.setProperty('--lane', 'var(--lapis)');
+  lane.innerHTML = parts.join('');
+}
+function techMark(L, x, y) {
+  if (L === 'A') return `<path d="M${x} ${y - 7}l7.5 13h-15z" style="fill:var(--lane)"/>`;
+  if (L === 'B') return `<circle cx="${x}" cy="${y}" r="8.5" style="fill:var(--panel)"/>` + mark('techB', x, y, 16);
+  return `<path d="M${x} ${y - 7.5}l6.9 4v8L${x} ${y + 8.5}l-6.9-4v-8z" style="fill:var(--lane)"/><circle cx="${x}" cy="${y + 0.5}" r="2.2" style="fill:var(--panel)"/>`;
+}
+// An option's timeline mark, moved so its row sits at `y` and shifted right by `dx` (drawn at half width).
+function TLat(g, dx, y) {
+  const [, body] = TL[g]();
+  return `<g transform="translate(${dx} ${y - 28})">${body}</g>`;
+}
+renderSet();
+
+const btn = document.getElementById('theme');
+const isDark = () => document.documentElement.dataset.theme ? document.documentElement.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+const label = () => { btn.textContent = isDark() ? 'Switch to light' : 'Switch to dark'; };
+btn.addEventListener('click', () => { document.documentElement.dataset.theme = isDark() ? 'light' : 'dark'; label(); });
+label();
+</script>

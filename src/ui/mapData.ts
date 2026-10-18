@@ -47,7 +47,8 @@ export function pinsAt(items: TimelineItem[], year: number, opts: { fadeYears: n
   const features: Feature<Point, PinProps>[] = [];
   for (const item of items) {
     const color = opts.colorOf(item.categoryId);
-    if (!color || !item.start) continue;
+    // A place without dates is on the map in every year; anything else needs its start (presenceAt says).
+    if (!color) continue;
     const opacity = presenceAt(item, year, opts.fadeYears, opts.keepPast);
     if (opacity <= 0) continue;
     for (const pl of placesToDraw(item)) {

@@ -37,8 +37,13 @@ export function valueAt(points: SeriesPoint[], year: number): number | undefined
  *  - events: shown when they happen, fading out over `fadeYears`
  *  - keepPast: things that are over stay on the map, dimmed, so you can watch
  *    something spread (printing presses, railways…)
+ *  - places: fade in over `fadeYears` from their founding and out over
+ *    `fadeYears` after they were abandoned; one with no founding date is
+ *    there from the start
  */
 export function presenceAt(item: TimelineItem, year: number, fadeYears: number, keepPast = false, now = new Date().getUTCFullYear()): number {
+  if (item.subject === 'place') return placePresence(item, year, fadeYears, keepPast);
+  if (!item.start) return 0;
   const start = toDecimalYear(item.start);
   // A whole year counts: on 1 Jan 1215 the map still shows what happened in June 1215.
   if (year < Math.floor(start)) return 0;
@@ -51,6 +56,20 @@ export function presenceAt(item: TimelineItem, year: number, fadeYears: number, 
   if (year < end) return 1;
   return keepPast ? 0.4 : 0;
 }
+
+/** A place's pin: faint in its founding year, full after `fadeYears`; after it was abandoned, gone (or dimmed) after `fadeYears`. */
+function placePresence(item: TimelineItem, year: number, fadeYears: number, keepPast: boolean): number {
+  const fade = Math.max(fadeYears, 1e-9);
+  const from = item.start ? Math.floor(toDecimalYear(item.start)) : -Infinity;
+  if (year < from) return 0;
+  const rise = Math.min(1, FOUNDED + (1 - FOUNDED) * ((year - from) / fade));
+  if (!item.end) return rise;
+  const gone = Math.max(0, year - (Math.floor(toDecimalYear(item.end)) + 1));
+  const floor = keepPast ? 0.4 : 0;
+  return Math.min(rise, Math.max(floor, 1 - gone / fade));
+}
+/** How strongly a place shows in the year it was founded. */
+const FOUNDED = 0.3;
 
 /** Earliest and latest years mentioned anywhere in the doc, for the year slider. */
 export function docYearRange(doc: TimelineDoc): [number, number] | null {

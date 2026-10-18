@@ -1,9 +1,9 @@
 import moment from 'moment';
-import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
+import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import { DataSet } from 'vis-data/peer';
 import { Timeline, type TimelineOptions } from 'vis-timeline/peer';
-import { decimalYearToJsDate, formatAxisYear, formatYear, jsDateToDecimalYear, toJsDate } from '../model/dates';
-import type { Category, MediaRef, Relation, TimelineItem } from '../model/types';
+import { decimalYearToJsDate, formatAxisYear, formatYear, isDated, jsDateToDecimalYear, toJsDate } from '../model/dates';
+import type { Category, DatedItem, MediaRef, Relation, TimelineItem } from '../model/types';
 import { anchors, arcPath, draftArrows, influenceArrows, influenceClasses } from './influenceLinks';
 import { axisLabelEvery, axisStepYears, labelWidthPx, narrowLabels } from './labels';
 import { createTimeline, type MovedDates, type TimelineHandle } from './timeline/createTimeline';
@@ -63,24 +63,30 @@ interface Props {
   onMove?: (id: string, dates: MovedDates) => void;
 }
 
-const NO_DRAFTS: { items: TimelineItem[]; relations: Relation[] } = { items: [], relations: [] };
+/** What the renderers get: only entries with a start date (a place with none is on the map only). */
+type Dated = Omit<Props, 'items' | 'drafts'> & { items: DatedItem[]; drafts?: { items: DatedItem[]; relations: Relation[] } };
+
+const NO_DRAFTS: { items: DatedItem[]; relations: Relation[] } = { items: [], relations: [] };
 
 export const TimelineView = forwardRef<TimelineControl, Props>(function TimelineView(props, ref) {
+  const items = useMemo(() => props.items.filter(isDated), [props.items]);
+  const drafts = useMemo(() => props.drafts && { ...props.drafts, items: props.drafts.items.filter(isDated) }, [props.drafts]);
+  const p: Dated = { ...props, items, drafts };
   // A different key swaps the renderer cleanly when the setting changes.
   return props.renderer === 'next'
-    ? <NextTimeline key="next" ref={ref} {...props} />
-    : <ClassicTimeline key="classic" ref={ref} {...props} />;
+    ? <NextTimeline key="next" ref={ref} {...p} />
+    : <ClassicTimeline key="classic" ref={ref} {...p} />;
 });
 
 /** The window that frames an entry with its connected entries, counting only the ones shown. */
-function focusTarget(id: string, items: TimelineItem[], relations: Relation[], shown: (id: string) => boolean): YearWindow | undefined {
+function focusTarget(id: string, items: DatedItem[], relations: Relation[], shown: (id: string) => boolean): YearWindow | undefined {
   const item = items.find((i) => i.id === id);
   if (!item || !shown(id)) return undefined;
   const otherIds = new Set(relations.flatMap((r) => (r.fromId === id ? [r.toId] : r.toId === id ? [r.fromId] : [])));
   return focusWindow(item, items.filter((i) => otherIds.has(i.id) && shown(i.id)));
 }
 
-const NextTimeline = forwardRef<TimelineControl, Props>(function NextTimeline({ items, categories, relations, selectedId, thumbFor, onSelect, onAddAt, onWindow, onCanGoBack, year, onYear, prominence, drafts = NO_DRAFTS, onMove }, ref) {
+const NextTimeline = forwardRef<TimelineControl, Dated>(function NextTimeline({ items, categories, relations, selectedId, thumbFor, onSelect, onAddAt, onWindow, onCanGoBack, year, onYear, prominence, drafts = NO_DRAFTS, onMove }, ref) {
   const host = useRef<HTMLDivElement>(null);
   const tl = useRef<TimelineHandle | null>(null);
   const cb = useRef({ onSelect, onAddAt, onWindow, onYear, onCanGoBack, onMove });
@@ -108,8 +114,9 @@ const NextTimeline = forwardRef<TimelineControl, Props>(function NextTimeline({ 
       prominence,
       thumbFor: (i) => (i.media?.[0] ? thumbFor(i.media[0]) : undefined),
       drafts: drafts.items,
+      relations,
     });
-  }, [items, categories, thumbFor, prominence, drafts.items]);
+  }, [items, categories, thumbFor, prominence, drafts.items, relations]);
 
   // The open entry's connections light up with arrows; Claude's drafted ones show whenever their highlight is open.
   useEffect(() => {
@@ -191,7 +198,7 @@ function itemHtml(item: TimelineItem, thumb?: string): string {
   return `<span class="it">${img}<span>${escapeHtml(item.title)}</span></span>`;
 }
 
-function toVisItem(item: TimelineItem, color: string, thumbFor: Props['thumbFor']) {
+function toVisItem(item: DatedItem, color: string, thumbFor: Props['thumbFor']) {
   const firstMedia = item.media?.[0];
   const thumb = firstMedia ? thumbFor(firstMedia) : undefined;
   const base = {
@@ -256,7 +263,7 @@ function makeArrowLayer(center: Element): SVGSVGElement {
   return svg;
 }
 
-const ClassicTimeline = forwardRef<TimelineControl, Props>(function ClassicTimeline({ items, categories, relations, selectedId, thumbFor, onSelect, onAddAt, onWindow, onCanGoBack, year, onYear }, ref) {
+const ClassicTimeline = forwardRef<TimelineControl, Dated>(function ClassicTimeline({ items, categories, relations, selectedId, thumbFor, onSelect, onAddAt, onWindow, onCanGoBack, year, onYear }, ref) {
   const host = useRef<HTMLDivElement>(null);
   // Names are measured again once the font arrives, so long names aren't cut off at the edge.
   const [fontReady, setFontReady] = useState(false);

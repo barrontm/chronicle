@@ -72,7 +72,7 @@ export async function toDraft(args: {
           const { item, newSources } = r.draft;
           item.drafted = provenance;
           known.push(...newSources);
-          entries.push({ item, newSources, why: 'The passage links it, and a connection needs it on your timeline.', problems: item.start ? validateItem(item, catIds) : ['Wikidata has no date for it. Edit it to add one.'], status: 'pending' });
+          entries.push({ item, newSources, why: 'The passage links it, and a connection needs it on your timeline.', problems: item.start || item.subject === 'place' ? validateItem(item, catIds) : ['Wikidata has no date for it. Edit it to add one.'], status: 'pending' });
           out = item.id;
         }
       } catch (err) {

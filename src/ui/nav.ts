@@ -31,7 +31,8 @@ export interface Nav {
   /** Zoom the timeline to an entry's time with its connections in view. */
   showTime: (id: string) => void;
   /** Show the map at a year (e.g. "Show on map" from an entry or territory). */
-  showOnMap: (year: number) => void;
+  /** Without a year (a place with no dates), the map stays at its year. */
+  showOnMap: (year?: number) => void;
   /** Draw a border on the map; `onDone` gets the shape and the map's year when Bob finishes. */
   draw: (onDone: (g: Area, year: number) => void) => void;
   /** Pick one point on the map; `onDone` gets [lon, lat]. */

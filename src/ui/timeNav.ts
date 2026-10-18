@@ -1,5 +1,5 @@
 import { toDecimalYear } from '../model/dates';
-import type { TimelineItem } from '../model/types';
+import type { DatedItem } from '../model/types';
 
 /**
  * Moving through time: the zoom bar's scale, zooming around a point, and the
@@ -71,7 +71,7 @@ export function panBy(w: YearWindow, years: number, l = CLASSIC_LIMITS): YearWin
 }
 
 /** An entry's dates in decimal years; a living person, or an event, ends where it is. */
-function extent(item: TimelineItem, now: number): YearWindow {
+function extent(item: DatedItem, now: number): YearWindow {
   const start = toDecimalYear(item.start);
   if (item.kind === 'event') return { start, end: start };
   return { start, end: item.end ? toDecimalYear(item.end) : now };
@@ -87,7 +87,7 @@ const MAX_CONTEXT_FACTOR = 6;
  * entries, with a margin either side. When the connections reach so far that
  * the entry would be a sliver, it frames the entry alone.
  */
-export function focusWindow(item: TimelineItem, connected: TimelineItem[], now = new Date().getUTCFullYear()): YearWindow {
+export function focusWindow(item: DatedItem, connected: DatedItem[], now = new Date().getUTCFullYear()): YearWindow {
   const own = extent(item, now);
   const ownSpan = Math.max(own.end - own.start, MIN_FOCUS_YEARS);
   let { start, end } = own;

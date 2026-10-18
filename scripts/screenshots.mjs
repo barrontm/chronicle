@@ -231,6 +231,28 @@ async function newTimeline(p, prefix) {
   await p.waitForTimeout(700);
   await shot(p, `${prefix}-new-timeline-plato`);
 }
+// Every kind of thing on the new timeline (tests/fixtures/every-kind.json), framed on the Classical period.
+const KINDS = fileURLToPath(new URL('../tests/fixtures/every-kind.json', import.meta.url));
+async function kinds(p, prefix) {
+  await p.getByTestId('import-input').setInputFiles(KINDS);
+  await p.getByRole('button', { name: 'More' }).click();
+  await p.getByRole('menuitemcheckbox', { name: 'Try the new layout' }).click();
+  if (prefix === 'phone') await p.getByTestId('reader').getByRole('button', { name: 'Map' }).click();
+  await p.locator('[data-testid=timeline][data-ready]').waitFor();
+  await p.getByTestId('time-bar').getByRole('button', { name: 'All' }).click();
+  await p.waitForTimeout(400);
+  await p.locator('.tl-mark[data-id=classical]').click({ force: true });
+  await p.getByTestId('item-view').getByRole('button', { name: 'Show its time' }).click();
+  await p.getByRole('button', { name: 'Close panel' }).click();
+  await p.waitForTimeout(700);
+  await shot(p, `${prefix}-kinds`);
+}
+// Tall, so every lane is in view.
+const tall = { ...desktop, viewport: { width: desktop.viewport.width, height: 1500 } };
+if (any('desktop-kinds')) await kinds(await page('desktop-kinds', tall), 'desktop');
+if (any('dark-kinds')) await kinds(await page('dark-kinds', { ...tall, colorScheme: 'dark' }), 'dark');
+if (any('phone-kinds')) await kinds(await page('phone-kinds', { viewport: { width: 412, height: 1500 }, isMobile: true, hasTouch: true }), 'phone');
+
 if (any('desktop-new-timeline')) await newTimeline(await page('desktop-new-timeline', desktop), 'desktop');
 if (any('dark-new-timeline')) await newTimeline(await page('dark-new-timeline', { ...desktop, colorScheme: 'dark' }), 'dark');
 if (any('phone-new-timeline')) await newTimeline(await page('phone-new-timeline', { viewport: { width: 412, height: 860 }, isMobile: true, hasTouch: true }), 'phone');

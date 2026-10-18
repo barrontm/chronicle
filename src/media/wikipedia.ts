@@ -220,6 +220,14 @@ export function kindAndDates(f: WikidataFacts): { kind: ItemKind; start?: HistDa
   return { kind: 'event', start: f.pointInTime ?? f.start };
 }
 
+/** A place is a lifespan from its founding (P571) to its abandonment (P576), either of which may be unknown. */
+export function asPlace(item: TimelineItem, f: WikidataFacts | undefined): TimelineItem {
+  const { start: _start, end: _end, ...rest } = item;
+  const start = f?.start;
+  const end = f?.end && (!start || compareHistDate(f.end, start) >= 0) ? f.end : undefined;
+  return { ...rest, kind: 'span', subject: 'place', ...(start ? { start } : {}), ...(end ? { end } : {}) };
+}
+
 const capitalize = (s: string | undefined) => (s ? s[0].toUpperCase() + s.slice(1) : s);
 
 /** Assemble an unsaved entry from what Wikipedia and Wikidata said. */
@@ -367,6 +375,7 @@ export async function draftFromWikipedia(
   if (entity) {
     const kind = opts.subject?.qid === entity.qid ? opts.subject.kind : toSubject(entity, await walkClasses(entity.classIds, opts.signal), {}).kind;
     if (kind) draft.item.subject = kind;
+    if (kind === 'place') draft.item = asPlace(draft.item, facts);
     if (kind === 'period') {
       const ids = [...(entity.facts.country ?? []), ...(entity.facts.continent ?? [])].slice(0, 50);
       try {

@@ -894,6 +894,685 @@
           ]
         }
       }
+    },
+    {
+      "url": "https://en.wikipedia.org/api/rest_v1/page/summary/Decelea",
+      "status": 200,
+      "body": {
+        "type": "standard",
+        "title": "Decelea",
+        "displaytitle": "<span lang=\"en\" dir=\"ltr\"><span class=\"mw-page-title-main\">Decelea</span></span>",
+        "namespace": {
+          "id": 0,
+          "text": ""
+        },
+        "wikibase_item": "Q1006561",
+        "titles": {
+          "canonical": "Decelea",
+          "normalized": "Decelea",
+          "display": "<span lang=\"en\" dir=\"ltr\"><span class=\"mw-page-title-main\">Decelea</span></span>"
+        },
+        "pageid": 1184237,
+        "lang": "en",
+        "dir": "ltr",
+        "revision": "1365901818",
+        "tid": "b6803c95-87d0-11f1-a4c7-a74b88a4f50d",
+        "timestamp": "2026-07-25T02:29:51Z",
+        "description": "Ancient Athenian administrative unit",
+        "description_source": "local",
+        "coordinates": {
+          "lat": 38.11,
+          "lon": 23.7786
+        },
+        "content_urls": {
+          "desktop": {
+            "page": "https://en.wikipedia.org/wiki/Decelea",
+            "revisions": "https://en.wikipedia.org/wiki/Decelea?action=history",
+            "edit": "https://en.wikipedia.org/wiki/Decelea?action=edit",
+            "talk": "https://en.wikipedia.org/wiki/Talk:Decelea"
+          },
+          "mobile": {
+            "page": "https://en.wikipedia.org/wiki/Decelea",
+            "revisions": "https://en.wikipedia.org/wiki/Special:History/Decelea",
+            "edit": "https://en.wikipedia.org/wiki/Decelea?action=edit",
+            "talk": "https://en.wikipedia.org/wiki/Talk:Decelea"
+          }
+        },
+        "extract": "Decelea, was a deme and ancient village in northern Attica serving as a trade route connecting Euboea with Athens, Greece. It was situated near the entrance of the eastern pass across Mount Parnes, which leads from the northeastern part of the Athenian plain to Oropus, and from thence both to Tanagra on the one hand, and to Delium and Chalcis on the other. It was situated about 120 stadia from Athens, and the same distance from the frontiers of Boeotia. It was visible from Athens and from its heights the ships entering the harbour of Piraeus were visible as well.",
+        "extract_html": "<p><b>Decelea</b>, was a deme and ancient village in northern Attica serving as a trade route connecting Euboea with Athens, Greece. It was situated near the entrance of the eastern pass across Mount Parnes, which leads from the northeastern part of the Athenian plain to Oropus, and from thence both to Tanagra on the one hand, and to Delium and Chalcis on the other. It was situated about 120 stadia from Athens, and the same distance from the frontiers of Boeotia. It was visible from Athens and from its heights the ships entering the harbour of Piraeus were visible as well.</p>"
+      }
+    },
+    {
+      "url": "https://www.wikidata.org/w/api.php?action=wbgetentities&ids=Q1006561&props=claims&format=json&origin=*",
+      "status": 200,
+      "body": {
+        "entities": {
+          "Q1006561": {
+            "type": "item",
+            "id": "Q1006561",
+            "claims": {
+              "P17": [
+                {
+                  "mainsnak": {
+                    "snaktype": "value",
+                    "property": "P17",
+                    "hash": "fa077d95787acc09f0ed4de560cd6131400e0017",
+                    "datavalue": {
+                      "value": {
+                        "entity-type": "item",
+                        "numeric-id": 844930,
+                        "id": "Q844930"
+                      },
+                      "type": "wikibase-entityid"
+                    },
+                    "datatype": "wikibase-item"
+                  },
+                  "type": "statement",
+                  "id": "Q1006561$37ab051d-418c-abaf-12a2-18117e94d96c",
+                  "rank": "normal"
+                },
+                {
+                  "mainsnak": {
+                    "snaktype": "value",
+                    "property": "P17",
+                    "hash": "8b8452751998a8896933d5e4d7fb18338e3a5421",
+                    "datavalue": {
+                      "value": {
+                        "entity-type": "item",
+                        "numeric-id": 41,
+                        "id": "Q41"
+                      },
+                      "type": "wikibase-entityid"
+                    },
+                    "datatype": "wikibase-item"
+                  },
+                  "type": "statement",
+                  "id": "Q1006561$B5D6AE43-7453-454E-B3D6-ECC3DBBE6A17",
+                  "rank": "normal"
+                }
+              ],
+              "P131": [
+                {
+                  "mainsnak": {
+                    "snaktype": "value",
+                    "property": "P131",
+                    "hash": "5250aff767258e6ab49ce0d6f24344550b8284c8",
+                    "datavalue": {
+                      "value": {
+                        "entity-type": "item",
+                        "numeric-id": 13415446,
+                        "id": "Q13415446"
+                      },
+                      "type": "wikibase-entityid"
+                    },
+                    "datatype": "wikibase-item"
+                  },
+                  "type": "statement",
+                  "id": "q1006561$e2362249-4c46-9fc4-cf6f-f7e4f625f1cd",
+                  "rank": "normal"
+                }
+              ],
+              "P625": [
+                {
+                  "mainsnak": {
+                    "snaktype": "value",
+                    "property": "P625",
+                    "hash": "16aea48d252546b900d0898f9885fc688997f0f5",
+                    "datavalue": {
+                      "value": {
+                        "latitude": 38.11,
+                        "longitude": 23.77861111,
+                        "altitude": null,
+                        "precision": 0.00027777777777778,
+                        "globe": "http://www.wikidata.org/entity/Q2"
+                      },
+                      "type": "globecoordinate"
+                    },
+                    "datatype": "globe-coordinate"
+                  },
+                  "type": "statement",
+                  "id": "Q1006561$98D434DD-5821-468C-A45D-74BA099A140E",
+                  "rank": "normal",
+                  "references": [
+                    {
+                      "hash": "9a24f7c0208b05d6be97077d855671d1dfdbc0dd",
+                      "snaks": {
+                        "P143": [
+                          {
+                            "snaktype": "value",
+                            "property": "P143",
+                            "hash": "d38375ffe6fe142663ff55cd783aa4df4301d83d",
+                            "datavalue": {
+                              "value": {
+                                "entity-type": "item",
+                                "numeric-id": 48183,
+                                "id": "Q48183"
+                              },
+                              "type": "wikibase-entityid"
+                            },
+                            "datatype": "wikibase-item"
+                          }
+                        ]
+                      },
+                      "snaks-order": [
+                        "P143"
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "P646": [
+                {
+                  "mainsnak": {
+                    "snaktype": "value",
+                    "property": "P646",
+                    "hash": "4f90193ec460042aa33de95cf76749967a68eacb",
+                    "datavalue": {
+                      "value": "/m/04fbvg",
+                      "type": "string"
+                    },
+                    "datatype": "external-id"
+                  },
+                  "type": "statement",
+                  "id": "Q1006561$8FC1B1E2-477B-40C8-9726-B801AFEF7E68",
+                  "rank": "normal",
+                  "references": [
+                    {
+                      "hash": "2b00cb481cddcac7623114367489b5c194901c4a",
+                      "snaks": {
+                        "P248": [
+                          {
+                            "snaktype": "value",
+                            "property": "P248",
+                            "hash": "a94b740202b097dd33355e0e6c00e54b9395e5e0",
+                            "datavalue": {
+                              "value": {
+                                "entity-type": "item",
+                                "numeric-id": 15241312,
+                                "id": "Q15241312"
+                              },
+                              "type": "wikibase-entityid"
+                            },
+                            "datatype": "wikibase-item"
+                          }
+                        ],
+                        "P577": [
+                          {
+                            "snaktype": "value",
+                            "property": "P577",
+                            "hash": "fde79ecb015112d2f29229ccc1ec514ed3e71fa2",
+                            "datavalue": {
+                              "value": {
+                                "time": "+2013-10-28T00:00:00Z",
+                                "timezone": 0,
+                                "before": 0,
+                                "after": 0,
+                                "precision": 11,
+                                "calendarmodel": "http://www.wikidata.org/entity/Q1985727"
+                              },
+                              "type": "time"
+                            },
+                            "datatype": "time"
+                          }
+                        ]
+                      },
+                      "snaks-order": [
+                        "P248",
+                        "P577"
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "P31": [
+                {
+                  "mainsnak": {
+                    "snaktype": "value",
+                    "property": "P31",
+                    "hash": "2917a2c84d0cb0d6a02a8617d64838594d453a55",
+                    "datavalue": {
+                      "value": {
+                        "entity-type": "item",
+                        "numeric-id": 672490,
+                        "id": "Q672490"
+                      },
+                      "type": "wikibase-entityid"
+                    },
+                    "datatype": "wikibase-item"
+                  },
+                  "type": "statement",
+                  "id": "Q1006561$02B97412-19D7-46BB-AB5B-8BE94846FCFD",
+                  "rank": "normal",
+                  "references": [
+                    {
+                      "hash": "d5847b9b6032aa8b13dae3c2dfd9ed5d114d21b3",
+                      "snaks": {
+                        "P143": [
+                          {
+                            "snaktype": "value",
+                            "property": "P143",
+                            "hash": "5a343e7e758a4282a01316d3e959b6e653b767fc",
+                            "datavalue": {
+                              "value": {
+                                "entity-type": "item",
+                                "numeric-id": 11920,
+                                "id": "Q11920"
+                              },
+                              "type": "wikibase-entityid"
+                            },
+                            "datatype": "wikibase-item"
+                          }
+                        ]
+                      },
+                      "snaks-order": [
+                        "P143"
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "P1566": [
+                {
+                  "mainsnak": {
+                    "snaktype": "value",
+                    "property": "P1566",
+                    "hash": "29f2c70b6820b46fa5ab4b6504ce4f5c92cd3471",
+                    "datavalue": {
+                      "value": "263227",
+                      "type": "string"
+                    },
+                    "datatype": "external-id"
+                  },
+                  "type": "statement",
+                  "id": "Q1006561$F879172F-394C-4391-A37F-2D37983D26F0",
+                  "rank": "normal",
+                  "references": [
+                    {
+                      "hash": "88694a0f4d1486770c269f7db16a1982f74da69d",
+                      "snaks": {
+                        "P248": [
+                          {
+                            "snaktype": "value",
+                            "property": "P248",
+                            "hash": "1b3ef912a2bd61e18dd43abd184337eb010b2e96",
+                            "datavalue": {
+                              "value": {
+                                "entity-type": "item",
+                                "numeric-id": 830106,
+                                "id": "Q830106"
+                              },
+                              "type": "wikibase-entityid"
+                            },
+                            "datatype": "wikibase-item"
+                          }
+                        ]
+                      },
+                      "snaks-order": [
+                        "P248"
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "P1936": [
+                {
+                  "mainsnak": {
+                    "snaktype": "value",
+                    "property": "P1936",
+                    "hash": "00bf9814f1b7eff02e3a309a1fc34d25bdab5147",
+                    "datavalue": {
+                      "value": "37383",
+                      "type": "string"
+                    },
+                    "datatype": "external-id"
+                  },
+                  "type": "statement",
+                  "id": "Q1006561$59672665-4944-ed49-77d4-dc86488a2715",
+                  "rank": "normal"
+                }
+              ],
+              "P1584": [
+                {
+                  "mainsnak": {
+                    "snaktype": "value",
+                    "property": "P1584",
+                    "hash": "4a4d7517716a681acb6999e8d1262940f353869c",
+                    "datavalue": {
+                      "value": "579907",
+                      "type": "string"
+                    },
+                    "datatype": "external-id"
+                  },
+                  "type": "statement",
+                  "id": "Q1006561$cf9a6042-40c8-8a8c-1a51-720cb34d1e6a",
+                  "rank": "normal"
+                }
+              ],
+              "P1417": [
+                {
+                  "mainsnak": {
+                    "snaktype": "value",
+                    "property": "P1417",
+                    "hash": "111a131b4287c4f1b72a23d1c718d510e80b4cd4",
+                    "datavalue": {
+                      "value": "place/Decelea",
+                      "type": "string"
+                    },
+                    "datatype": "external-id"
+                  },
+                  "type": "statement",
+                  "qualifiers": {
+                    "P1810": [
+                      {
+                        "snaktype": "value",
+                        "property": "P1810",
+                        "hash": "2f163c752ae8acb04476a25d7ee939535355cd68",
+                        "datavalue": {
+                          "value": "Decelea",
+                          "type": "string"
+                        },
+                        "datatype": "string"
+                      }
+                    ]
+                  },
+                  "qualifiers-order": [
+                    "P1810"
+                  ],
+                  "id": "Q1006561$F364D514-41A7-4831-B0D6-298C7A228768",
+                  "rank": "normal"
+                }
+              ],
+              "P6706": [
+                {
+                  "mainsnak": {
+                    "snaktype": "value",
+                    "property": "P6706",
+                    "hash": "a4afe36173c38c14307b7901031b42defcdc42af",
+                    "datavalue": {
+                      "value": "Decelèa",
+                      "type": "string"
+                    },
+                    "datatype": "external-id"
+                  },
+                  "type": "statement",
+                  "qualifiers": {
+                    "P1810": [
+                      {
+                        "snaktype": "value",
+                        "property": "P1810",
+                        "hash": "34c5aeeb6ed15e5b900b1ee9311b81ce01d78c75",
+                        "datavalue": {
+                          "value": "Decelèa",
+                          "type": "string"
+                        },
+                        "datatype": "string"
+                      }
+                    ]
+                  },
+                  "qualifiers-order": [
+                    "P1810"
+                  ],
+                  "id": "Q1006561$7CB53CAE-CE2F-440E-AC21-254817777333",
+                  "rank": "normal"
+                }
+              ],
+              "P8068": [
+                {
+                  "mainsnak": {
+                    "snaktype": "value",
+                    "property": "P8068",
+                    "hash": "471a808fccbe3a87ac32ab7db7dcaefe3930f21f",
+                    "datavalue": {
+                      "value": "382238DDek",
+                      "type": "string"
+                    },
+                    "datatype": "external-id"
+                  },
+                  "type": "statement",
+                  "id": "Q1006561$EFC8B3D7-C971-4CC2-9292-DFAEEE67332D",
+                  "rank": "normal"
+                }
+              ],
+              "P9106": [
+                {
+                  "mainsnak": {
+                    "snaktype": "value",
+                    "property": "P9106",
+                    "hash": "acb2f74ae3e40e3f4a3ee19f1a78c7983e51a5ae",
+                    "datavalue": {
+                      "value": "2046",
+                      "type": "string"
+                    },
+                    "datatype": "external-id"
+                  },
+                  "type": "statement",
+                  "id": "Q1006561$25861FF1-E77F-4DDB-955A-984C0DA5E812",
+                  "rank": "normal"
+                }
+              ],
+              "P5019": [
+                {
+                  "mainsnak": {
+                    "snaktype": "value",
+                    "property": "P5019",
+                    "hash": "9d1ca05c94f2ce70c73d704a5ffc603f2a509154",
+                    "datavalue": {
+                      "value": "dekeleia",
+                      "type": "string"
+                    },
+                    "datatype": "external-id"
+                  },
+                  "type": "statement",
+                  "id": "Q1006561$9A5FFCAC-9863-4140-8EFB-17CD6AF9DF45",
+                  "rank": "normal"
+                }
+              ],
+              "P7982": [
+                {
+                  "mainsnak": {
+                    "snaktype": "value",
+                    "property": "P7982",
+                    "hash": "a5ad5a76ee516b523dbd4d376997568999a32dcb",
+                    "datavalue": {
+                      "value": "14280",
+                      "type": "string"
+                    },
+                    "datatype": "external-id"
+                  },
+                  "type": "statement",
+                  "id": "Q1006561$B1346203-595B-4325-83F3-D8DCD1F92DDD",
+                  "rank": "normal"
+                }
+              ],
+              "P8349": [
+                {
+                  "mainsnak": {
+                    "snaktype": "value",
+                    "property": "P8349",
+                    "hash": "e99b8766466acc8636c6130c1669e12640a7a895",
+                    "datavalue": {
+                      "value": "17174",
+                      "type": "string"
+                    },
+                    "datatype": "external-id"
+                  },
+                  "type": "statement",
+                  "id": "Q1006561$138166D1-3CCD-448E-AF79-1318071DFCF8",
+                  "rank": "normal"
+                }
+              ],
+              "P4342": [
+                {
+                  "mainsnak": {
+                    "snaktype": "value",
+                    "property": "P4342",
+                    "hash": "546716d41e3b6df8dfec047aa8523524a03792a3",
+                    "datavalue": {
+                      "value": "Dekeleia",
+                      "type": "string"
+                    },
+                    "datatype": "external-id"
+                  },
+                  "type": "statement",
+                  "id": "Q1006561$88F269CD-56D5-48D3-A4C4-A6C07D2A262B",
+                  "rank": "normal"
+                }
+              ],
+              "P1343": [
+                {
+                  "mainsnak": {
+                    "snaktype": "value",
+                    "property": "P1343",
+                    "hash": "5b0ef3d5413cd39d887fbe70d2d3b3f4a94ea9d8",
+                    "datavalue": {
+                      "value": {
+                        "entity-type": "item",
+                        "numeric-id": 1138524,
+                        "id": "Q1138524"
+                      },
+                      "type": "wikibase-entityid"
+                    },
+                    "datatype": "wikibase-item"
+                  },
+                  "type": "statement",
+                  "qualifiers": {
+                    "P805": [
+                      {
+                        "snaktype": "value",
+                        "property": "P805",
+                        "hash": "1f07a967aed19d925532b5e640a9220433666ce3",
+                        "datavalue": {
+                          "value": {
+                            "entity-type": "item",
+                            "numeric-id": 63414101,
+                            "id": "Q63414101"
+                          },
+                          "type": "wikibase-entityid"
+                        },
+                        "datatype": "wikibase-item"
+                      }
+                    ]
+                  },
+                  "qualifiers-order": [
+                    "P805"
+                  ],
+                  "id": "Q1006561$EFEF8BEC-E1CF-4DB3-BDE8-C0A622DC2C7B",
+                  "rank": "normal"
+                },
+                {
+                  "mainsnak": {
+                    "snaktype": "value",
+                    "property": "P1343",
+                    "hash": "1e87e0f7d2db06ab0ef5ccabd7c6275641f36553",
+                    "datavalue": {
+                      "value": {
+                        "entity-type": "item",
+                        "numeric-id": 867541,
+                        "id": "Q867541"
+                      },
+                      "type": "wikibase-entityid"
+                    },
+                    "datatype": "wikibase-item"
+                  },
+                  "type": "statement",
+                  "qualifiers": {
+                    "P805": [
+                      {
+                        "snaktype": "value",
+                        "property": "P805",
+                        "hash": "67e11c6e0eee325fbe8c13286327d444b8926ac0",
+                        "datavalue": {
+                          "value": {
+                            "entity-type": "item",
+                            "numeric-id": 84682805,
+                            "id": "Q84682805"
+                          },
+                          "type": "wikibase-entityid"
+                        },
+                        "datatype": "wikibase-item"
+                      }
+                    ]
+                  },
+                  "qualifiers-order": [
+                    "P805"
+                  ],
+                  "id": "Q1006561$B411B976-9C2C-4869-8204-2730CAD2C0E9",
+                  "rank": "normal"
+                }
+              ],
+              "P2326": [
+                {
+                  "mainsnak": {
+                    "snaktype": "value",
+                    "property": "P2326",
+                    "hash": "b91a7425fb3f2ce68a5d1789d9464bec5be3952f",
+                    "datavalue": {
+                      "value": "-816280",
+                      "type": "string"
+                    },
+                    "datatype": "external-id"
+                  },
+                  "type": "statement",
+                  "id": "Q1006561$3012653E-7238-4563-B17A-FBBE3B14558C",
+                  "rank": "normal"
+                }
+              ],
+              "P18": [
+                {
+                  "mainsnak": {
+                    "snaktype": "value",
+                    "property": "P18",
+                    "hash": "af7b4567150292b114208d6d0ed40b6ff798621b",
+                    "datavalue": {
+                      "value": "Dekeleia.png",
+                      "type": "string"
+                    },
+                    "datatype": "commonsMedia"
+                  },
+                  "type": "statement",
+                  "id": "Q1006561$eedb9381-4723-aa2d-c3b9-61a80b3f8ca1",
+                  "rank": "normal"
+                }
+              ],
+              "P13591": [
+                {
+                  "mainsnak": {
+                    "snaktype": "value",
+                    "property": "P13591",
+                    "hash": "fa7389119b8f94a8bc59333357e162967b967fc7",
+                    "datavalue": {
+                      "value": "place/5a48f774-712f-4f1e-8507-ffa0624e4cb9",
+                      "type": "string"
+                    },
+                    "datatype": "external-id"
+                  },
+                  "type": "statement",
+                  "id": "Q1006561$39E4E591-34D0-4276-9C33-FBB4EE7FDA28",
+                  "rank": "normal"
+                }
+              ],
+              "P373": [
+                {
+                  "mainsnak": {
+                    "snaktype": "value",
+                    "property": "P373",
+                    "hash": "d576e92b7ab8a6a1885b3064fccb3c5a3b8d6e3b",
+                    "datavalue": {
+                      "value": "Dekeleia",
+                      "type": "string"
+                    },
+                    "datatype": "string"
+                  },
+                  "type": "statement",
+                  "id": "Q1006561$6c38ee3c-4951-ad33-ff08-00584b9fe964",
+                  "rank": "normal"
+                }
+              ]
+            }
+          }
+        },
+        "success": 1
+      }
     }
   ]
 }

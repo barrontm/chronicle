@@ -1,11 +1,11 @@
 # Data model
 
-Source of truth: `src/model/types.ts`. This page explains the why. Schema version: **6**.
+Source of truth: `src/model/types.ts`. This page explains the why. Schema version: **8**.
 
 ```
 TimelineDoc
 ├── categories[]   lanes on the timeline (id, label, color)
-├── items[]        entries: event | span | person
+├── items[]        entries: event | span | person; start and end dates (a place may have neither)
 │     ├── media[]       pictures (commons | url | local)
 │     ├── citations[]   → sources (with locator: "pp. 12–15")
 │     ├── places[]      {name?, lat, lon, role: site | born | died} for the map
@@ -52,10 +52,11 @@ TimelineDoc
 
 ## Dates
 
-`HistDate = { y, m?, d?, approx? }`, where `y` is astronomical (1 BCE = 0, 431 BCE = -430). Day precision requires a month. Living people have no `end`.
+`HistDate = { y, m?, d?, approx? }`, where `y` is astronomical (1 BCE = 0, 431 BCE = -430). Day precision requires a month. Living people have no `end`, nor do places still there; a place whose founding isn't known has no `start`.
 
 ## Version history
 
+- **8** (2026-10-18): a place (`subject: 'place'`) may have no `start` (its founding isn't known), and a place with a start but no `end` is still there. A place with no start is on the map but not the timeline. Every v7 entry is already valid (`tests/fixtures/sample-history-v7.json`).
 - **7** (2026-10-18): optional `subject` and `region` on entries. Both stay empty on upgrade, so an older entry draws as its `kind` does; nothing else changes (`tests/fixtures/sample-history-v6.json`).
 - **6** (2026-10-17): `highlights` (with text-quote anchors), `dimension` on entries and highlights, `themes` on periods, `effect` and `highlightIds` on connections. Each entry's `excerpt` becomes a highlight with id `h_<entry id>` used by that entry, so two devices upgrading the same timeline agree (`tests/fixtures/sample-history-v5.json`).
 - **5** (2026-10-16): optional `drafted` provenance (`{ model, prompt, draftedAt }`) on entries, connections, territories and flows, set when Bob accepts an AI draft. Nothing else changes, so v4 files import as they are (`tests/fixtures/sample-history-v4.json`).

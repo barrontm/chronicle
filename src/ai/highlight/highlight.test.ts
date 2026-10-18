@@ -244,11 +244,15 @@ describe('draftFromHighlight', () => {
     expect(parseDoc(serializeDoc(d)).relations[0]).toMatchObject({ effect: 'funded', highlightIds: ['h_case'] });
   });
 
-  it('says why a linked place can’t be connected', async () => {
+  it('drafts a linked place a connection needs, as a place on the map', async () => {
     const { output } = await replay(rec('handmade-decelea'));
-    expect(output.entries.map((e) => e.item.title)).toEqual(['Sparta fortifies Decelea']);
-    expect(output.connections.map((c) => c.relation.effect)).toEqual(['escalated', 'drained']);
-    expect(output.dropped).toEqual(['A connection (fortified) with “Decelea”: A place on its own isn’t an event.']);
+    expect(output.entries.map((e) => e.item.title)).toEqual(['Sparta fortifies Decelea', 'Decelea']);
+    const decelea = output.entries[1];
+    expect(decelea.item).toMatchObject({ kind: 'span', subject: 'place', wikidataId: 'Q1006561', places: [expect.objectContaining({ role: 'site' })] });
+    expect(decelea.item.start).toBeUndefined();
+    expect(decelea.problems).toEqual([]);
+    expect(output.connections.map((c) => [c.relation.effect, c.relation.toId === decelea.item.id])).toEqual([['escalated', false], ['fortified', true], ['drained', false]]);
+    expect(output.dropped).toEqual([]);
   });
 
   it('drafts a linked page a connection needs from Wikipedia, once', async () => {
