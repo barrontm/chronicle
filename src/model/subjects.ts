@@ -75,20 +75,29 @@ function walk<T>(start: string[], parents: ClassParents, visit: (level: string[]
   return undefined;
 }
 
-const kindAt = (level: string[]): SubjectKind | undefined => {
+/**
+ * Classes that are none of the kinds, however dated: Latin has a start date
+ * (c. 800 BCE) but isn't an event, so a passage linking it mustn't offer it as one.
+ */
+const NO_KIND = new Set(['Q34770', 'Q8192']); // language, writing system
+
+/** The kind a level of classes settles on; null when it says the thing has no kind; undefined to keep looking. */
+const kindAt = (level: string[]): SubjectKind | null | undefined => {
   const kinds = new Set(level.flatMap((q) => (KIND_OF[q] ? [KIND_OF[q]] : [])));
-  return ORDER.find((k) => kinds.has(k));
+  return ORDER.find((k) => kinds.has(k)) ?? (level.some((q) => NO_KIND.has(q)) ? null : undefined);
 };
+
+const settle = (classIds: string[], parents: ClassParents) => walk(classIds, parents, kindAt);
 
 /** The kind of the nearest known class: the entity's own classes first, then their parents, and so on. */
 export function classify(classIds: string[], parents: ClassParents): SubjectKind | undefined {
-  return walk(classIds, parents, kindAt);
+  return settle(classIds, parents) ?? undefined;
 }
 
 /** Classes whose parents must be fetched before `classify` can go further; [] when it has its answer or has looked far enough. */
 export function classesToFetch(classIds: string[], parents: ClassParents): string[] {
   return walk(classIds, parents, (level, depth) => {
-    if (kindAt(level) || depth === MAX_DEPTH) return [];
+    if (kindAt(level) !== undefined || depth === MAX_DEPTH) return [];
     const unknown = level.filter((q) => !(q in parents));
     return unknown.length ? unknown : undefined;
   }) ?? [];
@@ -168,6 +177,13 @@ export const idsOf = (claims: Claims, prop: string): string[] => [
 ];
 
 // ——— Subjects ———
+
+/**
+ * Bump when Chronicle reads Wikidata differently (a new kind, a date rule), so
+ * subjects cached on the device are looked up again when online.
+ * 2: dates in the calendar Wikipedia uses; languages aren't events.
+ */
+export const SUBJECT_VERSION = 2;
 
 export interface SubjectFacts {
   born?: HistDate;
@@ -261,7 +277,7 @@ export function classParentsQuery(classIds: string[]): string {
   return `SELECT ?c ?p WHERE { VALUES ?c { ${classIds.map((q) => `wd:${q}`).join(' ')} } ?c wdt:P279 ?p }`;
 }
 
-/** When no class is known: someone born is a person; a dated thing an event; a thing with only coordinates a place. */
+/** When no class says (and none rules it out): someone born is a person; a dated thing an event; a thing with only coordinates a place. */
 function kindFromFacts(f: SubjectFacts): SubjectKind | undefined {
   if (f.born || f.died) return 'person';
   if (f.start || f.pointInTime) return 'event';
@@ -270,7 +286,8 @@ function kindFromFacts(f: SubjectFacts): SubjectKind | undefined {
 }
 
 export function toSubject(e: SubjectEntity, parents: ClassParents, labels: Record<string, string>): Subject {
-  const kind = classify(e.classIds, parents) ?? kindFromFacts(e.facts);
+  const settled = settle(e.classIds, parents);
+  const kind = settled === null ? undefined : settled ?? kindFromFacts(e.facts);
   return { qid: e.qid, ...(e.label ? { label: e.label } : {}), ...(kind ? { kind } : {}), facts: e.facts, labels };
 }
 

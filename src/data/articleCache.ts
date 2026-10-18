@@ -14,7 +14,8 @@ interface ArticleDB extends DBSchema {
   subjects: { key: string; value: CachedSubject };
 }
 
-export interface CachedSubject { key: string; subject?: Subject; fetchedAt: number }
+/** `v`: the `SUBJECT_VERSION` it was read with; missing before versions were kept. */
+export interface CachedSubject { key: string; subject?: Subject; fetchedAt: number; v?: number }
 
 const DB_NAME = 'chronicle-articles';
 
