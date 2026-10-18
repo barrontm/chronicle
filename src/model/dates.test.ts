@@ -2,6 +2,9 @@ import { describe, expect, it } from 'vitest';
 import {
   axisTicks,
   compareHistDate,
+  moveDates,
+  precisionOf,
+  shiftHistDate,
   formatTickYear,
   toDecimalYear,
   formatYear,
@@ -196,5 +199,41 @@ describe('axis ticks', () => {
   });
   it('never makes more than a few hundred ticks', () => {
     expect(steps(-3_200_000, 2200, 20_000).ticks.length).toBeLessThanOrEqual(401);
+  });
+});
+
+describe('moving dates', () => {
+  it('keeps a year a year, across year 0', () => {
+    expect(shiftHistDate({ y: -2 }, 3.4)).toEqual({ y: 1 });
+    expect(shiftHistDate({ y: -430, approx: true }, -0.6)).toEqual({ y: -431, approx: true });
+    expect(precisionOf({ y: 5 })).toBe('year');
+  });
+  it('keeps a month a month, across the new year', () => {
+    expect(shiftHistDate({ y: 0, m: 11 }, 0.25)).toEqual({ y: 1, m: 2 });
+    expect(shiftHistDate({ y: 50, m: 1 }, -1 / 12)).toEqual({ y: 49, m: 12 });
+  });
+  it('moves a day by days, and a leap day lands on the last of February', () => {
+    expect(shiftHistDate({ y: 33, m: 12, d: 31 }, 1 / 365.25)).toEqual({ y: 34, m: 1, d: 1 });
+    expect(shiftHistDate({ y: -399, m: 3, d: 1 }, -1 / 365.25)).toEqual({ y: -399, m: 2, d: 28 });
+    expect(shiftHistDate({ y: 2000, m: 2, d: 29 }, 1, 'year')).toEqual({ y: 2001, m: 2, d: 28 });
+    expect(shiftHistDate({ y: 1999, m: 1, d: 31 }, 1 / 12, 'month')).toEqual({ y: 1999, m: 2, d: 28 });
+  });
+  it('never moves in steps finer than the date is known', () => {
+    expect(shiftHistDate({ y: 10 }, 0.3, 'day')).toEqual({ y: 10 });
+  });
+  it('stays within the years Chronicle can store', () => {
+    expect(shiftHistDate({ y: -270_999 }, -50)).toEqual({ y: -271_000 });
+  });
+  it('moves a whole entry by one step of its coarser date, keeping its length', () => {
+    const war = { start: { y: -430 }, end: { y: -403, m: 4, d: 25 } };
+    expect(moveDates(war, 2.6)).toEqual({ start: { y: -427 }, end: { y: -400, m: 4, d: 25 } });
+    expect(moveDates({ start: { y: -469 } }, 1)).toEqual({ start: { y: -468 } });
+  });
+  it('moves one end, never past the other', () => {
+    const life = { start: { y: -427 }, end: { y: -347 } };
+    expect(moveDates(life, -1, 'start')).toEqual({ start: { y: -428 }, end: { y: -347 } });
+    expect(moveDates(life, 200, 'start')).toEqual({ start: { y: -347 }, end: { y: -347 } });
+    expect(moveDates(life, -200, 'end')).toEqual({ start: { y: -427 }, end: { y: -427 } });
+    expect(moveDates({ start: { y: 1950 } }, 5, 'end')).toEqual({ start: { y: 1950 } });
   });
 });

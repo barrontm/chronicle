@@ -15,6 +15,7 @@ export const FONTS = {
   head: 'italic 12px Spectral, Georgia, serif',
   count: '600 11px "Public Sans", system-ui, sans-serif',
   play: '12px Spectral, Georgia, serif',
+  arc: 'italic 600 12px "Public Sans", system-ui, sans-serif',
 } as const;
 export type FontKey = keyof typeof FONTS;
 
@@ -36,7 +37,16 @@ export interface Dot extends Base { t: 1; x: number; y: number; r: number; fill?
 export interface Txt extends Base { t: 2; x: number; y: number; s: string; f: FontKey; fill: string; anchor?: 'start' | 'middle' | 'end' }
 export interface Ln extends Base { t: 3; x1: number; y1: number; x2: number; y2: number; stroke: string; dash?: boolean; sw?: number }
 export interface Img extends Base { t: 4; x: number; y: number; w: number; h: number; href: string }
-export type Prim = Rect | Dot | Txt | Ln | Img;
+/** An arrow between two entries: its ends' ids, and the arrowhead (a marker per role). */
+export interface Arc extends Base { t: 5; d: string; stroke: string; sw?: number; dash?: boolean; head?: ArcRole; from?: string; to?: string }
+export type Prim = Rect | Dot | Txt | Ln | Img | Arc;
+
+/** Who an arrow links: influenced by, influenced, otherwise connected, or Claude's draft. */
+export type ArcRole = 'infl-by' | 'infl-on' | 'linked' | 'draft';
+export const ARC_ROLES: ArcRole[] = ['infl-by', 'infl-on', 'linked', 'draft'];
+
+/** An arrow to draw when both ends are in view. `label` is written halfway along it. */
+export interface Link { fromId: string; toId: string; role: ArcRole; label?: string }
 
 export type MarkKind = 'event' | 'span' | 'person';
 
@@ -54,8 +64,10 @@ export interface Cluster {
 }
 
 export interface Target {
-  /** An entry id, or "cluster" for a cluster, or "playhead". */
+  /** An entry id, or "cluster" for a cluster, "playhead", or an open entry's handle. */
   id: string;
+  /** On the open entry: which part a drag moves. */
+  grip?: 'body' | 'start' | 'end';
   x: number; y: number; w: number; h: number;
   lane?: string;
   cluster?: Cluster;
@@ -64,14 +76,16 @@ export interface Target {
 export interface Box { x: number; y: number; w: number; h: number }
 
 export interface Scene {
-  /** Lane washes and gridlines, marks, text: clipped to the plot. */
-  z: [Prim[], Prim[], Prim[]];
+  /** Lane washes and gridlines, marks, text, then arrows: clipped to the plot. */
+  z: [Prim[], Prim[], Prim[], Prim[]];
   /** Lane names, clipped to the gutter. */
   gutter: Prim[];
   /** Axis, "now" and the playhead: clipped to the right of the gutter, full height. */
   axis: Prim[];
   targets: Target[];
   clusters: Cluster[];
+  /** Where each entry in view is drawn (a cluster's members share its box), for arrows and keyboard focus. */
+  boxes: Map<string, Box>;
   plot: Box;
   gutterBox: Box;
   /** Height of all lanes, for vertical scroll limits. */

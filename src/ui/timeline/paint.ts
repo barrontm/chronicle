@@ -1,4 +1,4 @@
-import { FONTS, type Box, type Prim, type Scene } from './scene';
+import { ARC_ROLES, FONTS, type Box, type Prim, type Scene } from './scene';
 
 /**
  * The SVG painter. Every primitive has a stable key, so each frame updates the same elements
@@ -16,7 +16,7 @@ export interface Painter {
 }
 
 const NS = 'http://www.w3.org/2000/svg';
-const TAGS = ['rect', 'circle', 'text', 'line', 'image'] as const;
+const TAGS = ['rect', 'circle', 'text', 'line', 'image', 'path'] as const;
 type Tag = (typeof TAGS)[number];
 
 interface Rec { el: SVGElement; tag: Tag; gen: number; last: Map<string, string | number>; text?: string }
@@ -38,13 +38,24 @@ export function svgPainter(): Painter {
     return r;
   };
   const plotClip = clip('plot'), gutterClip = clip('gutter'), rightClip = clip('right');
+  // One arrowhead per kind of arrow; its color comes from CSS (`.tl-head.<role>`), so it follows the theme.
+  for (const role of ARC_ROLES) {
+    const m = document.createElementNS(NS, 'marker');
+    m.id = `${id}-head-${role}`;
+    for (const [k, v] of Object.entries({ viewBox: '0 0 10 10', refX: '9', refY: '5', markerWidth: '7', markerHeight: '7', orient: 'auto-start-reverse' })) m.setAttribute(k, v);
+    const head = document.createElementNS(NS, 'path');
+    head.setAttribute('d', 'M0 0 L10 5 L0 10 z');
+    head.setAttribute('class', `tl-head ${role}`);
+    m.append(head);
+    defs.append(m);
+  }
   const group = (clipName: string) => {
     const g = document.createElementNS(NS, 'g');
     g.setAttribute('clip-path', `url(#${id}-${clipName})`);
     return g;
   };
   const plot = group('plot');
-  const z = [0, 1, 2].map(() => { const g = document.createElementNS(NS, 'g'); plot.append(g); return g; });
+  const z = [0, 1, 2, 3].map(() => { const g = document.createElementNS(NS, 'g'); plot.append(g); return g; });
   const gutter = group('gutter');
   const axis = group('right');
   svg.append(defs, plot, gutter, axis);
@@ -118,6 +129,17 @@ export function svgPainter(): Painter {
         set(r, 'href', p.href);
         set(r, 'preserveAspectRatio', 'xMidYMid slice');
         break;
+      case 5:
+        set(r, 'd', p.d);
+        style(r, 'fill', 'none');
+        style(r, 'stroke', p.stroke);
+        set(r, 'stroke-width', p.sw ?? 1.5);
+        set(r, 'stroke-linecap', 'round');
+        set(r, 'stroke-dasharray', p.dash ? '5 4' : undefined);
+        set(r, 'marker-end', p.head ? `url(#${id}-head-${p.head})` : undefined);
+        set(r, 'data-from', p.from);
+        set(r, 'data-to', p.to);
+        break;
     }
   };
 
@@ -138,7 +160,7 @@ export function svgPainter(): Painter {
       fitClip(plotClip, scene.plot);
       fitClip(gutterClip, scene.gutterBox);
       fitClip(rightClip, { x: scene.plot.x, y: 0, w: scene.plot.w, h: scene.plot.y + scene.plot.h });
-      for (let i = 0; i < 3; i++) for (const p of scene.z[i]) paint(p, z[i], `z${i}`);
+      for (let i = 0; i < z.length; i++) for (const p of scene.z[i]) paint(p, z[i], `z${i}`);
       for (const p of scene.gutter) paint(p, gutter, 'g');
       for (const p of scene.axis) paint(p, axis, 'a');
       // What wasn't drawn this frame goes back to the pool, stripped, for reuse.

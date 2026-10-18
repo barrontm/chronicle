@@ -1,4 +1,4 @@
-import { influencesOf } from '../model/doc';
+import { describeRelation, influencesOf } from '../model/doc';
 import type { Relation } from '../model/types';
 
 /**
@@ -43,6 +43,14 @@ export function influenceArrows(relations: Relation[], selectedId: string | unde
   ];
 }
 
+/** Claude's drafted connections, as dashed arrows labelled with how one acted on the other, and a "?". */
+export function draftArrows(relations: Relation[]): Array<{ fromId: string; toId: string; role: 'draft'; label: string }> {
+  return relations.filter((r) => r.fromId !== r.toId).map((r) => ({
+    fromId: r.fromId, toId: r.toId, role: 'draft' as const,
+    label: `${r.effect?.trim() || describeRelation(r.type, 'out').toLowerCase()} ?`,
+  }));
+}
+
 export interface Box { left: number; right: number; top: number; bottom: number }
 interface Pt { x: number; y: number }
 
@@ -68,8 +76,13 @@ export function anchors(from: Box, to: Box): { a: Pt; b: Pt } {
   return { a: { x: ax, y: ay }, b };
 }
 
+const r1 = (n: number) => Math.round(n * 10) / 10;
+
+/** A curve's path, and the point halfway along it, where a label can sit. */
+export interface Curve { d: string; mid: Pt }
+
 /** A gentle arc from a to b: a quadratic curve bowed to one side of the chord. */
-export function arcPath(a: Pt, b: Pt): string {
+export function arcCurve(a: Pt, b: Pt): Curve {
   const dx = b.x - a.x;
   const dy = b.y - a.y;
   const len = Math.hypot(dx, dy) || 1;
@@ -79,6 +92,26 @@ export function arcPath(a: Pt, b: Pt): string {
   const ny = dx / len;
   const cx = (a.x + b.x) / 2 + nx * bow;
   const cy = (a.y + b.y) / 2 + ny * bow;
-  const r = (n: number) => Math.round(n * 10) / 10;
-  return `M${r(a.x)} ${r(a.y)} Q${r(cx)} ${r(cy)} ${r(b.x)} ${r(b.y)}`;
+  return {
+    d: `M${r1(a.x)} ${r1(a.y)} Q${r1(cx)} ${r1(cy)} ${r1(b.x)} ${r1(b.y)}`,
+    mid: { x: 0.25 * a.x + 0.5 * cx + 0.25 * b.x, y: 0.25 * a.y + 0.5 * cy + 0.25 * b.y },
+  };
+}
+
+export function arcPath(a: Pt, b: Pt): string {
+  return arcCurve(a, b).d;
+}
+
+/**
+ * Two ends at the same year sit one above the other: the arrow loops out to
+ * the left and back, so it reads as an arrow rather than a stroke between them.
+ */
+export function loopCurve(a: Pt, b: Pt): Curve {
+  const reach = 26 + Math.abs(b.y - a.y) * 0.25;
+  const x = Math.min(a.x, b.x) - reach;
+  return {
+    d: `M${r1(a.x)} ${r1(a.y)} C${r1(x)} ${r1(a.y)} ${r1(x)} ${r1(b.y)} ${r1(b.x)} ${r1(b.y)}`,
+    // A cubic's halfway point: (a + 3c1 + 3c2 + b) / 8.
+    mid: { x: (a.x + 6 * x + b.x) / 8, y: (a.y * 4 + b.y * 4) / 8 },
+  };
 }

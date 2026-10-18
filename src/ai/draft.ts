@@ -108,6 +108,21 @@ export function pendingWithPlaces(set: DraftSet | null): TimelineItem[] {
   return (set?.entries ?? []).filter((e) => e.status === 'pending' && e.item.places?.length).map((e) => e.item);
 }
 
+/**
+ * What of Claude's drafts the timeline shows: dated entries still waiting (dashed ghosts), and
+ * connections still waiting whose ends are both in Chronicle or drafted (dashed arrows).
+ */
+export function pendingOnTimeline(doc: TimelineDoc, sets: Array<DraftSet | null | undefined>): { items: TimelineItem[]; relations: Relation[] } {
+  const items: TimelineItem[] = [];
+  const relations: Relation[] = [];
+  for (const set of sets) {
+    if (!set) continue;
+    for (const e of set.entries) if (statusIn(doc, e) === 'pending' && Number.isFinite(e.item.start?.y)) items.push(e.item);
+    for (const c of set.connections) if (statusIn(doc, c) === 'pending') relations.push(c.relation);
+  }
+  return { items, relations };
+}
+
 /** The version line at the top of a feature's prompt.md ("Version: 3") → "entries@3". */
 export function promptId(feature: string, prompt: string): string {
   const v = /^Version:\s*(\S+)/.exec(prompt)?.[1];

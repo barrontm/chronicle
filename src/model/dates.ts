@@ -243,6 +243,75 @@ export function compareHistDate(a: HistDate, b: HistDate): number {
   return toDecimalYear(a) - toDecimalYear(b);
 }
 
+/* ---------- Moving dates (dragging an entry on the timeline) ---------- */
+
+/** How finely a date is known: to the year, the month or the day. */
+export type Precision = 'year' | 'month' | 'day';
+const FINENESS: Record<Precision, number> = { year: 0, month: 1, day: 2 };
+
+export function precisionOf(d: HistDate): Precision {
+  return d.m ? (d.d ? 'day' : 'month') : 'year';
+}
+
+/** The coarser of two precisions. */
+export function coarser(a: Precision, b: Precision): Precision {
+  return FINENESS[a] <= FINENESS[b] ? a : b;
+}
+
+const clampYear = (y: number) => Math.min(MAX_YEAR, Math.max(MIN_YEAR, y));
+
+/**
+ * Move a date by about `years`, in whole steps of `unit` (never finer than the
+ * date itself is known), keeping its precision and its "c.": a year stays a
+ * year, a month a month. A day that the new month lacks becomes its last day.
+ */
+export function shiftHistDate(d: HistDate, years: number, unit: Precision = precisionOf(d)): HistDate {
+  const step = coarser(unit, precisionOf(d));
+  const fitDay = (y: number, m?: number) => (m && d.d ? Math.min(d.d, daysInMonth(y, m)) : undefined);
+  const out = (y: number, m?: number, day?: number): HistDate => ({
+    y, ...(m ? { m } : {}), ...(day ? { d: day } : {}), ...(d.approx ? { approx: true } : {}),
+  });
+  if (step === 'year') {
+    const y = clampYear(d.y + Math.round(years));
+    return out(y, d.m, fitDay(y, d.m));
+  }
+  if (step === 'month') {
+    const total = d.y * 12 + (d.m! - 1) + Math.round(years * 12);
+    const y = clampYear(Math.floor(total / 12));
+    const m = y === Math.floor(total / 12) ? total - y * 12 + 1 : d.m!;
+    return out(y, m, fitDay(y, m));
+  }
+  const dt = toJsDate(d);
+  dt.setUTCDate(dt.getUTCDate() + Math.round(years * 365.25));
+  const moved = fromJsDate(dt);
+  return moved.y < MIN_YEAR || moved.y > MAX_YEAR ? d : out(moved.y, moved.m, moved.d);
+}
+
+/** A date cut back to `p`: 12 Mar 431 BCE to the year is 431 BCE. */
+function trimTo(d: HistDate, p: Precision, approx?: boolean): HistDate {
+  return { y: d.y, ...(p !== 'year' && d.m ? { m: d.m } : {}), ...(p === 'day' && d.d ? { d: d.d } : {}), ...(approx ? { approx: true } : {}) };
+}
+
+/**
+ * New dates for an entry dragged by `years`. The whole entry ('body') moves
+ * both dates by the same whole number of the coarser unit, so its length is
+ * kept; one end moves on its own, and never past the other end.
+ */
+export function moveDates<T extends { start: HistDate; end?: HistDate }>(item: T, years: number, part: 'body' | 'start' | 'end' = 'body'): T {
+  const { start, end } = item;
+  if (part === 'body') {
+    const unit = end ? coarser(precisionOf(start), precisionOf(end)) : precisionOf(start);
+    return { ...item, start: shiftHistDate(start, years, unit), ...(end ? { end: shiftHistDate(end, years, unit) } : {}) };
+  }
+  if (part === 'start') {
+    const s = shiftHistDate(start, years);
+    return { ...item, start: end && compareHistDate(s, end) > 0 ? trimTo(end, precisionOf(start), start.approx) : s };
+  }
+  if (!end) return item;
+  const e = shiftHistDate(end, years);
+  return { ...item, end: compareHistDate(e, start) < 0 ? trimTo(start, precisionOf(end), end.approx) : e };
+}
+
 /**
  * Read a Wikidata time value ("+1815-12-10T00:00:00Z" with a precision code).
  * Wikidata's JSON writes BCE years in historical numbering ("-0490" = 490 BCE),

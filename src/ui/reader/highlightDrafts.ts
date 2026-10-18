@@ -13,11 +13,16 @@ export interface HighlightDrafts {
   /** The highlight whose drafts the map shows: the one open in the tray. */
   shown: string | null;
   show: (highlightId: string | null) => void;
+  /** What the open highlight could become, not yet in Chronicle: a dashed ghost on the map where it was. */
+  ghost: Ghost | null;
+  setGhost: (g: Ghost | null) => void;
 }
+
+export interface Ghost { qid: string; title: string; lat: number; lon: number }
 
 const KEY = 'chronicle.highlightDrafts';
 
-export const HighlightDraftsContext = createContext<HighlightDrafts>({ sets: {}, put: () => {}, shown: null, show: () => {} });
+export const HighlightDraftsContext = createContext<HighlightDrafts>({ sets: {}, put: () => {}, shown: null, show: () => {}, ghost: null, setGhost: () => {} });
 export const useHighlightDrafts = () => useContext(HighlightDraftsContext);
 
 /** The store, owned by the workspace. Sets whose highlight is gone are dropped. */
@@ -26,6 +31,9 @@ export function useHighlightDraftStore(highlights: Highlight[]): HighlightDrafts
     try { return JSON.parse(localStorage.getItem(KEY) ?? '{}') as Record<string, DraftSet>; } catch { return {}; }
   });
   const [shown, show] = useState<string | null>(null);
+  const [ghost, setGhostState] = useState<Ghost | null>(null);
+  // Only a different ghost re-renders (and moves the map to it).
+  const setGhost = useCallback((g: Ghost | null) => setGhostState((cur) => (cur?.qid === g?.qid && cur?.lat === g?.lat && cur?.lon === g?.lon ? cur : g)), []);
 
   const put = useCallback((id: string, set: DraftSet | null) => setSets((s) => {
     const { [id]: _old, ...rest } = s;
@@ -44,5 +52,5 @@ export function useHighlightDraftStore(highlights: Highlight[]): HighlightDrafts
     } catch { /* not kept past this visit; fine */ }
   }, [sets]);
 
-  return useMemo(() => ({ sets, put, shown, show }), [sets, put, shown]);
+  return useMemo(() => ({ sets, put, shown, show, ghost, setGhost }), [sets, put, shown, ghost, setGhost]);
 }

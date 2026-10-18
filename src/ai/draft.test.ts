@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createEmptyDoc, upsert } from '../model/doc';
 import type { Highlight, TimelineDoc, TimelineItem } from '../model/types';
-import { acceptConnection, acceptEntry, statusIn, undoConnection, undoEntry, waiting, type DraftConnection, type DraftEntry, type DraftSet } from './draft';
+import { acceptConnection, acceptEntry, pendingOnTimeline, statusIn, undoConnection, undoEntry, waiting, type DraftConnection, type DraftEntry, type DraftSet } from './draft';
 
 const item = (id: string, over: Partial<TimelineItem> = {}): TimelineItem => ({ id, kind: 'event', title: id, start: { y: -448 }, categoryId: 'politics', updatedAt: 0, ...over });
 const highlight: Highlight = { id: 'h1', sourceId: 's1', text: 'In 449 BC Pericles proposed a decree.', dimension: 'economic', usedBy: ['i_old'], updatedAt: 1 };
@@ -67,5 +67,16 @@ describe('accepting drafts from a highlight', () => {
     const decided = { ...set, entries: [{ ...decree, status: 'rejected' as const }], connections: [{ ...funded, status: 'rejected' as const }] };
     expect(waiting(doc, decided)).toBe(0);
     expect(waiting(doc, null)).toBe(0);
+  });
+});
+
+describe('drafts on the timeline', () => {
+  it('shows what is still waiting: dated entries, and connections not made yet', () => {
+    const { doc, decree, funded, set } = setup();
+    const undated: DraftEntry = { ...decree, item: item('i_undated', { start: { y: NaN } }) };
+    const rejected: DraftEntry = { ...decree, item: item('i_no'), status: 'rejected' };
+    expect(pendingOnTimeline(doc, [{ ...set, entries: [decree, undated, rejected] }, null])).toEqual({ items: [decree.item], relations: [funded.relation] });
+    const d = acceptConnection(acceptEntry(doc, decree, 5, 'h1'), funded, 5, 'h1');
+    expect(pendingOnTimeline(d, [set])).toEqual({ items: [], relations: [] });
   });
 });
