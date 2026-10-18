@@ -67,10 +67,24 @@ A connection can carry an `effect` (weakened, funded, legitimised, …) and the 
 - Dimensions live on highlights and entries and are the default lanes at level 1. Categories stay Bob's own topics.
 - One year clock (`useYearClock`) drives the timeline, the map and every animation. Reduced motion is respected.
 
+## Long range: many things, still clear
+Bob will add thousands of things across millennia. Zoomed out, the timeline should stay calm and still show what matters and how it connects (Bob, 2026-10-18). Speed isn't the problem: the spike's layout takes 0.1–2 ms a frame at 50,000 entries. What needs a plan is what to draw. The look is settled in Phase 4's "long range" prototype; until then these are the ideas it tests.
+
+- **Prominence** comes from Bob's own work, never from an outside ranking: the highlights, connections and notes on an entry (weights set in the prototype), plus an optional **landmark** star he sets. One pure `prominence(entry, doc)` in `src/model/` decides landmarks, which entry leads a cluster, and which labels win when they collide.
+- **Landmarks in bands.** At level 0 each era band shows its most prominent wars, people and events (as many as fit) as their kind's glyph. The rest are in the band's count.
+- **Clusters that split.** Entries that would overlap merge into a badge in their kind's glyph with a count ("12 battles", "8 people"), labelled with its most prominent member. Zooming in splits it over `--motion-move` (a fade with reduced motion); tapping one zooms to fit it. A cluster holds one kind in one row, so a badge always says one thing.
+- **Threads.** Connections are rolled up by the eras their ends fall in: an end belongs to the era of its region whose dates contain it, or the era it is `part of`. Each pair of eras gets one ribbon, its width the number of links, coloured by the main effect's dimension, labelled "4 · influenced". Ribbons run in the gutters between region rows, never over a band's text.
+  - **On focus** by default: hover (laptop) or tap (phone) an era, landmark, cluster or theme chip and its threads light up across every era and region, while unrelated bands fade. Esc or tapping empty space clears it.
+  - **"Show all threads"** (a setting, remembered per device) draws every ribbon faintly, and focus brightens its own. Laptop only; the phone stays on focus.
+  - Tapping a ribbon lists the connections inside it, with their effects and evidence. Zooming in turns ribbons back into single arrows (levels 1 and 2).
+- **Threads on the map, over time.** The same focus drives the map, both ways, and the year clock plays it. A thread is an arc between its ends' places that draws in the year its connection happened, then settles to a faint trace. For an idea or work, the regions it reached are tinted by its reception (known, lost, revived; Phase 5c). Played through, Bob sees a story move: Greek philosophy from Athens to Alexandria and Baghdad's translators, the Latin West fading to "lost" for centuries, then its return through Córdoba and Toledo to Paris. Arcs follow known routes (sea legs from `scripts/sea-route.mjs`), otherwise great circles. "Show all threads" also applies here: every arc active in the year, faint. This is the same map layer as Phase 5c's transmission arrows, generalised to any connection.
+- **Lenses.** Chips above level 0 (Wars, People, Ideas, Trade, and any of Bob's categories), each adding a thin strip under every region row: war ticks, how many people lived then, idea spans. Off by default and remembered per device. They add strips and never move the bands.
+- **Collapsible regions.** Regions can have a parent (Mediterranean › Greece, Rome). A parent row folds its children into one, unfolds on tap, and remembers. A row is as tall as its content, so an almost empty region is thin.
+
 ## Schema path
 - v6: `highlights`, `dimension`, `themes` on periods; `effect` and `highlightIds` on connections.
 - v7: `subject` and `region` on entries, for the new timeline.
-- v8: `regimes` on territories, and alliances.
+- v8: `regimes` on territories, and alliances; also a landmark star on entries and regions with a parent, if the long-range prototype keeps them.
 - v9: `economies` (with `distribution`), plus `Flow.subject` and `goods`.
 - v10: `institutions` with `structures`, `reception` on ideas and works, `Flow.subject: 'ideas'`.
 - v11: kinds of border (`edge` on territory snapshots), walls, forces on wars and battles.

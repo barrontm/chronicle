@@ -8,7 +8,7 @@ The direction is in `docs/vision.md`; visual references are in `docs/references.
 
 - **Zoom levels.** Level 0: era bands with theme chips. Level 1: an era's six dimension lanes. Level 2: individual entries. Each level shows less detail than the next, never a shrunken copy of it.
 - **Representations.** Each subject type has one way of being drawn (the table in `vision.md`). Two subject types never share a glyph.
-- **Density.** Era bands and theme chips never hide at level 0: a band grows taller to show all its chips. At levels 1 and 2, when crowded, hide in this order: descriptions, then secondary labels, then minor entries (merged into counts). A span label that doesn't fit sits just after the span if there's room, is cut short with an ellipsis if not, and is hidden (tooltip only) below 48 px. A moment's label hides if it would collide with the one before it.
+- **Density.** Era bands and theme chips never hide at level 0: a band grows taller to show all its chips. At levels 1 and 2, when crowded, hide in this order: descriptions, then secondary labels, then low-prominence entries, which merge into a cluster of their kind (see Long range below). A span label that doesn't fit sits just after the span if there's room, is cut short with an ellipsis if not, and is hidden (tooltip only) below 48 px. A moment's label hides if it would collide with the one before it.
 - **Dimension pigments**: political lapis, economic ochre, social madder, technological verdigris, intellectual indigo, religious cinnabar, always in that order; umber stays for neutral rules and uncertainty.
 - **Patterns** carry meaning that color can't. Every pattern is legible in dark mode and at phone size.
   - Regime forms, in lapis on polity bars and territories: one ruler solid, the few a 45° hatch, by wealth horizontal bands, the many dots. Backed by a foreign power adds an umber bar along the top.
@@ -32,6 +32,15 @@ Sources are in `docs/prototypes/`; republish one with the Artifact tool after ed
 - **Level 1 · phases.** The era's theme chips run along the top. Six lanes in pigment order, each a faint wash of its pigment, labelled with its name and highlight count. Spans of change are named bars packed into rows (dashed when approximate); key moments are diamonds on a row above. Picking a theme dims everything outside it in every lane. Clicking a span, moment or theme opens the highlights behind it.
 - **Phone.** Level 0 pans sideways with the region names above each row. Level 1 becomes a vertical list: per lane, the bars without labels, then a dated list of its spans and moments. Details open in a bottom sheet.
 - **Empty lanes** say so in Bob's words ("Nothing economic highlighted here yet.").
+
+## Long range (*proposed*)
+Settled by Phase 4's "long range" prototype; the ideas are in `vision.md` (Long range).
+- **Landmarks** sit in a row inside each band, drawn as their kind's glyph; never more than fit without overlapping the band's name or chips.
+- **Clusters** are a badge in their kind's glyph with a count and their lead's label; one kind per badge.
+- **Threads** are ribbons in the gutters between region rows: width by count, coloured by the main effect's dimension, labelled with count and effect. On focus, unrelated bands fade to about 35%. "Show all threads" draws every ribbon at about 15%.
+- **Threads on the map** draw in as arcs in their year, then settle to a faint trace; reception tints follow Phase 5c. Reduced motion shows them without the draw-in.
+- **Lenses** are thin strips under each region row, in their own pigment, never moving the bands.
+- **Folded regions** show the parent's name in spaced small caps with its children's names after it, smaller.
 
 ## Reader and capture
 - **Layout.** Laptop: the reader column (text about 34em wide) beside the map over a timeline strip; a reading trail and "Open an article" in the top bar. Phone: full-screen reader; "Map" opens the map and timeline as a sheet.
