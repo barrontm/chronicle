@@ -157,6 +157,13 @@ describe('without classes', () => {
     expect(toSubject({ ...e, facts: { ...e.facts, coords: { lat: 1, lon: 2 } } }, {}, {}).kind).toBe('place');
   });
 
+  it('never makes a language an event, however dated (Latin, c. 800 BCE)', () => {
+    const latin = { qid: 'Q397', classIds: ['Q45762', 'Q436240', 'Q34770', 'Q839470'], facts: { start: { y: -799, approx: true }, partOf: [], follows: [], followedBy: [], participants: [], locations: [], government: [] } };
+    expect(classesToFetch(latin.classIds, {})).toEqual([]);
+    expect(toSubject(latin, {}, {}).kind).toBeUndefined();
+    expect(subjectWhen(toSubject(latin, {}, {}))).toBe('c. 800 BCE');
+  });
+
   it('knows when a page has no Wikidata item', () => {
     expect(parseSubjectEntity({ entities: { '-1': { site: 'enwiki', title: 'Nope', missing: '' } } })).toBeUndefined();
   });

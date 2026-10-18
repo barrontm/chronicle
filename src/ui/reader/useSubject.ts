@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { articleCache } from '../../data/articleCache';
 import { fetchSubject } from '../../media/wikipedia';
-import type { Subject } from '../../model/subjects';
+import { SUBJECT_VERSION, type Subject } from '../../model/subjects';
 
 export type SubjectState =
   | { status: 'loading' }
@@ -25,17 +25,23 @@ function useOnline(): boolean {
   return online;
 }
 
-/** What a page is about: from the device cache, else from Wikidata (then kept beside the articles). */
+/**
+ * What a page is about: from the device cache, else from Wikidata (then kept
+ * beside the articles). A subject cached by an older version is looked up
+ * again when online, and still used offline or when Wikidata doesn't answer.
+ */
 async function loadSubject(key: string, online: boolean, signal: AbortSignal): Promise<SubjectState> {
   const cached = await articleCache().getSubject(key);
-  if (cached) return cached.subject ? { status: 'ready', subject: cached.subject } : { status: 'unknown' };
+  const fromCache = cached && (cached.subject ? { status: 'ready', subject: cached.subject } as const : { status: 'unknown' } as const);
+  if (fromCache && (cached.v === SUBJECT_VERSION || !online)) return fromCache;
   if (!online) return { status: 'offline' };
   try {
     const subject = await fetchSubject(key, signal);
-    if (!signal.aborted) await articleCache().putSubject({ key, ...(subject ? { subject } : {}), fetchedAt: Date.now() });
+    if (!signal.aborted) await articleCache().putSubject({ key, ...(subject ? { subject } : {}), fetchedAt: Date.now(), v: SUBJECT_VERSION });
     return subject ? { status: 'ready', subject } : { status: 'unknown' };
   } catch (e) {
     if ((e as Error).name === 'AbortError') throw e;
+    if (fromCache) return fromCache;
     // Busy or unreachable: say nothing now, and look again next time.
     return navigator.onLine ? { status: 'unknown' } : { status: 'offline' };
   }

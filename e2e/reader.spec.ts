@@ -308,6 +308,30 @@ test('the reader says what an article is about, and when it is already in Chroni
   await expect(page.getByTestId('item-view')).toContainText('Pericles');
 });
 
+test('what an older version read from Wikidata is looked up again', async ({ page }) => {
+  await mockArticles(page);
+  await open(page);
+  // Cached by an older version (no `v`), and read wrongly: Pericles as an event.
+  await page.evaluate(() => new Promise<void>((done, fail) => {
+    const req = indexedDB.open('chronicle-articles', 2);
+    req.onupgradeneeded = () => {
+      req.result.createObjectStore('articles', { keyPath: 'key' });
+      req.result.createObjectStore('subjects', { keyPath: 'key' });
+    };
+    req.onsuccess = () => {
+      const tx = req.result.transaction('subjects', 'readwrite');
+      tx.objectStore('subjects').put({ key: 'Pericles', fetchedAt: 1, subject: { qid: 'Q80398', kind: 'event', facts: { start: { y: -999 }, partOf: [], follows: [], followedBy: [], participants: [], locations: [], government: [] }, labels: {} } });
+      tx.oncomplete = () => { req.result.close(); done(); };
+      tx.onerror = () => fail(tx.error);
+    };
+    req.onerror = () => fail(req.error);
+  }));
+  await page.getByRole('button', { name: 'More' }).click();
+  await page.getByRole('menuitemcheckbox', { name: 'Try the new layout' }).click();
+  await search(page, 'pericles', 'Pericles');
+  await expect(page.getByTestId('reader').getByTestId('article-subject')).toHaveText('Person · 494–429 BCE');
+});
+
 test('the capture tray keeps a highlight, gives it a dimension, and adds the article to the timeline @phone', async ({ page }, info) => {
   const phone = info.project.name.includes('phone');
   await mockArticles(page);
