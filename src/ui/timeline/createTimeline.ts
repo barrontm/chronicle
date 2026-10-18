@@ -1,10 +1,12 @@
 import { formatRange, jsDateToDecimalYear, moveDates, precisionOf, toDecimalYear } from '../../model/dates';
+import type { EraRegion } from '../../model/eras';
 import type { DatedItem, HistDate, Relation, TimelineItem } from '../../model/types';
+import { bandSummary } from '../representations/era';
 import { DEEP_LIMITS, panBy, windowAround, zoomAround, type YearWindow } from '../timeNav';
 import { attachGestures } from './gestures';
-import { AXIS_H, describeEntry, hitTest, laneAt, layout, maxScroll, prepare, rowSpan, stepActive, type LaneInput, type Level, type Prepared, type StepKey, type View } from './layout';
+import { AXIS_H, describeEntry, describeEra, eraSpan, hitTest, laneAt, layout, maxScroll, PHONE_W, prepare, rowSpan, stepActive, stepEra, type LaneInput, type Level, type PEra, type Prepared, type StepKey, type View } from './layout';
 import { svgPainter } from './paint';
-import { FONTS, type FontKey, type Link, type Measure, type Scene, type Target } from './scene';
+import { FONTS, SPACING, type FontKey, type Link, type Measure, type Scene, type Target } from './scene';
 
 /**
  * The new timeline renderer: our own layout, SVG painter and gestures, in place of vis-timeline.
@@ -21,6 +23,8 @@ export interface TimelineData {
   drafts?: DatedItem[];
   /** Connections: a war's battles become ticks on its bar, a work is joined to its maker. */
   relations?: Relation[];
+  /** Level 0: the eras in their regions. */
+  eras?: EraRegion[];
 }
 
 /** New dates for an entry Bob dragged (or moved with Alt and an arrow key). */
@@ -29,8 +33,8 @@ export interface MovedDates { start: HistDate; end?: HistDate }
 export interface TimelineCallbacks {
   onSelect: (id: string | undefined) => void;
   onAddAt: (year: number, laneId?: string) => void;
-  /** The window in view and where the plot sits in the host, as `VisibleWindow`. */
-  onWindow: (w: { start: number; end: number; left: number; width: number }) => void;
+  /** The window in view, where the plot sits in the host, and the level, as `VisibleWindow`. */
+  onWindow: (w: { start: number; end: number; left: number; width: number; level: Level }) => void;
   /** Bob dragged the playhead, or clicked empty space while it shows. */
   onYear?: (year: number) => void;
   /** Bob dragged the open entry, or one of its ends, to new dates. Without it entries can't be dragged. */
@@ -77,7 +81,7 @@ function canvasMeasure(): Measure & { reset(): void } {
     if (w === undefined) {
       if (!ctx) return s.length * 7;
       if (cur !== font) { ctx.font = FONTS[font]; cur = font; }
-      w = ctx.measureText(s).width;
+      w = ctx.measureText(s).width + (SPACING[font] ?? 0) * s.length;
       if (c.size > 50_000) c.clear();
       c.set(s, w);
     }
@@ -103,7 +107,10 @@ export function createTimeline(host: HTMLElement, cb: TimelineCallbacks, initial
   let scene: Scene | null = null;
   let raf = 0;
   let tween: { from: YearWindow; to: YearWindow; t0: number | null } | null = null;
-  let reported: { start: number; end: number; left: number; width: number } | null = null;
+  let reported: { start: number; end: number; left: number; width: number; level: Level } | null = null;
+  /** Each level keeps its own vertical scroll. */
+  const scrolls = new Map<Level, number>();
+  let eraById = new Map<string, PEra>();
   let hasData = false;
   let source = new Map<string, DatedItem>();
   let draftKey = '';
@@ -118,14 +125,17 @@ export function createTimeline(host: HTMLElement, cb: TimelineCallbacks, initial
   host.setAttribute('role', 'listbox');
   host.append(option);
 
-  const env = () => ({ w: size.w, h: size.h, gutter: size.gutter, measure });
+  /** On a phone, level 0 has no gutter: region names sit above their rows. */
+  const gut = () => (level === 0 && size.w < PHONE_W ? 0 : size.gutter);
+  const maxY = () => maxScroll(D, size.h, level, size.w);
+  const env = () => ({ w: size.w, h: size.h, gutter: gut(), measure });
   const render = () => {
     if (!size.w || !size.h) return;
-    V.scrollY = clamp(V.scrollY, 0, maxScroll(D, size.h));
+    V.scrollY = clamp(V.scrollY, 0, maxY());
     scene = layout(D, V, env(), level);
     painter.draw(scene);
-    const w = { start: V.win.start, end: V.win.end, left: size.left + size.gutter, width: size.w - size.gutter };
-    if (!reported || !sameWin(reported, w) || reported.left !== w.left || reported.width !== w.width) {
+    const w = { start: V.win.start, end: V.win.end, left: size.left + gut(), width: size.w - gut(), level };
+    if (!reported || !sameWin(reported, w) || reported.left !== w.left || reported.width !== w.width || reported.level !== w.level) {
       reported = w;
       cb.onWindow(w);
     }
@@ -154,8 +164,8 @@ export function createTimeline(host: HTMLElement, cb: TimelineCallbacks, initial
     }
     schedule();
   };
-  const plotW = () => Math.max(1, size.w - size.gutter);
-  const yearAt = (x: number) => V.win.start + ((x - size.gutter) / plotW()) * (V.win.end - V.win.start);
+  const plotW = () => Math.max(1, size.w - gut());
+  const yearAt = (x: number) => V.win.start + ((x - gut()) / plotW()) * (V.win.end - V.win.start);
 
   /* ---------- pointer ---------- */
   const targetAt = (x: number, y: number): Target | undefined => (scene ? hitTest(scene, x, y) : undefined);
@@ -167,6 +177,8 @@ export function createTimeline(host: HTMLElement, cb: TimelineCallbacks, initial
       const noun = t.cluster.kind === 'event' ? 'events' : t.cluster.kind === 'person' ? 'people' : 'periods';
       return { title: `${t.cluster.count} ${noun}${lead ? `, among them ${lead.title}` : ''}`, sub: 'Click to zoom in on them' };
     }
+    const era = level === 0 ? eraById.get(t.id) : undefined;
+    if (era) return { title: era.title, sub: bandSummary(era) };
     const it = D.byId.get(t.id);
     if (!it) return null;
     if (it.draft) return { title: it.title, sub: `${it.when} · Claude's draft, waiting for you` };
@@ -197,8 +209,8 @@ export function createTimeline(host: HTMLElement, cb: TimelineCallbacks, initial
   const unchanged = (a: MovedDates, it: TimelineItem) => JSON.stringify([a.start, a.end]) === JSON.stringify([it.start, it.end]);
   const detach = attachGestures(host, {
     panPx: (dx) => { tween = null; setWin(panBy(V.win, (-dx / plotW()) * (V.win.end - V.win.start), DEEP_LIMITS)); },
-    scrollBy: (dy) => { V.scrollY = clamp(V.scrollY + dy, 0, maxScroll(D, size.h)); schedule(); },
-    zoomAt: (factor, x) => { tween = null; setWin(zoomAround(V.win, factor, x > size.gutter ? yearAt(x) : undefined, DEEP_LIMITS)); },
+    scrollBy: (dy) => { V.scrollY = clamp(V.scrollY + dy, 0, maxY()); schedule(); },
+    zoomAt: (factor, x) => { tween = null; setWin(zoomAround(V.win, factor, x > gut() ? yearAt(x) : undefined, DEEP_LIMITS)); },
     tap: (x, y) => {
       const t = targetAt(x, y);
       if (t?.id === 'playhead') return;
@@ -210,13 +222,13 @@ export function createTimeline(host: HTMLElement, cb: TimelineCallbacks, initial
       }
       if (t && D.byId.get(t.id)?.draft) return;
       if (t) { setActive(t.id); cb.onSelect(t.id); return; }
-      if (y < scene!.plot.y || x < size.gutter) return;
+      if (y < scene!.plot.y || x < gut()) return;
       cb.onSelect(undefined);
       if (V.playYear !== undefined) cb.onYear?.(Math.round(yearAt(x)));
     },
     doubleTap: (x, y) => {
-      if (x < size.gutter || (scene && y < scene.plot.y) || targetAt(x, y)) return;
-      cb.onAddAt(Math.round(yearAt(x)), laneAt(D, V.scrollY, y)?.id);
+      if (x < gut() || (scene && y < scene.plot.y) || targetAt(x, y)) return;
+      cb.onAddAt(Math.round(yearAt(x)), level === 0 ? undefined : laneAt(D, V.scrollY, y)?.id);
     },
     hover: (x, y) => {
       if (dragging) return;
@@ -239,11 +251,11 @@ export function createTimeline(host: HTMLElement, cb: TimelineCallbacks, initial
       return !!dragging;
     },
     drag: (x) => {
-      if (dragging?.what === 'playhead') { cb.onYear?.(yearAt(clamp(x, size.gutter, size.w))); return; }
+      if (dragging?.what === 'playhead') { cb.onYear?.(yearAt(clamp(x, gut(), size.w))); return; }
       if (dragging?.what !== 'entry') return;
       const it = source.get(dragging.id)!;
       // Dates move in whole steps of how precisely they're known, so the copy snaps as it goes.
-      const moved = moveDates(it, yearAt(clamp(x, size.gutter, size.w)) - dragging.from, dragging.part);
+      const moved = moveDates(it, yearAt(clamp(x, gut(), size.w)) - dragging.from, dragging.part);
       dragging.moved = moved;
       const s = toDecimalYear(moved.start);
       const e = it.kind === 'event' ? s : moved.end ? toDecimalYear(moved.end) : V.now;
@@ -266,7 +278,7 @@ export function createTimeline(host: HTMLElement, cb: TimelineCallbacks, initial
   const setActive = (id: string | undefined) => {
     V.active = id;
     if (id && D.byId.has(id)) {
-      option.textContent = describeEntry(D, id);
+      option.textContent = (level === 0 && describeEra(D, id)) || describeEntry(D, id);
       option.setAttribute('aria-selected', String(id === V.selected));
       host.setAttribute('aria-activedescendant', optionId);
     } else {
@@ -282,10 +294,17 @@ export function createTimeline(host: HTMLElement, cb: TimelineCallbacks, initial
     const span = V.win.end - V.win.start;
     const pad = span * 0.08;
     if (it.s < V.win.start + pad || it.s > V.win.end - pad) setWin(windowAround(Math.min(it.s + span * 0.3, (it.s + it.e) / 2), span, DEEP_LIMITS), true);
-    const [top, bottom] = rowSpan(D, it);
+    scrollTo(id, 4);
+  };
+  /** Scroll an entry's row (at level 0, an era's band) into view. */
+  const scrollTo = (id: string, pad: number) => {
+    const it = D.byId.get(id);
+    const ys = level === 0 ? eraSpan(D, id, size.w < PHONE_W) : it && rowSpan(D, it);
+    if (!ys || !size.h) return;
+    const [top, bottom] = ys;
     const viewH = size.h - AXIS_H;
-    if (top < V.scrollY) V.scrollY = clamp(top - 4, 0, maxScroll(D, size.h));
-    else if (bottom > V.scrollY + viewH) V.scrollY = clamp(bottom - viewH + 4, 0, maxScroll(D, size.h));
+    if (top < V.scrollY) V.scrollY = clamp(top - pad, 0, maxY());
+    else if (bottom > V.scrollY + viewH) V.scrollY = clamp(bottom - viewH + pad, 0, maxY());
   };
   /** One step for Alt + arrow: a twentieth of the view, but at least one unit of how precisely the dates are known. */
   const nudge = (it: DatedItem, dir: number): MovedDates => {
@@ -304,7 +323,7 @@ export function createTimeline(host: HTMLElement, cb: TimelineCallbacks, initial
       if (!it || !cb.onMove) return;
       cb.onMove(it.id, nudge(it, sideways));
     } else if (STEP_KEYS.has(e.key) && !e.metaKey && !e.ctrlKey) {
-      const id = stepActive(D, V.active, e.key as StepKey, V.win);
+      const id = (level === 0 ? stepEra : stepActive)(D, V.active, e.key as StepKey, V.win);
       if (!id) return;
       V.ring = true;
       reveal(id);
@@ -318,6 +337,16 @@ export function createTimeline(host: HTMLElement, cb: TimelineCallbacks, initial
   // The ring shows only while the keyboard is in use.
   const onBlur = () => { if (V.ring) { V.ring = false; schedule(); } };
   host.addEventListener('blur', onBlur);
+
+  const switchLevel = (l: Level) => {
+    if (l === level) return;
+    scrolls.set(level, V.scrollY);
+    level = l;
+    V.scrollY = scrolls.get(l) ?? 0;
+    V.hover = undefined;
+    if (V.active) setActive(D.byId.has(V.active) ? V.active : undefined);
+    schedule();
+  };
 
   /* ---------- size and fonts ---------- */
   const resize = () => {
@@ -336,10 +365,13 @@ export function createTimeline(host: HTMLElement, cb: TimelineCallbacks, initial
   // Labels are measured again once the fonts arrive, so they aren't cut short by a fallback's widths.
   let live = true;
   void document.fonts?.ready.then(() => { if (live) { measure.reset(); schedule(); } });
+  // Spectral SC is only ever drawn in the SVG, so it's asked for here, before level 0 needs it.
+  void Promise.all([FONTS.era, FONTS.region].map((f) => document.fonts?.load(f))).then(() => { if (live) { measure.reset(); schedule(); } }, () => {});
 
   return {
     setData(d) {
-      D = prepare(d.items, d.lanes, { now: V.now, prominence: d.prominence, thumbFor: d.thumbFor, drafts: d.drafts, relations: d.relations });
+      D = prepare(d.items, d.lanes, { now: V.now, prominence: d.prominence, thumbFor: d.thumbFor, drafts: d.drafts, relations: d.relations, eras: d.eras });
+      eraById = new Map(D.regions.flatMap((R) => R.eras.map((e) => [e.id, e])));
       source = new Map(d.items.map((i) => [i.id, i]));
       if (V.active) setActive(D.byId.has(V.active) ? V.active : undefined);
       // New drafts from Claude are brought into view, as the map frames them.
@@ -352,13 +384,10 @@ export function createTimeline(host: HTMLElement, cb: TimelineCallbacks, initial
     },
     setSelected(id) {
       V.selected = id;
+      // An entry that isn't an era (a landmark, say) opens among the entries, at level 2.
+      if (id && level === 0 && D.byId.has(id) && !eraById.has(id)) switchLevel(2);
       // An entry opened anywhere scrolls its row into view (its time is framed by `focus`).
-      const it = id ? D.byId.get(id) : undefined;
-      if (it && size.h) {
-        const [top, bottom] = rowSpan(D, it);
-        const viewH = size.h - AXIS_H;
-        if (top < V.scrollY || bottom > V.scrollY + viewH) V.scrollY = clamp(bottom - viewH + 8 > top ? top - 4 : bottom - viewH + 8, 0, maxScroll(D, size.h));
-      }
+      if (id && D.byId.has(id)) scrollTo(id, 4);
       // The arrow keys carry on from whatever was opened last.
       setActive(id ?? V.active);
     },
@@ -369,13 +398,13 @@ export function createTimeline(host: HTMLElement, cb: TimelineCallbacks, initial
     zoomBy: (f) => setWin(zoomAround(tween?.to ?? V.win, f, undefined, DEEP_LIMITS), true),
     panBy: (years) => setWin(panBy(V.win, years, DEEP_LIMITS)),
     fit() {
-      const x = D.extent;
+      const x = (level === 0 && D.eraExtent) || D.extent;
       if (!x) return;
       const span = Math.max(x.end - x.start, 10);
       setWin(windowAround((x.start + x.end) / 2, span * 1.08, DEEP_LIMITS), true);
     },
     level: () => level,
-    setLevel(l) { level = l; schedule(); },
+    setLevel: switchLevel,
     dispose() {
       live = false;
       cancelAnimationFrame(raf);

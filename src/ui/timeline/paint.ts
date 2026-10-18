@@ -1,5 +1,5 @@
 import { REPRESENTATIONS } from '../representations';
-import { ARC_ROLES, FONTS, type Box, type Prim, type Scene } from './scene';
+import { ARC_ROLES, FONTS, OLDSTYLE, SPACING, type Box, type Prim, type Scene } from './scene';
 
 /**
  * The SVG painter. Every primitive has a stable key, so each frame updates the same elements
@@ -126,6 +126,8 @@ export function svgPainter(): Painter {
         set(r, 'text-anchor', p.anchor);
         style(r, 'fill', p.fill);
         style(r, 'font', FONTS[p.f]);
+        style(r, 'letter-spacing', SPACING[p.f] ? `${SPACING[p.f]}px` : undefined);
+        style(r, 'font-variant-numeric', OLDSTYLE.has(p.f) ? 'oldstyle-nums' : undefined);
         if (r.text !== p.s) { r.el.textContent = p.s; r.text = p.s; }
         break;
       case 3:

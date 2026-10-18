@@ -1,6 +1,7 @@
 import '@fontsource/spectral/400.css';
 import '@fontsource/spectral/400-italic.css';
 import '@fontsource/spectral/600.css';
+import '@fontsource/spectral-sc/600.css';
 import '@fontsource/public-sans/400.css';
 import '@fontsource/public-sans/600.css';
 import 'vis-timeline/styles/vis-timeline-graph2d.min.css';

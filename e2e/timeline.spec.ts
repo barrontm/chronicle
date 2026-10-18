@@ -177,3 +177,41 @@ test('drag an open entry to change its dates, undo it, drag again, and it stays 
   await mark(page, 'i_pelop').click({ force: true });
   await expect(view).toContainText(moved);
 });
+
+test('the Eras stop shows each era in its region’s row, with its dimension strip, and opens one @phone', async ({ page, isMobile }) => {
+  await page.goto('/');
+  await expect(page.getByTestId('save-state')).toHaveText('Saved on this device');
+  await page.getByTestId('import-input').setInputFiles(fileURLToPath(new URL('../tests/fixtures/greece/classical-greece.json', import.meta.url)));
+  await expect(page.locator('.doc-title')).toHaveValue(/Classical Greece/);
+  await page.getByRole('button', { name: 'More' }).click();
+  await page.getByRole('menuitemcheckbox', { name: 'Try the new layout' }).click();
+  if (isMobile) await page.getByTestId('reader').getByRole('button', { name: 'Map' }).click();
+  const timeline = page.locator('[data-testid=timeline][data-ready]');
+  await expect(timeline).toBeVisible();
+
+  const eras = page.getByTestId('time-bar').getByRole('button', { name: 'Eras' });
+  await eras.click();
+  await expect(eras).toHaveAttribute('aria-pressed', 'true');
+  const region = timeline.locator('text.tl-region', { hasText: 'Greece' });
+  const band = timeline.locator('.tl-era[data-id=i_classical]');
+  await expect(region).toBeVisible();
+  await expect(band).toBeVisible();
+  await expect(timeline.locator('text', { hasText: /^47 highlights$/ })).toBeVisible();
+  // In the Greece row: just under its name on a phone, beside it otherwise.
+  const r = (await region.boundingBox())!, b = (await band.boundingBox())!;
+  expect(b.y - r.y).toBeLessThan(60);
+  expect(b.y + b.height).toBeGreaterThan(r.y);
+  // The strip along its bottom: the dimensions of its highlights, political first.
+  const strip = timeline.locator('.tl-era-mix[data-id=i_classical]');
+  expect(await strip.count()).toBeGreaterThanOrEqual(4);
+  await expect(strip.first()).toHaveClass(/political/);
+
+  // Clicking it opens the era; the Century stop goes back to the entries.
+  await band.click({ position: { x: 20, y: 10 }, force: true }); // the timeline hit-tests by position
+  await expect(page.getByTestId('item-view').getByRole('heading', { name: 'Classical Greece' })).toBeVisible();
+  if (isMobile) await page.getByRole('button', { name: 'Close panel' }).click();
+  await page.getByTestId('time-bar').getByRole('button', { name: 'Century' }).click();
+  await expect(eras).toHaveAttribute('aria-pressed', 'false');
+  await expect(timeline.locator('.tl-era')).toHaveCount(0);
+  await expect(timeline.locator('.tl-mark').first()).toBeVisible();
+});

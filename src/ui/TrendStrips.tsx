@@ -26,9 +26,11 @@ export function TrendStrips({ series, categories, window: win, onOpen, onAdd }: 
   const colorOf = useMemo(() => new Map(categories.map((c) => [c.id, c.color])), [categories]);
   // Map-only trends (values per country, no overall curve) have nothing to draw here.
   const visible = series.filter((s) => colorOf.has(s.categoryId) && s.points.length >= 2);
+  const stacked = !!win && win.left < 48;
 
   return (
-    <section className="strips" aria-label="Trends over time" style={win ? ({ '--strip-cols': `${Math.max(0, win.left - 8)}px ${win.width}px` } as React.CSSProperties) : undefined}>
+    // With no lane names beside the timeline (level 0 on a phone), each strip's name sits above it, still lined up in time.
+    <section className={`strips${stacked ? ' stacked' : ''}`} aria-label="Trends over time" style={win ? ({ '--strip-cols': stacked ? `${win.width - 8}px` : `${Math.max(0, win.left - 8)}px ${win.width}px` } as React.CSSProperties) : undefined}>
       <div className="strips-head">
         <span>Trends</span>
         <button className="btn small quiet" onClick={onAdd}>Add a trend</button>

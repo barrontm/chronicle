@@ -247,6 +247,27 @@ async function kinds(p, prefix) {
   await p.waitForTimeout(700);
   await shot(p, `${prefix}-kinds`);
 }
+// Level 0 on the Classical Greece fixture: the Eras stop, then the Classical period hovered.
+const GREECE = fileURLToPath(new URL('../tests/fixtures/greece/classical-greece.json', import.meta.url));
+async function eras(p, prefix) {
+  await p.getByTestId('import-input').setInputFiles(GREECE);
+  await p.getByRole('button', { name: 'More' }).click();
+  await p.getByRole('menuitemcheckbox', { name: 'Try the new layout' }).click();
+  if (prefix === 'phone') await p.getByTestId('reader').getByRole('button', { name: 'Map' }).click();
+  await p.locator('[data-testid=timeline][data-ready]').waitFor();
+  await p.getByTestId('time-bar').getByRole('button', { name: 'Eras' }).click();
+  await p.waitForTimeout(700);
+  await shot(p, `${prefix}-eras`);
+  const band = p.locator('.tl-era[data-id=i_classical]');
+  const box = await band.boundingBox();
+  if (box) await p.mouse.move(box.x + 40, box.y + 12);
+  await p.waitForTimeout(300);
+  await shot(p, `${prefix}-eras-hover`);
+}
+if (any('desktop-eras')) await eras(await page('desktop-eras', desktop), 'desktop');
+if (any('dark-eras')) await eras(await page('dark-eras', { ...desktop, colorScheme: 'dark' }), 'dark');
+if (any('phone-eras')) await eras(await page('phone-eras', { viewport: { width: 412, height: 860 }, isMobile: true, hasTouch: true }), 'phone');
+
 // Tall, so every lane is in view.
 const tall = { ...desktop, viewport: { width: desktop.viewport.width, height: 1500 } };
 if (any('desktop-kinds')) await kinds(await page('desktop-kinds', tall), 'desktop');
