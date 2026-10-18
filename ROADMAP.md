@@ -19,6 +19,14 @@ Triaged 2026-10-17: history of ideas and schools → Phase 5c; influences betwee
 Triaged 2026-10-17 (later): kinds of border, war technology, disasters, discoveries, the look of ideas and religion → Phase 5d; PDFs and EPUBs → Phase 6.
 When you click on an era, person, event, etc., on the timeline, it zooms in, but I want the map to also zoom in and highlight the most relevant areas, and context on the map for that era, person, polity, event, etc. 
 
+I want to be able to adjust the size of the wiki box on the side, as well as the division between the map and timeline. 
+
+a function where you can command-click and drag and draw a square around things on timeline and select them all and either mass-edit or mass-delete.
+
+A search bar that will search the timeline/map entries
+
+Get better at recognizing what is important in a highlight. Here is an example highlight: “The silver mines of Laurion contributed significantly to the development of Athens in the 5th century BC, when the Athenians learned to prospect, treat, and refine the ore and used the proceeds to build a massive fleet, at the instigation of Themistocles.4” I want this to be characterized as an economic event with the corresponding place of the mine marked on maps. I also want to be able to fill out becomes manually, and also select and deselect the options in becomes to be included or excluded. 
+
 
 
 ## Redesign phases
