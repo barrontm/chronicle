@@ -3,7 +3,7 @@ import type { Relation } from '../model/types';
 
 /**
  * Lighting up a person's influences on the timeline. Pure, so the class and
- * arrow geometry can be tested without vis-timeline.
+ * arrow geometry can be tested without the renderer.
  */
 
 export type InfluenceRole = 'infl-self' | 'infl-by' | 'infl-on' | 'linked';
@@ -96,10 +96,6 @@ export function arcCurve(a: Pt, b: Pt): Curve {
     d: `M${r1(a.x)} ${r1(a.y)} Q${r1(cx)} ${r1(cy)} ${r1(b.x)} ${r1(b.y)}`,
     mid: { x: 0.25 * a.x + 0.5 * cx + 0.25 * b.x, y: 0.25 * a.y + 0.5 * cy + 0.25 * b.y },
   };
-}
-
-export function arcPath(a: Pt, b: Pt): string {
-  return arcCurve(a, b).d;
 }
 
 /**

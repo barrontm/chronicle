@@ -3,18 +3,38 @@ import { fileURLToPath } from 'node:url';
 
 const FIXTURE = fileURLToPath(new URL('../tests/fixtures/sample-history.json', import.meta.url));
 
-/** The sample timeline, in the new layout (where the new renderer draws the timeline). */
+/** The sample timeline, in the reader layout (on a phone, the map sheet that holds the timeline). */
 async function openNewLayout(page: Page, phone: boolean) {
   await page.goto('/');
   await expect(page.getByTestId('save-state')).toHaveText('Saved on this device');
   await page.getByTestId('import-input').setInputFiles(FIXTURE);
-  await expect(page.locator('.vis-item', { hasText: 'Aristotle' })).toBeVisible();
-  await page.getByRole('button', { name: 'More' }).click();
-  await page.getByRole('menuitemcheckbox', { name: 'Try the new layout' }).click();
+  await expect(page.locator('.doc-title')).toHaveValue('Test fixture');
   if (phone) await page.getByTestId('reader').getByRole('button', { name: 'Map' }).click();
   await expect(page.locator('[data-testid=timeline][data-ready]')).toBeVisible();
-  await expect(page.locator('.vis-timeline')).toHaveCount(0);
 }
+
+test('a fresh start opens the reader layout; the classic layout is one choice away and stays chosen @phone', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.getByTestId('save-state')).toHaveText('Saved on this device');
+  await expect(page.getByTestId('reader')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Open an article' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Add', exact: true })).toHaveCount(0);
+
+  await page.getByRole('button', { name: 'More' }).click();
+  await expect(page.getByRole('menuitemcheckbox', { name: 'Use the classic layout' })).toHaveAttribute('aria-checked', 'false');
+  await page.getByRole('menuitemcheckbox', { name: 'Use the classic layout' }).click();
+  await expect(page.getByRole('button', { name: 'Add', exact: true })).toBeVisible();
+  await expect(page.getByTestId('reader')).toHaveCount(0);
+  // The classic layout's timeline is drawn the same new way.
+  await page.getByTestId('import-input').setInputFiles(FIXTURE);
+  await expect(page.getByTestId('timeline').locator('.tl-mark[data-id=i_aristotle]')).toBeVisible();
+
+  await page.reload();
+  await expect(page.getByRole('button', { name: 'Add', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'More' }).click();
+  await page.getByRole('menuitemcheckbox', { name: 'Use the classic layout' }).click();
+  await expect(page.getByTestId('reader')).toBeVisible();
+});
 
 test('the new timeline pans, zooms with the zoom bar and opens an entry @phone', async ({ page, isMobile }) => {
   await openNewLayout(page, isMobile);
@@ -183,8 +203,6 @@ test('the Eras stop shows each era in its region’s row, with its dimension str
   await expect(page.getByTestId('save-state')).toHaveText('Saved on this device');
   await page.getByTestId('import-input').setInputFiles(fileURLToPath(new URL('../tests/fixtures/greece/classical-greece.json', import.meta.url)));
   await expect(page.locator('.doc-title')).toHaveValue(/Classical Greece/);
-  await page.getByRole('button', { name: 'More' }).click();
-  await page.getByRole('menuitemcheckbox', { name: 'Try the new layout' }).click();
   if (isMobile) await page.getByTestId('reader').getByRole('button', { name: 'Map' }).click();
   const timeline = page.locator('[data-testid=timeline][data-ready]');
   await expect(timeline).toBeVisible();
@@ -225,8 +243,6 @@ test('an era opens into its six lanes, says when one is empty, and Esc goes back
   await expect(page.getByTestId('save-state')).toHaveText('Saved on this device');
   await page.getByTestId('import-input').setInputFiles(fileURLToPath(new URL('../tests/fixtures/greece/classical-greece.json', import.meta.url)));
   await expect(page.locator('.doc-title')).toHaveValue(/Classical Greece/);
-  await page.getByRole('button', { name: 'More' }).click();
-  await page.getByRole('menuitemcheckbox', { name: 'Try the new layout' }).click();
   if (isMobile) await page.getByTestId('reader').getByRole('button', { name: 'Map' }).click();
   // Without Technology and Science, nothing technological is left in the Classical period.
   const cats = page.getByRole('group', { name: 'Show or hide categories' });

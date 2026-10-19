@@ -1,9 +1,5 @@
 import type { Citation, Dimension, Source, TimelineDoc } from '../model/types';
 
-export function escapeHtml(s: string): string {
-  return s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
-}
-
 const compact = new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 2 });
 const plain = new Intl.NumberFormat('en', { maximumFractionDigits: 2 });
 

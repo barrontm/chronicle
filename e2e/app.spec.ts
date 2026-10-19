@@ -3,15 +3,24 @@ import { fileURLToPath } from 'node:url';
 
 const FIXTURE = fileURLToPath(new URL('../tests/fixtures/sample-history.json', import.meta.url));
 
-/** Each test gets a fresh browser context, so IndexedDB starts empty. */
+/**
+ * Each test gets a fresh browser context, so IndexedDB starts empty. These tests use the classic
+ * layout (More → Use the classic layout: the Add menu, and the Timeline, Map and Both views).
+ */
 async function open(page: Page) {
+  await page.addInitScript(() => { if (localStorage.getItem('chronicle.classicLayout') === null) localStorage.setItem('chronicle.classicLayout', 'true'); });
   await page.goto('/');
   await expect(page.getByTestId('save-state')).toHaveText('Saved on this device');
 }
 
+/** A fixture entry's mark on the timeline. Click it with `force`: the timeline hit-tests by position. */
+const mark = (page: Page, id: string) => page.getByTestId('timeline').locator(`.tl-mark[data-id=${id}]`);
+/** An entry's name on the timeline, for entries made during a test. */
+const label = (page: Page, title: string) => page.getByTestId('timeline').locator('.tl-label', { hasText: title });
+
 async function importFixture(page: Page) {
   await page.getByTestId('import-input').setInputFiles(FIXTURE);
-  await expect(page.locator('.vis-item', { hasText: 'Aristotle' })).toBeVisible();
+  await expect(mark(page, 'i_aristotle')).toBeVisible();
 }
 
 async function addEntry(page: Page, kind: 'Event' | 'Period, war or movement' | 'Person', title: string, start: string, end?: string) {
@@ -28,7 +37,7 @@ async function addEntry(page: Page, kind: 'Event' | 'Period, war or movement' | 
 test('a new timeline starts empty and invites the first entry @phone', async ({ page }) => {
   await open(page);
   await expect(page.getByTestId('empty-state')).toBeVisible();
-  await expect(page.locator('.vis-item')).toHaveCount(0);
+  await expect(page.getByTestId('timeline').locator('.tl-mark')).toHaveCount(0);
 });
 
 test('add an event, reading BCE dates the way people write them', async ({ page }) => {
@@ -45,7 +54,7 @@ test('add an event, reading BCE dates the way people write them', async ({ page 
   const view = page.getByTestId('item-view');
   await expect(view.getByRole('heading', { name: 'Battle of Marathon' })).toBeVisible();
   await expect(view.getByText('490 BCE')).toBeVisible();
-  await expect(page.locator('.vis-item', { hasText: 'Battle of Marathon' })).toBeVisible();
+  await expect(label(page, 'Battle of Marathon')).toBeVisible();
   await expect(page.getByTestId('empty-state')).toHaveCount(0);
 });
 
@@ -67,7 +76,7 @@ test('entries survive a reload', async ({ page }) => {
   await addEntry(page, 'Person', 'Hypatia', 'c. 360', '415');
   await page.waitForTimeout(400); // debounce
   await page.reload();
-  await expect(page.locator('.vis-item', { hasText: 'Hypatia' })).toBeVisible();
+  await expect(label(page, 'Hypatia')).toBeVisible();
 });
 
 test('write a note linked to two people, with a cited source', async ({ page }) => {
@@ -182,7 +191,7 @@ test('import a backup, then merge in a copy edited elsewhere', async ({ page }) 
   await page.getByTestId('import-input').setInputFiles(FIXTURE);
   await expect(page.getByTestId('import-choice')).toBeVisible();
   await page.getByRole('button', { name: 'Merge into my timeline' }).click();
-  await expect(page.locator('.vis-item', { hasText: 'Aristotle' })).toHaveCount(1);
+  await expect(mark(page, 'i_aristotle')).toHaveCount(1);
 });
 
 test('explains why a bad file cannot be imported', async ({ page }) => {
@@ -199,7 +208,7 @@ test('works offline after the first visit', async ({ page, context }) => {
   await page.reload(); // let the service worker take control
   await context.setOffline(true);
   await page.reload();
-  await expect(page.locator('.vis-item', { hasText: 'Fall of Constantinople' })).toBeVisible();
+  await expect(label(page, 'Fall of Constantinople')).toBeVisible();
   await context.setOffline(false);
 });
 
@@ -279,7 +288,7 @@ test('add a person from Wikipedia with dates, place, picture, quote and source @
   await expect(view.getByTestId('excerpt').getByRole('link', { name: 'Wikipedia' })).toHaveAttribute('href', 'https://en.wikipedia.org/wiki/Ada_Lovelace');
   await expect(view.getByText(/Alfred Edward Chalon, Public domain/)).toBeVisible();
   await expect(view.getByRole('button', { name: 'Wikipedia contributors, Ada Lovelace' })).toBeVisible(); // the cited source
-  await expect(page.locator('.vis-item', { hasText: 'Ada Lovelace' })).toBeVisible();
+  await expect(label(page, 'Ada Lovelace')).toBeVisible();
 });
 
 test('adding the same Wikipedia page twice opens the existing entry instead', async ({ page }) => {
@@ -294,25 +303,6 @@ test('adding the same Wikipedia page twice opens the existing entry instead', as
   await expect(panel.getByText('“Ada Lovelace” is already on your timeline.')).toBeVisible();
   await panel.getByRole('button', { name: 'Open it' }).click();
   await expect(page.getByTestId('item-view').getByRole('heading', { name: 'Ada Lovelace' })).toBeVisible();
-});
-
-test('clicking a person lights up their influences on the timeline @phone', async ({ page }) => {
-  await open(page);
-  await importFixture(page);
-  await page.locator('.vis-item', { hasText: 'Plato' }).click();
-  await expect(page.locator('.vis-item.infl-by', { hasText: 'Socrates' })).toBeVisible();
-  await expect(page.locator('.vis-item.infl-on', { hasText: 'Aristotle' })).toBeVisible();
-  await expect(page.locator('.vis-item.dimmed', { hasText: 'Confucius' })).toBeVisible();
-  await expect(page.locator('.influence-arrows path.arc')).toHaveCount(2);
-  await expect(page.locator('.influence-arrows path.arc.infl-by')).toHaveAttribute('data-from', 'i_socrates');
-
-  // A person without connections changes nothing. (Clicking Plato zoomed in on his time; show everything first.)
-  await page.getByRole('button', { name: 'Close panel' }).click();
-  await page.getByRole('button', { name: 'More' }).click();
-  await page.getByRole('menuitem', { name: 'Show everything' }).click();
-  await page.locator('.vis-item', { hasText: 'Confucius' }).click();
-  await expect(page.locator('.vis-item.dimmed')).toHaveCount(0);
-  await expect(page.locator('.influence-arrows path.arc')).toHaveCount(0);
 });
 
 test('move through time with the wheel, the thumbwheel and the zoom bar; clicking a person zooms to their time @phone', async ({ page }) => {
@@ -343,20 +333,22 @@ test('move through time with the wheel, the thumbwheel and the zoom bar; clickin
   await page.mouse.move(w.x + w.width * 0.6, w.y + w.height / 2, { steps: 5 });
   await page.mouse.up();
   await expect.poll(centre).toBeLessThan(afterWheel);
-  // A key press also stops a flick's glide, so read the year after it.
+  // A key press also stops a flick's glide, so read the year once it has stopped changing
+  // (the timeline reports its window on the next frame).
   await wheel.focus();
   await page.keyboard.press('ArrowLeft');
-  const settled = await centre();
+  let settled = NaN;
+  await expect.poll(async () => { const was = settled; settled = await centre(); return settled === was; }, { intervals: [200] }).toBe(true);
   await page.keyboard.press('ArrowRight');
   await expect.poll(centre).toBeGreaterThan(settled);
 
   // "All" shows everything; clicking Plato then frames his life with Socrates and Aristotle.
   await page.getByTestId('time-bar').getByRole('button', { name: 'All' }).click();
   await expect(span).toHaveText(/[0-9,]{4,} years in view/);
-  await page.locator('.vis-item', { hasText: 'Plato' }).click();
+  await mark(page, 'i_plato').click({ force: true });
   await expect(span).toHaveText('180 years in view');
-  await expect(page.locator('.vis-item.infl-by', { hasText: 'Socrates' })).toBeInViewport();
-  await expect(page.locator('.vis-item.infl-on', { hasText: 'Aristotle' })).toBeInViewport();
+  await expect(page.locator('.tl-mark.infl-by[data-id=i_socrates]')).toBeInViewport();
+  await expect(page.locator('.tl-mark.infl-on[data-id=i_aristotle]')).toBeInViewport();
 
   // His bibliography: what notes and connections cite, and what he wrote.
   const bib = page.getByTestId('bibliography');
@@ -367,55 +359,6 @@ test('move through time with the wheel, the thumbwheel and the zoom bar; clickin
   await page.getByRole('button', { name: 'Back to where I was' }).click();
   await expect(span).toHaveText(/[0-9,]{4,} years in view/);
   await expect(page.getByRole('button', { name: 'Back to where I was' })).toHaveCount(0);
-});
-
-test('zoomed far out, names run past bars too narrow for them, and go back in when zoomed in @phone', async ({ page }) => {
-  await open(page);
-  await importFixture(page);
-  const plato = page.locator('.vis-item', { hasText: 'Plato' });
-  const box = (await page.getByTestId('timeline').boundingBox())!;
-  await page.mouse.move(box.x + box.width / 2, box.y + 150);
-  // Ctrl + wheel zooms (it's also what a trackpad pinch sends); the plain wheel moves through time.
-  await page.keyboard.down('Control');
-  for (let i = 0; i < 6; i++) await page.mouse.wheel(0, 300);
-  await page.keyboard.up('Control');
-  // Shift + wheel scrolls the lanes, so a phone can reach the science lane (it moves no time).
-  const centre = await page.getByTestId('thumbwheel').getAttribute('aria-valuenow');
-  await page.keyboard.down('Shift');
-  await page.mouse.wheel(0, 600);
-  await page.keyboard.up('Shift');
-  await expect(page.getByTestId('thumbwheel')).toHaveAttribute('aria-valuenow', centre!);
-  await expect(plato).toHaveClass(/label-out/);
-  // The whole name is drawn, not clipped to the bar.
-  const name = plato.locator('.it > span');
-  expect((await name.boundingBox())!.width).toBeGreaterThan((await plato.boundingBox())!.width);
-  // Names near the right edge are pulled left so the edge doesn't cut them off
-  // (once the zoom settles: vis-timeline reports it 200 ms after the last wheel step).
-  const panel = (await page.locator('.vis-panel.vis-center').boundingBox())!;
-  for (const who of ['Isaac Newton', 'Albert Einstein']) {
-    const label = page.locator('.vis-item', { hasText: who }).locator('.it > span');
-    await expect.poll(async () => { const b = (await label.boundingBox())!; return b.x + b.width; })
-      .toBeLessThanOrEqual(panel.x + panel.width + 1);
-  }
-  // Year labels on the axis never run into each other, even on a phone.
-  const yearLabels = await page.locator('.vis-time-axis .vis-text.vis-minor:not(.vis-measure)').evaluateAll((els, edge) =>
-    els.filter((e) => e.textContent?.trim()).map((e) => e.getBoundingClientRect())
-      .filter((r) => r.right > edge.left && r.left < edge.right).map((r) => [r.left, r.right]).sort((x, y) => x[0] - y[0]),
-  { left: panel.x, right: panel.x + panel.width });
-  expect(yearLabels.length).toBeGreaterThan(1);
-  for (let i = 1; i < yearLabels.length; i++) expect(yearLabels[i][0]).toBeGreaterThanOrEqual(yearLabels[i - 1][1] - 1);
-
-  const at = (await plato.boundingBox())!;
-  const axis = (await page.locator('.vis-time-axis').first().boundingBox())!;
-  await page.mouse.move(at.x + 2, axis.y + axis.height / 2);
-  // Zoom in until Plato's life is wider than his name (a phone zooms less per step).
-  await page.keyboard.down('Control');
-  for (let i = 0; i < 60 && /label-out/.test((await plato.getAttribute('class')) ?? ''); i++) {
-    await page.mouse.wheel(0, -300);
-    await page.waitForTimeout(50);
-  }
-  await page.keyboard.up('Control');
-  await expect(plato).not.toHaveClass(/label-out/);
 });
 
 test('Wikipedia suggests influences: connect one on the timeline, add one that isn’t', async ({ page }) => {
@@ -439,7 +382,7 @@ test('Wikipedia suggests influences: connect one on the timeline, add one that i
   });
   await open(page);
   await importFixture(page);
-  await page.locator('.vis-item', { hasText: 'Aristotle' }).click();
+  await mark(page, 'i_aristotle').click({ force: true });
   const view = page.getByTestId('item-view');
   const suggestions = view.getByTestId('influence-suggestions');
   await suggestions.getByRole('button', { name: 'Suggest influences' }).click();
@@ -525,10 +468,10 @@ test('a timeline saved by an older version opens upgraded, with a copy kept', as
   await seedSavedDoc(page, JSON.parse(readFileSync(FIXTURE_V5, 'utf8')));
   await page.reload();
   await expect(page.getByTestId('save-state')).toHaveText('Saved on this device');
-  await expect(page.locator('.vis-item', { hasText: 'Aristotle' })).toBeVisible();
+  await expect(mark(page, 'i_aristotle')).toBeVisible();
   await expect.poll(() => savedState(page)).toMatchObject({ schemaVersion: 8, backups: 1 });
   // The v5 excerpt is now a highlight, still shown on its entry.
-  await page.locator('.vis-item', { hasText: 'Magna Carta' }).click();
+  await mark(page, 'i_magna').click({ force: true });
   await expect(page.getByTestId('item-view').getByTestId('excerpt')).toContainText('royal charter of rights');
 });
 
@@ -539,7 +482,7 @@ test('a timeline saved before entries said what they are opens upgraded, each en
   await page.reload();
   await expect(page.getByTestId('save-state')).toHaveText('Saved on this device');
   await expect.poll(() => savedState(page)).toMatchObject({ schemaVersion: 8, backups: 1 });
-  await page.locator('.vis-item', { hasText: 'Industrial Revolution' }).click();
+  await mark(page, 'i_indrev').click({ force: true });
   await page.getByTestId('item-view').getByRole('button', { name: 'Edit' }).click();
   await expect(page.getByTestId('item-editor').getByLabel('Kind of thing')).toHaveValue('');
   await expect(page.getByTestId('item-editor').getByLabel('Region')).toHaveValue('');
@@ -552,7 +495,7 @@ test('a timeline saved before places could go without dates opens upgraded', asy
   await page.reload();
   await expect(page.getByTestId('save-state')).toHaveText('Saved on this device');
   await expect.poll(() => savedState(page)).toMatchObject({ schemaVersion: 8, backups: 1 });
-  await expect(page.locator('.vis-item', { hasText: 'Peloponnesian War' })).toBeVisible();
+  await expect(mark(page, 'i_pelop')).toBeVisible();
 });
 
 test('an older copy of the app never overwrites data from a newer one', async ({ page }) => {
@@ -610,7 +553,7 @@ test('the timeline playhead and the map share one year', async ({ page }) => {
   await importFixture(page);
   await openMap(page, 'Both');
   await goToYear(page, '1914');
-  await expect(page.locator('.vis-custom-time-marker')).toHaveText('1914');
+  await expect(page.getByTestId('timeline').locator('.tl-year')).toHaveText('1914');
   await page.getByRole('button', { name: 'Play through time' }).click();
   await expect(page.getByRole('button', { name: 'Pause' })).toBeVisible();
   await expect.poll(async () => Number(await page.getByTestId('yearbar').getByLabel('Year', { exact: true }).inputValue())).toBeGreaterThan(1914);
@@ -620,7 +563,7 @@ test('the timeline playhead and the map share one year', async ({ page }) => {
 test('“Show on map” jumps to an entry’s year with the map open', async ({ page }) => {
   await open(page);
   await importFixture(page);
-  await page.locator('.vis-item', { hasText: 'Magna Carta sealed' }).click();
+  await mark(page, 'i_magna').click({ force: true });
   await page.getByTestId('item-view').getByRole('button', { name: 'Show on map' }).click();
   await expect(page.locator('[data-testid=map][data-ready]')).toBeAttached({ timeout: 20_000 });
   await expect(page.getByTestId('yearbar').getByLabel('Year', { exact: true })).toHaveValue('1215');
@@ -987,8 +930,8 @@ test.describe('drafting with AI', () => {
     await expect(marathonToWar).toContainText('Accept the entry first.');
     await expect(marathonToWar.getByRole('button', { name: 'Accept' })).toBeDisabled();
 
-    await expect(page.locator('.vis-item', { hasText: 'Battle of Marathon' })).toBeVisible();
-    await expect(page.locator('.vis-item', { hasText: 'Battle of Salamis' })).toHaveCount(0);
+    await expect(label(page, 'Battle of Marathon')).toBeVisible();
+    await expect(label(page, 'Battle of Salamis')).toHaveCount(0);
     await entries.nth(1).getByRole('button', { name: 'Open' }).click();
     await expect(page.getByTestId('item-drafted')).toContainText('Drafted with AI (claude-opus-5-5, entries@1)');
   });

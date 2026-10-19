@@ -14,7 +14,7 @@ import { formatValue } from './util';
 
 /**
  * Adapter around MapLibre GL. This is the ONLY file that imports maplibre-gl,
- * the same rule as TimelineView and vis-timeline.
+ * the same rule as TimelineView and the timeline renderer.
  *
  * The basemap is bundled (Natural Earth countries, lakes and rivers in
  * public/geo), so there are no tiles to fetch and the map works offline.

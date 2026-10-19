@@ -12,7 +12,7 @@ import { svgPainter } from './paint';
 import { FONTS, SPACING, type FontKey, type Link, type Measure, type Scene, type Target } from './scene';
 
 /**
- * The new timeline renderer: our own layout, SVG painter and gestures, in place of vis-timeline.
+ * The timeline renderer: our own layout, SVG painter and gestures.
  * Only `TimelineView.tsx` imports it. Its control mirrors `TimelineControl` (windows in decimal
  * years), plus a level.
  */

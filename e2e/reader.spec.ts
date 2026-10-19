@@ -97,13 +97,12 @@ async function search(page: Page, q: string, pick: string) {
   await page.getByTestId('article-results').getByRole('button', { name: new RegExp(pick) }).click();
 }
 
-test('the new layout reads articles, follows links, keeps a trail and rereads offline @phone', async ({ page }, info) => {
+test('the reader layout reads articles, follows links, keeps a trail and rereads offline @phone', async ({ page }, info) => {
   const phone = info.project.name.includes('phone');
   await mockArticles(page);
   await open(page);
 
-  await page.getByRole('button', { name: 'More' }).click();
-  await page.getByRole('menuitemcheckbox', { name: 'Try the new layout' }).click();
+  // The reader layout is where Chronicle opens.
   await expect(page.getByRole('button', { name: 'Add', exact: true })).toHaveCount(0);
 
   const reader = page.getByTestId('reader');
@@ -152,7 +151,7 @@ test('the new layout reads articles, follows links, keeps a trail and rereads of
   await page.reload();
   await expect(reader.getByText('The war was fought between')).toBeVisible();
   await page.getByRole('button', { name: 'More' }).click();
-  await page.getByRole('menuitemcheckbox', { name: 'Try the new layout' }).click();
+  await page.getByRole('menuitemcheckbox', { name: 'Use the classic layout' }).click();
   await expect(page.getByTestId('reader')).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Add', exact: true })).toBeVisible();
 });
@@ -181,8 +180,6 @@ test('highlights a passage, keeps it after a reload, and removes it @phone', asy
   const phone = info.project.name.includes('phone');
   await mockArticles(page);
   await open(page);
-  await page.getByRole('button', { name: 'More' }).click();
-  await page.getByRole('menuitemcheckbox', { name: 'Try the new layout' }).click();
   await search(page, 'pericles', 'Pericles');
   const reader = page.getByTestId('reader');
   await expect(reader.getByText('Pericles led Athens')).toBeVisible();
@@ -242,8 +239,6 @@ test.describe('the infobox', () => {
     await page.route('https://upload.wikimedia.org/**', (route) => route.fulfill({ headers: cors, contentType: 'image/png',
       body: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==', 'base64') }));
     await open(page);
-    await page.getByRole('button', { name: 'More' }).click();
-    await page.getByRole('menuitemcheckbox', { name: 'Try the new layout' }).click();
     await search(page, 'pericles', 'Pericles');
 
     // Folded: one line, and the first paragraph is in view.
@@ -284,10 +279,8 @@ test('the reader says what an article is about, and when it is already in Chroni
   const socrates = doc.items.find((i: { title: string }) => i.title === 'Socrates');
   doc.items.push({ ...socrates, id: 'pericles', title: 'Pericles', wikidataId: 'Q80398', start: { y: -493 }, end: { y: -428 } });
   await page.getByTestId('import-input').setInputFiles({ name: 'mine.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(doc)) });
-  await expect(page.locator('.vis-item', { hasText: 'Pericles' })).toBeVisible();
+  await expect(page.locator('.doc-title')).toHaveValue(doc.title);
 
-  await page.getByRole('button', { name: 'More' }).click();
-  await page.getByRole('menuitemcheckbox', { name: 'Try the new layout' }).click();
   const reader = page.getByTestId('reader');
   await search(page, 'peloponnesian', 'Peloponnesian War');
   const subject = reader.getByTestId('article-subject');
@@ -326,8 +319,6 @@ test('what an older version read from Wikidata is looked up again', async ({ pag
     };
     req.onerror = () => fail(req.error);
   }));
-  await page.getByRole('button', { name: 'More' }).click();
-  await page.getByRole('menuitemcheckbox', { name: 'Try the new layout' }).click();
   await search(page, 'pericles', 'Pericles');
   await expect(page.getByTestId('reader').getByTestId('article-subject')).toHaveText('Person · 494–429 BCE');
 });
@@ -337,8 +328,6 @@ test('the capture tray keeps a highlight, gives it a dimension, and adds the art
   await mockArticles(page);
   await mockSummaries(page);
   await open(page);
-  await page.getByRole('button', { name: 'More' }).click();
-  await page.getByRole('menuitemcheckbox', { name: 'Try the new layout' }).click();
   await search(page, 'pericles', 'Pericles');
   const reader = page.getByTestId('reader');
   await expect(reader.getByText('Pericles led Athens')).toBeVisible();
@@ -409,8 +398,6 @@ test('a highlight becomes a page its passage links: pick the war, add it, and se
   await mockArticles(page);
   await mockSummaries(page);
   await open(page);
-  await page.getByRole('button', { name: 'More' }).click();
-  await page.getByRole('menuitemcheckbox', { name: 'Try the new layout' }).click();
   await search(page, 'pericles', 'Pericles');
   const reader = page.getByTestId('reader');
   await expect(reader.getByRole('link', { name: 'Peloponnesian War' })).toBeVisible();
@@ -509,9 +496,7 @@ test('Claude drafts from the tribute passage: a suggested dimension, an event on
   await open(page);
   // Bob's timeline already has Pericles and the Delian League.
   await page.getByTestId('import-input').setInputFiles(fileURLToPath(new URL('../tests/ai-evals/highlight/doc.json', import.meta.url)));
-  await expect(page.locator('.vis-item', { hasText: 'Delian League' })).toBeVisible();
-  await page.getByRole('button', { name: 'More' }).click();
-  await page.getByRole('menuitemcheckbox', { name: 'Try the new layout' }).click();
+  await expect(page.locator('.doc-title')).toHaveValue('Highlight eval');
   await search(page, 'pericles', 'Pericles');
   await expect(page.getByTestId('reader').getByText('In 449 BC Pericles')).toBeVisible();
   await expect(page.locator('[data-testid=map][data-ready]')).toBeVisible();
@@ -605,10 +590,8 @@ test('adding a battle connects it to the war already in Chronicle, with the high
   const any = doc.items[0];
   doc.items.push({ ...any, id: 'invasion', kind: 'span', title: 'Second Persian invasion of Greece', wikidataId: 'Q1122337', start: { y: -479 }, end: { y: -478 }, places: undefined });
   await page.getByTestId('import-input').setInputFiles({ name: 'mine.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(doc)) });
-  await expect(page.locator('.vis-item', { hasText: 'Second Persian invasion' })).toBeVisible();
+  await expect(page.locator('.doc-title')).toHaveValue(doc.title);
 
-  await page.getByRole('button', { name: 'More' }).click();
-  await page.getByRole('menuitemcheckbox', { name: 'Try the new layout' }).click();
   await search(page, 'salamis', 'Battle of Salamis');
   await expect(page.getByTestId('reader').getByText('The battle turned the war')).toBeVisible();
   const quote = phone ? 'The battle turned the war in 480 BC.' : 'turned the war';
@@ -671,8 +654,6 @@ test('a place and a battle draw as what they are: Athens on its ground line with
   const doc = JSON.parse(readFileSync(new URL('../tests/fixtures/sample-history.json', import.meta.url), 'utf8'));
   doc.items.push({ ...doc.items[0], id: 'invasion', kind: 'span', subject: 'war', title: 'Second Persian invasion of Greece', wikidataId: 'Q1122337', start: { y: -479 }, end: { y: -478 }, places: undefined });
   await page.getByTestId('import-input').setInputFiles({ name: 'mine.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(doc)) });
-  await page.getByRole('button', { name: 'More' }).click();
-  await page.getByRole('menuitemcheckbox', { name: 'Try the new layout' }).click();
 
   const tray = page.getByTestId('capture-tray');
   const editor = page.getByTestId('item-editor');

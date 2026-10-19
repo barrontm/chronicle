@@ -47,10 +47,12 @@ if (galleryMode && !process.env.SHOTS_URL) {
 const browser = await chromium.launch({ executablePath: process.env.PW_CHROMIUM_PATH || undefined, args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
 const errors = [];
 
-async function page(name, options, path = '') {
+/** `classic`: open in the classic layout (More → Use the classic layout) unless the page has chosen since. */
+async function page(name, options, path = '', classic = false) {
   const ctx = await browser.newContext(options);
   const p = await ctx.newPage();
   p.on('pageerror', (e) => errors.push(`${name}: ${e.message}`));
+  if (classic) await p.addInitScript(() => { try { if (localStorage.getItem('chronicle.classicLayout') === null) localStorage.setItem('chronicle.classicLayout', 'true'); } catch { /* fine */ } });
   await p.goto(BASE + path);
   await p.getByTestId('save-state').waitFor({ state: 'attached' });
   return p;
@@ -58,7 +60,7 @@ async function page(name, options, path = '') {
 
 async function withFixture(p) {
   await p.getByTestId('import-input').setInputFiles(FIXTURE);
-  await p.locator('.vis-item', { hasText: 'Aristotle' }).waitFor();
+  await p.locator('.tl-mark[data-id=i_aristotle]').waitFor({ state: 'attached' });
   await p.getByRole('button', { name: 'More' }).click();
   await p.getByRole('menuitem', { name: 'Show everything' }).click();
   await p.waitForTimeout(300);
@@ -81,16 +83,16 @@ const any = (...names) => names.some(wanted);
 let p;
 
 if (any('desktop-empty')) {
-p = await page('empty', desktop);
+p = await page('empty', desktop, '', true);
 await shot(p, 'desktop-empty');
 }
 
 if (any('desktop-timeline', 'desktop-entry', 'desktop-editor', 'desktop-map', 'desktop-split')) {
 
-p = await page('desktop', desktop);
+p = await page('desktop', desktop, '', true);
 await withFixture(p);
 await shot(p, 'desktop-timeline');
-await p.locator('.vis-item', { hasText: 'Plato' }).click();
+await p.locator('.tl-mark[data-id=i_plato]').click({ force: true });
 await p.waitForTimeout(600); // the timeline zooms to his time
 await shot(p, 'desktop-entry');
 await p.getByTestId('item-view').getByRole('button', { name: 'Edit' }).click();
@@ -104,11 +106,11 @@ await shot(p, 'desktop-split');
 
 if (any('desktop-dark', 'desktop-dark-split', 'desktop-dark-influences')) {
 
-p = await page('dark', { ...desktop, colorScheme: 'dark' });
+p = await page('dark', { ...desktop, colorScheme: 'dark' }, '', true);
 await withFixture(p);
 await shot(p, 'desktop-dark');
 if (wanted('desktop-dark-influences')) {
-  await p.locator('.vis-item', { hasText: 'Plato' }).click();
+  await p.locator('.tl-mark[data-id=i_plato]').click({ force: true });
   await p.waitForTimeout(600); // the timeline zooms to his time
   await shot(p, 'desktop-dark-influences');
   await p.getByRole('button', { name: 'Close panel' }).click();
@@ -119,11 +121,11 @@ await shot(p, 'desktop-dark-split');
 
 if (any('phone-timeline', 'phone-map', 'phone-influences')) {
 
-p = await page('phone', { viewport: { width: 412, height: 860 }, isMobile: true, hasTouch: true });
+p = await page('phone', { viewport: { width: 412, height: 860 }, isMobile: true, hasTouch: true }, '', true);
 await withFixture(p);
 await shot(p, 'phone-timeline');
 if (wanted('phone-influences')) {
-  await p.locator('.vis-item', { hasText: 'Plato' }).click();
+  await p.locator('.tl-mark[data-id=i_plato]').click({ force: true });
   await p.waitForTimeout(600); // the timeline zooms to his time
   await shot(p, 'phone-influences');
   await p.getByRole('button', { name: 'Close panel' }).click();
@@ -149,9 +151,9 @@ async function drawBorder(p, prefix) {
   await shot(p, `${prefix}-draw-form`);
 }
 
-if (any('desktop-draw')) await drawBorder(await page('desktop-draw', desktop), 'desktop');
-if (any('dark-draw')) await drawBorder(await page('dark-draw', { ...desktop, colorScheme: 'dark' }), 'dark');
-if (any('phone-draw')) await drawBorder(await page('phone-draw', { viewport: { width: 412, height: 860 }, isMobile: true, hasTouch: true }), 'phone');
+if (any('desktop-draw')) await drawBorder(await page('desktop-draw', desktop, '', true), 'desktop');
+if (any('dark-draw')) await drawBorder(await page('dark-draw', { ...desktop, colorScheme: 'dark' }, '', true), 'dark');
+if (any('phone-draw')) await drawBorder(await page('phone-draw', { viewport: { width: 412, height: 860 }, isMobile: true, hasTouch: true }, '', true), 'phone');
 
 // Migration: the fixture's famine routes in 1850, then the editor.
 async function migration(p, prefix) {
@@ -169,9 +171,9 @@ async function migration(p, prefix) {
   await shot(p, `${prefix}-migration-editor`);
 }
 
-if (any('desktop-migration')) await migration(await page('desktop-migration', desktop), 'desktop');
-if (any('dark-migration')) await migration(await page('dark-migration', { ...desktop, colorScheme: 'dark' }), 'dark');
-if (any('phone-migration')) await migration(await page('phone-migration', { viewport: { width: 412, height: 860 }, isMobile: true, hasTouch: true }), 'phone');
+if (any('desktop-migration')) await migration(await page('desktop-migration', desktop, '', true), 'desktop');
+if (any('dark-migration')) await migration(await page('dark-migration', { ...desktop, colorScheme: 'dark' }, '', true), 'dark');
+if (any('phone-migration')) await migration(await page('phone-migration', { viewport: { width: 412, height: 860 }, isMobile: true, hasTouch: true }, '', true), 'phone');
 
 // Find a trend: search the bundled catalogue (no network needed).
 async function trendSearch(p, prefix) {
@@ -181,9 +183,9 @@ async function trendSearch(p, prefix) {
   await p.waitForTimeout(300);
   await shot(p, `${prefix}-trends`);
 }
-if (any('desktop-trends')) await trendSearch(await page('desktop-trends', desktop), 'desktop');
-if (any('dark-trends')) await trendSearch(await page('dark-trends', { ...desktop, colorScheme: 'dark' }), 'dark');
-if (any('phone-trends')) await trendSearch(await page('phone-trends', { viewport: { width: 412, height: 860 }, isMobile: true, hasTouch: true }), 'phone');
+if (any('desktop-trends')) await trendSearch(await page('desktop-trends', desktop, '', true), 'desktop');
+if (any('dark-trends')) await trendSearch(await page('dark-trends', { ...desktop, colorScheme: 'dark' }, '', true), 'dark');
+if (any('phone-trends')) await trendSearch(await page('phone-trends', { viewport: { width: 412, height: 860 }, isMobile: true, hasTouch: true }, '', true), 'phone');
 
 // The place picker in the entry editor, with Wikipedia's answer mocked.
 async function places(p, prefix) {
@@ -195,7 +197,7 @@ async function places(p, prefix) {
     headers: { 'Access-Control-Allow-Origin': '*' },
   }));
   await withFixture(p);
-  await p.locator('.vis-item', { hasText: 'Plato' }).click();
+  await p.locator('.tl-mark[data-id=i_plato]').click({ force: true });
   await p.waitForTimeout(600); // the timeline zooms to his time
   await p.getByTestId('item-view').getByRole('button', { name: 'Edit' }).click();
   await p.getByRole('button', { name: 'Add a place' }).click();
@@ -206,16 +208,13 @@ async function places(p, prefix) {
   await p.getByTestId('place-form').scrollIntoViewIfNeeded();
   await shot(p, `${prefix}-places`);
 }
-if (any('desktop-places')) await places(await page('desktop-places', desktop), 'desktop');
-if (any('dark-places')) await places(await page('dark-places', { ...desktop, colorScheme: 'dark' }), 'dark');
-if (any('phone-places')) await places(await page('phone-places', { viewport: { width: 412, height: 860 }, isMobile: true, hasTouch: true }), 'phone');
+if (any('desktop-places')) await places(await page('desktop-places', desktop, '', true), 'desktop');
+if (any('dark-places')) await places(await page('dark-places', { ...desktop, colorScheme: 'dark' }, '', true), 'dark');
+if (any('phone-places')) await places(await page('phone-places', { viewport: { width: 412, height: 860 }, isMobile: true, hasTouch: true }, '', true), 'phone');
 
-// The new timeline renderer, under "Try the new layout": everything in view, then zoomed out far enough to cluster.
+// The timeline in the reader layout: everything in view, then zoomed out far enough to cluster.
 async function newTimeline(p, prefix) {
   await p.getByTestId('import-input').setInputFiles(FIXTURE);
-  await p.locator('.vis-item', { hasText: 'Aristotle' }).waitFor();
-  await p.getByRole('button', { name: 'More' }).click();
-  await p.getByRole('menuitemcheckbox', { name: 'Try the new layout' }).click();
   if (prefix === 'phone') await p.getByTestId('reader').getByRole('button', { name: 'Map' }).click();
   await p.locator('[data-testid=timeline][data-ready]').waitFor();
   await p.getByTestId('time-bar').getByRole('button', { name: 'All' }).click();
@@ -235,8 +234,6 @@ async function newTimeline(p, prefix) {
 const KINDS = fileURLToPath(new URL('../tests/fixtures/every-kind.json', import.meta.url));
 async function kinds(p, prefix) {
   await p.getByTestId('import-input').setInputFiles(KINDS);
-  await p.getByRole('button', { name: 'More' }).click();
-  await p.getByRole('menuitemcheckbox', { name: 'Try the new layout' }).click();
   if (prefix === 'phone') await p.getByTestId('reader').getByRole('button', { name: 'Map' }).click();
   await p.locator('[data-testid=timeline][data-ready]').waitFor();
   await p.getByTestId('time-bar').getByRole('button', { name: 'All' }).click();
@@ -251,8 +248,6 @@ async function kinds(p, prefix) {
 const GREECE = fileURLToPath(new URL('../tests/fixtures/greece/classical-greece.json', import.meta.url));
 async function eras(p, prefix) {
   await p.getByTestId('import-input').setInputFiles(GREECE);
-  await p.getByRole('button', { name: 'More' }).click();
-  await p.getByRole('menuitemcheckbox', { name: 'Try the new layout' }).click();
   if (prefix === 'phone') await p.getByTestId('reader').getByRole('button', { name: 'Map' }).click();
   await p.locator('[data-testid=timeline][data-ready]').waitFor();
   await p.getByTestId('time-bar').getByRole('button', { name: 'Eras' }).click();
@@ -268,8 +263,6 @@ async function eras(p, prefix) {
 // a filmstrip of frames 50 ms apart (the page's clock is paused and stepped, so frames are exact).
 async function eraLanes(p, prefix) {
   await p.getByTestId('import-input').setInputFiles(GREECE);
-  await p.getByRole('button', { name: 'More' }).click();
-  await p.getByRole('menuitemcheckbox', { name: 'Try the new layout' }).click();
   if (prefix === 'phone') await p.getByTestId('reader').getByRole('button', { name: 'Map' }).click();
   const timeline = p.locator('[data-testid=timeline][data-ready]');
   await timeline.waitFor();
@@ -329,11 +322,11 @@ async function help(p, prefix) {
   await p.getByTestId('help').waitFor();
   await shot(p, `${prefix}-help`);
 }
-if (any('desktop-help')) await help(await page('desktop-help', desktop), 'desktop');
-if (any('dark-help')) await help(await page('dark-help', { ...desktop, colorScheme: 'dark' }), 'dark');
-if (any('phone-help')) await help(await page('phone-help', { viewport: { width: 412, height: 860 }, isMobile: true, hasTouch: true }), 'phone');
+if (any('desktop-help')) await help(await page('desktop-help', desktop, '', true), 'desktop');
+if (any('dark-help')) await help(await page('dark-help', { ...desktop, colorScheme: 'dark' }, '', true), 'dark');
+if (any('phone-help')) await help(await page('phone-help', { viewport: { width: 412, height: 860 }, isMobile: true, hasTouch: true }, '', true), 'phone');
 
-// The new layout's reader on a saved article, with the sample timeline beside it.
+// The reader on a saved article, with the sample timeline beside it.
 async function reader(p, prefix) {
   const cors = { 'Access-Control-Allow-Origin': '*' };
   await p.route('https://en.wikipedia.org/w/rest.php/v1/search/page**', (r) => r.fulfill({ headers: cors, json: { pages: [{ key: 'Peloponnesian_War', title: 'Peloponnesian War', description: 'War between Athens and Sparta (431–404 BC)', thumbnail: null }] } }));
@@ -360,9 +353,9 @@ async function reader(p, prefix) {
     const entity = (q) => ({ value: `http://www.wikidata.org/entity/${q}` });
     return r.fulfill({ headers: cors, json: { results: { bindings: ids.flatMap((c) => (parents[c] ?? []).map((x) => ({ c: entity(c), p: entity(x) }))) } } });
   });
-  await withFixture(p);
-  await p.getByRole('button', { name: 'More' }).click();
-  await p.getByRole('menuitemcheckbox', { name: 'Try the new layout' }).click();
+  // On the phone the timeline is behind the map sheet, so there's nothing to wait for or fit.
+  if (prefix === 'phone') { await p.getByTestId('import-input').setInputFiles(FIXTURE); await p.waitForTimeout(500); }
+  else await withFixture(p);
   await p.getByTestId('article-search').getByLabel('Search Wikipedia').fill('peloponnesian');
   await p.getByTestId('article-search').getByRole('button', { name: 'Search' }).click();
   await p.getByTestId('article-results').getByRole('button').first().click();
@@ -450,9 +443,7 @@ async function readerClaude(p, prefix) {
   }
   await p.evaluate(() => localStorage.setItem('chronicle.anthropicKey', 'sk-ant-screenshot-1234'));
   await p.getByTestId('import-input').setInputFiles(fileURLToPath(new URL('../tests/ai-evals/highlight/doc.json', import.meta.url)));
-  await p.locator('.vis-item', { hasText: 'Delian League' }).waitFor();
-  await p.getByRole('button', { name: 'More' }).click();
-  await p.getByRole('menuitemcheckbox', { name: 'Try the new layout' }).click();
+  await p.waitForTimeout(500);
   await p.getByTestId('article-search').getByLabel('Search Wikipedia').fill('pericles');
   await p.getByTestId('article-search').getByRole('button', { name: 'Search' }).click();
   await p.getByTestId('article-results').getByRole('button').first().click();
@@ -513,9 +504,9 @@ async function aiDraft(p, prefix) {
   await p.waitForTimeout(800); // the map frames the dashed pins
   await shot(p, `${prefix}-ai-draft`);
 }
-if (any('desktop-ai-draft')) await aiDraft(await page('desktop-ai-draft', desktop), 'desktop');
-if (any('dark-ai-draft')) await aiDraft(await page('dark-ai-draft', { ...desktop, colorScheme: 'dark' }), 'dark');
-if (any('phone-ai-draft')) await aiDraft(await page('phone-ai-draft', { viewport: { width: 412, height: 860 }, isMobile: true, hasTouch: true }), 'phone');
+if (any('desktop-ai-draft')) await aiDraft(await page('desktop-ai-draft', desktop, '', true), 'desktop');
+if (any('dark-ai-draft')) await aiDraft(await page('dark-ai-draft', { ...desktop, colorScheme: 'dark' }, '', true), 'dark');
+if (any('phone-ai-draft')) await aiDraft(await page('phone-ai-draft', { viewport: { width: 412, height: 860 }, isMobile: true, hasTouch: true }, '', true), 'phone');
 
 // ---------- gallery: the app on the Classical Greece fixture ----------
 let presets = [];
@@ -532,7 +523,7 @@ if (argv.includes('--gallery')) {
   for (const preset of presets.filter((x) => !ids.length || ids.includes(x.id))) {
     p = await galleryPage(preset);
     if (preset.view !== 'timeline') await p.locator('[data-testid=map][data-ready]').waitFor({ timeout: 20000 });
-    else await p.locator('.vis-item').first().waitFor();
+    else await p.locator('[data-testid=timeline][data-ready]').waitFor();
     await p.waitForTimeout(800);
     taken.push(`gallery-${preset.id}`);
     await p.screenshot({ path: `${OUT}gallery-${preset.id}.png` });

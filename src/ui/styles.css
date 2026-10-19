@@ -330,7 +330,8 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .chip[aria-pressed='false'] { opacity: 0.45; }
 .chip[aria-pressed='false'] .swatch { background: transparent; box-shadow: inset 0 0 0 2px var(--c); }
 
-/* ---------- the new timeline renderer (src/ui/timeline/) ---------- */
+/* ---------- the timeline (src/ui/timeline/) ---------- */
+.timeline-host { flex: 1 1 auto; min-height: 320px; padding: 0 8px; }
 .tl-host { position: relative; overflow: hidden; touch-action: none; user-select: none; -webkit-user-select: none; background: var(--panel); }
 .tl-host:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
 .tl-svg { display: block; }
@@ -354,65 +355,6 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .tl-svg .tl-arc-label { paint-order: stroke; stroke: var(--panel); stroke-width: 3px; stroke-linejoin: round; }
 .tl-tip b { font-family: var(--font-read); font-weight: 600; font-size: 13.5px; }
 .tl-tip span { color: var(--muted); }
-
-/* ---------- vis-timeline overrides ---------- */
-.timeline-host { flex: 1 1 auto; min-height: 320px; padding: 0 8px; }
-.timeline-host .vis-timeline { border: 0; font-family: var(--font-ui); }
-.timeline-host .vis-panel.vis-center, .timeline-host .vis-panel.vis-left, .timeline-host .vis-panel.vis-top,
-.timeline-host .vis-panel.vis-bottom { border-color: var(--rule); }
-.timeline-host .vis-labelset .vis-label { color: var(--ink); border-bottom-color: var(--rule-soft); }
-.timeline-host .vis-labelset .vis-label .vis-inner { width: var(--lane-label); padding: 10px 12px; }
-.timeline-host .vis-foreground .vis-group { border-bottom-color: var(--rule-soft); }
-.timeline-host .vis-time-axis .vis-text { color: var(--muted); font-family: var(--font-read); font-variant-numeric: oldstyle-nums; font-size: 13px; }
-.timeline-host .vis-time-axis .vis-text.vis-major { color: var(--ink-2); font-weight: 600; }
-.timeline-host .vis-time-axis .vis-grid.vis-minor { border-color: var(--rule-soft); }
-.timeline-host .vis-time-axis .vis-grid.vis-major { border-color: var(--rule); }
-.timeline-host .vis-current-time { background: var(--pig-cinnabar); opacity: 0.5; }
-
-.lane-label { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 13px; }
-.lane-label .swatch { width: 10px; height: 22px; border-radius: 2px; background: var(--c); flex: none; }
-
-.timeline-host .vis-item {
-  border-color: var(--c); background: color-mix(in srgb, var(--c) 16%, var(--panel)); color: var(--ink);
-  border-radius: var(--radius-s); font-size: 13px;
-}
-.timeline-host .vis-item.vis-range { border-width: 0 0 0 3px; }
-.timeline-host .vis-item.vis-range .vis-item-content { padding: 3px 8px; }
-.timeline-host .vis-item.kind-person { background: var(--panel); border: 1px solid color-mix(in srgb, var(--c) 55%, transparent); border-radius: 999px; }
-.timeline-host .vis-item.kind-person .vis-item-content { padding: 1px 8px 1px 2px; }
-.timeline-host .vis-item.vis-point .vis-item-content { padding: 0 6px; }
-.timeline-host .vis-item.vis-dot { border-color: var(--c); background: var(--c); border-width: 5px; border-radius: 50%; }
-.timeline-host .vis-item.vis-selected { box-shadow: 0 0 0 2px var(--ink); z-index: 2; }
-.it { display: inline-flex; align-items: center; gap: 6px; }
-.it img { width: 22px; height: 22px; object-fit: cover; border-radius: 50%; flex: none; background: var(--rule-soft); }
-.kind-event .it img { border-radius: 3px; }
-.timeline-host .vis-item.vis-range.approx { border-left-style: dashed; }
-.timeline-host .vis-item.kind-person.approx { border-style: dashed; }
-
-/* A bar too narrow for its name at this zoom lets the name run on past it, with a halo so it reads over grid lines. */
-.timeline-host .vis-item.vis-range.label-out .vis-item-overflow { overflow: visible; }
-.timeline-host .vis-item.vis-range.label-out .it > span {
-  text-shadow: 0 0 3px var(--bg), 0 0 3px var(--bg), 0 0 2px var(--bg);
-}
-/* Near the right edge the name is pulled left (by --pull) so it stays on screen. */
-.timeline-host .vis-item.vis-range.label-out .it { transform: translateX(calc(-1 * var(--pull, 0px))); position: relative; z-index: 1; }
-
-/* Influences of the selected person light up; everything else steps back. */
-.timeline-host .vis-item { transition: opacity 0.15s, box-shadow 0.15s; }
-.timeline-host .vis-item.dimmed { opacity: 0.3; }
-.timeline-host .vis-item.infl-by { box-shadow: 0 0 0 2px var(--glow-by), 0 0 10px 2px color-mix(in srgb, var(--glow-by) 55%, transparent); z-index: 2; }
-.timeline-host .vis-item.infl-on { box-shadow: 0 0 0 2px var(--glow-on), 0 0 10px 2px color-mix(in srgb, var(--glow-on) 55%, transparent); z-index: 2; }
-.timeline-host .vis-item.vis-line.infl-by, .timeline-host .vis-item.vis-line.infl-on,
-.timeline-host .vis-item.vis-dot.infl-by, .timeline-host .vis-item.vis-dot.infl-on { box-shadow: none; }
-.influence-arrows { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; z-index: 3; }
-.influence-arrows .arc { fill: none; stroke-width: 2; stroke-linecap: round; opacity: 0.9; }
-.influence-arrows .infl-by { stroke: var(--glow-by); fill: var(--glow-by); }
-.influence-arrows .infl-on { stroke: var(--glow-on); fill: var(--glow-on); }
-.influence-arrows .arc.infl-by, .influence-arrows .arc.infl-on { fill: none; }
-.timeline-host .vis-item.linked { box-shadow: 0 0 0 2px var(--muted); z-index: 2; }
-.timeline-host .vis-item.vis-line.linked, .timeline-host .vis-item.vis-dot.linked { box-shadow: none; }
-.influence-arrows .linked { stroke: var(--muted); fill: var(--muted); }
-.influence-arrows .arc.linked { fill: none; stroke-dasharray: 5 4; stroke-width: 1.5; }
 
 /* Under the timeline: the thumbwheel and the zoom bar. */
 .time-bar { display: flex; align-items: center; gap: 16px; padding: 6px 16px; border-top: 1px solid var(--rule); flex-wrap: wrap; }
@@ -628,9 +570,6 @@ dialog h2 { font-family: var(--font-read); margin: 0 0 12px; font-weight: 600; }
 .year-input:hover, .year-input:focus { border-color: var(--rule); background: var(--panel); outline: none; }
 .year-input[aria-invalid='true'] { border-color: var(--danger); }
 .yearbar .speed select { width: auto; font-size: 12px; padding: 4px 6px; }
-
-.timeline-host .vis-custom-time { background: var(--ink); width: 2px; cursor: ew-resize; }
-.timeline-host .vis-custom-time-marker { background: var(--ink); color: var(--panel); font-family: var(--font-read); font-size: 12px; padding: 1px 6px; border-radius: var(--radius-s); top: 0; }
 
 .polity-list { max-height: 50vh; overflow: auto; margin-top: 6px; }
 

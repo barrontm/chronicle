@@ -28,7 +28,7 @@ src/model/   types.ts (schema), dates.ts (ALL date logic), doc.ts (pure mutation
 src/data/    series/OWID parsing, geo.ts, basemaps.ts
 src/media/   Commons, Wikipedia/Wikidata
 src/ai/      AI drafting (rules in its CLAUDE.md); only client.ts imports the Anthropic SDK
-src/ui/      React; TimelineView = only vis-timeline importer, MapView = only maplibre-gl importer
+src/ui/      React; TimelineView = only user of the timeline renderer (src/ui/timeline/), MapView = only maplibre-gl importer
 src/ui/gallery/  dev-only `/#gallery`: the app on the Greece fixture in preset states (not in production builds)
 e2e/         Playwright specs        tests/fixtures/  TEST DATA ONLY (greece/: ~160-entry Classical Greece doc + next.json for shapes the schema lacks)
 docs/        vision.md, decisions.md, data-model.md, design.md, references.md

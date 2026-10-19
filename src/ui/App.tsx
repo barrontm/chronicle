@@ -107,8 +107,10 @@ function Workspace() {
   // ----- Map and the shared current year -----
   const narrow = useMedia('(max-width: 860px)');
   const [view, setView] = useStored<View>('chronicle.view', () => 'timeline');
-  // "Try the new layout": the reader beside the map over the timeline; on a phone, the map is a sheet over the reader.
-  const [next, setNext] = useStored<boolean>('chronicle.uiNext', () => false);
+  // The layout: the reader beside the map over the timeline (on a phone, the map is a sheet over the reader),
+  // unless Bob chose "Use the classic layout". A new key, so everyone starts on the reader layout, including whoever had tried it under "Try the new layout".
+  const [classic, setClassic] = useStored<boolean>('chronicle.classicLayout', () => false);
+  const next = !classic;
   const [trail, setTrail] = useStored<{ pages: ArticleRef[]; at: number }>('chronicle.trail', () => ({ pages: [], at: -1 }));
   const article = trail.pages[trail.at] ?? null;
   const [searching, setSearching] = useState(false);
@@ -176,7 +178,7 @@ function Workspace() {
   // Events linger for a while after they happen; longer when playing fast so they can be seen.
   const fadeYears = Math.max(10, speed * 2);
 
-  // Bring the map into view for a panel action: a split on the laptop, the sheet on a phone in the new layout.
+  // Bring the map into view for a panel action: a split on the laptop, the sheet on a phone in the reader layout.
   const revealMap = () => {
     if (next) { if (narrow) setMapSheet(true); }
     else if (view === 'timeline') setView(narrow ? 'map' : 'split');
@@ -312,7 +314,7 @@ function Workspace() {
           {menu === 'file' && (
             <div className="menu-pop" role="menu">
               <button role="menuitem" onClick={() => { setMenu(null); timeline.current?.fit(); }}>Show everything</button>
-              <button role="menuitemcheckbox" aria-checked={next} onClick={() => { setMenu(null); setMapSheet(false); setNext(!next); }}>Try the new layout</button>
+              <button role="menuitemcheckbox" aria-checked={classic} onClick={() => { setMenu(null); setMapSheet(false); setClassic(!classic); }}>Use the classic layout</button>
               <hr />
               <button role="menuitem" onClick={() => {
                 setMenu(null);
@@ -418,7 +420,6 @@ function Workspace() {
             onCanGoBack={setCanGoBackInTime}
             year={showMap ? year : undefined}
             onYear={(y) => { setPlaying(false); setYear(y); }}
-            renderer={next ? 'next' : 'classic'}
             prominence={prominence}
             drafts={timelineDrafts}
             onMove={readOnly ? undefined : moveItem}
