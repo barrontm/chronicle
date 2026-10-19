@@ -4,7 +4,7 @@ Where Chronicle is heading (planned 2026-10-16). A living doc: change it at a ph
 
 ## The two big changes
 1. **Reading is how you add.** Bob reads Wikipedia (later other sources) inside the app, highlights what matters, and the app turns highlights into records on the map and timeline. It recognizes what the subject is and draws each kind of thing in its own way. Code does the work where facts are structured (Wikidata); AI only where they aren't (the highlighted prose). No Add button, no kind buttons.
-2. **Visuals with zoom levels.** Zoomed out: eras, each showing what it's known for, built from Bob's own highlights. Zoomed into an era: how it changed across six dimensions (political, economic, social, technological, intellectual, religious). Simple animations: technology spreading, migrations, wars, borders and governments changing.
+2. **Visuals with zoom levels.** Zoomed out: the polities and world events Bob has read about, each polity a strip as thick as its power, over a faint backdrop of eras (Bob, 2026-10-18; it was era bands until the Phase 3 checkpoint). Opening a polity or a world event: how it changed in six lanes (politics, war, economy, philosophy and religion, technology, nature), with the map following. Simple animations: technology spreading, migrations, wars, borders and governments changing.
 
 Nothing appears until Bob has read and highlighted it. The app still ships no content.
 
@@ -27,8 +27,9 @@ Every kind of thing has a representation on both the timeline and the map (Bob, 
 
 | Subject | Timeline | Map | Animation |
 |---|---|---|---|
-| Era/period | band with theme chips | tinted extent | crossfade between eras |
-| Polity | lifespan bar, split by regime | territory, styled by regime | border morph; power-structure diagram morphs between regimes |
+| Era/period | a labelled wash behind its region's polity strips, with theme chips | tinted extent | crossfade between eras |
+| Polity | at the top: a strip as thick as its power, split by regime; opened: its six lanes | territory, styled by regime; picked, the polities it dealt with | thickness changes as the year plays; border morph; power-structure diagram morphs between regimes |
+| World event (an entry marked as one) | gold, at the top; opened: its six lanes | gold pin or extent | as its kind |
 | Economy | economic lane as a sector streamgraph | production sites, trade flows of goods | sectors grow and shrink; goods flow |
 | War | span with battle ticks | campaign routes, battle pins | routes draw in, battles pulse |
 | Battle | tick on its war's span (a point of its own when it has no war) | battle pin | pulses in its year |
@@ -43,7 +44,7 @@ Every kind of thing has a representation on both the timeline and the map (Bob, 
 | Disaster (earthquake, eruption, epidemic, famine, flood) | point or span | affected area | rings, ash fall, a spreading tint |
 | Discovery (science) | point | spark at the place | a ring as word spreads |
 | Religion | span | regions tinted by adherence | conversion waves |
-| Influence (connection across dimensions) | arrow between level-1 lanes, labelled with its effect | none | none |
+| Influence (connection across lanes) | arrow between level-1 lanes, labelled with its effect | none | none |
 
 Borders also show their kind (Phase 5d): a frontier fades out, a wall is a crenellated line, a treaty border is crisp, contested ground interleaves both claimants' colours, a claim or occupation is dashed. Wars carry force icons for the arms each side used. Icons and lines are drawn by us; a tap shows real Commons pictures.
 
@@ -56,21 +57,35 @@ Borders also show their kind (Phase 5d): a frontier fades out, a wall is a crene
 ### Ideas and schools
 An idea or work keeps a `reception` by region (known, partial, lost, revived, taught), and transmission is a `Flow` with `subject: 'ideas'`. Schools and universities are institutions whose `structures` have the same shape as regimes (roles, plus links such as teaches, funds, licenses), so one diagram serves the Academy, the University of Paris and Athens' democracy.
 
-### Influences between dimensions
-A connection can carry an `effect` (weakened, funded, legitimised, …) and the highlights that justify it. When its two ends sit in different dimensions, level 1 draws it as an arrow between the lanes. Ends can be entries, themes, regimes, economies or institutions.
+### Influences between lanes
+A connection can carry an `effect` (weakened, funded, legitimised, …) and the highlights that justify it. When its two ends sit in different lanes, level 1 draws it as an arrow between the lanes. Ends can be entries, themes, regimes, economies or institutions.
 
 ## Timeline with zoom levels
-- Level 0: era bands in the spirit of the 1931 Histomap, one row per region (a period's `region`), with theme chips.
-- Level 1: inside an era, six dimension lanes showing change.
+- Level 0, **the overview**: polities and world events in the spirit of the 1931 Histomap, over a backdrop of eras (below).
+- Level 1: inside a polity or world event, its six lanes showing change.
 - Level 2: individual entries, each drawn as its `subject` (falling back to its `kind`).
 - A custom renderer replaces vis-timeline behind the same one-importer boundary, and lifts the ±271k-year limit. The spike settled it: a pure layout plus an SVG painter (the hybrid only if a real phone needs it), our own Pointer Events driver instead of d3-zoom, and time in decimal years.
-- Dimensions live on highlights and entries and are the default lanes at level 1. Categories stay Bob's own topics.
+- Lanes live on highlights and entries, several per entry. Categories stay Bob's own topics: filter chips, not rows down the left.
+
+## The overview: polities and world events
+Bob's direction at the Phase 3 checkpoint (2026-10-18). Phase 4's prototype settles the look.
+
+- **What's at the top.** Polities (nations, empires, republics, leagues of city-states) and world events: the Reformation, the split of the Roman Empire, the spread of Christianity, Islam and Judaism, world-changing inventions such as the steam engine. World events are gold, which marks their weight, and need no row or category of their own. Bob can mark any entry "Show in the overview", and any entry as a world event (`overview: 'shown' | 'world'`, v9).
+- **Thickness is power.** A polity's strip is as thick as its power, reach and population in each year. Athens starts as a sliver, grows as its power does, and thins as Macedon comes to dominate. By default it follows the area of the territory's borders in that year (`areaKm2`). Bob can set a relative strength (1 to 5) at any date, citing a highlight, and that wins. A polity with neither is one even width.
+- **Related polities sit together.** Rows are ordered by geography and history: Classical Greece beside Macedon and Persia, the Chinese dynasties far off. Region parents group them (Mediterranean › Greece), and a group of city-states can fold into one row (Classical Greece) and open into Athens, Sparta and Corinth.
+- **Eras are the backdrop.** Each region's eras are a faint labelled wash behind its strips, so "Classical" still reads at a glance; theme chips sit on the wash.
+- **Opening a polity or world event** drops its six lanes beneath its strip, each a sub-timeline of changes. Before a lane is opened it already shows its most important changes (by `prominence`); opening it shows all of them, and how they relate to the other lanes (influences, Phase 4b). The lanes don't appear at the top; only under what is open.
+- **The six lanes** (Bob's): **Politics** (constitutions, laws, leaders, movements), **War**, **Economy** (production, and how goods were distributed: the state, markets, kinship…), **Philosophy and religion** (leaders, texts, schisms), **Technology** (inventions, tools, techniques, discoveries), **Nature** (climate, disasters, disease, the land and its resources). No People lane: notable people sit in each lane they belong to. An entry can be in several (the Reformation is religious and political). Lanes are sorted automatically from what a thing is and its highlights, and what Bob sets always wins.
+- **The map follows.**
+  - Picking a polity shows it and the polities it dealt with at the year shown (trade, war, crusades, alliances), each marked with how.
+  - An open lane shows its layer: **War** highlights every participant in its wars (with today's zoom to a category), **Economy** shows production sites and flows of goods, **Philosophy and religion** shows where thinkers were born, their schools and traditions, religious leaders and movements, **Technology** shows where inventions appeared and how they spread, **Nature** shows disasters, epidemics and climate over the areas they touched, **Politics** shows political change as the year plays. Each later phase's map layer is also its lane's layer.
+  - Clicking an area of the map grows the polities, events and people of that region slightly on the timeline and fades the rest into the background, still visible.
 - One year clock (`useYearClock`) drives the timeline, the map and every animation. Reduced motion is respected.
 
 ## Long range: many things, still clear
-Bob will add thousands of things across millennia. Zoomed out, the timeline should stay calm and still show what matters and how it connects (Bob, 2026-10-18). Speed isn't the problem: the spike's layout takes 0.1–2 ms a frame at 50,000 entries. What needs a plan is what to draw. The look is settled in Phase 4's "long range" prototype; until then these are the ideas it tests.
+Bob will add thousands of things across millennia. Zoomed out, the timeline should stay calm and still show what matters and how it connects (Bob, 2026-10-18). Speed isn't the problem: the spike's layout takes 0.1–2 ms a frame at 50,000 entries. What needs a plan is what to draw. The look is settled in Phase 4's overview prototype, which took over the long-range one; until then these are the ideas it tests. Where they say era bands and region rows, read polity strips and their groups too: the overview keeps eras only as a backdrop.
 
-- **Prominence** comes from Bob's own work, never from an outside ranking: the highlights, connections and notes on an entry (weights set in the prototype), plus an optional **landmark** star he sets. One pure `prominence(entry, doc)` in `src/model/` decides landmarks, which entry leads a cluster, and which labels win when they collide.
+- **Prominence** comes from Bob's own work, never from an outside ranking: the highlights, connections and notes on an entry (weights set in the prototype), plus the overview mark he sets (which replaced the planned landmark star at the Phase 3 checkpoint). One pure `prominence(entry, doc)` in `src/model/` decides landmarks, which entry leads a cluster, and which labels win when they collide.
 - **Landmarks in bands.** At level 0 each era band shows its most prominent wars, people and events (as many as fit) as their kind's glyph. The rest are in the band's count.
 - **Clusters that split.** Entries that would overlap merge into a badge in their kind's glyph with a count ("12 battles", "8 people"), labelled with its most prominent member. Zooming in splits it over `--motion-move` (a fade with reduced motion); tapping one zooms to fit it. A cluster holds one kind in one row, so a badge always says one thing.
 - **Threads.** Connections are rolled up by the eras their ends fall in: an end belongs to the era of its region whose dates contain it, or the era it is `part of`. Each pair of eras gets one ribbon, its width the number of links, coloured by the main effect's dimension, labelled "4 · influenced". Ribbons run in the gutters between region rows, never over a band's text.
@@ -84,10 +99,12 @@ Bob will add thousands of things across millennia. Zoomed out, the timeline shou
 ## Schema path
 - v6: `highlights`, `dimension`, `themes` on periods; `effect` and `highlightIds` on connections.
 - v7: `subject` and `region` on entries, for the new timeline.
-- v8: `regimes` on territories, and alliances; also a landmark star on entries and regions with a parent, if the long-range prototype keeps them.
-- v9: `economies` (with `distribution`), plus `Flow.subject` and `goods`.
-- v10: `institutions` with `structures`, `reception` on ideas and works, `Flow.subject: 'ideas'`.
-- v11: kinds of border (`edge` on territory snapshots), walls, forces on wars and battles.
+- v8: places may have no start or no end (done, Phase 3 ticket 4).
+- v9: `lanes` on entries and highlights (filled from `dimension`), the overview mark, `strength` on territories, region parents, territories as connection ends.
+- v10: `regimes` on territories, and alliances.
+- v11: `economies` (with `distribution`), plus `Flow.subject` and `goods`.
+- v12: `institutions` with `structures`, `reception` on ideas and works, `Flow.subject: 'ideas'`.
+- v13: kinds of border (`edge` on territory snapshots), walls, forces on wars and battles.
 
 Each bump that adds a record also makes it a valid connection endpoint.
 
@@ -100,11 +117,12 @@ Each phase ships something usable, behind a "Try the new layout" setting (`ui.ne
 1. Reader: reader pane, highlights (v6), recognition, offline cache
 2. Highlight → record: code path, AI `highlight` feature, review
 3. New timeline: `subject` and `region` (v7), renderer at parity, every kind drawn as itself, then the zoom levels; vis-timeline removed
-4. Eras, themes and influences between dimensions; eras on the map
-5. Polities and wars: regimes (v8), border morph, alliances, campaigns, battles
-   - 5b. Economy, with distribution (v9)
-   - 5c. Ideas, schools and spread (v10)
-   - 5d. Living map: kinds of border and walls, war technology, disasters, discoveries, the look of ideas and religion (v11)
+4. The overview: lanes (v9), polities from the tray, polity strips and world events, a polity's six lanes, the map following; the classic layout dropped
+   - 4b. Themes, influences between lanes, threads; eras on the map
+5. Polities and wars: regimes (v10), border morph, alliances, campaigns, battles
+   - 5b. Economy, with distribution (v11)
+   - 5c. Ideas, schools and spread (v12)
+   - 5d. Living map: kinds of border and walls, war technology, disasters, discoveries, the look of ideas and religion (v13)
 6. Other sources: Worker proxy with Readability, bookmarklet / share target, PDFs and EPUBs Bob uploads
 
 A checkpoint session closes each phase. It triages the ideas inbox, reorders what's left and logs changes.
