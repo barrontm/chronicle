@@ -106,6 +106,24 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .save-state { color: var(--muted); font-size: 12px; }
 .spacer { flex: 1; }
 
+/* Search in the top bar: a box on a laptop, a button that opens it across the bar on a phone. */
+.search { position: relative; display: flex; align-items: center; gap: 6px; }
+.search input { width: 15em; padding: 5px 10px; border: 1px solid var(--rule); border-radius: var(--radius-s); background: var(--bg); color: var(--ink); font: inherit; }
+.search input:focus { width: 20em; }
+.search-results { position: absolute; right: 0; top: calc(100% + 4px); width: min(30em, calc(100vw - 24px)); max-height: min(70vh, 560px); overflow: auto; margin: 0; padding: 4px; list-style: none; background: var(--panel); border: 1px solid var(--rule); border-radius: var(--radius-m); box-shadow: 0 8px 24px rgb(0 0 0 / 0.12); z-index: 40; }
+.search-hit { display: flex; gap: 10px; align-items: flex-start; padding: 6px 8px; border-radius: var(--radius-s); cursor: pointer; }
+.search-hit[aria-selected='true'] { background: var(--rule-soft); }
+.search-mark { flex: none; width: 64px; display: flex; justify-content: center; padding-top: 1px; color: var(--ink-2); }
+.search-mark .glyph { width: 18px; height: 18px; display: block; }
+.search-type { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); padding-top: 2px; }
+.search-main { min-width: 0; display: grid; gap: 1px; }
+.search-title { font-family: var(--font-read); font-size: 15px; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.search-when { font-size: 12px; color: var(--muted); }
+.search-snippet { font-family: var(--font-read); font-size: 13px; line-height: 1.4; color: var(--ink-2); }
+.search-empty { padding: 10px; color: var(--muted); }
+.search-open { padding: 6px 8px; }
+.search-open svg { display: block; }
+
 .workspace { display: grid; grid-template-columns: 1fr; min-height: 0; position: relative; }
 .workspace.with-drawer { grid-template-columns: 1fr var(--drawer); }
 .stage { display: flex; flex-direction: column; min-width: 0; min-height: 0; overflow: auto; }
@@ -301,6 +319,9 @@ button, input, select, textarea { font: inherit; color: inherit; }
   .tray-bar, .tray-card { padding-left: 16px; padding-right: 16px; }
   .tray-card { max-height: 58vh; }
   .trail { order: 10; width: 100%; }
+  .search.phone { order: 11; width: 100%; }
+  .search.phone input, .search.phone input:focus { flex: 1; width: auto; font-size: 16px; }
+  .search.phone .search-results { left: 0; right: 0; width: auto; }
 }
 
 /* ---------- Buttons & fields ---------- */

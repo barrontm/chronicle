@@ -16,7 +16,7 @@ import { pendingOnTimeline, pendingWithPlaces, type DraftSet } from '../ai/draft
 import { NoteEditor, NoteView } from './panels/NotePanels';
 import { SeriesEditor } from './panels/SeriesEditor';
 import { SourceEditor, SourceView } from './panels/SourcePanels';
-import { MapPane, YearBar, type FlowOptions, type MapCamera, type MapOptions } from './MapPane';
+import { MapPane, YearBar, type FlowOptions, type MapCamera, type MapFit, type MapOptions } from './MapPane';
 import { FlowEditor, FlowView } from './panels/FlowPanels';
 import { applyUpdate, useUpdateReady } from './updates';
 import { TerritoryEditor, TerritoryImport, TerritoryView } from './panels/TerritoryPanels';
@@ -28,6 +28,8 @@ import { HighlightDraftsContext, useHighlightDraftStore } from './reader/highlig
 import { downloadText } from './util';
 import { useStored } from './useStored';
 import { Splitter } from './Splitter';
+import { Search } from './Search';
+import type { SearchHit } from '../model/search';
 
 export function App({ store }: { store: DocStore }) {
   return (
@@ -239,6 +241,26 @@ function Workspace() {
     },
   }), [stack.length, view, narrow, setView, next]);
 
+  // A search result: open it, and bring the timeline, the year and the map to it.
+  const [mapFit, setMapFit] = useState<MapFit | undefined>();
+  const pickResult = (hit: SearchHit) => {
+    setMenu(null);
+    if (hit.type === 'note' || hit.type === 'source') { setStack([{ type: hit.type, id: hit.id }]); return; }
+    // A highlight opens the entry it's on, if any; otherwise the highlights in the Library.
+    let h: Pick<SearchHit, 'id' | 'year' | 'bounds'> & { type: 'item' | 'territory' };
+    if (hit.type === 'highlight') {
+      const on = doc.highlights.find((x) => x.id === hit.id)?.usedBy.map((id) => doc.items.find((i) => i.id === id)).find((i) => i !== undefined);
+      if (!on) { setStack([{ type: 'library', tab: 'highlights' }]); return; }
+      const place = on.places?.[0];
+      h = { type: 'item', id: on.id, year: on.start ? toDecimalYear(on.start) : undefined, bounds: place ? [place.lon, place.lat, place.lon, place.lat] : undefined };
+    } else h = { ...hit, type: hit.type };
+    setStack([{ type: h.type, id: h.id }]);
+    setPlaying(false);
+    if (h.year !== undefined) setYearState(h.year);
+    if (h.bounds) setMapFit({ bounds: h.bounds, at: Date.now() });
+    if (h.type === 'item') nav.showTime(h.id);
+    else revealMap();
+  };
   const categories = useMemo(() => doc.categories.filter((c) => !hidden.has(c.id)), [doc.categories, hidden]);
   const prominence = useMemo(() => highlightProminence(doc.highlights ?? []), [doc.highlights]);
   const thumbFor = useCallback((m: MediaRef) => mediaUrl(m, true), [mediaUrl]);
@@ -306,6 +328,7 @@ function Workspace() {
             ))}
           </nav>
         )}
+        <Search narrow={narrow} onPick={pickResult} />
         {next ? (
           <button className="btn primary" onClick={() => { setMenu(null); setMapSheet(false); setSearching(true); }}>Open an article</button>
         ) : (<>
@@ -428,6 +451,7 @@ function Workspace() {
                 onOpenFlow={(id) => setStack([{ type: 'flow', id }])}
                 onAddTerritory={() => startNew({ type: 'territory-import', year: Math.round(year) })}
                 camera={mapCamera}
+                fitTo={mapFit}
                 onCamera={setMapCamera}
                 drawing={drawing ? { onDone: (g) => { drawing.onDone(g, Math.round(year)); setDrawing(null); }, onCancel: () => setDrawing(null) } : undefined}
                 picking={picking ? { onDone: (pt) => { picking.onDone(pt); setPicking(null); }, onCancel: () => setPicking(null) } : undefined}
