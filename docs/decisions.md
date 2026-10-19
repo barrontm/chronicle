@@ -2,6 +2,29 @@
 
 A log of choices that shouldn't be re-litigated every session. Newest first. To change a decision, add a new entry that supersedes the old one.
 
+## 2026-10-18 — Phase 3 checkpoint: the overview is polities and world events
+Bob's new ideas change what the zoomed-out timeline is. Until now it was era bands, a row per region, and the "All" stop showed Bob's categories as lanes down the left. Now the top of the timeline shows **polities and world events**. Each polity is a strip whose thickness follows its power, and related polities sit together (Greece, Macedon and Persia near each other, China far off). World events (the Reformation, the split of the Roman Empire, the spread of a religion, the steam engine) are gold. Opening a polity or world event drops its lanes beneath it, and the map follows a picked polity, an open lane, or a click on an area. The full direction is in `docs/vision.md` (The overview).
+
+Bob's choices:
+- **Four lanes, not six dimensions:**
+  - Politics (constitutions, laws, leaders, movements; so the "law" option he asked for is Politics, shown as "Politics and law").
+  - War.
+  - Economy (production and distribution).
+  - Philosophy and religion (leaders, texts, schisms).
+  - There's no People lane. An entry can be in several lanes. The automatic sort never overrides what Bob sets.
+- **Eras become a backdrop**, a labelled wash behind their region's strips, rather than being removed or turned into groups.
+- **Thickness** starts from the territory's area in each year (`areaKm2`, already stored), and Bob's relative strength points (1–5, citing a highlight) override it.
+
+What follows:
+- **Phase order.** Phase 4 is now "The overview", and the old Phase 4 (themes, influences, threads) is Phase 4b. Phase 4 opens with one prototype that also absorbs the long-range one. Polities from the tray moves from Phase 5 to Phase 4, because the strips need polities Bob can add.
+- **Schema v9** holds `lanes` (several per entry and highlight), the overview mark (`overview: 'shown' | 'world'`), `strength` on territories, region parents, and territories as connection ends. The mark replaces the planned landmark star: what shows at the top is Bob's choice, and world events are a kind of mark, not a kind of entry.
+- **The upgrade** fills `lanes` from `dimension` (political → politics, economic → economy, intellectual and religious → ideas). Social and technological have no lane, so those entries are left to the automatic sort, and `dimension` stays readable so nothing is lost.
+- **Renumbering.** Phase 3 ticket 4 already used v8 (place dates), so the later bumps move up two: regimes v10, economies v11, institutions and reception v12, borders and forces v13.
+- **The classic layout** stays until Phase 4 ticket 6 replaces the category-lane overview, then a small ticket drops it.
+- **Inbox items.** Resizable panes and search are small tickets to do before Phase 4. Search folds in paused ticket 9. Box-select with bulk edit and delete waits for v9 so it can set lanes. Better highlight reading (the Laurion passage, ticking several "Becomes" candidates, filling one in by hand) is Phase 4 ticket 3, after the lanes change so its eval cases are rerun once. "Clicking an era zooms the map" was dropped: the map following a picked polity covers it.
+
+This supersedes the level-0 half of "What's in an era" (eras are the backdrop now, and `src/model/polities.ts` will decide what's in a polity the same way) and the landmark star in "Long range: prominence, clusters, threads". Level 1's six dimension lanes become a polity's four lanes. The morph and `eraLanes` are reused.
+
 ## 2026-10-18 — Switch-over: one renderer, the reader layout by default
 vis-timeline, vis-data and moment are gone; both layouts draw with `src/ui/timeline/`, and `TimelineView.tsx` is still the only file that knows the renderer. The main bundle went from 342.9 to 154.4 KB gzipped (−188 KB, more than the 165 KB the spike estimated) and its CSS from 13.6 to 9.9 KB. A unit test (`src/ui/timeline/noVis.test.ts`) fails if any of the three is imported again or comes back into `package.json`, so CI catches it. The reader layout is the default. The setting is a new key, `chronicle.classicLayout` (default false), rather than flipping `chronicle.uiNext`: whoever had tried the new layout keeps it, and so does everyone else, since an old `false` can't tell "never chose" from "chose classic". The old key is left unread. The classic layout (Add menu, Timeline/Map/Both views) stays until the Phase 3 checkpoint decides whether to drop it. In it, the timeline now has the new renderer's behaviour: names that don't fit are shortened or hidden (with clusters) instead of running past their bars, and the year labels are the new axis ticks. `labels.ts`, `arcPath` and `escapeHtml` went with vis-timeline. The e2e specs for the classic layout set `chronicle.classicLayout` before loading and find entries by `.tl-mark[data-id]` or `.tl-label`; two vis-only tests (name spill-over, the classic influence highlight) were dropped, since `layout.test.ts` and `timeline.spec.ts` cover the new renderer's versions. This supersedes "vis-timeline behind an adapter" below.
 

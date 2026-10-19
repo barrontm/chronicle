@@ -28,6 +28,8 @@ Sources are in `docs/prototypes/`; republish one with the Artifact tool after ed
 - **Kind glyphs** (Phase 3 ticket 4, `docs/prototypes/glyphs.html`): https://claude.ai/artifact/AXxe1jZ7nULaJUdG65qJZs. Bob chose on 2026-10-18: Period A · Open bar, Idea B · Spark, Technology B · Cog, Economy D · Stack of coins (he asked for coins more recognisable than the first coin), Work B · Page, Migration B · Chevrons, Place B · Pin with a dot. Not chosen: brackets and a bar under a rule (period), diamond (it clashes with level 1's key moments) and ripple (idea), triangle and nut (technology), the first coin, stream (it suggests sizes nobody knows) and scales (economy), book and picture (work), curved arrow and arrowheads (migration), pin and flag (place).
 
 ## Overview (levels 0 and 1)
+*Being replaced* (Phase 3 checkpoint, 2026-10-18). Level 0 becomes polity strips (thickness = power) and gold world events over a backdrop of eras; level 1 becomes a polity's four lanes (Politics and law, War, Economy, Philosophy and religion). Phase 4's overview prototype rewrites this section. Until then the rules below describe what's built: the motion, the lanes' washes and labels, the phone list and empty-lane wording carry over.
+
 - **Level 0 · bands.** One row per region, its name in spaced small caps at the left with its highlight count. Each era is a block: name, dates, Bob's theme chips (a square in the theme's main dimension pigment, then the label and count), and a strip along the bottom showing the mix of dimensions in its highlights. Approximate starts and ends are dashed umber edges. Dragging or the wheel moves through time.
 - **Zooming in.** Clicking an era, or Ctrl/⌘-wheel or pinching over it, expands its band into the six lanes over `--motion-move` on one continuous time scale; the other rows fade. Clicking a chip zooms in with that theme picked. "All eras", the Eras stop, Esc or pinching out zooms back.
 - **Level 1 · phases.** The era's theme chips run along the top. Six lanes in pigment order, each a faint wash of its pigment, labelled with its name and highlight count. Spans of change are named bars packed into rows (dashed when approximate); key moments are diamonds on a row above. Picking a theme dims everything outside it in every lane. Clicking a span, moment or theme opens the highlights behind it.
@@ -35,7 +37,7 @@ Sources are in `docs/prototypes/`; republish one with the Artifact tool after ed
 - **Empty lanes** say so in Bob's words ("Nothing economic highlighted here yet.").
 
 ## Long range (*proposed*)
-Settled by Phase 4's "long range" prototype; the ideas are in `vision.md` (Long range).
+Settled by Phase 4's overview prototype (which absorbed the long-range one); the landmark star became the overview mark; the ideas are in `vision.md` (Long range).
 - **Landmarks** sit in a row inside each band, drawn as their kind's glyph; never more than fit without overlapping the band's name or chips.
 - **Clusters** are a badge in their kind's glyph with a count and their lead's label; one kind per badge.
 - **Threads** are ribbons in the gutters between region rows: width by count, coloured by the main effect's dimension, labelled with count and effect. On focus, unrelated bands fade to about 35%. "Show all threads" draws every ribbon at about 15%.
