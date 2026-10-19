@@ -417,7 +417,68 @@ const next = {
     },
     goods: GOODS.map(({ q, pts, ...g }) => ({ ...g, points: pts.map(pt) })),
   },
+  // Phase 4: the overview (schema v9, settled by docs/prototypes/polities.html).
+  overview: overviewShapes(),
 };
+
+// Lanes, the overview mark, strength points, regions and their parents, a group of city-states, and the polities
+// that took part in wars and alliances (territories as connection ends, with a side).
+function overviewShapes() {
+  const DIM_LANE = { political: ['politics'], economic: ['economy'], intellectual: ['ideas'], religious: ['ideas'], technological: ['technology'], social: [] };
+  const WAR = /Battle|War\b|Wars\b|Siege|invasion|[Ee]xpedition|[Rr]evolt|surrenders|falls|taken|attack|victories|destroyed|conquest|March of|seizes|takes|garrison|^Delium$|^Mantinea$|^Notium$|^Arginusae$|^Assinarus$|^Cynossema$|^Cyzicus$|^Aegospotami$|^Pylos/;
+  // What Bob set by hand, which the automatic sort never overrides.
+  const SET = {
+    i_sparta_quake: ['nature'], i_plague: ['nature', 'ideas'], i_helot_revolt: ['war', 'politics'], i_citizenship_law: ['politics'],
+    i_juror_pay: ['politics', 'economy'], i_piraeus_plan: ['technology', 'economy'], i_aspasia: ['ideas'], i_arginusae_trial: ['politics'],
+    i_messene: ['politics'], i_lysias: ['ideas'], i_trireme: ['technology', 'war'], i_hoplite: ['technology', 'war'], i_sarissa: ['technology', 'war'],
+    i_catapult: ['technology', 'war'], i_long_walls: ['technology', 'war'], i_megarian_decree: ['economy', 'politics'], i_treasury_moved: ['economy', 'politics'],
+    i_parthenon_built: ['ideas', 'economy'], i_thurii: ['economy', 'politics'], i_sacred_war: ['war', 'ideas'], i_herms: ['ideas', 'politics'],
+    i_trial_socrates: ['ideas', 'politics'], i_pericles: ['politics', 'war'], i_themistocles: ['politics', 'war'], i_leonidas: ['war'],
+    i_lysander: ['war'], i_epaminondas: ['war', 'politics'], i_alexander: ['war', 'politics'], i_philip: ['politics', 'war'],
+    i_hippocrates: ['ideas', 'nature'], i_hippodamus: ['technology'], i_laurion: ['economy', 'nature'], i_owls: ['economy'],
+  };
+  const lanes = {};
+  for (const i of items) {
+    if (i.subject === 'period') continue;
+    const auto = WAR.test(i.title) || i.id.startsWith('i_b_') ? ['war'] : DIM_LANE[i.dimension] ?? [];
+    const l = SET[i.id] ?? auto;
+    if (l.length) lanes[i.id] = l;
+  }
+  const y = (n) => ({ y: bce(n) });
+  const at = (n, level, ...highlightIds) => ({ at: y(n), level, ...(highlightIds.length ? { highlightIds } : {}) });
+  return {
+    lanes,
+    marks: { i_persian: 'shown', i_pelop: 'shown', i_plague: 'shown', i_delian_founded: 'shown', i_alexander_persia: 'world', i_academy: 'shown' },
+    strength: {
+      t_athens: [at(600, 1), at(490, 2), at(479, 3), at(454, 5, 'h_delian'), at(431, 5), at(413, 4, 'h_decelea'), at(404, 2, 'h_thirty'), at(377, 3), at(338, 1, 'h_chaeronea')],
+      t_sparta: [at(700, 3), at(480, 4), at(404, 5, 'h_sparta'), at(371, 2, 'h_thebes'), at(338, 1)],
+      t_thebes: [at(700, 1), at(395, 2), at(371, 4, 'h_thebes'), at(362, 3), at(338, 1, 'h_chaeronea')],
+      t_macedon: [at(700, 1), at(359, 2, 'h_macedon'), at(338, 5, 'h_chaeronea'), at(323, 5)],
+    },
+    // A territory's region, and each region's parent (Mediterranean › Greece).
+    regions: { t_athens: 'Greece', t_sparta: 'Greece', t_corinth: 'Greece', t_thebes: 'Greece', t_delian: 'Greece', t_macedon: 'Macedon', t_syracuse: 'Italy' },
+    regionParents: { Greece: 'Mediterranean', Macedon: 'Mediterranean', Italy: 'Mediterranean' },
+    groups: [{ id: 'g_classical_greece', title: 'Classical Greece', region: 'Greece', members: ['t_athens', 't_sparta', 't_corinth', 't_thebes'] }],
+    // The Delian League is Athens' reach, not a polity of its own: it draws as Athens' alliance on the map.
+    alliances: { t_delian: { leader: 't_athens' } },
+    // Who took part, and on which side: the contacts the map marks when a polity is picked.
+    participants: [
+      { entryId: 'i_persian', how: 'war', sides: [['t_athens', 't_sparta', 't_corinth'], []] },
+      { entryId: 'i_pelop', how: 'war', sides: [['t_athens'], ['t_sparta', 't_corinth', 't_thebes']] },
+      { entryId: 'i_sybota', how: 'war', sides: [['t_athens'], ['t_corinth']] },
+      { entryId: 'i_sicilian', how: 'war', sides: [['t_athens'], ['t_syracuse', 't_sparta', 't_corinth']] },
+      { entryId: 'i_corinthian_war', how: 'war', sides: [['t_thebes', 't_athens', 't_corinth'], ['t_sparta']] },
+      { entryId: 'i_leuctra', how: 'war', sides: [['t_thebes'], ['t_sparta']] },
+      { entryId: 'i_mantinea362', how: 'war', sides: [['t_thebes'], ['t_sparta', 't_athens']] },
+      { entryId: 'i_chaeronea', how: 'war', sides: [['t_macedon'], ['t_athens', 't_thebes']] },
+      { entryId: 'i_lamian', how: 'war', sides: [['t_athens'], ['t_macedon']] },
+      { entryId: 'i_delian_founded', how: 'alliance', sides: [['t_athens', 't_delian']] },
+      { entryId: 'i_second_league', how: 'alliance', sides: [['t_athens', 't_thebes']] },
+      { entryId: 'i_corinth_league', how: 'alliance', sides: [['t_macedon', 't_corinth']] },
+      { entryId: 'i_thirty_years_peace', how: 'peace', sides: [['t_athens'], ['t_sparta']] },
+    ],
+  };
+}
 function regime(r) {
   return {
     id: r.id, title: r.title, form: r.form, from: r.from, to: r.to, ...(r.client ? { client: r.client } : {}), ...(r.approxFrom ? { approxFrom: true } : {}),
