@@ -547,7 +547,6 @@ async function readerBecomes(p, prefix) {
   const becomes = p.getByTestId('capture-tray').getByRole('group', { name: 'Becomes' });
   await becomes.getByRole('checkbox', { name: /Mines of Lauri.*Place/ }).click();
   await becomes.getByRole('checkbox', { name: /Themistocles/ }).click();
-  await becomes.getByRole('checkbox', { name: /Classical Athens/ }).click(); // says why it can't be ticked
   await p.waitForTimeout(700);
   await shot(p, `${prefix}-reader-becomes`);
   await becomes.getByRole('button', { name: /Something else/ }).click();
@@ -564,6 +563,89 @@ async function readerBecomes(p, prefix) {
 if (any('desktop-reader-becomes') || any('desktop-reader-own')) await readerBecomes(await page('desktop-reader-becomes', desktop), 'desktop');
 if (any('dark-reader-becomes') || any('dark-reader-own')) await readerBecomes(await page('dark-reader-becomes', { ...desktop, colorScheme: 'dark' }), 'dark');
 if (any('phone-reader-becomes') || any('phone-reader-own')) await readerBecomes(await page('phone-reader-becomes', { viewport: { width: 412, height: 860 }, isMobile: true, hasTouch: true }), 'phone');
+
+// A polity from the tray: Sparta, linked in a passage about the war. The maps won't load first (the held card), then do.
+async function readerPolity(p, prefix) {
+  const cors = { 'Access-Control-Allow-Origin': '*' };
+  const QIDS = { Pericles: 'Q80398', Peloponnesian_War: 'Q33745', Sparta: 'Q5690' };
+  await p.route('https://en.wikipedia.org/w/rest.php/v1/search/page**', (r) => r.fulfill({ headers: cors, json: { pages: [{ key: 'Pericles', title: 'Pericles', description: 'Athenian statesman', thumbnail: null }] } }));
+  await p.route('https://en.wikipedia.org/w/rest.php/v1/page/*/html', (r) => r.fulfill({
+    headers: { ...cors, 'Content-Type': 'text/html' },
+    body: '<!DOCTYPE html><html about="https://en.wikipedia.org/wiki/Special:Redirect/revision/42"><head><title>Pericles</title></head><body>' +
+      '<section data-mw-section-id="0"><p>Pericles was a Greek statesman and general of Athens during its golden age.</p>' +
+      '<p>He took Athens into the <a rel="mw:WikiLink" href="./Peloponnesian_War" title="Peloponnesian War">Peloponnesian War</a> against <a rel="mw:WikiLink" href="./Sparta" title="Sparta">Sparta</a>, ' +
+      'trusting the fleet and the Long Walls to outlast the Spartan army.</p></section></body></html>',
+  }));
+  await p.route('https://en.wikipedia.org/api/rest_v1/page/summary/**', (r) => {
+    const key = decodeURIComponent(new URL(r.request().url()).pathname.split('/').at(-1));
+    return r.fulfill({ headers: cors, json: { title: key.replace(/_/g, ' '), wikibase_item: QIDS[key], description: 'Ancient Greek city-state', extract: `${key} was a city-state in Laconia.`, content_urls: { desktop: { page: `https://en.wikipedia.org/wiki/${key}` } } } });
+  });
+  const dir = new URL('../tests/fixtures/subjects/', import.meta.url);
+  const recs = readdirSync(dir).map((f) => JSON.parse(readFileSync(new URL(f, dir), 'utf8')));
+  const parents = Object.assign({}, ...recs.map((r) => r.parents));
+  const labels = Object.assign({}, ...recs.map((r) => r.labels));
+  await p.route('https://www.wikidata.org/w/api.php**', (r) => {
+    const u = new URL(r.request().url());
+    const title = u.searchParams.get('titles');
+    if (title) {
+      const rec = recs.find((x) => x.title === title);
+      return r.fulfill({ headers: cors, json: rec ? rec.entity : { entities: { '-1': { site: 'enwiki', title, missing: '' } } } });
+    }
+    const ids = (u.searchParams.get('ids') ?? '').split('|');
+    const rec = u.searchParams.get('props') === 'claims' && recs.find((x) => ids[0] in x.entity.entities);
+    if (rec) return r.fulfill({ headers: cors, json: rec.entity });
+    if (u.searchParams.get('action') === 'wbgetclaims') return r.fulfill({ headers: cors, json: { claims: {} } });
+    return r.fulfill({ headers: cors, json: { entities: Object.fromEntries(ids.map((q) => [q, { id: q, labels: labels[q] ? { en: { value: labels[q] } } : {} }])) } });
+  });
+  await p.route('https://query.wikidata.org/sparql**', (r) => {
+    const ids = [...(new URL(r.request().url()).searchParams.get('query') ?? '').matchAll(/wd:(Q\d+)/g)].map((m) => m[1]);
+    const entity = (q) => ({ value: `http://www.wikidata.org/entity/${q}` });
+    return r.fulfill({ headers: cors, json: { results: { bindings: ids.flatMap((c) => (parents[c] ?? []).map((x) => ({ c: entity(c), p: entity(x) }))) } } });
+  });
+  // Laconia and Messenia, roughly: Sparta's borders on every map of its lifetime.
+  let mapsUp = false;
+  const sparta = [[[21.6, 36.45], [22.95, 36.45], [23.15, 37.0], [22.6, 37.45], [21.7, 37.35], [21.6, 36.45]]];
+  await p.route('https://raw.githubusercontent.com/aourednik/historical-basemaps/**', (r) => (mapsUp
+    ? r.fulfill({ headers: cors, json: { type: 'FeatureCollection', features: [{ type: 'Feature', properties: { NAME: 'Sparta' }, geometry: { type: 'Polygon', coordinates: sparta } }] } })
+    : r.fulfill({ status: 503, headers: cors, body: 'down' })));
+  await p.getByTestId('article-search').getByLabel('Search Wikipedia').fill('pericles');
+  await p.getByTestId('article-search').getByRole('button', { name: 'Search' }).click();
+  await p.getByTestId('article-results').getByRole('button').first().click();
+  await p.getByTestId('article').getByText('outlast the Spartan army').waitFor();
+  const at = await p.evaluate((phone) => {
+    const para = [...document.querySelectorAll('.reader-text p')].find((x) => x.textContent.includes('took Athens'));
+    const r = document.createRange();
+    r.selectNodeContents(para);
+    if (!phone) { getSelection().removeAllRanges(); getSelection().addRange(r); }
+    const b = r.getClientRects()[r.getClientRects().length - 1];
+    return { x: b.left + 20, y: b.top + b.height / 2 };
+  }, prefix === 'phone');
+  if (prefix === 'phone') await p.touchscreen.tap(at.x, at.y);
+  else { await p.getByRole('button', { name: 'Highlight' }).waitFor(); await p.keyboard.press('h'); }
+  await p.evaluate(() => getSelection().removeAllRanges());
+  const tray = p.getByTestId('capture-tray');
+  const becomes = tray.getByRole('group', { name: 'Becomes' });
+  await becomes.getByRole('checkbox', { name: /Sparta/ }).click();
+  await becomes.getByRole('checkbox', { name: /Peloponnesian War/ }).click();
+  await tray.getByRole('button', { name: 'Add to map and timeline' }).click();
+  await tray.getByTestId('no-borders').waitFor();
+  await tray.getByTestId('no-borders').scrollIntoViewIfNeeded();
+  await p.waitForTimeout(400);
+  await shot(p, `${prefix}-reader-polity-held`);
+  await tray.getByRole('button', { name: 'Cancel' }).click();
+  mapsUp = true;
+  await tray.getByRole('button', { name: 'Add to map and timeline' }).click();
+  await tray.locator('.tray-done').waitFor();
+  await tray.getByRole('button', { name: 'Open Sparta' }).click();
+  await p.getByTestId('item-view').getByRole('button', { name: 'Show its time' }).click();
+  if (prefix === 'phone') await p.getByRole('button', { name: 'Close panel' }).click().catch(() => {});
+  await p.waitForTimeout(1200);
+  await shot(p, `${prefix}-reader-polity`);
+}
+const noSW = { serviceWorkers: 'block' };
+if (any('desktop-reader-polity-held') || any('desktop-reader-polity')) await readerPolity(await page('desktop-reader-polity', { ...desktop, ...noSW }), 'desktop');
+if (any('dark-reader-polity-held') || any('dark-reader-polity')) await readerPolity(await page('dark-reader-polity', { ...desktop, ...noSW, colorScheme: 'dark' }), 'dark');
+if (any('phone-reader-polity-held') || any('phone-reader-polity')) await readerPolity(await page('phone-reader-polity', { viewport: { width: 412, height: 860 }, isMobile: true, hasTouch: true, ...noSW }), 'phone');
 
 // Draft with AI: a recorded run replayed (no network, no key needed), one entry accepted.
 async function aiDraft(p, prefix) {

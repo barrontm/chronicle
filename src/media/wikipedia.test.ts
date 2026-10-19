@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Source, TimelineItem } from '../model/types';
 import {
+  asLifespan,
   asPlace,
   buildCoordsUrl,
   buildDraft,
@@ -99,6 +100,14 @@ describe('parsing responses', () => {
     expect(parseCoords({ claims: { P625: [{ mainsnak: { snaktype: 'value', datavalue: { value: { latitude: 51.5, longitude: -0.12 } } } }] } })).toEqual({ lat: 51.5, lon: -0.12 });
     expect(parseCoords({ claims: {} })).toBeUndefined();
     expect(parseLabels({ entities: { Q84: { labels: { en: { value: 'London' } } }, Q2: { labels: {} } } })).toEqual({ Q84: 'London' });
+  });
+});
+
+describe('asLifespan', () => {
+  it('makes a polity a lifespan from its founding to its dissolution, either of which may be unknown', () => {
+    const item = { id: 'i', kind: 'event', title: 'Sparta', start: { y: -899 }, categoryId: 'c', updatedAt: 0 } as const;
+    expect(asLifespan(item, { start: { y: -899, approx: true }, end: { y: -191 } } as never, 'polity')).toMatchObject({ kind: 'span', subject: 'polity', start: { y: -899 }, end: { y: -191 } });
+    expect(asLifespan(item, { start: { y: -899 } } as never, 'polity')).not.toHaveProperty('end');
   });
 });
 

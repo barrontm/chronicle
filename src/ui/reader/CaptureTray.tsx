@@ -3,12 +3,15 @@ import {
   acceptConnection, acceptEntry, addBecoming, statusIn, undoBecoming, undoConnection, undoEntry, waiting,
   type Became, type Becoming, type DraftConnection, type DraftEntry, type DraftSet, type DraftStatus,
 } from '../../ai/draft';
+import { BASEMAPS_CREDIT, bordersFor } from '../../data/basemaps';
+import { areaKm2, type Area } from '../../data/geo';
 import { lookUpPlace, type ItemDraft } from '../../media/wikipedia';
 import { formatItemDates, toDecimalYear } from '../../model/dates';
-import { CANT_ADD, defaultChoices, ownEntry } from '../../model/passage';
+import { CANT_ADD, defaultChoices, ownEntry, polityTerritory, territoryOf } from '../../model/passage';
+import { upsert } from '../../model/doc';
 import { describeRelation } from '../../model/doc';
 import { KIND_LABEL, factRelations, findInChronicle, subjectFacts, type Subject } from '../../model/subjects';
-import type { Highlight, ItemKind, Lane, Place, Relation } from '../../model/types';
+import type { Highlight, ItemKind, Lane, Place, Relation, TerritorySnapshot } from '../../model/types';
 import { useDoc } from '../DocContext';
 import { DraftConnectionRow, DraftEntryRow, DroppedList } from '../panels/DraftRows';
 import { useApiKey, useOnline } from '../useAi';
@@ -53,7 +56,7 @@ const pigment = (d?: Lane) => `var(--pig-${PIGMENT[d ?? 'none']})`;
  * Otherwise one line counts the article's highlights. Closing the card, or
  * moving on, keeps the highlight as it is.
  */
-export function CaptureTray({ marks, candidates, articleTitle, onAdd, onDraftPage, onAsk, onOpenRecord, onEdit, onShowYear, onOpenDrafting }: {
+export function CaptureTray({ marks, candidates, articleTitle, onAdd, onDraftPage, onAsk, onOpenRecord, onEdit, onShowYear, onOpenDrafting, onDraw }: {
   marks: Marks;
   /** What the open highlight could become: the article's subject first, then the pages its passage links. */
   candidates: { key: string; state: SubjectState }[];
@@ -69,6 +72,8 @@ export function CaptureTray({ marks, candidates, articleTitle, onAdd, onDraftPag
   onEdit?: (d: ItemDraft) => void;
   onShowYear?: (year: number) => void;
   onOpenDrafting?: () => void;
+  /** Draw borders on the map (today's draw tool), for a polity the historical maps don't have. */
+  onDraw?: (onDone: (g: Area, year: number) => void) => void;
 }) {
   const { doc, update } = useDoc();
   const drafts = useHighlightDrafts();
@@ -79,6 +84,10 @@ export function CaptureTray({ marks, candidates, articleTitle, onAdd, onDraftPag
   const claudeSection = useRef<HTMLElement>(null);
   const [flash, setFlash] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  /** What a slow add is doing now ("Looking for Sparta’s borders…"). */
+  const [progress, setProgress] = useState<string | null>(null);
+  /** An add held back because a polity has no borders yet, until Bob draws them or adds it without. */
+  const [held, setHeld] = useState<{ b: Becoming; names: string[]; ticks: string[]; missing: { id: string; title: string }[]; note?: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
   /** The candidates Bob ticked, per highlight, this session (until he does, `defaultChoices`). */
   const [ticked, setTicked] = useState<Record<string, string[]>>({});
@@ -111,6 +120,8 @@ export function CaptureTray({ marks, candidates, articleTitle, onAdd, onDraftPag
     setBusy(false);
     setWhyNot(null);
     setLast(null);
+    setHeld(null);
+    setProgress(null);
     setOwn(null);
     setOwnError(null);
     if (!openId) return;
@@ -244,28 +255,77 @@ export function CaptureTray({ marks, candidates, articleTitle, onAdd, onDraftPag
     );
   };
 
-  /** Link what Bob has and add the rest straight away, through the same path as Claude's drafts; one Undo takes it all back. */
+  /**
+   * Link what Bob has and add the rest straight away, through the same path as Claude's drafts;
+   * one Undo takes it all back. A polity comes with its territory, its borders found on the
+   * historical maps by name; when they aren't there, Bob draws them or adds it without.
+   */
   const addTicked = async () => {
     setBusy(true);
     setError(null);
     try {
       const b: Becoming = { link: toLink.map((r) => ({ id: r.have!.id, relations: kept(r) })), add: [] };
       const names = toLink.map((r) => r.have!.title);
+      const missing: { id: string; title: string }[] = [];
+      let note: string | undefined;
       for (const r of toAdd) {
         const d = await onDraftPage({ ...h, subjectQid: r.subject!.qid }, r.key);
         if ('duplicateOf' in d) b.link.push({ id: d.duplicateOf });
-        else b.add.push({ item: d.item, newSources: d.newSources, relations: d.relations });
-        names.push('duplicateOf' in d ? doc.items.find((i) => i.id === d.duplicateOf)?.title ?? r.title : d.item.title);
+        else if (d.item.subject === 'polity') {
+          const { item } = d;
+          let snaps: TerritorySnapshot[] = [];
+          if (!territoryOf(item, doc.territories)?.snapshots.length && item.start) {
+            setProgress(`Looking for ${item.title}’s borders on the historical maps…`);
+            try {
+              snaps = (await bordersFor([r.subject!.label ?? '', r.key, item.title], item.start, item.end)).snapshots;
+            } catch (e) {
+              note = navigator.onLine ? (e as Error).message : 'You’re offline, so the historical maps can’t be searched.';
+            }
+          }
+          const territory = polityTerritory(item, doc.territories, snaps, BASEMAPS_CREDIT);
+          const bordered = territory.next.snapshots.length > 0;
+          if (!bordered) missing.push({ id: territory.next.id, title: item.title });
+          // With borders, the territory is where it is on the map; without, its pin stands in for now.
+          const { places: _pin, ...rest } = item;
+          b.add.push({ item: bordered ? rest : item, newSources: d.newSources, relations: d.relations, territory });
+        } else b.add.push({ item: d.item, newSources: d.newSources, relations: d.relations });
+        if (!('duplicateOf' in d)) names.push(d.item.title);
+        else names.push(doc.items.find((i) => i.id === d.duplicateOf)?.title ?? r.title);
       }
-      const { became } = addBecoming(doc, h.id, b);
-      update((d) => addBecoming(d, h.id, b).doc);
-      setTicked(({ [h.id]: _done, ...t }) => t);
-      setLast({ became, msg: `Added ${inWords(names)} to your map and timeline.`, ticks: chosenKeys });
+      if (missing.length) setHeld({ b, names, ticks: chosenKeys, missing, note });
+      else finish(b, names, chosenKeys);
     } catch (e) {
       setError((e as Error).message);
     } finally {
       setBusy(false);
+      setProgress(null);
     }
+  };
+
+  /** Put what was ticked in the doc, and show the year where a new polity's borders begin. */
+  const finish = (b: Becoming, names: string[], ticks: string[], msg?: string) => {
+    const { became } = addBecoming(doc, h.id, b);
+    update((d) => addBecoming(d, h.id, b).doc);
+    setTicked(({ [h.id]: _done, ...t }) => t);
+    setHeld(null);
+    setLast({ became, msg: msg ?? `Added ${inWords(names)} to your map and timeline.`, ticks });
+    const polity = b.add.find((a) => a.territory);
+    const at = polity?.territory?.next.snapshots[0]?.from ?? polity?.item.start;
+    if (at) onShowYear?.(Math.round(toDecimalYear(at)));
+  };
+
+  /** Add the held polity, then draw its borders on the map: they last its whole life, until Bob edits them. */
+  const drawBorders = (p: { id: string; title: string }) => {
+    if (!held || !onDraw) return;
+    const item = held.b.add.find((a) => a.territory?.next.id === p.id)?.item;
+    finish(held.b, held.names, held.ticks, `Added ${inWords(held.names)} to your map and timeline. Draw ${p.title}’s borders on the map.`);
+    onDraw((geometry, year) => update((d) => {
+      const t = d.territories.find((x) => x.id === p.id);
+      if (!t) return d;
+      const from = item?.start ?? { y: year };
+      const snap = { from, ...(item?.end ? { to: item.end } : {}), geometry, areaKm2: Math.round(areaKm2(geometry)) };
+      return upsert(d, 'territories', { ...t, snapshots: [...t.snapshots, snap], source: { name: 'Drawn by me' } });
+    }));
   };
 
   /** "Something else…": Bob's own entry, its place looked up on the map, saved like a ticked one. */
@@ -332,7 +392,10 @@ export function CaptureTray({ marks, candidates, articleTitle, onAdd, onDraftPag
         {justKeep}
       </>
     );
-  } else if (count === 1) {
+  } else if (held) {
+    // Its choices sit with the notice, under the list.
+    actions = null;
+  } else if (count === 1 && toAdd[0].subject?.kind !== 'polity') {
     const r = toAdd[0];
     const add = async () => {
       setBusy(true);
@@ -349,7 +412,7 @@ export function CaptureTray({ marks, candidates, articleTitle, onAdd, onDraftPag
   } else {
     actions = (
       <>
-        <button type="button" className="btn primary" disabled={busy} onClick={() => void addTicked()}>{busy ? 'Reading Wikipedia…' : `Add ${count} to map and timeline`}</button>
+        <button type="button" className="btn primary" disabled={busy} onClick={() => void addTicked()}>{busy ? 'Reading Wikipedia…' : count === 1 ? 'Add to map and timeline' : `Add ${count} to map and timeline`}</button>
         {justKeep}
       </>
     );
@@ -570,6 +633,21 @@ export function CaptureTray({ marks, candidates, articleTitle, onAdd, onDraftPag
         <p className="tray-note">
           All of this comes from Wikidata{rows.some((r) => isTicked(r) && r.subject && subjectFacts(r.subject).some((f) => f.values.some((v) => inChronicle(v.qid)))) ? '; underlined names are already in Chronicle' : ''}.
         </p>
+      )}
+      {progress && <p className="tray-note" role="status">{progress}</p>}
+      {held && (
+        <div className="no-borders" data-testid="no-borders">
+          {/* A polity the historical maps don't have: draw its borders, or add it without them for now. */}
+          <p className="notice" role="status">
+            {held.note ?? `The historical maps don’t have ${inWords(held.missing.map((m) => `${m.title}’s`))} borders.`}
+            {' '}{held.missing.length === 1 && onDraw ? 'Draw them on the map, or add it without borders for now.' : 'Add without borders for now, and draw them from the territory later.'}
+          </p>
+          <div className="own-acts">
+            {held.missing.length === 1 && onDraw && <button type="button" className="btn primary" onClick={() => drawBorders(held.missing[0])}>Draw its borders</button>}
+            <button type="button" className={held.missing.length === 1 && onDraw ? 'btn' : 'btn primary'} onClick={() => finish(held.b, held.names, held.ticks)}>Add without borders yet</button>
+            <button type="button" className="btn" onClick={() => setHeld(null)}>Cancel</button>
+          </div>
+        </div>
       )}
       {last && (
         <p className="tray-done" role="status">

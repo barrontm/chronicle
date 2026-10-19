@@ -79,6 +79,21 @@ async function savedItem(page: Page, title: string) {
   }), title);
 }
 
+/** A territory as saved on this device. */
+async function savedTerritory(page: Page, title: string) {
+  return page.evaluate((t) => new Promise<unknown>((resolve) => {
+    const req = indexedDB.open('chronicle');
+    req.onsuccess = () => {
+      const tx = req.result.transaction(['docs', 'meta']);
+      const id = tx.objectStore('meta').get('activeDocId');
+      id.onsuccess = () => {
+        const doc = tx.objectStore('docs').get(id.result);
+        doc.onsuccess = () => { req.result.close(); resolve(doc.result?.territories.find((x: { title: string }) => x.title === t)); };
+      };
+    };
+  }), title);
+}
+
 /** The page summaries "Add to map and timeline" starts from. */
 async function mockSummaries(page: Page) {
   await page.route('https://en.wikipedia.org/api/rest_v1/page/summary/**', (route) => {
@@ -432,17 +447,12 @@ test('a highlight becomes a page its passage links: pick the war, add it, and se
   await expect(ticks).toHaveCount(3);
   await expect(ticks.nth(0)).toContainText('PericlesThis article · Person');
   await expect(ticks.nth(1)).toContainText('Peloponnesian WarWar');
-  await expect(ticks.nth(2)).toContainText('SpartaPolity · can’t be added yet');
+  await expect(ticks.nth(2)).toContainText('SpartaPolity');
+  await expect(ticks.nth(2)).not.toContainText('can’t be added');
   const war = tray.getByRole('checkbox', { name: /Peloponnesian War/ });
   await expect(war).toHaveAttribute('aria-checked', 'true');
   await expect(ticks.nth(0)).toHaveAttribute('aria-checked', 'false');
   await expect(tray).toContainText('431 BCE – 25 Apr 404 BCE');
-
-  // Sparta is a polity: it can't be ticked from here, and the card says why.
-  const sparta = tray.getByRole('checkbox', { name: /Sparta/ });
-  await sparta.click();
-  await expect(tray).toContainText('Polities come from the territory tools');
-  await expect(sparta).toHaveAttribute('aria-checked', 'false');
 
   // The war alone is ticked: it's added through the editor, quoting the highlight and citing the article Bob read.
   await tray.getByRole('button', { name: 'Add to map and timeline' }).click();
@@ -474,6 +484,77 @@ test('a highlight becomes a page its passage links: pick the war, add it, and se
   await page.getByRole('button', { name: 'Library' }).click();
   await page.getByRole('tab', { name: /Highlights/ }).click();
   await expect(page.getByTestId('highlight-group')).toContainText('on Peloponnesian War');
+});
+
+test.describe('a polity from the tray', () => {
+  // The service worker would answer historical-basemaps from its cache.
+  test.use({ serviceWorkers: 'block' });
+
+  test('Sparta, linked in a passage, comes with its territory from the historical maps and its lifespan bar on the timeline', async ({ page }) => {
+    test.slow();
+    await mockArticles(page);
+    await mockSummaries(page);
+    // Every map of Sparta's lifetime has it, in Laconia; the first time they won't load.
+    let mapsUp = false;
+    const laconia = [[[22.2, 36.7], [22.9, 36.7], [22.9, 37.4], [22.2, 37.4], [22.2, 36.7]]];
+    await page.route('https://raw.githubusercontent.com/aourednik/historical-basemaps/**', (route) => mapsUp
+      ? route.fulfill({ headers: cors, json: { type: 'FeatureCollection', features: [
+        { type: 'Feature', properties: { NAME: 'Sparta' }, geometry: { type: 'Polygon', coordinates: laconia } },
+        { type: 'Feature', properties: { NAME: 'Achaemenid Empire' }, geometry: { type: 'Polygon', coordinates: [[[40, 30], [50, 30], [50, 38], [40, 38], [40, 30]]] } },
+      ] } })
+      : route.fulfill({ status: 503, headers: cors, body: 'down' }));
+    await open(page);
+    await search(page, 'pericles', 'Pericles');
+    await expect(page.getByTestId('reader').getByRole('link', { name: 'Sparta' })).toBeVisible();
+    await page.evaluate(() => {
+      const p = [...document.querySelectorAll('.reader-text p')].find((x) => x.textContent!.includes('took Athens'))!;
+      const r = document.createRange();
+      r.selectNodeContents(p);
+      getSelection()!.removeAllRanges();
+      getSelection()!.addRange(r);
+    });
+    await expect(page.getByRole('button', { name: 'Highlight' })).toBeVisible();
+    await page.keyboard.press('h');
+
+    // Sparta can be ticked now; the war is ticked first, so Bob swaps them.
+    const tray = page.getByTestId('capture-tray');
+    const sparta = tray.getByRole('checkbox', { name: /Sparta/ });
+    await expect(sparta).toContainText('Polity');
+    await sparta.click();
+    await tray.getByRole('checkbox', { name: /Peloponnesian War/ }).click();
+    await expect(sparta).toHaveAttribute('aria-checked', 'true');
+
+    // The maps won't load: the tray says so and offers to draw the borders or add it without them.
+    await tray.getByRole('button', { name: 'Add to map and timeline' }).click();
+    await expect(tray.getByTestId('no-borders')).toContainText('couldn’t be loaded (503)');
+    await expect(tray.getByRole('button', { name: 'Draw its borders' })).toBeVisible();
+    await expect(tray.getByRole('button', { name: 'Add without borders yet' })).toBeVisible();
+    await tray.getByRole('button', { name: 'Cancel' }).click();
+    await expect.poll(() => savedItem(page, 'Sparta')).toBeUndefined();
+
+    // With the maps back, Sparta's borders come from every map of its lifetime.
+    mapsUp = true;
+    await tray.getByRole('button', { name: 'Add to map and timeline' }).click();
+    await expect(tray.locator('.tray-done')).toContainText('Added Sparta to your map and timeline.');
+    await expect(sparta).toContainText('Linked');
+    await expect.poll(() => savedItem(page, 'Sparta')).toMatchObject({ kind: 'span', subject: 'polity', wikidataId: 'Q5690', start: { y: -899 }, end: { y: -191 } });
+    const item = (await savedItem(page, 'Sparta')) as { id: string; places?: unknown };
+    expect(item.places).toBeUndefined();
+    const territory = (await savedTerritory(page, 'Sparta')) as { itemId: string; wikidataId: string; snapshots: { from: { y: number } }[]; source: { name: string } };
+    expect(territory).toMatchObject({ itemId: item.id, wikidataId: 'Q5690', source: { name: expect.stringContaining('historical-basemaps') } });
+    expect(territory.snapshots.map((x) => x.from.y)).toEqual([-899, -699, -499, -399, -322, -299, -199]);
+
+    // The map shows it in the year it began, and the timeline draws its lifespan bar with the polity's square.
+    await expect(page.locator('[data-testid=map][data-ready]')).toBeVisible();
+    await expect(page.locator('.map-label.territory', { hasText: 'Sparta' })).toBeVisible();
+    await tray.getByRole('button', { name: 'Open Sparta' }).click();
+    const entry = page.getByTestId('item-view');
+    await expect(entry.getByRole('heading', { name: 'Sparta' })).toBeVisible();
+    await entry.getByRole('button', { name: 'Show its time' }).click();
+    const svg = page.locator('.tl-svg');
+    await expect(svg.locator(`rect[data-id="${item.id}"]`)).toBeVisible();
+    await expect(svg.locator(`use[data-id="${item.id}"]`)).toHaveAttribute('href', /-g-polity$/);
+  });
 });
 
 test('Bob’s Laurion passage becomes several records: two candidates ticked, one filled in by hand, and Claude’s event pinned at the mines', async ({ page }) => {
@@ -526,9 +607,11 @@ test('Bob’s Laurion passage becomes several records: two candidates ticked, on
   const tray = page.getByTestId('capture-tray');
   await expect(tray.getByRole('blockquote')).toContainText('The silver mines of Laurion');
 
-  // The article is a polity, so nothing is ticked at first; the mines (a place) and Themistocles can be.
+  // The article is a polity, which Bob ticks himself, so nothing is ticked at first.
   const becomes = tray.getByRole('group', { name: 'Becomes' });
-  await expect(becomes.getByRole('checkbox', { name: /Classical Athens/ })).toContainText('This article · Polity · can’t be added yet');
+  const athens = becomes.getByRole('checkbox', { name: /Classical Athens/ });
+  await expect(athens).toContainText('This article · Polity');
+  await expect(athens).toHaveAttribute('aria-checked', 'false');
   // Wikidata calls the mines "Mines of Laurium", Wikipedia "Mines of Laurion".
   const mines = becomes.getByRole('checkbox', { name: /Mines of Lauri/ });
   const themistocles = becomes.getByRole('checkbox', { name: /Themistocles/ });

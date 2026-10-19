@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { defaultChoices, ownEntry, isDatePage, pageKey, passageCandidates, type Choice, type WikiLink } from './passage';
+import { CANT_ADD, defaultChoices, ownEntry, isDatePage, pageKey, passageCandidates, polityTerritory, territoryOf, type Choice, type WikiLink } from './passage';
+import type { Territory, TimelineItem } from './types';
 
 const link = (start: number, end: number, key: string): WikiLink => ({ start, end, key });
 
@@ -45,8 +46,9 @@ describe('defaultChoices', () => {
     expect(defaultChoices(k('person'))).toEqual([0]);
   });
 
-  it('ticks nothing when the article is a kind that can’t be added and nothing else comes first', () => {
-    // Classical Athens (a polity), the mines of Laurion (a place), Themistocles.
+  it('ticks nothing when the article is a kind that can’t be added, or a polity, and nothing else comes first', () => {
+    // Classical Athens (a polity, addable but Bob ticks it himself), the mines of Laurion (a place), Themistocles.
+    expect(CANT_ADD.polity).toBeUndefined();
     expect(defaultChoices(k('polity', 'place', 'person'))).toEqual([]);
     expect(defaultChoices(k('idea'))).toEqual([]);
   });
@@ -84,5 +86,40 @@ describe('ownEntry', () => {
     expect(ownEntry({ ...form, start: 'the 480s' }, h, 'x')).toEqual({ problem: 'Chronicle can’t read “the 480s” as a date. Try 483 BCE or c. 450 BCE.' });
     expect(ownEntry({ ...form, kind: 'span' }, h, 'x')).toEqual({ problem: 'A period needs an end date.' });
     expect(ownEntry({ ...form, kind: 'span', end: '490 BCE' }, h, 'x')).toEqual({ problem: 'It ends before it starts.' });
+  });
+});
+
+describe('a polity added from the tray', () => {
+  const sparta: TimelineItem = {
+    id: 'i_sparta', kind: 'span', subject: 'polity', title: 'Sparta', start: { y: -899, approx: true }, end: { y: -191 },
+    categoryId: 'politics', wikidataId: 'Q5690', region: 'Greece', updatedAt: 0,
+  };
+  const snap = { from: { y: -699 }, to: { y: -499 }, areaKm2: 8000 };
+  const mine = (over: Partial<Territory>): Territory => ({ id: 't_mine', title: 'Sparta', categoryId: 'c', snapshots: [], updatedAt: 1, ...over });
+
+  it('gets a new territory with the article’s Wikidata id, its region and the borders found', () => {
+    const { next, before } = polityTerritory(sparta, [], [snap], { name: 'maps' });
+    expect(before).toBeUndefined();
+    expect(next).toMatchObject({ title: 'Sparta', categoryId: 'politics', itemId: 'i_sparta', wikidataId: 'Q5690', region: 'Greece', snapshots: [snap], source: { name: 'maps' } });
+    // Without borders yet: no snapshots, and no source to credit.
+    const bare = polityTerritory(sparta, [], [], { name: 'maps' }).next;
+    expect(bare.snapshots).toEqual([]);
+    expect(bare).not.toHaveProperty('source');
+  });
+
+  it('takes over the territory Bob already has for it, keeping his borders', () => {
+    const drawn = mine({ snapshots: [{ from: { y: -500 } }], source: { name: 'Drawn by me' } });
+    const { next, before } = polityTerritory(sparta, [drawn], [snap], { name: 'maps' });
+    expect(before).toBe(drawn);
+    expect(next).toMatchObject({ id: 't_mine', itemId: 'i_sparta', wikidataId: 'Q5690', snapshots: drawn.snapshots, source: { name: 'Drawn by me' } });
+    // One of his without borders gets the ones found.
+    expect(polityTerritory(sparta, [mine({})], [snap], { name: 'maps' }).next.snapshots).toEqual([snap]);
+  });
+
+  it('finds its territory by Wikidata id, else by name when the territory is nobody else’s', () => {
+    expect(territoryOf(sparta, [mine({ title: 'Lacedaemon', wikidataId: 'Q5690' })])?.id).toBe('t_mine');
+    expect(territoryOf(sparta, [mine({ title: ' sparta ' })])?.id).toBe('t_mine');
+    expect(territoryOf(sparta, [mine({ itemId: 'i_other' })])).toBeUndefined();
+    expect(territoryOf(sparta, [mine({ wikidataId: 'Q1' })])).toBeUndefined();
   });
 });

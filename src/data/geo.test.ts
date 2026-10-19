@@ -1,6 +1,6 @@
 import type { FeatureCollection, Polygon } from 'geojson';
 import { describe, expect, it } from 'vitest';
-import { BASEMAP_YEARS, basemapFor, basemapUrl, polityNames, snapshotsFor } from './basemaps';
+import { BASEMAP_YEARS, basemapFor, basemapUrl, mapsDuring, matchPolity, polityNames, snapshotsFor, withinLife } from './basemaps';
 import { areaKm2, bbox, FINE, isArea, labelPoint, parseGeoJsonAreas, simplifyArea, simplifyLine } from './geo';
 
 const square = (x: number, y: number, size: number): Polygon => ({
@@ -88,6 +88,33 @@ describe('historical-basemaps', () => {
     expect(snaps.map((s) => [s.from.y, s.to?.y])).toEqual([[-299, -199], [-199, -99]]);
     expect(snaps[1].geometry!.type).toBe('MultiPolygon');
     expect(snaps[1].areaKm2).toBeGreaterThan(snaps[0].areaKm2!);
+  });
+
+  it('finds a polity on the maps by the names Wikidata and Wikipedia give it', () => {
+    const names = ['Achaemenid Empire', 'Macedonia', 'Sparta', 'Épire'];
+    expect(matchPolity(names, ['Sparta', 'Sparta'])).toBe('Sparta');
+    expect(matchPolity(names, ['Macedonia (ancient kingdom)'])).toBe('Macedonia');
+    expect(matchPolity(names, ['the Achaemenid empire'])).toBe('Achaemenid Empire');
+    expect(matchPolity(names, ['Epire'])).toBe('Épire');
+    expect(matchPolity(names, ['Corinth', ''])).toBeUndefined();
+  });
+
+  it('reads the maps of a polity’s lifetime: the one in force when it began, then each until it ended', () => {
+    // Sparta, 900–192 BCE.
+    expect(mapsDuring({ y: -899 }, { y: -191 }).map((b) => b.file)).toEqual([
+      'world_bc1000.geojson', 'world_bc700.geojson', 'world_bc500.geojson', 'world_bc400.geojson', 'world_bc323.geojson', 'world_bc300.geojson', 'world_bc200.geojson',
+    ]);
+    // Still there: every map since, thinned evenly, keeping the first and the last.
+    const open = mapsDuring({ y: 300 }, undefined, 5).map((b) => b.y);
+    expect(open).toHaveLength(5);
+    expect(open[0]).toBe(300);
+    expect(open.at(-1)).toBe(2010);
+  });
+
+  it('cuts borders to the polity’s own lifespan', () => {
+    const snaps = [{ from: { y: -999 }, to: { y: -699 } }, { from: { y: -299 }, to: { y: -199 } }, { from: { y: -199 }, to: { y: -99 } }, { from: { y: -99 } }];
+    expect(withinLife(snaps, { y: -899, approx: true }, { y: -191 }).map((s) => [s.from.y, s.to?.y])).toEqual([[-899, -699], [-299, -199], [-199, -191]]);
+    expect(withinLife([{ from: { y: 1900 } }], { y: 1800 }).map((s) => [s.from.y, s.to?.y])).toEqual([[1900, undefined]]);
   });
 });
 

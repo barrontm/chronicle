@@ -1,6 +1,6 @@
 import type { Feature, FeatureCollection } from 'geojson';
-import { formatYear, toAstronomical } from '../model/dates';
-import type { TerritorySnapshot } from '../model/types';
+import { formatYear, toAstronomical, toDecimalYear } from '../model/dates';
+import type { HistDate, TerritorySnapshot } from '../model/types';
 import { areaKm2, isArea, simplifyArea, type Area } from './geo';
 
 /**
@@ -80,6 +80,42 @@ export function snapshotsFor(name: string, loaded: Array<{ year: BasemapYear; fc
     });
 }
 
+/** A name as the maps and Wikipedia might both spell it: no accents, case, "the" or "(ancient city)". */
+const plain = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/_/g, ' ').replace(/\s*\([^)]*\)\s*/g, ' ')
+  .toLowerCase().replace(/^the\s+/, '').replace(/\s+/g, ' ').trim();
+
+/** The polity in a snapshot that one of these names (Wikidata's label, Wikipedia's title) means, if any. */
+export function matchPolity(names: string[], wanted: string[]): string | undefined {
+  const want = new Set(wanted.map(plain).filter(Boolean));
+  return names.find((n) => want.has(plain(n)));
+}
+
+/** Most maps read for one polity, so a long-lived empire doesn't fetch the whole dataset. */
+export const MAX_MAPS = 12;
+
+/**
+ * The maps to read for a polity that lasted from `start` to `end` (today when open): the one in
+ * force when it began and every one after, until it ended, thinned evenly to `max`.
+ */
+export function mapsDuring(start: HistDate, end?: HistDate, max = MAX_MAPS): BasemapYear[] {
+  const s = toDecimalYear(start), e = end ? toDecimalYear(end) : Infinity;
+  const first = basemapFor(s);
+  const all = BASEMAP_YEARS.filter((b) => b === first || (b.y > s && b.y <= e));
+  if (all.length <= max) return all;
+  return Array.from({ length: max }, (_, i) => all[Math.round((i * (all.length - 1)) / (max - 1))]);
+}
+
+/** Snapshots cut to the polity's own lifespan, so its borders don't show before it began or after it ended. */
+export function withinLife(snaps: TerritorySnapshot[], start: HistDate, end?: HistDate): TerritorySnapshot[] {
+  const s = toDecimalYear(start), e = end ? toDecimalYear(end) : Infinity;
+  return snaps.flatMap((snap) => {
+    const from = snap.from.y < s ? { y: start.y } : snap.from;
+    const to = end && (!snap.to || snap.to.y > e) ? { y: end.y } : snap.to;
+    if (to && to.y <= from.y) return [];
+    return [{ ...snap, from, ...(to ? { to } : {}) }];
+  });
+}
+
 // ---------- Network ----------
 
 const loaded = new Map<string, Promise<FeatureCollection>>();
@@ -100,4 +136,20 @@ export function fetchBasemap(b: BasemapYear): Promise<FeatureCollection> {
     loaded.set(b.file, p);
   }
   return p;
+}
+
+/**
+ * A polity's borders from the maps of its lifetime, found by name: the snapshots, and the name the
+ * maps use. Nothing found is an empty list; a map that won't load is an error in Bob's words.
+ */
+export async function bordersFor(wanted: string[], start: HistDate, end?: HistDate, signal?: AbortSignal): Promise<{ name?: string; snapshots: TerritorySnapshot[] }> {
+  const loaded: Array<{ year: BasemapYear; fc: FeatureCollection }> = [];
+  let name: string | undefined;
+  for (const b of mapsDuring(start, end)) {
+    signal?.throwIfAborted();
+    const fc = await fetchBasemap(b);
+    name ??= matchPolity(polityNames(fc), wanted);
+    loaded.push({ year: b, fc });
+  }
+  return name ? { name, snapshots: withinLife(snapshotsFor(name, loaded), start, end) } : { snapshots: [] };
 }

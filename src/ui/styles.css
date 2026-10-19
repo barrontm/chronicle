@@ -270,6 +270,8 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .tray-card .own-dates { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; }
 .tray-card .own .segmented { justify-self: start; }
 .tray-card .own-acts { display: flex; flex-wrap: wrap; gap: 6px; }
+.tray-card .no-borders { display: grid; gap: 8px; margin-top: 10px; }
+.tray-card .no-borders .notice { margin: 0; }
 .tray-card .tray-done { margin: 0 0 10px 30px; font-size: 12.5px; color: var(--ink-2); }
 .tray-card .cand .line { display: block; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .tray-card .cand .ct { font: 500 15.5px/1.4 var(--font-read); }

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { DraftSet } from '../../ai/draft';
 import { articleCache } from '../../data/articleCache';
 import { fetchArticle, type Article as ArticleData } from '../../media/article';
+import type { Area } from '../../data/geo';
 import { draftFromWikipedia, searchWikipedia, type ItemDraft, type WikiSearchResult } from '../../media/wikipedia';
 import { passageCandidates } from '../../model/passage';
 import { KIND_LABEL, findInChronicle, subjectPartOf, subjectWhen } from '../../model/subjects';
@@ -33,12 +34,14 @@ const OFFLINE_ADD = 'You’re offline. Adding to the map and timeline needs a co
  * The reader column of the reader layout: search Wikipedia and read the article
  * that's open. Opening and the reading trail are owned by the caller.
  */
-export function ReaderPane({ article, searching, onOpen, onSearching, onBack, onShowMap, onOpenRecord, onDraft, onShowYear, onOpenDrafting }: {
+export function ReaderPane({ article, searching, onOpen, onSearching, onBack, onShowMap, onOpenRecord, onDraft, onShowYear, onOpenDrafting, onDraw }: {
   article: ArticleRef | null;
   /** Open what Bob already has for the article's subject. */
   onOpenRecord?: (r: RecordRef) => void;
   /** Open a prefilled entry for Bob to check and add. */
   onDraft?: (d: ItemDraft) => void;
+  /** Draw borders on the map, for a polity the historical maps don't have. */
+  onDraw?: (onDone: (g: Area, year: number) => void) => void;
   /** Move the map and timeline to a year (to show an entry Bob just accepted). */
   onShowYear?: (year: number) => void;
   /** Open Drafting with AI, where Bob sets his Anthropic key. */
@@ -66,7 +69,7 @@ export function ReaderPane({ article, searching, onOpen, onSearching, onBack, on
         </div>
       )}
       {(searching || !article) && <ArticleSearch hasArticle={!!article} onOpen={onOpen} onCancel={() => onSearching(false)} />}
-      {article && !searching && <Article key={article.key} article={article} onOpen={onOpen} onOpenRecord={onOpenRecord} onDraft={onDraft} onShowYear={onShowYear} onOpenDrafting={onOpenDrafting} />}
+      {article && !searching && <Article key={article.key} article={article} onOpen={onOpen} onOpenRecord={onOpenRecord} onDraft={onDraft} onShowYear={onShowYear} onOpenDrafting={onOpenDrafting} onDraw={onDraw} />}
     </section>
   );
 }
@@ -169,11 +172,13 @@ function SubjectLine({ state, onOpenRecord }: { state: SubjectState; onOpenRecor
   );
 }
 
-function Article({ article, onOpen, onOpenRecord, onDraft, onShowYear, onOpenDrafting }: {
+function Article({ article, onOpen, onOpenRecord, onDraft, onShowYear, onOpenDrafting, onDraw }: {
   article: ArticleRef;
   onOpen: (a: ArticleRef) => void;
   onOpenRecord?: (r: RecordRef) => void;
   onDraft?: (d: ItemDraft) => void;
+  /** Draw borders on the map, for a polity the historical maps don't have. */
+  onDraw?: (onDone: (g: Area, year: number) => void) => void;
   onShowYear?: (year: number) => void;
   onOpenDrafting?: () => void;
 }) {
@@ -303,7 +308,7 @@ function Article({ article, onOpen, onOpenRecord, onDraft, onShowYear, onOpenDra
       {data && (
         <CaptureTray
           marks={marks} candidates={candidates} articleTitle={data.title}
-          onAdd={addPage} onDraftPage={draftPage} onAsk={askClaude} onOpenRecord={onOpenRecord} onEdit={onDraft} onShowYear={onShowYear} onOpenDrafting={onOpenDrafting}
+          onAdd={addPage} onDraftPage={draftPage} onAsk={askClaude} onOpenRecord={onOpenRecord} onEdit={onDraft} onShowYear={onShowYear} onOpenDrafting={onOpenDrafting} onDraw={onDraw}
         />
       )}
     </article>

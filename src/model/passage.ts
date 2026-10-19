@@ -1,7 +1,7 @@
 import { compareHistDate, parseHistDate } from './dates';
 import { newId } from './doc';
 import type { SubjectKind } from './subjects';
-import type { Highlight, ItemKind, Lane, Place, TimelineItem } from './types';
+import type { Highlight, ItemKind, Lane, Place, Territory, TerritorySnapshot, TimelineItem } from './types';
 
 /**
  * What a highlight could become: the article's own subject, then the pages
@@ -46,7 +46,6 @@ export function passageCandidates(articleKey: string, links: WikiLink[], start: 
 /** Kinds that can't be drawn from Wikipedia yet, and why (docs/design.md, Becomes). */
 export const CANT_ADD: Partial<Record<SubjectKind, string>> = {
   idea: 'Ideas can’t be drawn on the map and timeline yet. Keep the highlight.',
-  polity: 'Polities come from the territory tools for now. Keep the highlight.',
 };
 
 const FIRST: SubjectKind[] = ['event', 'war', 'battle'];
@@ -64,7 +63,9 @@ export interface Choice {
  * The candidates ticked when a highlight opens (indexes, in order): the ones
  * it's already on; else the one Bob ticked last; else the first event, war or
  * battle the passage links; else the article's subject (index 0), unless it's
- * a kind that can't be added yet. Bob ticks more or fewer from there.
+ * a kind that can't be added yet or a polity (most passages in a polity's
+ * article are about something in it, and adding one reads the historical
+ * maps). Bob ticks more or fewer from there.
  */
 export function defaultChoices(cands: Choice[]): number[] {
   const linked = cands.flatMap((c, i) => (c.linked ? [i] : []));
@@ -74,7 +75,7 @@ export function defaultChoices(cands: Choice[]): number[] {
   const first = cands.findIndex((c, i) => i > 0 && !!c.kind && FIRST.includes(c.kind));
   if (first > 0) return [first];
   const own = cands[0];
-  return own && !(own.kind && CANT_ADD[own.kind]) ? [0] : [];
+  return own && !(own.kind && (CANT_ADD[own.kind] || own.kind === 'polity')) ? [0] : [];
 }
 
 /** "Something else…": what Bob fills in by hand for a highlight. Dates as he types them. */
@@ -113,4 +114,41 @@ export function ownEntry(f: OwnEntryForm, h: Pick<Highlight, 'sourceId' | 'ancho
       updatedAt: 0,
     },
   };
+}
+
+const sameName = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase();
+
+/**
+ * The territory a polity entry already has: one with its Wikidata id, else one of Bob's with
+ * its name that isn't another entry's yet (borders he imported before he had the entry).
+ */
+export function territoryOf(item: Pick<TimelineItem, 'id' | 'title' | 'wikidataId'>, territories: Territory[]): Territory | undefined {
+  return territories.find((t) => t.itemId === item.id || (!!item.wikidataId && t.wikidataId === item.wikidataId))
+    ?? territories.find((t) => !t.itemId && !t.wikidataId && sameName(t.title, item.title));
+}
+
+/**
+ * A polity added from the tray is its entry (the lifespan bar) and its territory (the map's
+ * half), tied by `itemId` and the article's Wikidata id. A territory Bob already has is taken
+ * over, keeping its borders; otherwise a new one gets the borders found, or none yet.
+ */
+export function polityTerritory(
+  item: TimelineItem, territories: Territory[], snapshots: TerritorySnapshot[] = [], source?: Territory['source'],
+): { next: Territory; before?: Territory } {
+  const had = territoryOf(item, territories);
+  if (had) {
+    return { before: had, next: {
+      ...had, itemId: had.itemId ?? item.id,
+      ...(had.wikidataId || !item.wikidataId ? {} : { wikidataId: item.wikidataId }),
+      ...(had.region || !item.region ? {} : { region: item.region }),
+      ...(had.snapshots.length || !snapshots.length ? {} : { snapshots, ...(source ? { source } : {}) }),
+    } };
+  }
+  return { next: {
+    id: newId('t'), title: item.title, categoryId: item.categoryId, snapshots, itemId: item.id,
+    ...(item.wikidataId ? { wikidataId: item.wikidataId } : {}),
+    ...(item.region ? { region: item.region } : {}),
+    ...(snapshots.length && source ? { source } : {}),
+    updatedAt: 0,
+  } };
 }
