@@ -111,13 +111,16 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .stage { display: flex; flex-direction: column; min-width: 0; min-height: 0; overflow: auto; }
 
 /* ---------- New layout: the reader beside the map over a timeline strip ---------- */
-.workspace.next { grid-template-columns: minmax(320px, 40em) 1fr; }
-.workspace.next.with-drawer { grid-template-columns: minmax(320px, 40em) 1fr var(--drawer); }
+.workspace.next { --reader-col: minmax(320px, 40em); grid-template-columns: var(--reader-col) auto 1fr; }
+.workspace.next.with-drawer { grid-template-columns: var(--reader-col) auto 1fr var(--drawer); }
+/* Bob's own reader width (the splitter), kept inside what the window allows now. */
+.workspace.next.sized { --reader-col: max(320px, min(var(--reader-w), 100% - 360px)); }
+.workspace.next.sized.with-drawer { --reader-col: max(320px, min(var(--reader-w), 100% - 360px - var(--drawer))); }
 .workspace.next .stage { padding-top: 12px; }
 .workspace.next .lanebar { padding: 0 16px 8px; gap: 4px; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
 .workspace.next .lanebar .chip { flex: none; }
 .workspace.next .lanebar .chip { padding-block: 2px; font-size: 12px; }
-.reader { min-width: 0; min-height: 0; overflow: auto; border-right: 1px solid var(--rule); background: var(--panel); padding: 24px 32px 48px; }
+.reader { min-width: 0; min-height: 0; overflow: auto; background: var(--panel); padding: 24px 32px 48px; }
 .reader-tools { display: flex; justify-content: flex-end; margin: -8px -8px 8px 0; }
 .reader-search, .reader-article { max-width: 34em; margin: 0 auto; }
 .reader-title { font-family: var(--font-read); font-size: 30px; line-height: 1.15; font-weight: 600; margin: 0 0 6px; }
@@ -273,6 +276,18 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .trail-step:hover { background: var(--rule-soft); }
 .empty-strip { margin: 8px 16px; color: var(--muted); font-family: var(--font-read); font-size: 15px; }
 .sheet-head { display: flex; padding: 0 8px 8px; }
+/* Drag handles between panes: a hairline with a wider grab area, darker while hovered, focused or dragged. */
+.splitter { position: relative; z-index: 5; flex: none; touch-action: none; outline: none; }
+.splitter::before { content: ''; position: absolute; }
+.splitter::after { content: ''; position: absolute; border-radius: 2px; background: transparent; transition: background-color 120ms; }
+.splitter.columns { width: 1px; background: var(--rule); cursor: col-resize; }
+.splitter.columns::before { inset: 0 -5px; }
+.splitter.columns::after { top: 0; bottom: 0; left: -1px; width: 3px; }
+.splitter.rows { height: 0; margin: 0 16px; cursor: row-resize; }
+.splitter.rows::before { inset: -6px 0; }
+.splitter.rows::after { left: 0; right: 0; top: -1.5px; height: 3px; }
+.splitter:hover::after, .splitter.dragging::after { background: var(--ink-2); }
+.splitter:focus-visible::after { background: var(--focus); }
 @media (max-width: 860px) {
   .workspace.next, .workspace.next.with-drawer { grid-template-columns: 1fr; }
   .reader { border-right: 0; padding: 16px 16px 96px; } /* room below the text for the docked Highlight button */
@@ -512,6 +527,9 @@ dialog h2 { font-family: var(--font-read); margin: 0 0 12px; font-weight: 600; }
 
 .map-pane { position: relative; flex: 1 1 auto; min-height: 280px; margin: 0 16px; border: 1px solid var(--rule); border-radius: var(--radius-m); overflow: hidden; background: var(--map-water); }
 .stage.view-split .map-pane { flex: 0 0 46%; }
+/* Bob's own map height (the splitter): the map gives way first when the window is shorter. */
+.stage.view-split.sized .map-pane { flex: 0 1 var(--map-h); min-height: 160px; }
+.stage.view-split.sized .timeline-host { min-height: 160px; }
 /* More specific than MapLibre's own .maplibregl-map { position: relative }. */
 .map-pane .map-host { position: absolute; inset: 0; }
 .map-loading { display: grid; place-items: center; color: var(--ink-2); }
