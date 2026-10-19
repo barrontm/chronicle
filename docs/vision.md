@@ -4,7 +4,7 @@ Where Chronicle is heading (planned 2026-10-16). A living doc: change it at a ph
 
 ## The two big changes
 1. **Reading is how you add.** Bob reads Wikipedia (later other sources) inside the app, highlights what matters, and the app turns highlights into records on the map and timeline. It recognizes what the subject is and draws each kind of thing in its own way. Code does the work where facts are structured (Wikidata); AI only where they aren't (the highlighted prose). No Add button, no kind buttons.
-2. **Visuals with zoom levels.** Zoomed out: the polities and world events Bob has read about, each polity a strip as thick as its power, over a faint backdrop of eras (Bob, 2026-10-18; it was era bands until the Phase 3 checkpoint). Opening a polity or a world event: how it changed in four lanes (politics, war, economy, philosophy and religion), with the map following. Simple animations: technology spreading, migrations, wars, borders and governments changing.
+2. **Visuals with zoom levels.** Zoomed out: the polities and world events Bob has read about, each polity a strip as thick as its power, over a faint backdrop of eras (Bob, 2026-10-18; it was era bands until the Phase 3 checkpoint). Opening a polity or a world event: how it changed in six lanes (politics, war, economy, philosophy and religion, technology, nature), with the map following. Simple animations: technology spreading, migrations, wars, borders and governments changing.
 
 Nothing appears until Bob has read and highlighted it. The app still ships no content.
 
@@ -28,8 +28,8 @@ Every kind of thing has a representation on both the timeline and the map (Bob, 
 | Subject | Timeline | Map | Animation |
 |---|---|---|---|
 | Era/period | a labelled wash behind its region's polity strips, with theme chips | tinted extent | crossfade between eras |
-| Polity | at the top: a strip as thick as its power, split by regime; opened: its four lanes | territory, styled by regime; picked, the polities it dealt with | thickness changes as the year plays; border morph; power-structure diagram morphs between regimes |
-| World event (an entry marked as one) | gold, at the top; opened: its four lanes | gold pin or extent | as its kind |
+| Polity | at the top: a strip as thick as its power, split by regime; opened: its six lanes | territory, styled by regime; picked, the polities it dealt with | thickness changes as the year plays; border morph; power-structure diagram morphs between regimes |
+| World event (an entry marked as one) | gold, at the top; opened: its six lanes | gold pin or extent | as its kind |
 | Economy | economic lane as a sector streamgraph | production sites, trade flows of goods | sectors grow and shrink; goods flow |
 | War | span with battle ticks | campaign routes, battle pins | routes draw in, battles pulse |
 | Battle | tick on its war's span (a point of its own when it has no war) | battle pin | pulses in its year |
@@ -62,7 +62,7 @@ A connection can carry an `effect` (weakened, funded, legitimised, …) and the 
 
 ## Timeline with zoom levels
 - Level 0, **the overview**: polities and world events in the spirit of the 1931 Histomap, over a backdrop of eras (below).
-- Level 1: inside a polity or world event, its four lanes showing change.
+- Level 1: inside a polity or world event, its six lanes showing change.
 - Level 2: individual entries, each drawn as its `subject` (falling back to its `kind`).
 - A custom renderer replaces vis-timeline behind the same one-importer boundary, and lifts the ±271k-year limit. The spike settled it: a pure layout plus an SVG painter (the hybrid only if a real phone needs it), our own Pointer Events driver instead of d3-zoom, and time in decimal years.
 - Lanes live on highlights and entries, several per entry. Categories stay Bob's own topics: filter chips, not rows down the left.
@@ -74,11 +74,11 @@ Bob's direction at the Phase 3 checkpoint (2026-10-18). Phase 4's prototype sett
 - **Thickness is power.** A polity's strip is as thick as its power, reach and population in each year. Athens starts as a sliver, grows as its power does, and thins as Macedon comes to dominate. By default it follows the area of the territory's borders in that year (`areaKm2`). Bob can set a relative strength (1 to 5) at any date, citing a highlight, and that wins. A polity with neither is one even width.
 - **Related polities sit together.** Rows are ordered by geography and history: Classical Greece beside Macedon and Persia, the Chinese dynasties far off. Region parents group them (Mediterranean › Greece), and a group of city-states can fold into one row (Classical Greece) and open into Athens, Sparta and Corinth.
 - **Eras are the backdrop.** Each region's eras are a faint labelled wash behind its strips, so "Classical" still reads at a glance; theme chips sit on the wash.
-- **Opening a polity or world event** drops its four lanes beneath its strip, each a sub-timeline of changes. Before a lane is opened it already shows its most important changes (by `prominence`); opening it shows all of them, and how they relate to the other lanes (influences, Phase 4b). The lanes don't appear at the top; only under what is open.
-- **The four lanes** (Bob's): **Politics** (constitutions, laws, leaders, movements), **War**, **Economy** (production, and how goods were distributed: the state, markets, kinship…), **Philosophy and religion** (leaders, texts, schisms). No People lane: notable people sit in each lane they belong to. An entry can be in several (the Reformation is religious and political). Lanes are sorted automatically from what a thing is and its highlights, and what Bob sets always wins.
+- **Opening a polity or world event** drops its six lanes beneath its strip, each a sub-timeline of changes. Before a lane is opened it already shows its most important changes (by `prominence`); opening it shows all of them, and how they relate to the other lanes (influences, Phase 4b). The lanes don't appear at the top; only under what is open.
+- **The six lanes** (Bob's): **Politics** (constitutions, laws, leaders, movements), **War**, **Economy** (production, and how goods were distributed: the state, markets, kinship…), **Philosophy and religion** (leaders, texts, schisms), **Technology** (inventions, tools, techniques, discoveries), **Nature** (climate, disasters, disease, the land and its resources). No People lane: notable people sit in each lane they belong to. An entry can be in several (the Reformation is religious and political). Lanes are sorted automatically from what a thing is and its highlights, and what Bob sets always wins.
 - **The map follows.**
   - Picking a polity shows it and the polities it dealt with at the year shown (trade, war, crusades, alliances), each marked with how.
-  - An open lane shows its layer: **War** highlights every participant in its wars (with today's zoom to a category), **Economy** shows production sites and flows of goods, **Philosophy and religion** shows where thinkers were born, their schools and traditions, religious leaders and movements, **Politics** shows political change as the year plays. Each later phase's map layer is also its lane's layer.
+  - An open lane shows its layer: **War** highlights every participant in its wars (with today's zoom to a category), **Economy** shows production sites and flows of goods, **Philosophy and religion** shows where thinkers were born, their schools and traditions, religious leaders and movements, **Technology** shows where inventions appeared and how they spread, **Nature** shows disasters, epidemics and climate over the areas they touched, **Politics** shows political change as the year plays. Each later phase's map layer is also its lane's layer.
   - Clicking an area of the map grows the polities, events and people of that region slightly on the timeline and fades the rest into the background, still visible.
 - One year clock (`useYearClock`) drives the timeline, the map and every animation. Reduced motion is respected.
 
@@ -117,7 +117,7 @@ Each phase ships something usable, behind a "Try the new layout" setting (`ui.ne
 1. Reader: reader pane, highlights (v6), recognition, offline cache
 2. Highlight → record: code path, AI `highlight` feature, review
 3. New timeline: `subject` and `region` (v7), renderer at parity, every kind drawn as itself, then the zoom levels; vis-timeline removed
-4. The overview: lanes (v9), polities from the tray, polity strips and world events, a polity's four lanes, the map following; the classic layout dropped
+4. The overview: lanes (v9), polities from the tray, polity strips and world events, a polity's six lanes, the map following; the classic layout dropped
    - 4b. Themes, influences between lanes, threads; eras on the map
 5. Polities and wars: regimes (v10), border morph, alliances, campaigns, battles
    - 5b. Economy, with distribution (v11)
