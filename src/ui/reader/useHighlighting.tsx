@@ -3,7 +3,8 @@ import { articleSource, type Article } from '../../media/article';
 import { findAnchor, makeAnchor, type Placement } from '../../model/anchor';
 import { newId, upsert, remove } from '../../model/doc';
 import { sentenceAt, sentencesOf } from '../../model/sentences';
-import type { Dimension, Highlight } from '../../model/types';
+import type { Highlight, Lane } from '../../model/types';
+import { sortLanes } from '../../model/lanes';
 import { useDoc } from '../DocContext';
 import { PIGMENT } from '../util';
 import { buildTextModel, indexAtPoint, indicesOf, rangeOf, type TextModel } from './textModel';
@@ -73,7 +74,7 @@ export function useHighlighting(body: RefObject<HTMLDivElement | null>, article:
     for (const p of placed) {
       if (!p.at) continue;
       const r = rangeOf(model, p.at.start, p.at.end);
-      const name = `${MARK}-${PIGMENT[p.highlight.dimension ?? 'none']}-${p.state}`;
+      const name = `${MARK}-${PIGMENT[p.highlight.lanes?.[0] ?? 'none']}-${p.state}`;
       groups.set(name, [...(groups.get(name) ?? []), r]);
       if (p.at.uncertain) unsure.push(r);
     }
@@ -134,14 +135,16 @@ export function useHighlighting(body: RefObject<HTMLDivElement | null>, article:
     setOpenId(null);
   }, [open]);
 
-  const setDimension = useCallback((dimension: Dimension | undefined) => {
+  /** Put the open highlight in a lane, or take it out of one. It can be in several. */
+  const toggleLane = useCallback((lane: Lane) => {
     if (!open || readOnly) return;
     const id = open.highlight.id;
     update((d) => {
       const h = d.highlights.find((x) => x.id === id);
       if (!h) return d;
-      const { dimension: _, ...rest } = h;
-      return upsert(d, 'highlights', dimension ? { ...rest, dimension } : rest);
+      const { lanes: had = [], ...rest } = h;
+      const lanes = had.includes(lane) ? had.filter((l) => l !== lane) : sortLanes([...had, lane]);
+      return upsert(d, 'highlights', lanes.length ? { ...rest, lanes } : rest);
     });
   }, [open, readOnly, update]);
 
@@ -240,7 +243,7 @@ export function useHighlighting(body: RefObject<HTMLDivElement | null>, article:
     highlightSelection,
     removeOpen,
     keep,
-    setDimension,
+    toggleLane,
     setSubject,
     link,
     /** The article's wiki links, for the passage's candidates. */

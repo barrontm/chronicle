@@ -2,7 +2,7 @@ import { findAnchor, sectionAt, type ArticleText } from '../../model/anchor';
 import { fromAstronomical, parseHistDate } from '../../model/dates';
 import { RELATION_TYPES } from '../../model/doc';
 import { pageKey } from '../../model/passage';
-import { DIMENSIONS, type Dimension, type Highlight, type HistDate, type ItemKind, type RelationType } from '../../model/types';
+import { LANES, type Highlight, type HistDate, type ItemKind, type Lane, type RelationType } from '../../model/types';
 
 /**
  * Checks Claude's answer about a highlight before anything is looked up or
@@ -33,7 +33,7 @@ export interface ProposedEntry {
 export interface ProposedConnection { from: End; to: End; type: RelationType; effect: string; quote: string }
 
 export interface CheckedHighlight {
-  dimension?: { value: Dimension; quote: string };
+  lanes: { value: Lane; quote: string }[];
   entries: ProposedEntry[];
   connections: ProposedConnection[];
   dropped: string[];
@@ -91,16 +91,20 @@ const KINDS: ItemKind[] = ['event', 'span', 'person'];
 
 export function checkHighlightAnswer(input: unknown, ctx: HighlightContext): CheckedHighlight {
   const dropped: string[] = [];
-  if (!isObj(input)) return { entries: [], connections: [], dropped: ['Claude’s answer wasn’t in the expected shape.'] };
+  if (!isObj(input)) return { lanes: [], entries: [], connections: [], dropped: ['Claude’s answer wasn’t in the expected shape.'] };
   const { scope } = ctx;
 
-  let dimension: CheckedHighlight['dimension'];
-  if (isObj(input.dimension)) {
-    const value = str(input.dimension.value) as Dimension;
-    const quote = str(input.dimension.quote);
-    if (!DIMENSIONS.includes(value)) dropped.push('The suggested dimension: not one of the six.');
-    else if (!quoteHolds(quote, scope)) dropped.push(`The suggested dimension (${value}): the words it rests on aren’t in the passage.`);
-    else dimension = { value, quote };
+  // At most two lanes, each once, each resting on the passage's words.
+  const lanes: CheckedHighlight['lanes'] = [];
+  for (const raw of Array.isArray(input.lanes) ? input.lanes : []) {
+    if (!isObj(raw)) continue;
+    const value = str(raw.value) as Lane;
+    const quote = str(raw.quote);
+    if (!LANES.includes(value)) dropped.push(`The suggested lane "${value}": not one of the six.`);
+    else if (lanes.some((l) => l.value === value)) continue;
+    else if (!quoteHolds(quote, scope)) dropped.push(`The suggested lane (${value}): the words it rests on aren’t in the passage.`);
+    else if (lanes.length >= 2) dropped.push(`The suggested lane (${value}): more than two.`);
+    else lanes.push({ value, quote });
   }
 
   const entries: ProposedEntry[] = [];
@@ -169,5 +173,5 @@ export function checkHighlightAnswer(input: unknown, ctx: HighlightContext): Che
     keys.add(key);
     connections.push({ from, to, type: RELATION_TYPES.includes(type) ? type : 'caused', effect, quote });
   }
-  return { ...(dimension ? { dimension } : {}), entries, connections, dropped };
+  return { lanes, entries, connections, dropped };
 }

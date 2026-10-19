@@ -44,12 +44,25 @@ describe('Classical Greece fixture', () => {
     expect(next.war.routes.length).toBeGreaterThan(15);
   });
 
+  it('holds v9’s shapes: lanes, the overview mark, strength, regions, a group and who took part in what', () => {
+    expect(doc.items.filter((i) => i.lanes?.length).length).toBeGreaterThan(140);
+    expect(doc.highlights.filter((h) => h.lanes?.length).length).toBeGreaterThan(40);
+    expect(doc.items.find((i) => i.id === 'i_alexander_persia')?.overview).toBe('world');
+    const athens = doc.territories.find((t) => t.id === 't_athens')!;
+    expect(athens.region).toBe('Greece');
+    expect(athens.strength?.map((s) => s.level)).toContain(5);
+    expect(doc.regionParents?.Macedon).toBe('Mediterranean');
+    expect(doc.groups?.[0].territoryIds).toEqual(['t_athens', 't_sparta', 't_corinth', 't_thebes']);
+    const pelop = doc.relations.filter((r) => r.toId === 'i_pelop' && r.side);
+    expect(pelop.find((r) => r.fromId === 't_athens')?.side).toBe(1);
+    expect(pelop.find((r) => r.fromId === 't_sparta')?.side).toBe(2);
+  });
+
   it('has its eras in the Greece row, with highlights on the entries they support', () => {
     const ids = new Set(doc.items.map((i) => i.id));
     expect(doc.items.filter((i) => i.subject === 'period' && i.region === 'Greece').map((i) => i.id)).toContain('i_classical');
     expect(doc.highlights.length).toBeGreaterThanOrEqual(40);
     for (const h of doc.highlights) {
-      expect([h.id, !!h.dimension]).toEqual([h.id, true]);
       for (const id of h.usedBy) expect([h.id, ids.has(id)]).toEqual([h.id, true]);
     }
     const hids = new Set(doc.highlights.map((h) => h.id));

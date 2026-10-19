@@ -107,7 +107,7 @@ export async function toDraft(args: {
 
   return {
     feature: 'highlight', request: highlight.text, provenance, highlightId: highlight.id,
-    ...(checked.dimension ? { dimension: checked.dimension } : {}),
+    ...(checked.lanes.length ? { lanes: checked.lanes } : {}),
     entries, connections, dropped,
   };
 }

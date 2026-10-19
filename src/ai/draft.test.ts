@@ -4,7 +4,7 @@ import type { Highlight, TimelineDoc, TimelineItem } from '../model/types';
 import { acceptConnection, acceptEntry, pendingOnTimeline, statusIn, undoConnection, undoEntry, waiting, type DraftConnection, type DraftEntry, type DraftSet } from './draft';
 
 const item = (id: string, over: Partial<TimelineItem> = {}): TimelineItem => ({ id, kind: 'event', title: id, start: { y: -448 }, categoryId: 'politics', updatedAt: 0, ...over });
-const highlight: Highlight = { id: 'h1', sourceId: 's1', text: 'In 449 BC Pericles proposed a decree.', dimension: 'economic', usedBy: ['i_old'], updatedAt: 1 };
+const highlight: Highlight = { id: 'h1', sourceId: 's1', text: 'In 449 BC Pericles proposed a decree.', lanes: ['economy', 'politics'], usedBy: ['i_old'], updatedAt: 1 };
 
 function setup() {
   let doc: TimelineDoc = createEmptyDoc();
@@ -17,12 +17,12 @@ function setup() {
 }
 
 describe('accepting drafts from a highlight', () => {
-  it('adds the records to the highlight’s usedBy, cites it on the connection, and lends the entry its dimension', () => {
+  it('adds the records to the highlight’s usedBy, cites it on the connection, and lends the entry its lanes', () => {
     const { doc, decree, funded, set } = setup();
     expect(waiting(doc, set)).toBe(2);
     let d = acceptEntry(doc, decree, 5, 'h1');
     d = acceptConnection(d, funded, 5, 'h1');
-    expect(d.items.find((i) => i.id === 'i_decree')?.dimension).toBe('economic');
+    expect(d.items.find((i) => i.id === 'i_decree')?.lanes).toEqual(['economy', 'politics']);
     expect(d.relations[0]).toMatchObject({ effect: 'funded', highlightIds: ['h1'] });
     expect(d.highlights[0].usedBy).toEqual(['i_old', 'i_decree', 'r1']);
     expect(waiting(d, set)).toBe(0);
@@ -35,10 +35,10 @@ describe('accepting drafts from a highlight', () => {
     expect(d.highlights[0].usedBy).toEqual(['i_old', 'i_decree']);
   });
 
-  it('keeps an entry’s own dimension', () => {
+  it('keeps an entry’s own lanes', () => {
     const { doc, decree } = setup();
-    const d = acceptEntry(doc, { ...decree, item: { ...decree.item, dimension: 'political' } }, 5, 'h1');
-    expect(d.items.find((i) => i.id === 'i_decree')?.dimension).toBe('political');
+    const d = acceptEntry(doc, { ...decree, item: { ...decree.item, lanes: ['war'] } }, 5, 'h1');
+    expect(d.items.find((i) => i.id === 'i_decree')?.lanes).toEqual(['war']);
   });
 
   it('undoing an entry takes its accepted connections with it, and the highlight lets go of both', () => {

@@ -1252,10 +1252,12 @@
             "id": "toolu_1",
             "name": "propose_from_highlight",
             "input": {
-              "dimension": {
-                "value": "economic",
-                "quote": "Pericles drew the funds necessary to enable his ambitious building plan"
-              },
+              "lanes": [
+                {
+                  "value": "economy",
+                  "quote": "Pericles drew the funds necessary to enable his ambitious building plan"
+                }
+              ],
               "entries": [
                 {
                   "ref": "e1",

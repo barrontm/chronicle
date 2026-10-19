@@ -9,7 +9,7 @@ import { submitTool, SUBMIT } from './tools';
 import { checkHighlightAnswer, normalize, scopeOf, type Scope } from './validate';
 import { toDraft } from './toDraft';
 
-/** Draft records from a passage Bob highlighted: a dimension, entries for what has no article, connections with an effect. */
+/** Draft records from a passage Bob highlighted: its lanes, entries for what has no article, connections with an effect. */
 export const FEATURE = 'highlight';
 export const PROMPT_ID = promptId(FEATURE, prompt);
 

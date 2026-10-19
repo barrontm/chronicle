@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 8,
+  "schemaVersion": 9,
   "id": "doc_fixture",
   "title": "Test fixture",
   "updatedAt": 1760000000000,
@@ -12,13 +12,13 @@
     { "id": "society", "label": "Society & economy", "color": "var(--pig-madder)" }
   ],
   "items": [
-    { "id": "i_pelop", "kind": "span", "subject": "war", "title": "Peloponnesian War", "start": { "y": -430 }, "end": { "y": -403 }, "categoryId": "war", "description": "Athens and its empire against Sparta and the Peloponnesian League.", "updatedAt": 1760000000000 },
+    { "id": "i_pelop", "kind": "span", "subject": "war", "title": "Peloponnesian War", "start": { "y": -430 }, "end": { "y": -403 }, "categoryId": "war", "description": "Athens and its empire against Sparta and the Peloponnesian League.", "overview": "shown", "updatedAt": 1760000000000 },
     { "id": "i_confucius", "kind": "person", "title": "Confucius", "start": { "y": -550, "approx": true }, "end": { "y": -478 }, "categoryId": "ideas", "updatedAt": 1760000000000 },
     { "id": "i_socrates", "kind": "person", "subject": "person", "title": "Socrates", "start": { "y": -469, "approx": true }, "end": { "y": -398 }, "categoryId": "ideas", "wikidataId": "Q99999911", "updatedAt": 1760000000000 },
     { "id": "i_plato", "kind": "person", "title": "Plato", "start": { "y": -427, "approx": true }, "end": { "y": -347, "approx": true }, "categoryId": "ideas", "wikidataId": "Q99999910", "updatedAt": 1760000000000 },
     { "id": "i_aristotle", "kind": "person", "title": "Aristotle", "start": { "y": -383 }, "end": { "y": -321 }, "categoryId": "ideas", "description": "Student of Plato, tutor of Alexander.", "citations": [{ "sourceId": "s_barnes", "locator": "ch. 1" }], "wikidataId": "Q99999912", "updatedAt": 1760000000000 },
-    { "id": "i_rome_falls", "kind": "event", "title": "Deposition of Romulus Augustulus", "start": { "y": 476 }, "categoryId": "politics", "updatedAt": 1760000000000 },
-    { "id": "i_magna", "kind": "event", "title": "Magna Carta sealed", "start": { "y": 1215, "m": 6, "d": 15 }, "categoryId": "politics", "places": [{ "name": "Runnymede", "lat": 51.444, "lon": -0.565, "role": "site" }], "dimension": "political", "wikidataId": "Q99999901", "citations": [{ "sourceId": "s_wp_magna" }], "updatedAt": 1760000000000 },
+    { "id": "i_rome_falls", "kind": "event", "title": "Deposition of Romulus Augustulus", "start": { "y": 476 }, "categoryId": "politics", "lanes": ["politics"], "overview": "world", "updatedAt": 1760000000000 },
+    { "id": "i_magna", "kind": "event", "title": "Magna Carta sealed", "start": { "y": 1215, "m": 6, "d": 15 }, "categoryId": "politics", "places": [{ "name": "Runnymede", "lat": 51.444, "lon": -0.565, "role": "site" }], "dimension": "political", "lanes": ["politics"], "wikidataId": "Q99999901", "citations": [{ "sourceId": "s_wp_magna" }], "updatedAt": 1760000000000 },
     { "id": "i_hundred", "kind": "span", "title": "Hundred Years' War", "start": { "y": 1337 }, "end": { "y": 1453 }, "categoryId": "war", "updatedAt": 1760000000000 },
     { "id": "i_press", "kind": "event", "title": "Gutenberg's printing press", "start": { "y": 1440, "approx": true }, "categoryId": "technology", "updatedAt": 1760000000000 },
     { "id": "i_newton", "kind": "person", "title": "Isaac Newton", "start": { "y": 1643, "m": 1, "d": 4 }, "end": { "y": 1727, "m": 3, "d": 31 }, "categoryId": "science", "updatedAt": 1760000000000 },
@@ -57,7 +57,8 @@
   ],
   "territories": [
     {
-      "id": "t_fixture", "title": "Fixture Republic", "categoryId": "politics", "itemId": "i_pelop",
+      "id": "t_fixture", "title": "Fixture Republic", "categoryId": "politics", "itemId": "i_pelop", "region": "Greece",
+      "strength": [{ "at": { "y": -500 }, "level": 2 }, { "at": { "y": -431 }, "level": 5, "highlightIds": ["h_magna_reader"] }],
       "snapshots": [
         { "from": { "y": -499 }, "to": { "y": -199 }, "areaKm2": 40000, "geometry": { "type": "Polygon", "coordinates": [[[11, 41], [14, 41], [14, 43], [11, 43], [11, 41]]] } },
         { "from": { "y": -199 }, "to": { "y": 100 }, "areaKm2": 300000, "geometry": { "type": "MultiPolygon", "coordinates": [[[[7, 38], [18, 38], [18, 46], [7, 46], [7, 38]]]] } }
@@ -93,11 +94,14 @@
   "relations": [
     { "id": "r_1", "fromId": "i_socrates", "toId": "i_plato", "type": "influenced", "updatedAt": 1760000000000 },
     { "id": "r_2", "fromId": "i_plato", "toId": "i_aristotle", "type": "influenced", "updatedAt": 1760000000000 },
-    { "id": "r_3", "fromId": "i_principia", "toId": "i_newton", "type": "related", "effect": "made famous", "highlightIds": ["h_magna_reader"], "updatedAt": 1760000000000 }
+    { "id": "r_3", "fromId": "i_principia", "toId": "i_newton", "type": "related", "effect": "made famous", "highlightIds": ["h_magna_reader"], "updatedAt": 1760000000000 },
+    { "id": "r_4", "fromId": "t_fixture", "toId": "i_pelop", "type": "related", "side": 1, "updatedAt": 1760000000000 }
   ],
   "highlights": [
     { "id": "h_i_magna", "sourceId": "s_wp_magna", "text": "Fixture excerpt: a royal charter of rights agreed at Runnymede.", "usedBy": ["i_magna"], "updatedAt": 1760000000000 },
-    { "id": "h_magna_reader", "sourceId": "s_wp_magna", "text": "agreed at Runnymede", "anchor": { "revisionId": 42, "section": "", "exact": "agreed at Runnymede", "prefix": "a royal charter of rights ", "suffix": ".", "pos": 40 }, "dimension": "political", "subjectQid": "Q99999901", "usedBy": [], "updatedAt": 1760000000000 }
+    { "id": "h_magna_reader", "sourceId": "s_wp_magna", "text": "agreed at Runnymede", "anchor": { "revisionId": 42, "section": "", "exact": "agreed at Runnymede", "prefix": "a royal charter of rights ", "suffix": ".", "pos": 40 }, "dimension": "political", "lanes": ["politics", "economy"], "subjectQid": "Q99999901", "usedBy": [], "updatedAt": 1760000000000 }
   ],
+  "groups": [{ "id": "g_fixture", "title": "Fixture League", "territoryIds": ["t_fixture"], "updatedAt": 1760000000000 }],
+  "regionParents": { "Greece": "Mediterranean", "Britain": "Europe" },
   "deleted": {}
 }

@@ -198,7 +198,7 @@ test('drag an open entry to change its dates, undo it, drag again, and it stays 
   await expect(view).toContainText(moved);
 });
 
-test('the Eras stop shows each era in its region’s row, with its dimension strip, and opens one @phone', async ({ page, isMobile }) => {
+test('the Eras stop shows each era in its region’s row, with its lane strip, and opens one @phone', async ({ page, isMobile }) => {
   await page.goto('/');
   await expect(page.getByTestId('save-state')).toHaveText('Saved on this device');
   await page.getByTestId('import-input').setInputFiles(fileURLToPath(new URL('../tests/fixtures/greece/classical-greece.json', import.meta.url)));
@@ -220,10 +220,10 @@ test('the Eras stop shows each era in its region’s row, with its dimension str
   const r = (await region.boundingBox())!, b = (await band.boundingBox())!;
   expect(b.y - r.y).toBeLessThan(60);
   expect(b.y + b.height).toBeGreaterThan(r.y);
-  // The strip along its bottom: the dimensions of its highlights, political first.
+  // The strip along its bottom: the lanes of its highlights, Politics and law first.
   const strip = timeline.locator('.tl-era-mix[data-id=i_classical]');
   expect(await strip.count()).toBeGreaterThanOrEqual(4);
-  await expect(strip.first()).toHaveClass(/political/);
+  await expect(strip.first()).toHaveClass(/politics/);
 
   // Clicking it opens it into its lanes, where its name opens the era; the Century stop goes back to the entries.
   await band.click({ position: { x: 20, y: 10 }, force: true }); // the timeline hit-tests by position
@@ -244,7 +244,7 @@ test('an era opens into its six lanes, says when one is empty, and Esc goes back
   await page.getByTestId('import-input').setInputFiles(fileURLToPath(new URL('../tests/fixtures/greece/classical-greece.json', import.meta.url)));
   await expect(page.locator('.doc-title')).toHaveValue(/Classical Greece/);
   if (isMobile) await page.getByTestId('reader').getByRole('button', { name: 'Map' }).click();
-  // Without Technology and Science, nothing technological is left in the Classical period.
+  // Without Technology and Science, nothing is left in the Classical period's Technology lane.
   const cats = page.getByRole('group', { name: 'Show or hide categories' });
   await cats.getByRole('button', { name: 'Technology' }).click();
   await cats.getByRole('button', { name: 'Science' }).click();
@@ -258,9 +258,9 @@ test('an era opens into its six lanes, says when one is empty, and Esc goes back
   await expect(timeline).toHaveAttribute('data-level', '1');
   await expect(timeline.locator('text.tl-era-head', { hasText: 'Classical Greece' })).toBeVisible();
   await expect(timeline.locator('.tl-era')).toHaveCount(0);
-  await expect(timeline.locator('text.tl-lane-name', { hasText: 'POLITICAL' })).toBeVisible();
+  await expect(timeline.locator('text.tl-lane-name', { hasText: 'POLITICS' })).toBeVisible();
 
-  // Down the lanes (Shift and the wheel scroll them): the economic lane's silver owls, and the empty technological lane.
+  // Down the lanes (Shift and the wheel scroll them): the Economy lane's silver owls, and the empty Technology lane.
   const box = (await timeline.boundingBox())!;
   const scrollTo = async (target: ReturnType<typeof timeline.locator>) => {
     for (let i = 0; i < 150 && !(await target.count()); i++) {
@@ -273,7 +273,7 @@ test('an era opens into its six lanes, says when one is empty, and Esc goes back
     await expect(target.first()).toBeVisible();
   };
   await scrollTo(timeline.locator(isMobile ? '.tl-list-item[data-id=i_owls]' : '.tl-phase[data-id=i_owls]'));
-  await scrollTo(timeline.locator('text.tl-lane-empty', { hasText: 'Nothing technological highlighted here yet.' }));
+  await scrollTo(timeline.locator('text.tl-lane-empty', { hasText: 'No technology here yet.' }));
 
   // Esc folds the lanes back into the eras.
   await timeline.press('Escape');

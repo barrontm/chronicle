@@ -99,7 +99,7 @@ try {
     for (const x of r.checks) lines.push(`- ${x.pass ? '✓' : '✗'} ${x.metric}${x.reason ? `: ${x.reason}` : ''}`);
     if (r.output) {
       const quote = (q) => (q ? ` — “${q}”` : '');
-      if (r.output.dimension) lines.push('', `Dimension: ${r.output.dimension.value}${quote(r.output.dimension.quote)}`);
+      for (const l of r.output.lanes ?? []) lines.push('', `Lane: ${l.value}${quote(l.quote)}`);
       lines.push('', 'Entries:', ...r.output.entries.map((e) => `- ${e.item.title} (${e.item.start ? JSON.stringify(e.item.start) : 'no date'}${e.item.places?.length ? ', on the map' : ''})${e.problems.length ? ` ⚠ ${e.problems.join('; ')}` : ''}: ${e.why}${quote(e.quote)}`));
       const titles = new Map([...(r.doc?.items ?? []), ...r.output.entries.map((e) => e.item)].map((i) => [i.id, i.title]));
       const name = (id) => titles.get(id) ?? id;

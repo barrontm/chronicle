@@ -212,6 +212,27 @@ if (any('desktop-places')) await places(await page('desktop-places', desktop, ''
 if (any('dark-places')) await places(await page('dark-places', { ...desktop, colorScheme: 'dark' }, '', true), 'dark');
 if (any('phone-places')) await places(await page('phone-places', { viewport: { width: 412, height: 860 }, isMobile: true, hasTouch: true }, '', true), 'phone');
 
+// An entry's lanes and overview mark in the editor, then on its panel.
+async function lanes(p, prefix) {
+  await withFixture(p);
+  await p.locator('.tl-mark[data-id=i_plato]').click({ force: true });
+  await p.waitForTimeout(600); // the timeline zooms to his time
+  await p.getByTestId('item-view').getByRole('button', { name: 'Edit' }).click();
+  const editor = p.getByTestId('item-editor');
+  const chips = editor.getByRole('group', { name: 'Lanes' }).last();
+  await chips.getByRole('button', { name: 'Philosophy and religion' }).click();
+  await chips.getByRole('button', { name: 'Politics and law' }).click();
+  await editor.getByLabel('Show in the overview').check();
+  await chips.scrollIntoViewIfNeeded();
+  await shot(p, `${prefix}-lanes-editor`);
+  await editor.getByRole('button', { name: /^Save/ }).click();
+  await p.getByTestId('item-lanes').waitFor();
+  await shot(p, `${prefix}-lanes-entry`);
+}
+if (any('desktop-lanes')) await lanes(await page('desktop-lanes', desktop, '', true), 'desktop');
+if (any('dark-lanes')) await lanes(await page('dark-lanes', { ...desktop, colorScheme: 'dark' }, '', true), 'dark');
+if (any('phone-lanes')) await lanes(await page('phone-lanes', { viewport: { width: 412, height: 860 }, isMobile: true, hasTouch: true }, '', true), 'phone');
+
 // The timeline in the reader layout: everything in view, then zoomed out far enough to cluster.
 async function newTimeline(p, prefix) {
   await p.getByTestId('import-input').setInputFiles(FIXTURE);
@@ -290,7 +311,7 @@ async function eraLanes(p, prefix) {
   }
   await p.waitForTimeout(700);
   await shot(p, `${prefix}-era-lanes`);
-  // Further down the lanes: the quieter dimensions and an empty lane's note.
+  // Further down the lanes: the quieter lanes and an empty lane's note.
   const t = await timeline.boundingBox();
   await p.mouse.move(t.x + t.width / 2, t.y + t.height / 2);
   await p.keyboard.down('Shift');
@@ -406,9 +427,11 @@ async function readerHighlight(p, prefix) {
   if (prefix !== 'phone') await where('allowed the Spartan', 'allowed the Spartan', true);
   await p.waitForTimeout(600); // the tray's card rises in over 400 ms
   await shot(p, `${prefix}-reader-highlight`);
-  // The capture tray with a dimension picked, and no selection.
+  // The capture tray with two lanes picked, and no selection.
   await p.evaluate(() => getSelection().removeAllRanges());
-  await p.getByTestId('capture-tray').getByRole('button', { name: 'Political' }).click();
+  const lanes = p.getByTestId('capture-tray').getByRole('group', { name: 'Lanes' });
+  await lanes.getByRole('button', { name: 'Politics and law' }).click();
+  await lanes.getByRole('button', { name: 'War' }).click();
   await p.waitForTimeout(500);
   await shot(p, `${prefix}-reader-tray`);
 }
@@ -466,7 +489,7 @@ async function readerClaude(p, prefix) {
   await p.waitForTimeout(900); // the tray scrolls to the drafts; the map frames the dashed pin
   await shot(p, `${prefix}-reader-claude`);
   await tray.getByTestId('draft-entry').getByRole('button', { name: 'Accept' }).click();
-  await tray.getByRole('button', { name: 'Economic, suggested by Claude' }).click();
+  await tray.getByRole('group', { name: 'Lanes' }).getByRole('button', { name: 'Economy' }).click();
   await p.waitForTimeout(700);
   await shot(p, `${prefix}-reader-claude-accepted`);
 }

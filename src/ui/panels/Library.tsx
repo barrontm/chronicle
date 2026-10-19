@@ -6,7 +6,7 @@ import { useDoc } from '../DocContext';
 import type { Nav } from '../nav';
 import { routeYears } from '../mapData';
 import { useHighlightDrafts } from '../reader/highlightDrafts';
-import { DIMENSION_LABEL, titleOf } from '../util';
+import { lanesInWords, titleOf } from '../util';
 
 type Tab = 'notes' | 'highlights' | 'sources' | 'trends' | 'territories' | 'migration';
 
@@ -81,7 +81,7 @@ export function Library({ tab: initial, nav }: { tab: Tab; nav: Nav }) {
                       <button onClick={() => nav.open(item ? { type: 'item', id: item.id } : { type: 'source', id: source.id })}>
                         <strong className="quote">“{h.text}”</strong>
                         <small>
-                          {[h.dimension && DIMENSION_LABEL[h.dimension], on.length ? `on ${on.map((o) => o.t).join(', ')}` : 'kept as a highlight'].filter(Boolean).join(' · ')}
+                          {[lanesInWords(h.lanes), on.length ? `on ${on.map((o) => o.t).join(', ')}` : 'kept as a highlight'].filter(Boolean).join(' · ')}
                           {left > 0 && <span className="waiting"> · {left === 1 ? '1 draft' : `${left} drafts`} from Claude waiting</span>}
                         </small>
                       </button>

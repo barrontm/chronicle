@@ -1,6 +1,6 @@
 import { formatRange, jsDateToDecimalYear, moveDates, precisionOf, toDecimalYear } from '../../model/dates';
 import type { EraRegion } from '../../model/eras';
-import type { DatedItem, Dimension, HistDate, Relation, TimelineItem } from '../../model/types';
+import type { DatedItem, HistDate, Lane, Relation, TimelineItem } from '../../model/types';
 import { bandSummary } from '../representations/era';
 import { DEEP_LIMITS, panBy, windowAround, zoomAround, type YearWindow } from '../timeNav';
 import { attachGestures } from './gestures';
@@ -28,8 +28,8 @@ export interface TimelineData {
   relations?: Relation[];
   /** Level 0: the eras in their regions. */
   eras?: EraRegion[];
-  /** Level 1: each entry's dimension, its lane inside an era. */
-  dimensions?: ReadonlyMap<string, Dimension>;
+  /** Level 1: each entry's lanes (`entryLanes`), for its lane inside an era. */
+  entryLanes?: ReadonlyMap<string, readonly Lane[]>;
 }
 
 /** New dates for an entry Bob dragged (or moved with Alt and an arrow key). */
@@ -122,7 +122,7 @@ export function createTimeline(host: HTMLElement, cb: TimelineCallbacks, initial
   let hasData = false;
   let source = new Map<string, DatedItem>();
   let draftKey = '';
-  let dims: ReadonlyMap<string, Dimension> = new Map();
+  let dims: ReadonlyMap<string, readonly Lane[]> = new Map();
   /** Level 1: the window at level 0 before the era opened, to go back to. */
   let before0: YearWindow | null = null;
   /** An era opening (to 1) or closing (to 0). */
@@ -480,7 +480,7 @@ export function createTimeline(host: HTMLElement, cb: TimelineCallbacks, initial
     setData(d) {
       D = prepare(d.items, d.lanes, { now: V.now, prominence: d.prominence, thumbFor: d.thumbFor, drafts: d.drafts, relations: d.relations, eras: d.eras });
       eraById = new Map(D.regions.flatMap((R) => R.eras.map((e) => [e.id, e])));
-      dims = d.dimensions ?? new Map();
+      dims = d.entryLanes ?? new Map();
       // The open era follows the data; if it's gone (deleted, or its category hidden), back to the eras.
       if (level === 1 && V.era) {
         const EL = eraLanes(D, V.era.era.id, dims);

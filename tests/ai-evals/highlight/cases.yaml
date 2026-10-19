@@ -2,8 +2,8 @@
 # recorded article (articles/<key>.json) and the passage Bob highlights in it, on doc.json;
 # each assert is a JavaScript expression over `output` (the DraftSet).
 # Run live with: npm run eval:ai -- highlight   (costs money; see the ai-eval skill)
-# Bar (ROADMAP Phase 2 ticket 5): every case validates; the dimension is right or allowed in
-# at least 4 of 5; every date matches the passage; every connection has an effect and cites
+# Bar (ROADMAP Phase 2 ticket 5, lanes since Phase 4 ticket 2): every case validates; the first
+# lane is right or allowed in at least 4 of 5; every date matches the passage; every connection has an effect and cites
 # its highlight; no number the passage lacks (the validator drops those, so "validates" covers it).
 description: Draft records from a passage Bob highlighted
 tests:
@@ -16,8 +16,8 @@ tests:
         metric: validates (nothing dropped for its words, dates or numbers)
         value: "!output.dropped.some((d) => /words it rests on|date|number/.test(d))"
       - type: javascript
-        metric: the dimension is economic
-        value: "output.dimension?.value === 'economic'"
+        metric: the first lane is Economy
+        value: "output.lanes?.[0]?.value === 'economy'"
       - type: javascript
         metric: a connection says the league's money funded something
         value: "output.connections.some((c) => /fund|financ|paid|pay/.test(c.relation.effect))"
@@ -37,8 +37,8 @@ tests:
         metric: validates (nothing dropped for its words, dates or numbers)
         value: "!output.dropped.some((d) => /words it rests on|date|number/.test(d))"
       - type: javascript
-        metric: the dimension is economic
-        value: "output.dimension?.value === 'economic'"
+        metric: the first lane is Economy (War allowed)
+        value: "['economy', 'war'].includes(output.lanes?.[0]?.value)"
       - type: javascript
         metric: a connection says what it weakened
         value: "output.connections.some((c) => /weaken|disrupt|cut|drain|deprived|ruin/.test(c.relation.effect))"
@@ -58,8 +58,8 @@ tests:
         metric: validates (nothing dropped for its words, dates or numbers)
         value: "!output.dropped.some((d) => /words it rests on|date|number/.test(d))"
       - type: javascript
-        metric: the dimension is social (religious allowed)
-        value: "['social', 'religious'].includes(output.dimension?.value)"
+        metric: the first lane is Nature (Philosophy and religion allowed)
+        value: "['nature', 'ideas'].includes(output.lanes?.[0]?.value)"
       - type: javascript
         metric: every date matches the passage (430 BCE)
         value: "output.entries.filter((e) => !e.item.wikidataId).every((e) => e.item.start.y === -429)"
@@ -76,8 +76,8 @@ tests:
         metric: validates (nothing dropped for its words, dates or numbers)
         value: "!output.dropped.some((d) => /words it rests on|date|number/.test(d))"
       - type: javascript
-        metric: the dimension is political
-        value: "output.dimension?.value === 'political'"
+        metric: the first lane is Politics and law
+        value: "output.lanes?.[0]?.value === 'politics'"
       - type: javascript
         metric: drafts the move as a dated entry, 454–453 BCE
         value: "output.entries.some((e) => !e.item.wikidataId && e.item.start.y === -453)"
@@ -97,8 +97,8 @@ tests:
         metric: validates (nothing dropped for its words, dates or numbers)
         value: "!output.dropped.some((d) => /words it rests on|date|number/.test(d))"
       - type: javascript
-        metric: the dimension is technological or political
-        value: "['technological', 'political'].includes(output.dimension?.value)"
+        metric: the first lane is War, Technology or Economy
+        value: "['war', 'technology', 'economy'].includes(output.lanes?.[0]?.value)"
       - type: javascript
         metric: drafts an entry in 483–482 BCE
         value: "output.entries.some((e) => !e.item.wikidataId && (e.item.start.y === -482 || e.item.start.y === -481))"

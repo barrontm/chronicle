@@ -25,7 +25,7 @@ const entry = (over: Record<string, unknown> = {}) => ({
   ref: 'e1', title: 'Treasury moved to Athens', kind: 'event', start: '454 BCE', category: 'politics',
   quote: 'Athens transferred the treasury of the alliance', why: 'When the league’s money came to Athens.', ...over,
 });
-const answer = (over: Record<string, unknown> = {}) => ({ dimension: { value: 'political', quote: 'transferred the treasury of the alliance' }, entries: [], connections: [], ...over });
+const answer = (over: Record<string, unknown> = {}) => ({ lanes: [{ value: 'politics', quote: 'transferred the treasury of the alliance' }], entries: [], connections: [], ...over });
 
 describe('quoteHolds', () => {
   it('finds the words in the highlight or its section, however the quotes and dashes are typed', () => {
@@ -68,12 +68,20 @@ describe('scopeOf', () => {
 });
 
 describe('checkHighlightAnswer', () => {
-  it('keeps a dimension that rests on the passage and drops one that doesn’t', () => {
-    expect(checkHighlightAnswer(answer(), ctx()).dimension).toEqual({ value: 'political', quote: 'transferred the treasury of the alliance' });
-    const r = checkHighlightAnswer(answer({ dimension: { value: 'economic', quote: 'the league grew rich' } }), ctx());
-    expect(r.dimension).toBeUndefined();
-    expect(r.dropped).toEqual(['The suggested dimension (economic): the words it rests on aren’t in the passage.']);
-    expect(checkHighlightAnswer(answer({ dimension: { value: 'military', quote: 'transferred the treasury' } }), ctx()).dimension).toBeUndefined();
+  it('keeps lanes that rest on the passage and drops ones that don’t', () => {
+    expect(checkHighlightAnswer(answer(), ctx()).lanes).toEqual([{ value: 'politics', quote: 'transferred the treasury of the alliance' }]);
+    const r = checkHighlightAnswer(answer({ lanes: [{ value: 'economy', quote: 'the league grew rich' }, { value: 'politics', quote: 'transferred the treasury' }] }), ctx());
+    expect(r.lanes.map((l) => l.value)).toEqual(['politics']);
+    expect(r.dropped).toEqual(['The suggested lane (economy): the words it rests on aren’t in the passage.']);
+    expect(checkHighlightAnswer(answer({ lanes: [{ value: 'political', quote: 'transferred the treasury' }] }), ctx())).toMatchObject({ lanes: [], dropped: ['The suggested lane "political": not one of the six.'] });
+  });
+
+  it('keeps at most two lanes, each once', () => {
+    const q = 'transferred the treasury';
+    const r = checkHighlightAnswer(answer({ lanes: [{ value: 'politics', quote: q }, { value: 'politics', quote: q }, { value: 'economy', quote: q }, { value: 'war', quote: q }] }), ctx());
+    expect(r.lanes.map((l) => l.value)).toEqual(['politics', 'economy']);
+    expect(r.dropped).toEqual(['The suggested lane (war): more than two.']);
+    expect(checkHighlightAnswer(answer({ lanes: undefined }), ctx()).lanes).toEqual([]);
   });
 
   it('reads dates through dates.ts, and keeps entries whose date the passage gives', () => {
@@ -225,7 +233,7 @@ describe('draftFromHighlight', () => {
 
   it('drafts a dated entry with its place, and a connection with its effect citing the highlight', async () => {
     const { doc, output } = await replay(rec('handmade-tribute'));
-    expect(output).toMatchObject({ feature: 'highlight', highlightId: 'h_case', dimension: { value: 'economic' } });
+    expect(output).toMatchObject({ feature: 'highlight', highlightId: 'h_case', lanes: [{ value: 'economy' }] });
     expect(output.entries).toHaveLength(1);
     const decree = output.entries[0];
     expect(decree.item).toMatchObject({
@@ -257,7 +265,7 @@ describe('draftFromHighlight', () => {
 
   it('drafts a linked page a connection needs from Wikipedia, once', async () => {
     const { doc, output } = await replay(rec('handmade-plague'));
-    expect(output.dimension?.value).toBe('social');
+    expect(output.lanes?.map((l) => l.value)).toEqual(['nature']);
     expect(output.entries.map((e) => [e.item.title, e.item.wikidataId])).toEqual([['Plague of Athens', 'Q758173']]);
     const plague = output.entries[0].item.id;
     expect(output.connections.map((c) => [c.relation.fromId, c.relation.effect, c.relation.toId])).toEqual([[plague, 'killed', 'i_pericles'], [plague, 'weakened', 'i_pelop']]);
@@ -280,7 +288,8 @@ describe('draftFromHighlight', () => {
     if (!cases.has(r.case)) return;
     const { output } = await replay(r);
     expect(output.dropped.filter((x) => /words it rests on|date|number/.test(x))).toEqual([]);
-    expect(output.dimension).toBeDefined();
+    // Recordings from before lanes (an older prompt) are re-recorded by the next live run.
+    if (r.prompt === PROMPT_ID) expect(output.lanes?.length).toBeGreaterThan(0);
     expect(output.connections.every((c) => c.relation.effect && c.relation.highlightIds?.includes('h_case'))).toBe(true);
     expect(output.entries.every((e) => e.item.citations?.length && e.item.drafted?.prompt === PROMPT_ID)).toBe(true);
   });

@@ -742,10 +742,12 @@
             "id": "toolu_1",
             "name": "propose_from_highlight",
             "input": {
-              "dimension": {
-                "value": "economic",
-                "quote": "the nearby silver mines were totally disrupted"
-              },
+              "lanes": [
+                {
+                  "value": "economy",
+                  "quote": "the nearby silver mines were totally disrupted"
+                }
+              ],
               "entries": [
                 {
                   "ref": "e1",

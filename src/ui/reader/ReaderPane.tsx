@@ -215,7 +215,7 @@ function Article({ article, onOpen, onOpenRecord, onDraft, onShowYear, onOpenDra
     const citations = draft.item.citations?.map((c) => (page.has(c.sourceId) ? { ...c, sourceId: h.sourceId } : c));
     onDraft?.({
       ...draft,
-      item: { ...draft.item, ...(citations ? { citations } : {}), ...(h.dimension ? { dimension: h.dimension } : {}) },
+      item: { ...draft.item, ...(citations ? { citations } : {}), ...(h.lanes?.length ? { lanes: h.lanes } : {}) },
       newSources: [],
       highlight: h,
       // The highlight is the evidence Bob read for what Wikidata connects.

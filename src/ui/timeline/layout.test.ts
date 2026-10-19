@@ -2,11 +2,12 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { isDated } from '../../model/dates';
 import { parseDoc } from '../../model/doc';
-import { entryDimensions, eraRegions } from '../../model/eras';
+import { eraRegions } from '../../model/eras';
+import { entryLanes } from '../../model/lanes';
 import { highlightProminence } from '../../model/prominence';
-import type { DatedItem, Relation } from '../../model/types';
+import type { DatedItem, Lane, Relation } from '../../model/types';
 import {
-  AXIS_H, describeEntry, describeEra, describeLane1, eraLanes, ERAS_BACK, HEAD1_H, hitTest, laneAt, layout, maxScroll, MIN_HIT, NO_DIMENSION, prepare, ROW_H, stepActive, stepEra, stepLane1,
+  AXIS_H, describeEntry, describeEra, describeLane1, eraLanes, ERAS_BACK, HEAD1_H, hitTest, laneAt, layout, maxScroll, MIN_HIT, NO_LANE, prepare, ROW_H, stepActive, stepEra, stepLane1,
   type Env, type View,
 } from './layout';
 import type { Measure, Prim, Scene } from './scene';
@@ -334,7 +335,7 @@ describe('level 0: eras', () => {
     expect(D.eraExtent).toEqual({ start: -799, end: -30 });
   });
 
-  it('draws the region’s name with its count, and each era as a band with its name, dates and dimension strip', () => {
+  it('draws the region’s name with its count, and each era as a band with its name, dates and lane strip', () => {
     const S = layout(D, view(-820, -10), env(1200, 700), 0);
     const text = textOf(S);
     expect(text).toContain('Greece');
@@ -344,7 +345,7 @@ describe('level 0: eras', () => {
     const band = S.z[1].find((p) => p.cls?.startsWith('tl-era') && p.id === 'i_classical');
     expect(band).toBeDefined();
     const strip = S.z[1].filter((p) => p.k.endsWith('i_classical') && p.cls?.startsWith('tl-era-mix'));
-    expect(strip.map((p) => p.cls!.split(' ')[1])).toEqual(['political', 'economic', 'social', 'technological', 'intellectual', 'religious']);
+    expect(strip.map((p) => p.cls!.split(' ')[1])).toEqual(['politics', 'war', 'economy', 'ideas', 'technology', 'nature']);
     // The Archaic period's start is approximate: a dashed umber edge.
     expect(S.z[1].find((p) => p.k === 'eai_archaic')).toMatchObject({ dash: true, stroke: 'var(--pig-umber)' });
     // Clicking a band opens its era; a landmark opens its entry.
@@ -385,40 +386,45 @@ describe('level 1: an era’s six lanes', () => {
   const items = doc.items.filter(isDated);
   const lanes = doc.categories.map((c) => ({ id: c.id, label: c.label, color: c.color }));
   const D = prepare(items, lanes, { now: 2026, relations: doc.relations, eras: eraRegions(items, doc.highlights, doc.relations, 2026) });
-  const dims = entryDimensions(items, doc.highlights);
+  const dims = entryLanes(items, doc.highlights);
   const EL = eraLanes(D, 'i_classical', dims)!;
   const win = { start: -490, end: -312 };
   const open = (extra: Partial<View> = {}, e = env(1200, 2400)) => layout(D, view(win.start, win.end, { era: EL, ...extra }), e, 1);
   const textOf = (S: Scene) => [...S.z[2], ...S.z[3], ...S.gutter].flatMap((p) => (p.t === 2 ? [p.s] : []));
 
-  it('puts the era’s entries, and its inner eras, in their dimensions’ lanes in pigment order', () => {
-    expect(EL.lanes.map((l) => l.id)).toEqual(['political', 'economic', 'social', 'technological', 'intellectual', 'religious']);
+  it('puts the era’s entries, and its inner eras, in their first lane, the lanes in pigment order', () => {
+    expect(EL.lanes.map((l) => l.id)).toEqual(['politics', 'war', 'economy', 'ideas', 'technology', 'nature', NO_LANE]);
     const lane = (id: string) => EL.lanes[EL.laneOf.get(id)!].id;
-    expect(lane('i_owls')).toBe('economic');
-    expect(lane('i_plato')).toBe('intellectual');
-    expect(lane('i_pentecontaetia')).toBe('political'); // an inner era
+    expect(lane('i_owls')).toBe('economy');
+    expect(lane('i_plato')).toBe('ideas');
+    expect(lane('i_plague')).toBe('ideas'); // Philosophy and religion, and Nature: its first, until ticket 7 draws it in each
+    expect(lane('i_b_potidaea')).toBe('war');
+    expect(lane('i_pentecontaetia')).toBe(NO_LANE); // an inner era, in no lane of its own
     expect(EL.laneOf.has('i_classical')).toBe(false);
     expect(EL.laneOf.has('i_hoplite')).toBe(false); // Archaic
-    const eco = EL.lanes[1];
+    const eco = EL.lanes[2];
     expect(eco.spans.map((x) => x.id)).toContain('i_owls');
     expect(eco.moments.every((m) => m.kind === 'event')).toBe(true);
-    // Lane counts are the era's highlights in each dimension, as level 0's strip counts them.
-    expect(EL.lanes.map((l) => l.count)).toEqual(['political', 'economic', 'social', 'technological', 'intellectual', 'religious'].map((d) => EL.era.mix[d as keyof typeof EL.era.mix]));
+    // Lane counts are the era's highlights in each lane, as level 0's strip counts them.
+    expect(EL.lanes.slice(0, 6).map((l) => l.count)).toEqual(['politics', 'war', 'economy', 'ideas', 'technology', 'nature'].map((d) => EL.era.mix[d as keyof typeof EL.era.mix]));
     // Spans that overlap take different rows; one that follows can share.
     for (const L of EL.lanes) for (const a of L.spans) for (const b of L.spans) {
       if (a !== b && EL.rowOf.get(a.id) === EL.rowOf.get(b.id)) expect(a.e <= b.s || b.e <= a.s).toBe(true);
     }
   });
 
-  it('gives entries with no dimension a lane of their own at the bottom, and says when a lane is empty', () => {
-    const fewer = new Map([...dims].filter(([id, d]) => d !== 'technological' && id !== 'i_plato'));
+  it('gives entries in no lane a lane of their own at the bottom, and says when a lane is empty', () => {
+    const fewer = new Map([...dims].filter(([id, d]) => d[0] !== 'technology' && id !== 'i_plato'));
     const E2 = eraLanes(D, 'i_classical', fewer)!;
-    expect(E2.lanes.map((l) => l.id).at(-1)).toBe(NO_DIMENSION);
-    expect(E2.lanes.at(-1)!.label).toBe('No dimension yet');
+    expect(E2.lanes.map((l) => l.id).at(-1)).toBe(NO_LANE);
+    expect(E2.lanes.at(-1)!.label).toBe('No lane yet');
     expect(E2.lanes.at(-1)!.order.map((x) => x.id)).toContain('i_plato');
     const S = layout(D, view(win.start, win.end, { era: E2 }), env(1200, 2400), 1);
-    expect(textOf(S)).toContain('Nothing technological highlighted here yet.');
-    expect(textOf(S)).toContain('NO DIMENSION YET');
+    expect(textOf(S)).toContain('No technology here yet.');
+    expect(textOf(S)).toContain('NO LANE YET');
+    // With nothing in no lane, that lane isn't drawn.
+    const all = new Map<string, readonly Lane[]>([...dims, ...E2.lanes.at(-1)!.order.map((x): [string, Lane[]] => [x.id, ['politics']])]);
+    expect(eraLanes(D, 'i_classical', all)!.lanes.map((l) => l.id)).not.toContain(NO_LANE);
   });
 
   it('draws a header with the era’s name and "All eras", lane names with counts, named spans and diamonds', () => {
@@ -426,8 +432,8 @@ describe('level 1: an era’s six lanes', () => {
     const text = textOf(S);
     expect(text).toContain('Classical Greece');
     expect(text).toContain('‹ All eras');
-    expect(text).toContain('ECONOMIC');
-    expect(text).toContain(`${EL.era.mix.political} highlights`);
+    expect(text).toContain('ECONOMY');
+    expect(text).toContain(`${EL.era.mix.politics} highlights`);
     expect(text).toContain('Athenian silver “owls”');
     const owls = S.z[1].find((p) => p.id === 'i_owls' && p.cls?.includes('tl-phase'))!;
     expect(owls.t === 0 && owls.dash).toBe(true); // it starts c. 510 BCE
@@ -463,7 +469,7 @@ describe('level 1: an era’s six lanes', () => {
     const band = S.z[1].find((p) => p.cls?.startsWith('tl-era') && p.id === 'i_archaic')!;
     expect(band.a).toBeCloseTo(0.7);
     // The political lane is squeezed into the band, on its way to full height.
-    const wash = (X: Scene) => X.z[0].find((p) => p.k === 'qwpolitical')!;
+    const wash = (X: Scene) => X.z[0].find((p) => p.k === 'qwpolitics')!;
     const now = wash(S), done = wash(open({}, env(1200, 700)));
     expect(now.t === 0 && done.t === 0 && now.h < done.h * 0.6).toBe(true);
     expect(S.targets.filter((t) => t.id !== 'playhead')).toEqual([]);
@@ -476,10 +482,10 @@ describe('level 1: an era’s six lanes', () => {
 
   it('steps through a lane in time order, between lanes by time, and says where it is', () => {
     expect(stepLane1(EL, undefined, 'ArrowRight', win)).toBeDefined();
-    const eco = EL.lanes[1].order;
+    const eco = EL.lanes[2].order;
     expect(stepLane1(EL, eco[0].id, 'ArrowRight', win)).toBe(eco[1].id);
     expect(stepLane1(EL, eco[0].id, 'Home', win)).toBe(eco[0].id);
-    expect(EL.laneOf.get(stepLane1(EL, eco[0].id, 'ArrowDown', win)!)).toBe(2);
-    expect(describeLane1(EL, 'i_owls')).toMatch(/^Athenian silver “owls”, c\. 510 BCE – 322 BCE, Economic, \d+ of \d+$/);
+    expect(EL.laneOf.get(stepLane1(EL, eco[0].id, 'ArrowDown', win)!)).toBe(3);
+    expect(describeLane1(EL, 'i_owls')).toMatch(/^Athenian silver “owls”, c\. 510 BCE – 322 BCE, Economy, \d+ of \d+$/);
   });
 });

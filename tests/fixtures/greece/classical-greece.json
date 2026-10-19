@@ -1,5 +1,5 @@
 {
- "schemaVersion": 8,
+ "schemaVersion": 9,
  "id": "doc_classical_greece",
  "title": "Classical Greece (test fixture)",
  "updatedAt": 1760000000000,
@@ -55,7 +55,6 @@
     "y": -479
    },
    "description": "City-states, colonies, tyrants and the alphabet.",
-   "dimension": "political",
    "tags": [
     "era",
     "political"
@@ -81,7 +80,6 @@
      "sourceId": "s_wp_classical_greece"
     }
    ],
-   "dimension": "political",
    "tags": [
     "era",
     "political"
@@ -189,7 +187,6 @@
     "y": -430
    },
    "description": "Athens grows from leader of an alliance into an empire.",
-   "dimension": "political",
    "tags": [
     "era",
     "political"
@@ -209,7 +206,6 @@
    "end": {
     "y": -361
    },
-   "dimension": "political",
    "tags": [
     "era",
     "political"
@@ -229,7 +225,6 @@
    "end": {
     "y": -322
    },
-   "dimension": "political",
    "tags": [
     "era",
     "political"
@@ -249,7 +244,6 @@
    "end": {
     "y": -30
    },
-   "dimension": "political",
    "tags": [
     "era",
     "political"
@@ -278,10 +272,13 @@
      "sourceId": "s_wp_greco_persian_wars"
     }
    ],
-   "dimension": "political",
    "tags": [
     "political"
-   ]
+   ],
+   "lanes": [
+    "war"
+   ],
+   "overview": "shown"
   },
   {
    "id": "i_ionian",
@@ -308,9 +305,11 @@
      "role": "site"
     }
    ],
-   "dimension": "political",
    "tags": [
     "political"
+   ],
+   "lanes": [
+    "war"
    ]
   },
   {
@@ -335,9 +334,11 @@
      "role": "site"
     }
    ],
-   "dimension": "political",
    "tags": [
     "political"
+   ],
+   "lanes": [
+    "war"
    ]
   },
   {
@@ -366,9 +367,11 @@
      "role": "site"
     }
    ],
-   "dimension": "political",
    "tags": [
     "political"
+   ],
+   "lanes": [
+    "war"
    ]
   },
   {
@@ -388,9 +391,11 @@
      "sourceId": "s_wp_darius_the_great"
     }
    ],
-   "dimension": "political",
    "tags": [
     "political"
+   ],
+   "lanes": [
+    "politics"
    ]
   },
   {
@@ -410,9 +415,11 @@
      "sourceId": "s_wp_xerxes_i"
     }
    ],
-   "dimension": "political",
    "tags": [
     "political"
+   ],
+   "lanes": [
+    "politics"
    ]
   },
   {
@@ -433,9 +440,11 @@
      "sourceId": "s_hdt"
     }
    ],
-   "dimension": "political",
    "tags": [
     "political"
+   ],
+   "lanes": [
+    "war"
    ]
   },
   {
@@ -463,9 +472,11 @@
      "role": "site"
     }
    ],
-   "dimension": "political",
    "tags": [
     "political"
+   ],
+   "lanes": [
+    "war"
    ]
   },
   {
@@ -490,9 +501,11 @@
      "role": "site"
     }
    ],
-   "dimension": "political",
    "tags": [
     "political"
+   ],
+   "lanes": [
+    "war"
    ]
   },
   {
@@ -521,9 +534,11 @@
      "role": "site"
     }
    ],
-   "dimension": "political",
    "tags": [
     "political"
+   ],
+   "lanes": [
+    "war"
    ]
   },
   {
@@ -551,9 +566,11 @@
      "role": "site"
     }
    ],
-   "dimension": "political",
    "tags": [
     "political"
+   ],
+   "lanes": [
+    "war"
    ]
   },
   {
@@ -578,9 +595,11 @@
      "role": "site"
     }
    ],
-   "dimension": "political",
    "tags": [
     "political"
+   ],
+   "lanes": [
+    "war"
    ]
   },
   {
@@ -609,10 +628,13 @@
      "role": "site"
     }
    ],
-   "dimension": "political",
    "tags": [
     "political"
-   ]
+   ],
+   "lanes": [
+    "politics"
+   ],
+   "overview": "shown"
   },
   {
    "id": "i_themistocles_ostracised",
@@ -632,9 +654,11 @@
      "role": "site"
     }
    ],
-   "dimension": "political",
    "tags": [
     "political"
+   ],
+   "lanes": [
+    "politics"
    ]
   },
   {
@@ -660,9 +684,11 @@
      "role": "site"
     }
    ],
-   "dimension": "political",
    "tags": [
     "political"
+   ],
+   "lanes": [
+    "war"
    ]
   },
   {
@@ -683,9 +709,11 @@
      "role": "site"
     }
    ],
-   "dimension": "social",
    "tags": [
     "social"
+   ],
+   "lanes": [
+    "nature"
    ]
   },
   {
@@ -709,9 +737,12 @@
      "role": "site"
     }
    ],
-   "dimension": "social",
    "tags": [
     "social"
+   ],
+   "lanes": [
+    "war",
+    "politics"
    ]
   },
   {
@@ -740,9 +771,11 @@
      "role": "site"
     }
    ],
-   "dimension": "political",
    "tags": [
     "political"
+   ],
+   "lanes": [
+    "politics"
    ]
   },
   {
@@ -754,9 +787,11 @@
    },
    "categoryId": "politics",
    "updatedAt": 1760000000000,
-   "dimension": "political",
    "tags": [
     "political"
+   ],
+   "lanes": [
+    "politics"
    ]
   },
   {
@@ -787,9 +822,12 @@
      "role": "site"
     }
    ],
-   "dimension": "technological",
    "tags": [
     "technological"
+   ],
+   "lanes": [
+    "technology",
+    "war"
    ]
   },
   {
@@ -811,9 +849,11 @@
      "sourceId": "s_thuc"
     }
    ],
-   "dimension": "political",
    "tags": [
     "political"
+   ],
+   "lanes": [
+    "war"
    ]
   },
   {
@@ -833,9 +873,11 @@
      "role": "site"
     }
    ],
-   "dimension": "political",
    "tags": [
     "political"
+   ],
+   "lanes": [
+    "war"
    ]
   },
   {
@@ -861,9 +903,12 @@
      "role": "site"
     }
    ],
-   "dimension": "economic",
    "tags": [
     "economic"
+   ],
+   "lanes": [
+    "economy",
+    "politics"
    ]
   },
   {
@@ -881,9 +926,11 @@
      "sourceId": "s_ath"
     }
    ],
-   "dimension": "social",
    "tags": [
     "social"
+   ],
+   "lanes": [
+    "politics"
    ]
   },
   {
@@ -902,9 +949,11 @@
      "sourceId": "s_wp_peace_of_callias"
     }
    ],
-   "dimension": "political",
    "tags": [
     "political"
+   ],
+   "lanes": [
+    "politics"
    ]
   },
   {
@@ -922,9 +971,12 @@
     "approx": true
    },
    "description": "Poorer citizens can afford to sit on juries.",
-   "dimension": "social",
    "tags": [
     "social"
+   ],
+   "lanes": [
+    "politics",
+    "economy"
    ]
   },
   {
@@ -956,9 +1008,12 @@
      "role": "site"
     }
    ],
-   "dimension": "religious",
    "tags": [
     "religious"
+   ],
+   "lanes": [
+    "ideas",
+    "economy"
    ]
   },
   {
@@ -981,9 +1036,11 @@
      "role": "site"
     }
    ],
-   "dimension": "religious",
    "tags": [
     "religious"
+   ],
+   "lanes": [
+    "ideas"
    ]
   },
   {
@@ -995,9 +1052,11 @@
    },
    "categoryId": "politics",
    "updatedAt": 1760000000000,
-   "dimension": "political",
    "tags": [
     "political"
+   ],
+   "lanes": [
+    "politics"
    ]
   },
   {
@@ -1023,9 +1082,12 @@
      "role": "site"
     }
    ],
-   "dimension": "economic",
    "tags": [
     "economic"
+   ],
+   "lanes": [
+    "economy",
+    "politics"
    ]
   },
   {
@@ -1048,9 +1110,11 @@
      "role": "site"
     }
    ],
-   "dimension": "political",
    "tags": [
     "political"
+   ],
+   "lanes": [
+    "war"
    ]
   },
   {
@@ -1062,9 +1126,11 @@
    },
    "categoryId": "politics",
    "updatedAt": 1760000000000,
-   "dimension": "political",
    "tags": [
     "political"
+   ],
+   "lanes": [
+    "politics"
    ]
   },
   {
@@ -1084,9 +1150,11 @@
      "role": "site"
     }
    ],
-   "dimension": "political",
    "tags": [
     "political"
+   ],
+   "lanes": [
+    "war"
    ]
   },
   {
@@ -1106,9 +1174,11 @@
      "role": "site"
     }
    ],
-   "dimension": "political",
    "tags": [
     "political"
+   ],
+   "lanes": [
+    "war"
    ]
   },
   {
@@ -1121,9 +1191,12 @@
    "categoryId": "politics",
    "updatedAt": 1760000000000,
    "description": "Megarian merchants are shut out of Athens’ harbours and markets.",
-   "dimension": "economic",
    "tags": [
     "economic"
+   ],
+   "lanes": [
+    "economy",
+    "politics"
    ]
   },
   {
@@ -1147,10 +1220,13 @@
      "sourceId": "s_wp_peloponnesian_war"
     }
    ],
-   "dimension": "political",
    "tags": [
     "political"
-   ]
+   ],
+   "lanes": [
+    "war"
+   ],
+   "overview": "shown"
   },
   {
    "id": "i_archidamian",
@@ -1165,9 +1241,11 @@
     "y": -420
    },
    "description": "Sparta invades Attica each summer; Athens raids the coast.",
-   "dimension": "political",
    "tags": [
     "political"
+   ],
+   "lanes": [
+    "war"
    ]
   },
   {
@@ -1187,9 +1265,11 @@
      "sourceId": "s_wp_peace_of_nicias"
     }
    ],
-   "dimension": "political",
    "tags": [
     "political"
+   ],
+   "lanes": [
+    "politics"
    ]
   },
   {
@@ -1213,9 +1293,11 @@
      "sourceId": "s_wp_sicilian_expedition"
     }
    ],
-   "dimension": "political",
    "tags": [
     "political"
+   ],
+   "lanes": [
+    "war"
    ]
   },
   {
@@ -1230,9 +1312,11 @@
    "end": {
     "y": -403
    },
-   "dimension": "political",
    "tags": [
     "political"
+   ],
+   "lanes": [
+    "war"
    ]
   },
   {
@@ -1258,9 +1342,11 @@
      "role": "site"
     }
    ],
-   "dimension": "political",
    "tags": [
     "political"
+   ],
+   "lanes": [
+    "politics"
    ]
   },
   {
@@ -1292,10 +1378,14 @@
      "role": "site"
     }
    ],
-   "dimension": "social",
    "tags": [
     "social"
-   ]
+   ],
+   "lanes": [
+    "nature",
+    "ideas"
+   ],
+   "overview": "shown"
   },
   {
    "id": "i_herms",
@@ -1315,9 +1405,12 @@
      "role": "site"
     }
    ],
-   "dimension": "religious",
    "tags": [
     "religious"
+   ],
+   "lanes": [
+    "ideas",
+    "politics"
    ]
   },
   {
@@ -1329,9 +1422,11 @@
    },
    "categoryId": "politics",
    "updatedAt": 1760000000000,
-   "dimension": "political",
    "tags": [
     "political"
+   ],
+   "lanes": [
+    "politics"
    ]
   },
   {
@@ -1357,9 +1452,11 @@
      "role": "site"
     }
    ],
-   "dimension": "political",
    "tags": [
     "political"
+   ],
+   "lanes": [
+    "politics"
    ]
   },
   {
@@ -1380,9 +1477,11 @@
      "role": "site"
     }
    ],
-   "dimension": "social",
    "tags": [
     "social"
+   ],
+   "lanes": [
+    "politics"
    ]
   },
   {
@@ -1411,9 +1510,11 @@
      "role": "site"
     }
    ],
-   "dimension": "political",
    "tags": [
     "political"
+   ],
+   "lanes": [
+    "politics"
    ]
   },
   {
@@ -1439,9 +1540,11 @@
      "role": "site"
     }
    ],
-   "dimension": "political",
    "tags": [
     "political"
+   ],
+   "lanes": [
+    "politics"
    ]
   },
   {
@@ -1467,9 +1570,11 @@
      "role": "site"
     }
    ],
-   "dimension": "political",
    "tags": [
     "political"
+   ],
+   "lanes": [
+    "war"
    ]
   },
   {
@@ -1495,9 +1600,11 @@
      "role": "site"
     }
    ],
-   "dimension": "political",
    "tags": [
     "political"
+   ],
+   "lanes": [
+    "war"
    ]
   },
   {
@@ -1523,9 +1630,11 @@
      "role": "site"
     }
    ],
-   "dimension": "political",
    "tags": [
     "political"
+   ],
+   "lanes": [
+    "war"
    ]
   },
   {
@@ -1551,9 +1660,11 @@
      "role": "site"
     }
    ],
-   "dimension": "political",
    "tags": [
     "political"
+   ],
+   "lanes": [
+    "war"
    ]
   },
   {
@@ -1579,9 +1690,11 @@
      "role": "site"
     }
    ],
-   "dimension": "political",
    "tags": [
     "political"
+   ],
+   "lanes": [
+    "war"
    ]
   },
   {
@@ -1607,9 +1720,11 @@
      "role": "site"
     }
    ],
-   "dimension": "political",
    "tags": [
     "political"
+   ],
+   "lanes": [
+    "war"
    ]
   },
   {
@@ -1635,9 +1750,11 @@
      "role": "site"
     }
    ],
-   "dimension": "political",
    "tags": [
     "political"
+   ],
+   "lanes": [
+    "war"
    ]
   },
   {
@@ -1663,9 +1780,11 @@
      "role": "site"
     }
    ],
-   "dimension": "political",
    "tags": [
     "political"
+   ],
+   "lanes": [
+    "war"
    ]
   },
   {
@@ -1691,9 +1810,11 @@
      "role": "site"
     }
    ],
-   "dimension": "political",
    "tags": [
     "political"
+   ],
+   "lanes": [
+    "war"
    ]
   },
   {
@@ -1719,9 +1840,11 @@
      "role": "site"
     }
    ],
-   "dimension": "political",
    "tags": [
     "political"
+   ],
+   "lanes": [
+    "war"
    ]
   },
   {
@@ -1747,9 +1870,11 @@
      "role": "site"
     }
    ],
-   "dimension": "political",
    "tags": [
     "political"
+   ],
+   "lanes": [
+    "war"
    ]
   },
   {
@@ -1775,9 +1900,11 @@
      "role": "site"
     }
    ],
-   "dimension": "political",
    "tags": [
     "political"
+   ],
+   "lanes": [
+    "war"
    ]
   },
   {
@@ -1803,9 +1930,11 @@
      "role": "site"
     }
    ],
-   "dimension": "political",
    "tags": [
     "political"
+   ],
+   "lanes": [
+    "war"
    ]
   },
   {
@@ -1831,9 +1960,11 @@
      "role": "site"
     }
    ],
-   "dimension": "political",
    "tags": [
     "political"
+   ],
+   "lanes": [
+    "war"
    ]
   },
   {
@@ -1859,9 +1990,11 @@
      "role": "site"
     }
    ],
-   "dimension": "political",
    "tags": [
     "political"
+   ],
+   "lanes": [
+    "war"
    ]
   },
   {
@@ -1887,9 +2020,11 @@
      "role": "site"
     }
    ],
-   "dimension": "political",
    "tags": [
     "political"
+   ],
+   "lanes": [
+    "war"
    ]
   },
   {
@@ -1915,9 +2050,11 @@
      "role": "site"
     }
    ],
-   "dimension": "political",
    "tags": [
     "political"
+   ],
+   "lanes": [
+    "war"
    ]
   },
   {
@@ -1943,9 +2080,11 @@
      "role": "site"
     }
    ],
-   "dimension": "political",
    "tags": [
     "political"
+   ],
+   "lanes": [
+    "war"
    ]
   },
   {
@@ -1971,9 +2110,11 @@
      "role": "site"
     }
    ],
-   "dimension": "political",
    "tags": [
     "political"
+   ],
+   "lanes": [
+    "war"
    ]
   },
   {
@@ -1999,9 +2140,11 @@
      "role": "site"
     }
    ],
-   "dimension": "political",
    "tags": [
     "political"
+   ],
+   "lanes": [
+    "war"
    ]
   },
   {
@@ -2025,9 +2168,11 @@
      "sourceId": "s_wp_anabasis_xenophon"
     }
    ],
-   "dimension": "political",
    "tags": [
     "political"
+   ],
+   "lanes": [
+    "war"
    ]
   },
   {
@@ -2053,9 +2198,12 @@
      "role": "site"
     }
    ],
-   "dimension": "intellectual",
    "tags": [
     "intellectual"
+   ],
+   "lanes": [
+    "ideas",
+    "politics"
    ]
   },
   {
@@ -2076,9 +2224,12 @@
      "role": "site"
     }
    ],
-   "dimension": "technological",
    "tags": [
     "technological"
+   ],
+   "lanes": [
+    "technology",
+    "war"
    ]
   },
   {
@@ -2098,9 +2249,11 @@
      "sourceId": "s_wp_corinthian_war"
     }
    ],
-   "dimension": "political",
    "tags": [
     "political"
+   ],
+   "lanes": [
+    "war"
    ]
   },
   {
@@ -2118,9 +2271,11 @@
      "sourceId": "s_wp_king_s_peace"
     }
    ],
-   "dimension": "political",
    "tags": [
     "political"
+   ],
+   "lanes": [
+    "politics"
    ]
   },
   {
@@ -2145,10 +2300,13 @@
      "role": "site"
     }
    ],
-   "dimension": "intellectual",
    "tags": [
     "intellectual"
-   ]
+   ],
+   "lanes": [
+    "ideas"
+   ],
+   "overview": "shown"
   },
   {
    "id": "i_cadmea",
@@ -2167,9 +2325,11 @@
      "role": "site"
     }
    ],
-   "dimension": "political",
    "tags": [
     "political"
+   ],
+   "lanes": [
+    "war"
    ]
   },
   {
@@ -2181,9 +2341,11 @@
    },
    "categoryId": "politics",
    "updatedAt": 1760000000000,
-   "dimension": "political",
    "tags": [
     "political"
+   ],
+   "lanes": [
+    "politics"
    ]
   },
   {
@@ -2212,9 +2374,11 @@
      "role": "site"
     }
    ],
-   "dimension": "political",
    "tags": [
     "political"
+   ],
+   "lanes": [
+    "war"
    ]
   },
   {
@@ -2235,9 +2399,11 @@
      "role": "site"
     }
    ],
-   "dimension": "social",
    "tags": [
     "social"
+   ],
+   "lanes": [
+    "politics"
    ]
   },
   {
@@ -2263,9 +2429,11 @@
      "role": "site"
     }
    ],
-   "dimension": "political",
    "tags": [
     "political"
+   ],
+   "lanes": [
+    "war"
    ]
   },
   {
@@ -2281,9 +2449,11 @@
     "y": -354
    },
    "description": "Athens’ allies break away.",
-   "dimension": "political",
    "tags": [
     "political"
+   ],
+   "lanes": [
+    "war"
    ]
   },
   {
@@ -2312,9 +2482,12 @@
      "role": "site"
     }
    ],
-   "dimension": "religious",
    "tags": [
     "religious"
+   ],
+   "lanes": [
+    "war",
+    "ideas"
    ]
   },
   {
@@ -2334,9 +2507,11 @@
      "role": "site"
     }
    ],
-   "dimension": "political",
    "tags": [
     "political"
+   ],
+   "lanes": [
+    "politics"
    ]
   },
   {
@@ -2356,9 +2531,11 @@
      "role": "site"
     }
    ],
-   "dimension": "political",
    "tags": [
     "political"
+   ],
+   "lanes": [
+    "war"
    ]
   },
   {
@@ -2379,9 +2556,12 @@
      "sourceId": "s_wp_sarissa"
     }
    ],
-   "dimension": "technological",
    "tags": [
     "technological"
+   ],
+   "lanes": [
+    "technology",
+    "war"
    ]
   },
   {
@@ -2406,9 +2586,11 @@
      "role": "site"
     }
    ],
-   "dimension": "political",
    "tags": [
     "political"
+   ],
+   "lanes": [
+    "war"
    ]
   },
   {
@@ -2420,9 +2602,11 @@
    },
    "categoryId": "politics",
    "updatedAt": 1760000000000,
-   "dimension": "political",
    "tags": [
     "political"
+   ],
+   "lanes": [
+    "politics"
    ]
   },
   {
@@ -2451,9 +2635,11 @@
      "role": "site"
     }
    ],
-   "dimension": "political",
    "tags": [
     "political"
+   ],
+   "lanes": [
+    "war"
    ]
   },
   {
@@ -2473,9 +2659,11 @@
      "role": "site"
     }
    ],
-   "dimension": "political",
    "tags": [
     "political"
+   ],
+   "lanes": [
+    "politics"
    ]
   },
   {
@@ -2495,9 +2683,11 @@
      "role": "site"
     }
    ],
-   "dimension": "political",
    "tags": [
     "political"
+   ],
+   "lanes": [
+    "politics"
    ]
   },
   {
@@ -2517,9 +2707,11 @@
      "role": "site"
     }
    ],
-   "dimension": "intellectual",
    "tags": [
     "intellectual"
+   ],
+   "lanes": [
+    "ideas"
    ]
   },
   {
@@ -2539,9 +2731,11 @@
      "role": "site"
     }
    ],
-   "dimension": "political",
    "tags": [
     "political"
+   ],
+   "lanes": [
+    "war"
    ]
   },
   {
@@ -2561,10 +2755,13 @@
      "sourceId": "s_wp_wars_of_alexander_the_great"
     }
    ],
-   "dimension": "political",
    "tags": [
     "political"
-   ]
+   ],
+   "lanes": [
+    "war"
+   ],
+   "overview": "world"
   },
   {
    "id": "i_issus",
@@ -2583,9 +2780,11 @@
      "role": "site"
     }
    ],
-   "dimension": "political",
    "tags": [
     "political"
+   ],
+   "lanes": [
+    "war"
    ]
   },
   {
@@ -2605,9 +2804,11 @@
      "role": "site"
     }
    ],
-   "dimension": "political",
    "tags": [
     "political"
+   ],
+   "lanes": [
+    "war"
    ]
   },
   {
@@ -2627,9 +2828,11 @@
      "role": "site"
     }
    ],
-   "dimension": "political",
    "tags": [
     "political"
+   ],
+   "lanes": [
+    "politics"
    ]
   },
   {
@@ -2650,9 +2853,11 @@
      "sourceId": "s_wp_lamian_war"
     }
    ],
-   "dimension": "political",
    "tags": [
     "political"
+   ],
+   "lanes": [
+    "war"
    ]
   },
   {
@@ -2673,9 +2878,11 @@
      "role": "site"
     }
    ],
-   "dimension": "political",
    "tags": [
     "political"
+   ],
+   "lanes": [
+    "war"
    ]
   },
   {
@@ -2704,9 +2911,12 @@
      "role": "site"
     }
    ],
-   "dimension": "economic",
    "tags": [
     "economic"
+   ],
+   "lanes": [
+    "economy",
+    "nature"
    ]
   },
   {
@@ -2723,9 +2933,11 @@
     "y": -321
    },
    "description": "Coins stamped with Athena’s owl become a common currency around the Aegean.",
-   "dimension": "economic",
    "tags": [
     "economic"
+   ],
+   "lanes": [
+    "economy"
    ]
   },
   {
@@ -2746,9 +2958,12 @@
      "sourceId": "s_wp_trireme"
     }
    ],
-   "dimension": "technological",
    "tags": [
     "technological"
+   ],
+   "lanes": [
+    "technology",
+    "war"
    ]
   },
   {
@@ -2770,9 +2985,12 @@
      "sourceId": "s_wp_hoplite"
     }
    ],
-   "dimension": "technological",
    "tags": [
     "technological"
+   ],
+   "lanes": [
+    "technology",
+    "war"
    ]
   },
   {
@@ -2794,9 +3012,12 @@
      "role": "site"
     }
    ],
-   "dimension": "social",
    "tags": [
     "social"
+   ],
+   "lanes": [
+    "technology",
+    "economy"
    ]
   },
   {
@@ -2816,9 +3037,11 @@
      "role": "site"
     }
    ],
-   "dimension": "religious",
    "tags": [
     "religious"
+   ],
+   "lanes": [
+    "ideas"
    ]
   },
   {
@@ -2839,9 +3062,11 @@
      "role": "site"
     }
    ],
-   "dimension": "intellectual",
    "tags": [
     "intellectual"
+   ],
+   "lanes": [
+    "ideas"
    ]
   },
   {
@@ -2853,9 +3078,11 @@
    },
    "categoryId": "arts",
    "updatedAt": 1760000000000,
-   "dimension": "intellectual",
    "tags": [
     "intellectual"
+   ],
+   "lanes": [
+    "ideas"
    ]
   },
   {
@@ -2867,9 +3094,11 @@
    },
    "categoryId": "arts",
    "updatedAt": 1760000000000,
-   "dimension": "intellectual",
    "tags": [
     "intellectual"
+   ],
+   "lanes": [
+    "ideas"
    ]
   },
   {
@@ -2882,9 +3111,11 @@
    },
    "categoryId": "arts",
    "updatedAt": 1760000000000,
-   "dimension": "intellectual",
    "tags": [
     "intellectual"
+   ],
+   "lanes": [
+    "ideas"
    ]
   },
   {
@@ -2897,9 +3128,11 @@
    "categoryId": "arts",
    "updatedAt": 1760000000000,
    "description": "A comedy that makes fun of Socrates.",
-   "dimension": "intellectual",
    "tags": [
     "intellectual"
+   ],
+   "lanes": [
+    "ideas"
    ]
   },
   {
@@ -2918,9 +3151,11 @@
      "sourceId": "s_hdt"
     }
    ],
-   "dimension": "intellectual",
    "tags": [
     "intellectual"
+   ],
+   "lanes": [
+    "ideas"
    ]
   },
   {
@@ -2937,9 +3172,11 @@
      "sourceId": "s_thuc"
     }
    ],
-   "dimension": "intellectual",
    "tags": [
     "intellectual"
+   ],
+   "lanes": [
+    "ideas"
    ]
   },
   {
@@ -2953,9 +3190,11 @@
    "categoryId": "ideas",
    "updatedAt": 1760000000000,
    "description": "The spring festival where tragedies and comedies compete.",
-   "dimension": "religious",
    "tags": [
     "religious"
+   ],
+   "lanes": [
+    "ideas"
    ]
   },
   {
@@ -2978,9 +3217,11 @@
      "sourceId": "s_wp_cleisthenes"
     }
    ],
-   "dimension": "political",
    "tags": [
     "political"
+   ],
+   "lanes": [
+    "politics"
    ]
   },
   {
@@ -3003,9 +3244,12 @@
      "sourceId": "s_wp_themistocles"
     }
    ],
-   "dimension": "political",
    "tags": [
     "political"
+   ],
+   "lanes": [
+    "politics",
+    "war"
    ]
   },
   {
@@ -3021,9 +3265,11 @@
    "end": {
     "y": -467
    },
-   "dimension": "political",
    "tags": [
     "political"
+   ],
+   "lanes": [
+    "politics"
    ]
   },
   {
@@ -3044,9 +3290,11 @@
      "sourceId": "s_wp_leonidas_i"
     }
    ],
-   "dimension": "political",
    "tags": [
     "political"
+   ],
+   "lanes": [
+    "war"
    ]
   },
   {
@@ -3061,9 +3309,11 @@
    "end": {
     "y": -449
    },
-   "dimension": "political",
    "tags": [
     "political"
+   ],
+   "lanes": [
+    "politics"
    ]
   },
   {
@@ -3087,9 +3337,12 @@
      "sourceId": "s_wp_pericles"
     }
    ],
-   "dimension": "political",
    "tags": [
     "political"
+   ],
+   "lanes": [
+    "politics",
+    "war"
    ]
   },
   {
@@ -3106,9 +3359,11 @@
     "y": -399,
     "approx": true
    },
-   "dimension": "social",
    "tags": [
     "social"
+   ],
+   "lanes": [
+    "ideas"
    ]
   },
   {
@@ -3130,9 +3385,11 @@
      "sourceId": "s_wp_phidias"
     }
    ],
-   "dimension": "religious",
    "tags": [
     "religious"
+   ],
+   "lanes": [
+    "ideas"
    ]
   },
   {
@@ -3148,9 +3405,11 @@
    "end": {
     "y": -427
    },
-   "dimension": "intellectual",
    "tags": [
     "intellectual"
+   ],
+   "lanes": [
+    "ideas"
    ]
   },
   {
@@ -3167,9 +3426,11 @@
     "y": -419,
     "approx": true
    },
-   "dimension": "intellectual",
    "tags": [
     "intellectual"
+   ],
+   "lanes": [
+    "ideas"
    ]
   },
   {
@@ -3191,9 +3452,11 @@
      "sourceId": "s_wp_herodotus"
     }
    ],
-   "dimension": "intellectual",
    "tags": [
     "intellectual"
+   ],
+   "lanes": [
+    "ideas"
    ]
   },
   {
@@ -3216,9 +3479,11 @@
      "sourceId": "s_wp_thucydides"
     }
    ],
-   "dimension": "intellectual",
    "tags": [
     "intellectual"
+   ],
+   "lanes": [
+    "ideas"
    ]
   },
   {
@@ -3238,9 +3503,11 @@
      "sourceId": "s_wp_aeschylus"
     }
    ],
-   "dimension": "intellectual",
    "tags": [
     "intellectual"
+   ],
+   "lanes": [
+    "ideas"
    ]
   },
   {
@@ -3260,9 +3527,11 @@
      "sourceId": "s_wp_sophocles"
     }
    ],
-   "dimension": "intellectual",
    "tags": [
     "intellectual"
+   ],
+   "lanes": [
+    "ideas"
    ]
   },
   {
@@ -3282,9 +3551,11 @@
      "sourceId": "s_wp_euripides"
     }
    ],
-   "dimension": "intellectual",
    "tags": [
     "intellectual"
+   ],
+   "lanes": [
+    "ideas"
    ]
   },
   {
@@ -3306,9 +3577,11 @@
      "sourceId": "s_wp_aristophanes"
     }
    ],
-   "dimension": "intellectual",
    "tags": [
     "intellectual"
+   ],
+   "lanes": [
+    "ideas"
    ]
   },
   {
@@ -3325,9 +3598,11 @@
     "y": -437,
     "approx": true
    },
-   "dimension": "intellectual",
    "tags": [
     "intellectual"
+   ],
+   "lanes": [
+    "ideas"
    ]
   },
   {
@@ -3349,9 +3624,12 @@
      "sourceId": "s_wp_hippocrates"
     }
    ],
-   "dimension": "intellectual",
    "tags": [
     "intellectual"
+   ],
+   "lanes": [
+    "ideas",
+    "nature"
    ]
   },
   {
@@ -3368,9 +3646,11 @@
     "y": -369,
     "approx": true
    },
-   "dimension": "intellectual",
    "tags": [
     "intellectual"
+   ],
+   "lanes": [
+    "ideas"
    ]
   },
   {
@@ -3387,9 +3667,11 @@
     "y": -407,
     "approx": true
    },
-   "dimension": "technological",
    "tags": [
     "technological"
+   ],
+   "lanes": [
+    "technology"
    ]
   },
   {
@@ -3419,9 +3701,11 @@
      "role": "site"
     }
    ],
-   "dimension": "intellectual",
    "tags": [
     "intellectual"
+   ],
+   "lanes": [
+    "ideas"
    ]
   },
   {
@@ -3443,9 +3727,11 @@
      "sourceId": "s_wp_plato"
     }
    ],
-   "dimension": "intellectual",
    "tags": [
     "intellectual"
+   ],
+   "lanes": [
+    "ideas"
    ]
   },
   {
@@ -3466,9 +3752,11 @@
      "sourceId": "s_wp_aristotle"
     }
    ],
-   "dimension": "intellectual",
    "tags": [
     "intellectual"
+   ],
+   "lanes": [
+    "ideas"
    ]
   },
   {
@@ -3485,9 +3773,11 @@
     "y": -374,
     "approx": true
    },
-   "dimension": "intellectual",
    "tags": [
     "intellectual"
+   ],
+   "lanes": [
+    "ideas"
    ]
   },
   {
@@ -3503,9 +3793,11 @@
    "end": {
     "y": -322
    },
-   "dimension": "intellectual",
    "tags": [
     "intellectual"
+   ],
+   "lanes": [
+    "ideas"
    ]
   },
   {
@@ -3527,9 +3819,11 @@
      "sourceId": "s_wp_xenophon"
     }
    ],
-   "dimension": "intellectual",
    "tags": [
     "intellectual"
+   ],
+   "lanes": [
+    "ideas"
    ]
   },
   {
@@ -3553,9 +3847,11 @@
      "sourceId": "s_wp_alcibiades"
     }
    ],
-   "dimension": "political",
    "tags": [
     "political"
+   ],
+   "lanes": [
+    "politics"
    ]
   },
   {
@@ -3571,9 +3867,11 @@
    "end": {
     "y": -412
    },
-   "dimension": "political",
    "tags": [
     "political"
+   ],
+   "lanes": [
+    "politics"
    ]
   },
   {
@@ -3594,9 +3892,11 @@
      "sourceId": "s_wp_lysander"
     }
    ],
-   "dimension": "political",
    "tags": [
     "political"
+   ],
+   "lanes": [
+    "war"
    ]
   },
   {
@@ -3612,9 +3912,11 @@
    "end": {
     "y": -359
    },
-   "dimension": "political",
    "tags": [
     "political"
+   ],
+   "lanes": [
+    "politics"
    ]
   },
   {
@@ -3630,9 +3932,11 @@
    "end": {
     "y": -387
    },
-   "dimension": "political",
    "tags": [
     "political"
+   ],
+   "lanes": [
+    "politics"
    ]
   },
   {
@@ -3653,9 +3957,12 @@
      "sourceId": "s_wp_epaminondas"
     }
    ],
-   "dimension": "political",
    "tags": [
     "political"
+   ],
+   "lanes": [
+    "war",
+    "politics"
    ]
   },
   {
@@ -3671,9 +3978,11 @@
    "end": {
     "y": -363
    },
-   "dimension": "political",
    "tags": [
     "political"
+   ],
+   "lanes": [
+    "politics"
    ]
   },
   {
@@ -3690,9 +3999,11 @@
     "y": -379,
     "approx": true
    },
-   "dimension": "social",
    "tags": [
     "social"
+   ],
+   "lanes": [
+    "ideas"
    ]
   },
   {
@@ -3707,9 +4018,11 @@
    "end": {
     "y": -337
    },
-   "dimension": "intellectual",
    "tags": [
     "intellectual"
+   ],
+   "lanes": [
+    "ideas"
    ]
   },
   {
@@ -3726,9 +4039,11 @@
     "y": -329,
     "approx": true
    },
-   "dimension": "intellectual",
    "tags": [
     "intellectual"
+   ],
+   "lanes": [
+    "ideas"
    ]
   },
   {
@@ -3745,9 +4060,11 @@
     "y": -419,
     "approx": true
    },
-   "dimension": "intellectual",
    "tags": [
     "intellectual"
+   ],
+   "lanes": [
+    "ideas"
    ]
   },
   {
@@ -3771,9 +4088,11 @@
      "role": "site"
     }
    ],
-   "dimension": "political",
    "tags": [
     "political"
+   ],
+   "lanes": [
+    "politics"
    ]
   },
   {
@@ -3794,9 +4113,11 @@
      "sourceId": "s_wp_demosthenes"
     }
    ],
-   "dimension": "political",
    "tags": [
     "political"
+   ],
+   "lanes": [
+    "politics"
    ]
   },
   {
@@ -3816,9 +4137,12 @@
      "sourceId": "s_wp_philip_ii_of_macedon"
     }
    ],
-   "dimension": "political",
    "tags": [
     "political"
+   ],
+   "lanes": [
+    "politics",
+    "war"
    ]
   },
   {
@@ -3838,9 +4162,12 @@
      "sourceId": "s_wp_alexander_the_great"
     }
    ],
-   "dimension": "political",
    "tags": [
     "political"
+   ],
+   "lanes": [
+    "war",
+    "politics"
    ]
   }
  ],
@@ -3969,7 +4296,76 @@
    "source": {
     "name": "Rough hand-drawn outline (test data), not a historical map"
    },
-   "updatedAt": 1760000000000
+   "updatedAt": 1760000000000,
+   "region": "Greece",
+   "strength": [
+    {
+     "at": {
+      "y": -599
+     },
+     "level": 1
+    },
+    {
+     "at": {
+      "y": -489
+     },
+     "level": 2
+    },
+    {
+     "at": {
+      "y": -478
+     },
+     "level": 3
+    },
+    {
+     "at": {
+      "y": -453
+     },
+     "level": 5,
+     "highlightIds": [
+      "h_delian"
+     ]
+    },
+    {
+     "at": {
+      "y": -430
+     },
+     "level": 5
+    },
+    {
+     "at": {
+      "y": -412
+     },
+     "level": 4,
+     "highlightIds": [
+      "h_decelea"
+     ]
+    },
+    {
+     "at": {
+      "y": -403
+     },
+     "level": 2,
+     "highlightIds": [
+      "h_thirty"
+     ]
+    },
+    {
+     "at": {
+      "y": -376
+     },
+     "level": 3
+    },
+    {
+     "at": {
+      "y": -337
+     },
+     "level": 1,
+     "highlightIds": [
+      "h_chaeronea"
+     ]
+    }
+   ]
   },
   {
    "id": "t_delian",
@@ -4170,7 +4566,8 @@
    "source": {
     "name": "Rough hand-drawn outline (test data), not a historical map"
    },
-   "updatedAt": 1760000000000
+   "updatedAt": 1760000000000,
+   "region": "Greece"
   },
   {
    "id": "t_sparta",
@@ -4276,7 +4673,46 @@
    "source": {
     "name": "Rough hand-drawn outline (test data), not a historical map"
    },
-   "updatedAt": 1760000000000
+   "updatedAt": 1760000000000,
+   "region": "Greece",
+   "strength": [
+    {
+     "at": {
+      "y": -699
+     },
+     "level": 3
+    },
+    {
+     "at": {
+      "y": -479
+     },
+     "level": 4
+    },
+    {
+     "at": {
+      "y": -403
+     },
+     "level": 5,
+     "highlightIds": [
+      "h_sparta"
+     ]
+    },
+    {
+     "at": {
+      "y": -370
+     },
+     "level": 2,
+     "highlightIds": [
+      "h_thebes"
+     ]
+    },
+    {
+     "at": {
+      "y": -337
+     },
+     "level": 1
+    }
+   ]
   },
   {
    "id": "t_corinth",
@@ -4327,7 +4763,8 @@
    "source": {
     "name": "Rough hand-drawn outline (test data), not a historical map"
    },
-   "updatedAt": 1760000000000
+   "updatedAt": 1760000000000,
+   "region": "Greece"
   },
   {
    "id": "t_thebes",
@@ -4381,7 +4818,46 @@
    "source": {
     "name": "Rough hand-drawn outline (test data), not a historical map"
    },
-   "updatedAt": 1760000000000
+   "updatedAt": 1760000000000,
+   "region": "Greece",
+   "strength": [
+    {
+     "at": {
+      "y": -699
+     },
+     "level": 1
+    },
+    {
+     "at": {
+      "y": -394
+     },
+     "level": 2
+    },
+    {
+     "at": {
+      "y": -370
+     },
+     "level": 4,
+     "highlightIds": [
+      "h_thebes"
+     ]
+    },
+    {
+     "at": {
+      "y": -361
+     },
+     "level": 3
+    },
+    {
+     "at": {
+      "y": -337
+     },
+     "level": 1,
+     "highlightIds": [
+      "h_chaeronea"
+     ]
+    }
+   ]
   },
   {
    "id": "t_macedon",
@@ -4538,7 +5014,40 @@
    "source": {
     "name": "Rough hand-drawn outline (test data), not a historical map"
    },
-   "updatedAt": 1760000000000
+   "updatedAt": 1760000000000,
+   "region": "Macedon",
+   "strength": [
+    {
+     "at": {
+      "y": -699
+     },
+     "level": 1
+    },
+    {
+     "at": {
+      "y": -358
+     },
+     "level": 2,
+     "highlightIds": [
+      "h_macedon"
+     ]
+    },
+    {
+     "at": {
+      "y": -337
+     },
+     "level": 5,
+     "highlightIds": [
+      "h_chaeronea"
+     ]
+    },
+    {
+     "at": {
+      "y": -322
+     },
+     "level": 5
+    }
+   ]
   },
   {
    "id": "t_syracuse",
@@ -4619,7 +5128,8 @@
    "source": {
     "name": "Rough hand-drawn outline (test data), not a historical map"
    },
-   "updatedAt": 1760000000000
+   "updatedAt": 1760000000000,
+   "region": "Italy"
   }
  ],
  "flows": [
@@ -4820,11 +5330,14 @@
     "section": "Treasury",
     "exact": "Founded in 478 BC, the league moved its treasury from Delos to Athens in 454 BC."
    },
-   "dimension": "political",
    "usedBy": [
     "i_treasury_moved"
    ],
-   "updatedAt": 1760000000000
+   "updatedAt": 1760000000000,
+   "lanes": [
+    "economy",
+    "politics"
+   ]
   },
   {
    "id": "h_democracy",
@@ -4834,11 +5347,13 @@
     "section": "History",
     "exact": "Ephialtes' reforms of 462 BC took most of the Areopagus's powers and gave them to the Council, the Assembly and the courts."
    },
-   "dimension": "political",
    "usedBy": [
     "i_ephialtes"
    ],
-   "updatedAt": 1760000000000
+   "updatedAt": 1760000000000,
+   "lanes": [
+    "politics"
+   ]
   },
   {
    "id": "h_pelwar",
@@ -4848,31 +5363,37 @@
     "section": "Aftermath",
     "exact": "Athens surrendered in 404 BC, and its Long Walls were pulled down."
    },
-   "dimension": "political",
    "usedBy": [
     "i_pelop"
    ],
-   "updatedAt": 1760000000000
+   "updatedAt": 1760000000000,
+   "lanes": [
+    "war"
+   ]
   },
   {
    "id": "h_sparta",
    "sourceId": "s_wp_spartan_hegemony",
    "text": "Sparta was the leading power in Greece from 404 BC until Thebes defeated it at Leuctra in 371 BC.",
-   "dimension": "political",
    "usedBy": [
     "i_hegemonies"
    ],
-   "updatedAt": 1760000000000
+   "updatedAt": 1760000000000,
+   "lanes": [
+    "politics"
+   ]
   },
   {
    "id": "h_thebes",
    "sourceId": "s_wp_theban_hegemony",
    "text": "Theban supremacy ended when Epaminondas was killed at Mantinea in 362 BC.",
-   "dimension": "political",
    "usedBy": [
     "i_mantinea362"
    ],
-   "updatedAt": 1760000000000
+   "updatedAt": 1760000000000,
+   "lanes": [
+    "war"
+   ]
   },
   {
    "id": "h_macedon",
@@ -4882,41 +5403,49 @@
     "section": "Reign",
     "exact": "Philip II became king of Macedon in 359 BC and rebuilt its army."
    },
-   "dimension": "political",
    "usedBy": [
     "i_macedon_rises"
    ],
-   "updatedAt": 1760000000000
+   "updatedAt": 1760000000000,
+   "lanes": [
+    "politics"
+   ]
   },
   {
    "id": "h_salamis",
    "sourceId": "s_wp_battle_of_salamis",
    "text": "The Greek fleet defeated the Persians in the straits of Salamis in 480 BC.",
-   "dimension": "political",
    "usedBy": [
     "i_salamis"
    ],
-   "updatedAt": 1760000000000
+   "updatedAt": 1760000000000,
+   "lanes": [
+    "war"
+   ]
   },
   {
    "id": "h_thirty",
    "sourceId": "s_wp_thirty_tyrants",
    "text": "A pro-Spartan oligarchy, the Thirty Tyrants, ruled Athens for about eight months in 404–403 BC.",
-   "dimension": "political",
    "usedBy": [
     "i_thirty"
    ],
-   "updatedAt": 1760000000000
+   "updatedAt": 1760000000000,
+   "lanes": [
+    "politics"
+   ]
   },
   {
    "id": "h_chaeronea",
    "sourceId": "s_wp_battle_of_chaeronea_338_bc",
    "text": "At Chaeronea in 338 BC Philip's army defeated Athens and Thebes; his son Alexander led the cavalry.",
-   "dimension": "political",
    "usedBy": [
     "i_chaeronea"
    ],
-   "updatedAt": 1760000000000
+   "updatedAt": 1760000000000,
+   "lanes": [
+    "war"
+   ]
   },
   {
    "id": "h_silver",
@@ -4926,11 +5455,14 @@
     "section": "History",
     "exact": "A rich vein of silver found at Laurion in 483 BC paid for the fleet that fought at Salamis."
    },
-   "dimension": "economic",
    "usedBy": [
     "i_laurion"
    ],
-   "updatedAt": 1760000000000
+   "updatedAt": 1760000000000,
+   "lanes": [
+    "economy",
+    "nature"
+   ]
   },
   {
    "id": "h_grain",
@@ -4940,31 +5472,37 @@
     "section": "Trade",
     "exact": "Athens relied on grain shipped from the Black Sea through the Bosporus and the Hellespont."
    },
-   "dimension": "economic",
    "usedBy": [
     "i_classical"
    ],
-   "updatedAt": 1760000000000
+   "updatedAt": 1760000000000,
+   "lanes": [
+    "economy"
+   ]
   },
   {
    "id": "h_bankers",
    "sourceId": "s_wp_pasion",
    "text": "Pasion, a freed slave, became the richest banker in Athens in the early 4th century BC.",
-   "dimension": "economic",
    "usedBy": [
     "i_classical"
    ],
-   "updatedAt": 1760000000000
+   "updatedAt": 1760000000000,
+   "lanes": [
+    "economy"
+   ]
   },
   {
    "id": "h_decelea",
    "sourceId": "s_wp_decelea",
    "text": "Thucydides says more than 20,000 slaves deserted to the Spartans at Decelea.",
-   "dimension": "economic",
    "usedBy": [
     "i_decelean"
    ],
-   "updatedAt": 1760000000000
+   "updatedAt": 1760000000000,
+   "lanes": [
+    "war"
+   ]
   },
   {
    "id": "h_treasure",
@@ -4974,11 +5512,13 @@
     "section": "Persia",
     "exact": "Alexander took the royal treasuries at Susa and Persepolis in 331–330 BC."
    },
-   "dimension": "economic",
    "usedBy": [
     "i_alexander_persia"
    ],
-   "updatedAt": 1760000000000
+   "updatedAt": 1760000000000,
+   "lanes": [
+    "war"
+   ]
   },
   {
    "id": "h_citizens",
@@ -4988,7 +5528,6 @@
     "section": "Participation",
     "exact": "Only adult male citizens could take part; women, metics and slaves could not."
    },
-   "dimension": "social",
    "usedBy": [
     "i_classical"
    ],
@@ -4998,11 +5537,14 @@
    "id": "h_plague",
    "sourceId": "s_wp_plague_of_athens",
    "text": "The plague killed perhaps a quarter of Athens' people. Pericles died of it in 429 BC.",
-   "dimension": "social",
    "usedBy": [
     "i_plague"
    ],
-   "updatedAt": 1760000000000
+   "updatedAt": 1760000000000,
+   "lanes": [
+    "nature",
+    "ideas"
+   ]
   },
   {
    "id": "h_oliganthropia",
@@ -5012,7 +5554,6 @@
     "section": "Society",
     "exact": "Full Spartan citizens fell from about 8,000 in 480 BC to fewer than a thousand in Aristotle's day."
    },
-   "dimension": "social",
    "usedBy": [
     "i_classical"
    ],
@@ -5026,41 +5567,52 @@
     "section": "Citizenship law",
     "exact": "Pericles' law of 451 BC limited citizenship to children of an Athenian father and mother."
    },
-   "dimension": "social",
    "usedBy": [
     "i_citizenship_law"
    ],
-   "updatedAt": 1760000000000
+   "updatedAt": 1760000000000,
+   "lanes": [
+    "politics"
+   ]
   },
   {
    "id": "h_triremes",
    "sourceId": "s_wp_trireme",
    "text": "A trireme was rowed by about 170 oarsmen sitting in three banks.",
-   "dimension": "technological",
    "usedBy": [
     "i_trireme"
    ],
-   "updatedAt": 1760000000000
+   "updatedAt": 1760000000000,
+   "lanes": [
+    "technology",
+    "war"
+   ]
   },
   {
    "id": "h_longwalls",
    "sourceId": "s_wp_long_walls",
    "text": "The Long Walls, built around 461–456 BC, joined Athens to its harbour at Piraeus.",
-   "dimension": "technological",
    "usedBy": [
     "i_long_walls"
    ],
-   "updatedAt": 1760000000000
+   "updatedAt": 1760000000000,
+   "lanes": [
+    "technology",
+    "war"
+   ]
   },
   {
    "id": "h_sarissa",
    "sourceId": "s_wp_sarissa",
    "text": "Philip armed his infantry with the sarissa, a pike some 5 to 6 metres long.",
-   "dimension": "technological",
    "usedBy": [
     "i_sarissa"
    ],
-   "updatedAt": 1760000000000
+   "updatedAt": 1760000000000,
+   "lanes": [
+    "technology",
+    "war"
+   ]
   },
   {
    "id": "h_catapult",
@@ -5070,41 +5622,50 @@
     "section": "History",
     "exact": "Engineers working for Dionysius I of Syracuse built the first catapults around 399 BC."
    },
-   "dimension": "technological",
    "usedBy": [
     "i_catapult"
    ],
-   "updatedAt": 1760000000000
+   "updatedAt": 1760000000000,
+   "lanes": [
+    "technology",
+    "war"
+   ]
   },
   {
    "id": "h_tragedy",
    "sourceId": "s_wp_greek_tragedy",
    "text": "Aeschylus, Sophocles and Euripides are the three tragedians whose plays survive.",
-   "dimension": "intellectual",
    "usedBy": [
     "i_oresteia"
    ],
-   "updatedAt": 1760000000000
+   "updatedAt": 1760000000000,
+   "lanes": [
+    "ideas"
+   ]
   },
   {
    "id": "h_sophists",
    "sourceId": "s_wp_sophist",
    "text": "Sophists such as Protagoras taught rhetoric for a fee.",
-   "dimension": "intellectual",
    "usedBy": [
     "i_protagoras"
    ],
-   "updatedAt": 1760000000000
+   "updatedAt": 1760000000000,
+   "lanes": [
+    "ideas"
+   ]
   },
   {
    "id": "h_history",
    "sourceId": "s_wp_herodotus",
    "text": "Herodotus is often called the father of history.",
-   "dimension": "intellectual",
    "usedBy": [
     "i_thucydides_history"
    ],
-   "updatedAt": 1760000000000
+   "updatedAt": 1760000000000,
+   "lanes": [
+    "ideas"
+   ]
   },
   {
    "id": "h_academy",
@@ -5114,11 +5675,13 @@
     "section": "Academy",
     "exact": "Plato founded the Academy around 387 BC; Aristotle studied there for twenty years."
    },
-   "dimension": "intellectual",
    "usedBy": [
     "i_academy"
    ],
-   "updatedAt": 1760000000000
+   "updatedAt": 1760000000000,
+   "lanes": [
+    "ideas"
+   ]
   },
   {
    "id": "h_trial",
@@ -5128,61 +5691,77 @@
     "section": "Trial",
     "exact": "Socrates was tried in 399 BC for impiety and corrupting the young, and sentenced to death."
    },
-   "dimension": "intellectual",
    "usedBy": [
     "i_trial_socrates"
    ],
-   "updatedAt": 1760000000000
+   "updatedAt": 1760000000000,
+   "lanes": [
+    "ideas",
+    "politics"
+   ]
   },
   {
    "id": "h_lyceum",
    "sourceId": "s_wp_aristotle",
    "text": "Aristotle opened his school at the Lyceum in Athens in 335 BC.",
-   "dimension": "intellectual",
    "usedBy": [
     "i_lyceum"
    ],
-   "updatedAt": 1760000000000
+   "updatedAt": 1760000000000,
+   "lanes": [
+    "ideas"
+   ]
   },
   {
    "id": "h_festivals",
    "sourceId": "s_wp_dionysia",
    "text": "The City Dionysia, a festival of Dionysus, held the tragedy competitions.",
-   "dimension": "religious",
    "usedBy": [
     "i_city_dionysia"
    ],
-   "updatedAt": 1760000000000
+   "updatedAt": 1760000000000,
+   "lanes": [
+    "ideas"
+   ]
   },
   {
    "id": "h_parthenon",
    "sourceId": "s_wp_parthenon",
    "text": "The Parthenon was built between 447 and 432 BC as a temple of Athena.",
-   "dimension": "religious",
    "usedBy": [
     "i_parthenon_built"
    ],
-   "updatedAt": 1760000000000
+   "updatedAt": 1760000000000,
+   "lanes": [
+    "ideas",
+    "economy"
+   ]
   },
   {
    "id": "h_sacredwar",
    "sourceId": "s_wp_third_sacred_war",
    "text": "The Third Sacred War began in 356 BC when Phocis seized the sanctuary at Delphi.",
-   "dimension": "religious",
    "usedBy": [
     "i_sacred_war"
    ],
-   "updatedAt": 1760000000000
+   "updatedAt": 1760000000000,
+   "lanes": [
+    "war",
+    "ideas"
+   ]
   },
   {
    "id": "h_herms",
    "sourceId": "s_wp_hermai",
    "text": "In 415 BC, just before the Sicilian Expedition sailed, the herms of Athens were mutilated in one night.",
-   "dimension": "religious",
    "usedBy": [
     "i_herms"
    ],
-   "updatedAt": 1760000000000
+   "updatedAt": 1760000000000,
+   "lanes": [
+    "ideas",
+    "politics"
+   ]
   },
   {
    "id": "h_plataea431",
@@ -5192,21 +5771,25 @@
     "section": "Background",
     "exact": "In March 431 BC a Theban force slipped into Plataea at night; the Plataeans rallied and killed or captured them."
    },
-   "dimension": "political",
    "usedBy": [
     "i_b_plataea431"
    ],
-   "updatedAt": 1760000000000
+   "updatedAt": 1760000000000,
+   "lanes": [
+    "war"
+   ]
   },
   {
    "id": "h_naupactus",
    "sourceId": "s_wp_battle_of_naupactus",
    "text": "With only twenty ships, Phormio beat a Peloponnesian fleet of forty-seven, then won again off Naupactus.",
-   "dimension": "political",
    "usedBy": [
     "i_b_naupactus"
    ],
-   "updatedAt": 1760000000000
+   "updatedAt": 1760000000000,
+   "lanes": [
+    "war"
+   ]
   },
   {
    "id": "h_mytilene",
@@ -5216,11 +5799,13 @@
     "section": "Mytilenean Debate",
     "exact": "A second trireme, sent a day later, arrived just in time to stop the killing at Mytilene."
    },
-   "dimension": "political",
    "usedBy": [
     "i_b_mytilene"
    ],
-   "updatedAt": 1760000000000
+   "updatedAt": 1760000000000,
+   "lanes": [
+    "war"
+   ]
   },
   {
    "id": "h_sphacteria",
@@ -5230,21 +5815,25 @@
     "section": "Aftermath",
     "exact": "The surrender of 292 Spartans on Sphacteria shocked Greece; Spartans were not expected to give up."
    },
-   "dimension": "political",
    "usedBy": [
     "i_b_sphacteria"
    ],
-   "updatedAt": 1760000000000
+   "updatedAt": 1760000000000,
+   "lanes": [
+    "war"
+   ]
   },
   {
    "id": "h_delium",
    "sourceId": "s_wp_battle_of_delium",
    "text": "At Delium the Boeotians routed the Athenians; Socrates was among the hoplites who fell back in good order.",
-   "dimension": "political",
    "usedBy": [
     "i_b_delium"
    ],
-   "updatedAt": 1760000000000
+   "updatedAt": 1760000000000,
+   "lanes": [
+    "war"
+   ]
   },
   {
    "id": "h_amph424",
@@ -5254,41 +5843,49 @@
     "section": "Life",
     "exact": "The historian Thucydides, then a general, arrived too late to save Amphipolis and was exiled."
    },
-   "dimension": "political",
    "usedBy": [
     "i_b_amph424"
    ],
-   "updatedAt": 1760000000000
+   "updatedAt": 1760000000000,
+   "lanes": [
+    "war"
+   ]
   },
   {
    "id": "h_amph422",
    "sourceId": "s_wp_battle_of_amphipolis",
    "text": "Cleon and Brasidas, the leading voices for war on each side, were both killed at Amphipolis.",
-   "dimension": "political",
    "usedBy": [
     "i_b_amph422"
    ],
-   "updatedAt": 1760000000000
+   "updatedAt": 1760000000000,
+   "lanes": [
+    "war"
+   ]
   },
   {
    "id": "h_mantinea",
    "sourceId": "s_wp_battle_of_mantinea_418_bc",
    "text": "Mantinea was the largest land battle of the war, and restored Sparta's name after Sphacteria.",
-   "dimension": "political",
    "usedBy": [
     "i_b_mantinea"
    ],
-   "updatedAt": 1760000000000
+   "updatedAt": 1760000000000,
+   "lanes": [
+    "war"
+   ]
   },
   {
    "id": "h_melos",
    "sourceId": "s_wp_siege_of_melos",
    "text": "After the siege, the Athenians killed the men of Melos and sold the women and children as slaves.",
-   "dimension": "political",
    "usedBy": [
     "i_b_melos"
    ],
-   "updatedAt": 1760000000000
+   "updatedAt": 1760000000000,
+   "lanes": [
+    "war"
+   ]
   },
   {
    "id": "h_harbour",
@@ -5298,11 +5895,13 @@
     "section": "Defeat",
     "exact": "Beaten in the Great Harbour, the Athenians could no longer escape by sea."
    },
-   "dimension": "political",
    "usedBy": [
     "i_b_harbour"
    ],
-   "updatedAt": 1760000000000
+   "updatedAt": 1760000000000,
+   "lanes": [
+    "war"
+   ]
   },
   {
    "id": "h_assinarus",
@@ -5312,11 +5911,13 @@
     "section": "Aftermath",
     "exact": "The prisoners were held in the stone quarries of Syracuse, where many died."
    },
-   "dimension": "political",
    "usedBy": [
     "i_b_assinarus"
    ],
-   "updatedAt": 1760000000000
+   "updatedAt": 1760000000000,
+   "lanes": [
+    "war"
+   ]
   },
   {
    "id": "h_cyzicus",
@@ -5326,11 +5927,13 @@
     "section": "Aftermath",
     "exact": "Sparta's message home after Cyzicus: “Ships lost. Mindarus dead. Men starving. Don't know what to do.”"
    },
-   "dimension": "political",
    "usedBy": [
     "i_b_cyzicus"
    ],
-   "updatedAt": 1760000000000
+   "updatedAt": 1760000000000,
+   "lanes": [
+    "war"
+   ]
   },
   {
    "id": "h_arginusae",
@@ -5340,21 +5943,25 @@
     "section": "Trial of the generals",
     "exact": "Despite the victory, the Assembly executed six generals for failing to rescue sailors in a storm."
    },
-   "dimension": "political",
    "usedBy": [
     "i_b_arginusae"
    ],
-   "updatedAt": 1760000000000
+   "updatedAt": 1760000000000,
+   "lanes": [
+    "war"
+   ]
   },
   {
    "id": "h_aegospotami",
    "sourceId": "s_wp_battle_of_aegospotami",
    "text": "Lysander caught the Athenian fleet drawn up on the beach at Aegospotami and took almost all of it.",
-   "dimension": "political",
    "usedBy": [
     "i_b_aegospotami"
    ],
-   "updatedAt": 1760000000000
+   "updatedAt": 1760000000000,
+   "lanes": [
+    "war"
+   ]
   },
   {
    "id": "h_surrender",
@@ -5364,11 +5971,13 @@
     "section": "Aftermath",
     "exact": "Athens surrendered in 404 BC; its Long Walls were pulled down and its fleet was limited to twelve ships."
    },
-   "dimension": "political",
    "usedBy": [
     "i_b_surrender"
    ],
-   "updatedAt": 1760000000000
+   "updatedAt": 1760000000000,
+   "lanes": [
+    "war"
+   ]
   }
  ],
  "sources": [
@@ -6530,7 +7139,296 @@
    "toId": "i_histories",
    "type": "related",
    "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_t_athens_i_persian",
+   "fromId": "t_athens",
+   "toId": "i_persian",
+   "type": "related",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_t_sparta_i_persian",
+   "fromId": "t_sparta",
+   "toId": "i_persian",
+   "type": "related",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_t_corinth_i_persian",
+   "fromId": "t_corinth",
+   "toId": "i_persian",
+   "type": "related",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_t_athens_i_pelop",
+   "fromId": "t_athens",
+   "toId": "i_pelop",
+   "type": "related",
+   "side": 1,
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_t_sparta_i_pelop",
+   "fromId": "t_sparta",
+   "toId": "i_pelop",
+   "type": "related",
+   "side": 2,
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_t_corinth_i_pelop",
+   "fromId": "t_corinth",
+   "toId": "i_pelop",
+   "type": "related",
+   "side": 2,
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_t_thebes_i_pelop",
+   "fromId": "t_thebes",
+   "toId": "i_pelop",
+   "type": "related",
+   "side": 2,
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_t_athens_i_sybota",
+   "fromId": "t_athens",
+   "toId": "i_sybota",
+   "type": "related",
+   "side": 1,
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_t_corinth_i_sybota",
+   "fromId": "t_corinth",
+   "toId": "i_sybota",
+   "type": "related",
+   "side": 2,
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_t_athens_i_sicilian",
+   "fromId": "t_athens",
+   "toId": "i_sicilian",
+   "type": "related",
+   "side": 1,
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_t_syracuse_i_sicilian",
+   "fromId": "t_syracuse",
+   "toId": "i_sicilian",
+   "type": "related",
+   "side": 2,
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_t_sparta_i_sicilian",
+   "fromId": "t_sparta",
+   "toId": "i_sicilian",
+   "type": "related",
+   "side": 2,
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_t_corinth_i_sicilian",
+   "fromId": "t_corinth",
+   "toId": "i_sicilian",
+   "type": "related",
+   "side": 2,
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_t_thebes_i_corinthian_war",
+   "fromId": "t_thebes",
+   "toId": "i_corinthian_war",
+   "type": "related",
+   "side": 1,
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_t_athens_i_corinthian_war",
+   "fromId": "t_athens",
+   "toId": "i_corinthian_war",
+   "type": "related",
+   "side": 1,
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_t_corinth_i_corinthian_war",
+   "fromId": "t_corinth",
+   "toId": "i_corinthian_war",
+   "type": "related",
+   "side": 1,
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_t_sparta_i_corinthian_war",
+   "fromId": "t_sparta",
+   "toId": "i_corinthian_war",
+   "type": "related",
+   "side": 2,
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_t_thebes_i_leuctra",
+   "fromId": "t_thebes",
+   "toId": "i_leuctra",
+   "type": "related",
+   "side": 1,
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_t_sparta_i_leuctra",
+   "fromId": "t_sparta",
+   "toId": "i_leuctra",
+   "type": "related",
+   "side": 2,
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_t_thebes_i_mantinea362",
+   "fromId": "t_thebes",
+   "toId": "i_mantinea362",
+   "type": "related",
+   "side": 1,
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_t_sparta_i_mantinea362",
+   "fromId": "t_sparta",
+   "toId": "i_mantinea362",
+   "type": "related",
+   "side": 2,
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_t_athens_i_mantinea362",
+   "fromId": "t_athens",
+   "toId": "i_mantinea362",
+   "type": "related",
+   "side": 2,
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_t_macedon_i_chaeronea",
+   "fromId": "t_macedon",
+   "toId": "i_chaeronea",
+   "type": "related",
+   "side": 1,
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_t_athens_i_chaeronea",
+   "fromId": "t_athens",
+   "toId": "i_chaeronea",
+   "type": "related",
+   "side": 2,
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_t_thebes_i_chaeronea",
+   "fromId": "t_thebes",
+   "toId": "i_chaeronea",
+   "type": "related",
+   "side": 2,
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_t_athens_i_lamian",
+   "fromId": "t_athens",
+   "toId": "i_lamian",
+   "type": "related",
+   "side": 1,
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_t_macedon_i_lamian",
+   "fromId": "t_macedon",
+   "toId": "i_lamian",
+   "type": "related",
+   "side": 2,
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_t_athens_i_delian_founded",
+   "fromId": "t_athens",
+   "toId": "i_delian_founded",
+   "type": "related",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_t_delian_i_delian_founded",
+   "fromId": "t_delian",
+   "toId": "i_delian_founded",
+   "type": "related",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_t_athens_i_second_league",
+   "fromId": "t_athens",
+   "toId": "i_second_league",
+   "type": "related",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_t_thebes_i_second_league",
+   "fromId": "t_thebes",
+   "toId": "i_second_league",
+   "type": "related",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_t_macedon_i_corinth_league",
+   "fromId": "t_macedon",
+   "toId": "i_corinth_league",
+   "type": "related",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_t_corinth_i_corinth_league",
+   "fromId": "t_corinth",
+   "toId": "i_corinth_league",
+   "type": "related",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_t_athens_i_thirty_years_peace",
+   "fromId": "t_athens",
+   "toId": "i_thirty_years_peace",
+   "type": "related",
+   "side": 1,
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_t_sparta_i_thirty_years_peace",
+   "fromId": "t_sparta",
+   "toId": "i_thirty_years_peace",
+   "type": "related",
+   "side": 2,
+   "updatedAt": 1760000000000
   }
  ],
- "deleted": {}
+ "deleted": {},
+ "groups": [
+  {
+   "id": "g_classical_greece",
+   "title": "Classical Greece",
+   "territoryIds": [
+    "t_athens",
+    "t_sparta",
+    "t_corinth",
+    "t_thebes"
+   ],
+   "updatedAt": 1760000000000
+  }
+ ],
+ "regionParents": {
+  "Greece": "Mediterranean",
+  "Macedon": "Mediterranean",
+  "Italy": "Mediterranean"
+ }
 }

@@ -432,6 +432,7 @@ test('“How drawing works” opens the manual at territories', async ({ page })
 const FIXTURE_V5 = fileURLToPath(new URL('../tests/fixtures/sample-history-v5.json', import.meta.url));
 const FIXTURE_V6 = fileURLToPath(new URL('../tests/fixtures/sample-history-v6.json', import.meta.url));
 const FIXTURE_V7 = fileURLToPath(new URL('../tests/fixtures/sample-history-v7.json', import.meta.url));
+const FIXTURE_V8 = fileURLToPath(new URL('../tests/fixtures/sample-history-v8.json', import.meta.url));
 
 /** Replace the saved doc in IndexedDB, as an older or newer version of the app would have left it. */
 async function seedSavedDoc(page: Page, doc: Record<string, unknown>) {
@@ -469,7 +470,7 @@ test('a timeline saved by an older version opens upgraded, with a copy kept', as
   await page.reload();
   await expect(page.getByTestId('save-state')).toHaveText('Saved on this device');
   await expect(mark(page, 'i_aristotle')).toBeVisible();
-  await expect.poll(() => savedState(page)).toMatchObject({ schemaVersion: 8, backups: 1 });
+  await expect.poll(() => savedState(page)).toMatchObject({ schemaVersion: 9, backups: 1 });
   // The v5 excerpt is now a highlight, still shown on its entry.
   await mark(page, 'i_magna').click({ force: true });
   await expect(page.getByTestId('item-view').getByTestId('excerpt')).toContainText('royal charter of rights');
@@ -481,7 +482,7 @@ test('a timeline saved before entries said what they are opens upgraded, each en
   await seedSavedDoc(page, JSON.parse(readFileSync(FIXTURE_V6, 'utf8')));
   await page.reload();
   await expect(page.getByTestId('save-state')).toHaveText('Saved on this device');
-  await expect.poll(() => savedState(page)).toMatchObject({ schemaVersion: 8, backups: 1 });
+  await expect.poll(() => savedState(page)).toMatchObject({ schemaVersion: 9, backups: 1 });
   await mark(page, 'i_indrev').click({ force: true });
   await page.getByTestId('item-view').getByRole('button', { name: 'Edit' }).click();
   await expect(page.getByTestId('item-editor').getByLabel('Kind of thing')).toHaveValue('');
@@ -494,8 +495,19 @@ test('a timeline saved before places could go without dates opens upgraded', asy
   await seedSavedDoc(page, JSON.parse(readFileSync(FIXTURE_V7, 'utf8')));
   await page.reload();
   await expect(page.getByTestId('save-state')).toHaveText('Saved on this device');
-  await expect.poll(() => savedState(page)).toMatchObject({ schemaVersion: 8, backups: 1 });
+  await expect.poll(() => savedState(page)).toMatchObject({ schemaVersion: 9, backups: 1 });
   await expect(mark(page, 'i_pelop')).toBeVisible();
+});
+
+test('a timeline saved before lanes opens upgraded, each entry in the lane its dimension became', async ({ page }) => {
+  await open(page);
+  const { readFileSync } = await import('node:fs');
+  await seedSavedDoc(page, JSON.parse(readFileSync(FIXTURE_V8, 'utf8')));
+  await page.reload();
+  await expect(page.getByTestId('save-state')).toHaveText('Saved on this device');
+  await expect.poll(() => savedState(page)).toMatchObject({ schemaVersion: 9, backups: 1 });
+  await mark(page, 'i_magna').click({ force: true });
+  await expect(page.getByTestId('item-view').getByTestId('item-lanes')).toHaveText('Politics and law');
 });
 
 test('an older copy of the app never overwrites data from a newer one', async ({ page }) => {
