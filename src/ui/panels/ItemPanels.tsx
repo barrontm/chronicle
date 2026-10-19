@@ -3,12 +3,14 @@ import { bibliographyFor, describeRelation, highlightsFor, newId, notesFor, rela
 import { compareHistDate, formatItemDates, toDecimalYear } from '../../model/dates';
 import type { ItemDraft } from '../../media/wikipedia';
 import { KIND_LABEL as SUBJECT_LABEL, regionsIn } from '../../model/subjects';
-import { SUBJECT_KINDS, type Citation, type Dimension, type Highlight, type HistDate, type ItemKind, type MediaRef, type Relation, type RelationType, type Source, type SubjectKind, type TimelineItem } from '../../model/types';
+import { SUBJECT_KINDS, type Citation, type Highlight, type HistDate, type ItemKind, type MediaRef, type Relation, type RelationType, type Source, type SubjectKind, type TimelineItem } from '../../model/types';
 import { useDoc } from '../DocContext';
 import { CitationsEditor, DateField, Field, RecordPicker } from '../fields';
 import { ImagePicker } from '../ImagePicker';
 import type { Nav } from '../nav';
-import { DIMENSION_LABEL, formatCitation, titleOf } from '../util';
+import { formatCitation, lanesInWords, titleOf } from '../util';
+import { LaneChips } from '../LaneChips';
+import { lanesOf, sortLanes } from '../../model/lanes';
 import { placeLabel } from '../../model/places';
 import { InfluenceSuggestions } from './Influences';
 import { PlacesEditor } from './PlacesEditor';
@@ -17,14 +19,14 @@ import { QuickSource } from './SourcePanels';
 const KIND_LABEL: Record<ItemKind, string> = { event: 'Event', span: 'Period', person: 'Person' };
 
 /** Quoted reference text, kept visibly apart from Bob's own writing. */
-function Excerpt({ excerpt, source }: { excerpt: { text: string; dimension?: Dimension }; source?: Source }) {
+function Excerpt({ excerpt, source }: { excerpt: Pick<Highlight, 'text' | 'lanes'>; source?: Source }) {
   return (
     <blockquote className="excerpt" data-testid="excerpt">
       <p>{excerpt.text}</p>
       <footer>
         From {source?.url ? <a href={source.url} target="_blank" rel="noreferrer">{source.publisher ?? source.title}</a> : (source?.publisher ?? source?.title ?? 'a source')}
         {source?.accessed && <>, read {source.accessed}</>}
-        {excerpt.dimension && <> · {DIMENSION_LABEL[excerpt.dimension]}</>}
+        {excerpt.lanes?.length ? <> · {lanesInWords(excerpt.lanes)}</> : null}
       </footer>
     </blockquote>
   );
@@ -61,6 +63,7 @@ export function ItemView({ id, nav }: { id: string; nav: Nav }) {
   const territories = doc.territories.filter((t) => t.itemId === id);
   const flows = doc.flows.filter((f) => f.itemId === id);
   const evidence = (r: Relation) => (r.highlightIds ?? []).flatMap((hid) => doc.highlights.filter((h) => h.id === hid));
+  const lanes = lanesOf(item, doc);
 
   return (
     <article data-testid="item-view">
@@ -71,6 +74,8 @@ export function ItemView({ id, nav }: { id: string; nav: Nav }) {
         <span>{KIND_LABEL[item.kind]}</span>
         <span>{formatItemDates(item)}</span>
         {years !== null && years > 0 && <span>{years} {years === 1 ? 'year' : 'years'}{item.kind === 'person' ? ' old' : ''}</span>}
+        {lanes.length > 0 && <span data-testid="item-lanes" title={item.lanes?.length ? undefined : 'Sorted automatically'}>{lanesInWords(lanes)}</span>}
+        {item.overview && <span data-testid="item-overview">{item.overview === 'world' ? 'World event' : 'In the overview'}</span>}
       </div>
       {item.description && <p className="prose">{item.description}</p>}
       {item.places && item.places.length > 0 && <p className="meta" data-testid="item-places">{item.places.map(placeLabel).join(' · ')}</p>}
@@ -274,6 +279,24 @@ export function ItemEditor({ id, init, draft: prefill, nav }: {
           {SUBJECT_KINDS.map((k) => <option key={k} value={k}>{SUBJECT_LABEL[k]}</option>)}
         </select>
       </Field>
+      <Field label="Lanes" hint="Where it sits under a polity. Leave them all off to have it sorted automatically.">
+        <LaneChips value={draft.lanes} onToggle={(l) => {
+          const had = draft.lanes ?? [];
+          const lanes = had.includes(l) ? had.filter((x) => x !== l) : sortLanes([...had, l]);
+          set('lanes', lanes.length ? lanes : undefined);
+        }} />
+      </Field>
+      <div className="field">
+        <label className="check">
+          <input type="checkbox" checked={!!draft.overview} onChange={(e) => set('overview', e.target.checked ? 'shown' : undefined)} />
+          Show in the overview
+        </label>
+        <label className="check">
+          <input type="checkbox" checked={draft.overview === 'world'} onChange={(e) => set('overview', e.target.checked ? 'world' : 'shown')} />
+          World event
+        </label>
+        <small className="hint">A world event is drawn in gold across every region it touched, and always shows.</small>
+      </div>
       {isPeriod && (
         <Field label="Region" hint="The row this period sits in on the overview, such as Greece.">
           <input value={draft.region ?? ''} onChange={(e) => set('region', e.target.value || undefined)} list="regions" />

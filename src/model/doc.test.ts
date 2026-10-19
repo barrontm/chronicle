@@ -27,6 +27,9 @@ const fixtureV4Json = readFileSync(new URL('../../tests/fixtures/sample-history-
 const fixtureV5Json = readFileSync(new URL('../../tests/fixtures/sample-history-v5.json', import.meta.url), 'utf8');
 const fixtureV6Json = readFileSync(new URL('../../tests/fixtures/sample-history-v6.json', import.meta.url), 'utf8');
 const fixtureV7Json = readFileSync(new URL('../../tests/fixtures/sample-history-v7.json', import.meta.url), 'utf8');
+const fixtureV8Json = readFileSync(new URL('../../tests/fixtures/sample-history-v8.json', import.meta.url), 'utf8');
+/** Entries as they were before v9 filled in their lanes. */
+const withoutLanes = (items: TimelineItem[]) => items.map(({ lanes: _, ...it }) => it);
 
 describe('parseDoc', () => {
   it('accepts the fixture and round-trips it', () => {
@@ -257,6 +260,71 @@ describe('mergeDocs', () => {
   });
 });
 
+describe('lanes, the overview mark and polities (v9)', () => {
+  it('upgrades a schema 8 backup, filling lanes from dimensions and keeping the dimensions', () => {
+    const v8 = JSON.parse(fixtureV8Json);
+    expect(v8.schemaVersion).toBe(8);
+    const doc = parseDoc(fixtureV8Json);
+    expect(doc.schemaVersion).toBe(SCHEMA_VERSION);
+    expect(doc.items.find((i) => i.id === 'i_magna')).toMatchObject({ dimension: 'political', lanes: ['politics'] });
+    expect(doc.highlights.find((h) => h.id === 'h_magna_reader')).toMatchObject({ dimension: 'political', lanes: ['politics'] });
+    expect(withoutLanes(doc.items)).toEqual(v8.items);
+    expect(doc.groups).toEqual([]);
+    // Nothing is restamped, so two devices upgrading the same timeline merge cleanly.
+    expect(doc.items.map((i) => i.updatedAt)).toEqual(v8.items.map((i: TimelineItem) => i.updatedAt));
+  });
+
+  it('maps each dimension to its lane, leaves social to the automatic sort, and gives a territory its period’s region', () => {
+    const v8 = JSON.parse(fixtureV8Json);
+    const dims = ['political', 'economic', 'social', 'technological', 'intellectual', 'religious'];
+    v8.items = v8.items.slice(0, 6).map((it: TimelineItem, i: number) => ({ ...it, dimension: dims[i] }));
+    v8.territories[0].itemId = 'i_indrev';
+    v8.items.push(JSON.parse(fixtureV8Json).items.find((i: TimelineItem) => i.id === 'i_indrev'));
+    const doc = parseDoc(JSON.stringify(v8));
+    expect(doc.items.slice(0, 6).map((i) => i.lanes)).toEqual([['politics'], ['economy'], undefined, ['technology'], ['ideas'], ['ideas']]);
+    expect(doc.territories[0].region).toBe('Britain');
+  });
+
+  it('keeps lanes, the mark, strength, regions, groups and sides through export, import and merge', () => {
+    const doc = fixture();
+    expect(doc.items.find((i) => i.id === 'i_rome_falls')).toMatchObject({ lanes: ['politics'], overview: 'world' });
+    expect(doc.territories[0]).toMatchObject({ region: 'Greece', strength: [{ level: 2 }, { level: 5, highlightIds: ['h_magna_reader'] }] });
+    expect(doc.relations.find((r) => r.id === 'r_4')).toMatchObject({ fromId: 't_fixture', side: 1 });
+    expect(parseDoc(serializeDoc(doc))).toEqual(doc);
+    const other = upsert(upsert(doc, 'items', { ...doc.items.find((i) => i.id === 'i_pelop')!, lanes: ['war', 'economy'], overview: 'world' }, 2e12),
+      'groups', { id: 'g_new', title: 'Peloponnesian League', territoryIds: [], updatedAt: 0 }, 2e12);
+    const merged = mergeDocs(doc, { ...other, regionParents: { ...other.regionParents, Persia: 'Near East' } });
+    expect(merged.items.find((i) => i.id === 'i_pelop')).toMatchObject({ lanes: ['war', 'economy'], overview: 'world' });
+    expect(merged.groups?.map((g) => g.id)).toEqual(['g_fixture', 'g_new']);
+    expect(merged.regionParents).toEqual({ Greece: 'Mediterranean', Britain: 'Europe', Persia: 'Near East' });
+  });
+
+  it('rejects unknown lanes, marks, strength levels, sides and groups without a title', () => {
+    const bad = JSON.parse(fixtureJson);
+    bad.items[0].lanes = ['politics', 'social'];
+    bad.items[1].overview = 'gold';
+    bad.highlights[0].lanes = 'war';
+    bad.territories[0].strength[0].level = 7;
+    bad.relations[3].side = 3;
+    bad.groups[0].title = '';
+    const problems = validateDoc(bad).join('\n');
+    expect(problems).toMatch(/unknown lane "social"/);
+    expect(problems).toMatch(/unknown overview mark "gold"/);
+    expect(problems).toMatch(/malformed lanes/);
+    expect(problems).toMatch(/strength level that isn't 1 to 5/);
+    expect(problems).toMatch(/side that isn't 1 or 2/);
+    expect(problems).toMatch(/group is missing its id or title/);
+  });
+
+  it('takes a deleted territory out of its group, and a deleted highlight out of strength points', () => {
+    const doc = fixture();
+    expect(remove(doc, 'territories', 't_fixture').groups?.[0].territoryIds).toEqual([]);
+    expect(remove(doc, 'territories', 't_fixture').relations.some((r) => r.id === 'r_4')).toBe(false);
+    expect(remove(doc, 'highlights', 'h_magna_reader').territories[0].strength?.[1].highlightIds).toEqual([]);
+    expect(remove(doc, 'groups', 'g_fixture').deleted.g_fixture).toBeDefined();
+  });
+});
+
 describe('places without dates (v8)', () => {
   const place = (extra: Partial<TimelineItem> = {}): TimelineItem => ({
     id: 'i_knossos', kind: 'span', subject: 'place', title: 'Knossos', categoryId: 'society',
@@ -267,8 +335,8 @@ describe('places without dates (v8)', () => {
     const v7 = JSON.parse(fixtureV7Json);
     expect(v7.schemaVersion).toBe(7);
     const doc = parseDoc(fixtureV7Json);
-    expect(doc.schemaVersion).toBe(8);
-    expect(doc.items).toEqual(v7.items);
+    expect(doc.schemaVersion).toBe(SCHEMA_VERSION);
+    expect(withoutLanes(doc.items)).toEqual(v7.items);
   });
 
   it('accepts a place with no dates, or with only its founding, and keeps it through export, import and merge', () => {
@@ -293,7 +361,7 @@ describe('what an entry is (v7)', () => {
     expect(v6.schemaVersion).toBe(6);
     const doc = parseDoc(fixtureV6Json);
     expect(doc.schemaVersion).toBe(SCHEMA_VERSION);
-    expect(doc.items).toEqual(v6.items);
+    expect(withoutLanes(doc.items)).toEqual(v6.items);
     expect(doc.items.some((i) => i.subject || i.region)).toBe(false);
   });
 

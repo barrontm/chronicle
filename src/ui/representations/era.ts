@@ -1,12 +1,12 @@
-import { DIMENSIONS } from '../../model/types';
+import { LANES } from '../../model/types';
 import type { Era } from '../../model/eras';
 import type { Measure, Prim } from '../timeline/scene';
-import { DIMENSION_LABEL, PIGMENT } from '../util';
+import { LANE_LABEL, PIGMENT } from '../util';
 
 /**
  * An era at level 0: a band (docs/design.md, Overview: A · Bands). Its name in spaced small caps,
  * its dates, a row of landmarks (its most prominent entries as their glyphs), and a strip along
- * the bottom with the mix of dimensions in its highlights. Approximate ends are dashed umber
+ * the bottom with the mix of lanes in its highlights. Approximate ends are dashed umber
  * edges. Theme chips (Phase 4) go between the dates and the landmarks, and make the band taller.
  */
 
@@ -53,11 +53,11 @@ export function bandPrims(e: Era, b: BandLook, M: Measure): { marks: Prim[]; tex
     t: 0, k: `e${e.id}`, a: 1, cls, id: e.id, x: rx + 1.5, y: b.y, w: Math.max(0, rw - 3), h: BAND_H, r: 3, fill: 'var(--panel)',
     stroke: b.selected ? 'var(--ink)' : b.hot ? 'var(--ink-2)' : 'var(--band-edge)', sw: b.selected ? 2 : 1,
   });
-  // The mix of dimensions along the bottom, in pigment order, over the whole band so it stays put while panning.
-  const total = DIMENSIONS.reduce((n, d) => n + e.mix[d], 0);
+  // The mix of lanes along the bottom, in pigment order, over the whole band so it stays put while panning.
+  const total = LANES.reduce((n, d) => n + e.mix[d], 0);
   let at = b.xa + 1.5;
   const full = Math.max(0, b.xb - b.xa - 3);
-  for (const d of DIMENSIONS) {
+  for (const d of LANES) {
     if (!e.mix[d] || !total) continue;
     const w = (full * e.mix[d]) / total;
     const sa = Math.max(at, b.x0 - 4), sb = Math.min(at + w, b.x1 + 4);
@@ -75,9 +75,9 @@ export function bandPrims(e: Era, b: BandLook, M: Measure): { marks: Prim[]; tex
   return { marks, text };
 }
 
-/** What the band's tooltip says under its name: its dates and highlights, the biggest dimensions first. */
+/** What the band's tooltip says under its name: its dates and highlights, the biggest lanes first. */
 export function bandSummary(e: Era): string {
   if (!e.highlights) return `${e.when} · No highlights yet`;
-  const dims = DIMENSIONS.filter((d) => e.mix[d]).sort((a, b) => e.mix[b] - e.mix[a]).map((d) => `${e.mix[d]} ${DIMENSION_LABEL[d].toLowerCase()}`);
+  const dims = LANES.filter((d) => e.mix[d]).sort((a, b) => e.mix[b] - e.mix[a]).map((d) => `${e.mix[d]} ${LANE_LABEL[d].toLowerCase()}`);
   return `${e.when} · ${e.highlights} ${e.highlights === 1 ? 'highlight' : 'highlights'}${dims.length ? `: ${dims.join(', ')}` : ''}`;
 }

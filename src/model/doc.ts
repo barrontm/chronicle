@@ -2,6 +2,8 @@ import { isArea, labelPoint } from '../data/geo';
 import { isValidHistDate, compareHistDate } from './dates';
 import {
   DIMENSIONS,
+  LANES,
+  OVERVIEW_MARKS,
   SCHEMA_VERSION,
   SUBJECT_KINDS,
   type Citation,
@@ -11,7 +13,10 @@ import {
   type FlowCause,
   type FlowEnd,
   type ItemKind,
+  type Lane,
+  type Dimension,
   type Note,
+  type PolityGroup,
   type Provenance,
   type Relation,
   type RelationType,
@@ -55,6 +60,7 @@ export function createEmptyDoc(title = 'My history'): TimelineDoc {
     notes: [],
     sources: [],
     relations: [],
+    groups: [],
     deleted: {},
     updatedAt: Date.now(),
   };
@@ -70,6 +76,13 @@ export class DocValidationError extends Error {
 
 const KINDS: ItemKind[] = ['event', 'span', 'person'];
 export const RELATION_TYPES: RelationType[] = ['influenced', 'caused', 'part-of', 'responded-to', 'related'];
+
+/** Problems with a `lanes` list: not an array, or a lane that isn't one of the six. */
+function checkLanes(owner: string, lanes: unknown): string[] {
+  if (lanes === undefined) return [];
+  if (!Array.isArray(lanes)) return [`${owner} has malformed lanes`];
+  return lanes.filter((l) => !LANES.includes(l)).map((l) => `${owner} has unknown lane "${l}"`);
+}
 
 export function validateItem(item: TimelineItem, categoryIds: Set<string>): string[] {
   const p: string[] = [];
@@ -91,6 +104,8 @@ export function validateItem(item: TimelineItem, categoryIds: Set<string>): stri
     if (!Number.isFinite(pl.lat) || !Number.isFinite(pl.lon) || Math.abs(pl.lat) > 90 || Math.abs(pl.lon) > 180) p.push(`${name} has a place with invalid coordinates`);
   }
   if (item.dimension !== undefined && !DIMENSIONS.includes(item.dimension)) p.push(`${name} has unknown dimension "${item.dimension}"`);
+  p.push(...checkLanes(name, item.lanes));
+  if (item.overview !== undefined && !OVERVIEW_MARKS.includes(item.overview)) p.push(`${name} has an unknown overview mark "${item.overview}"`);
   if (item.subject !== undefined && !SUBJECT_KINDS.includes(item.subject)) p.push(`${name} is an unknown kind of thing "${item.subject}"`);
   if (item.region !== undefined && typeof item.region !== 'string') p.push(`${name} has a malformed region`);
   for (const t of item.themes ?? []) {
@@ -132,6 +147,15 @@ export function validateTerritory(t: Territory, categoryIds: Set<string>): strin
   for (const s of t.snapshots) {
     if (!s.from || !isValidHistDate(s.from) || (s.to && !isValidHistDate(s.to))) p.push(`${name} has a snapshot with an invalid date`);
     if (s.geometry !== undefined && !isArea(s.geometry)) p.push(`${name} has a snapshot that isn't a polygon`);
+  }
+  if (t.region !== undefined && typeof t.region !== 'string') p.push(`${name} has a malformed region`);
+  if (t.strength !== undefined) {
+    if (!Array.isArray(t.strength)) p.push(`${name} has malformed strength`);
+    else for (const s of t.strength) {
+      if (!s?.at || !isValidHistDate(s.at)) p.push(`${name} has a strength point with an invalid date`);
+      if (![1, 2, 3, 4, 5].includes(s?.level)) p.push(`${name} has a strength level that isn't 1 to 5`);
+      if (s?.highlightIds !== undefined && !Array.isArray(s.highlightIds)) p.push(`${name} has a strength point with malformed highlights`);
+    }
   }
   return p;
 }
@@ -200,6 +224,7 @@ export function validateDoc(doc: TimelineDoc): string[] {
     if (!sourceIds.has(h.sourceId)) p.push(`highlight ${h.id} quotes unknown source "${h.sourceId}"`);
     if (!Array.isArray(h.usedBy)) p.push(`highlight ${h.id} has malformed links`);
     if (h.dimension !== undefined && !DIMENSIONS.includes(h.dimension)) p.push(`highlight ${h.id} has unknown dimension "${h.dimension}"`);
+    p.push(...checkLanes(`highlight ${h.id}`, h.lanes));
     if (h.anchor !== undefined && typeof h.anchor?.exact !== 'string') p.push(`highlight ${h.id} has a malformed anchor`);
   }
   for (const n of doc.notes) {
@@ -223,6 +248,16 @@ export function validateDoc(doc: TimelineDoc): string[] {
     if (!RELATION_TYPES.includes(r.type)) p.push(`connection ${r.id} has unknown type "${r.type}"`);
     if (r.fromId === r.toId) p.push(`connection ${r.id} links an item to itself`);
     if (r.highlightIds !== undefined && !Array.isArray(r.highlightIds)) p.push(`connection ${r.id} has malformed evidence`);
+    if (r.side !== undefined && r.side !== 1 && r.side !== 2) p.push(`connection ${r.id} has a side that isn't 1 or 2`);
+  }
+  for (const g of doc.groups ?? []) {
+    checkUnique(g.id);
+    if (!g.id || !g.title?.trim()) p.push('a group is missing its id or title');
+    if (!Array.isArray(g.territoryIds)) p.push(`group "${g.title}" has malformed members`);
+  }
+  if (doc.regionParents !== undefined) {
+    const rp = doc.regionParents;
+    if (!rp || typeof rp !== 'object' || Array.isArray(rp) || Object.values(rp).some((v) => typeof v !== 'string')) p.push('the region parents are malformed');
   }
   return p;
 }
@@ -252,6 +287,7 @@ export function parseDoc(json: string): TimelineDoc {
   if (r.schemaVersion === 5) r = migrate5to6(r);
   if (r.schemaVersion === 6) r = migrate6to7(r);
   if (r.schemaVersion === 7) r = migrate7to8(r);
+  if (r.schemaVersion === 8) r = migrate8to9(r);
   const doc: TimelineDoc = {
     schemaVersion: SCHEMA_VERSION,
     id: r.id ?? newId('doc'),
@@ -265,6 +301,8 @@ export function parseDoc(json: string): TimelineDoc {
     sources: r.sources ?? [],
     relations: r.relations ?? [],
     highlights: r.highlights ?? [],
+    groups: r.groups ?? [],
+    ...(r.regionParents ? { regionParents: r.regionParents } : {}),
     deleted: r.deleted ?? {},
     updatedAt: r.updatedAt ?? Date.now(),
   };
@@ -348,6 +386,31 @@ function migrate7to8(r: Partial<TimelineDoc>): Partial<TimelineDoc> {
   return { ...r, schemaVersion: 8 };
 }
 
+/** The lane a v8 dimension became. Social has none: those are left to the automatic sort. */
+const LANE_OF_DIMENSION: Record<Dimension, Lane | undefined> = {
+  political: 'politics', economic: 'economy', intellectual: 'ideas', religious: 'ideas', technological: 'technology', social: undefined,
+};
+
+/**
+ * v9 adds lanes, the overview mark, territories' region and strength, polity groups, region
+ * parents and a connection's side. Entries and highlights get `lanes` from their `dimension`,
+ * which stays so nothing is lost; a territory takes its period's region. Nothing is restamped,
+ * so two devices that upgrade the same timeline still merge cleanly.
+ */
+function migrate8to9(r: Partial<TimelineDoc>): Partial<TimelineDoc> {
+  const withLanes = <T extends { dimension?: Dimension; lanes?: Lane[] }>(x: T): T => {
+    const lane = x.dimension && LANE_OF_DIMENSION[x.dimension];
+    return lane && !x.lanes ? { ...x, lanes: [lane] } : x;
+  };
+  const items = (r.items ?? []).map(withLanes);
+  const regionOf = new Map(items.filter((it) => it.region?.trim()).map((it) => [it.id, it.region!]));
+  const territories = (r.territories ?? []).map((t) => {
+    const region = t.itemId ? regionOf.get(t.itemId) : undefined;
+    return region && !t.region ? { ...t, region } : t;
+  });
+  return { ...r, schemaVersion: 9, items, territories, highlights: (r.highlights ?? []).map(withLanes), groups: r.groups ?? [] };
+}
+
 export function serializeDoc(doc: TimelineDoc): string {
   return JSON.stringify(doc, null, 2);
 }
@@ -355,7 +418,7 @@ export function serializeDoc(doc: TimelineDoc): string {
 // ---------- Mutations (pure; return a new doc) ----------
 
 /** The collections of id'd, timestamped records inside a doc. */
-export type Collection = 'items' | 'series' | 'territories' | 'flows' | 'notes' | 'sources' | 'relations' | 'highlights';
+export type Collection = 'items' | 'series' | 'territories' | 'flows' | 'notes' | 'sources' | 'relations' | 'highlights' | 'groups';
 type RecordOf<C extends Collection> = {
   items: TimelineItem;
   series: Series;
@@ -365,10 +428,11 @@ type RecordOf<C extends Collection> = {
   sources: Source;
   relations: Relation;
   highlights: Highlight;
+  groups: PolityGroup;
 }[C];
 
 export function upsert<C extends Collection>(doc: TimelineDoc, collection: C, record: RecordOf<C>, now = Date.now()): TimelineDoc {
-  const list = doc[collection] as RecordOf<C>[];
+  const list = (doc[collection] ?? []) as RecordOf<C>[];
   const next = { ...record, updatedAt: now };
   const exists = list.some((r) => r.id === record.id);
   const updated = exists ? list.map((r) => (r.id === record.id ? next : r)) : [...list, next];
@@ -390,7 +454,7 @@ export function upsert<C extends Collection>(doc: TimelineDoc, collection: C, re
  */
 export function remove(doc: TimelineDoc, collection: Collection, id: string, now = Date.now()): TimelineDoc {
   const deleted = { ...doc.deleted, [id]: now };
-  let next: TimelineDoc = { ...doc, [collection]: (doc[collection] as { id: string }[]).filter((r) => r.id !== id), deleted, updatedAt: now };
+  let next: TimelineDoc = { ...doc, [collection]: ((doc[collection] ?? []) as { id: string }[]).filter((r) => r.id !== id), deleted, updatedAt: now };
 
   if (collection === 'items' || collection === 'series' || collection === 'territories' || collection === 'flows') {
     const dropped = next.relations.filter((r) => r.fromId === id || r.toId === id);
@@ -418,7 +482,12 @@ export function remove(doc: TimelineDoc, collection: Collection, id: string, now
       if (s.points.length < 2 && !Object.keys(regions).length) deleted[s.id] = now;
       else series.push({ ...s, regions, updatedAt: now });
     }
-    next = { ...next, series, flows: next.flows.map((f) => detachTerritory(f, doc.territories.find((t) => t.id === id), now)) };
+    next = {
+      ...next,
+      series,
+      flows: next.flows.map((f) => detachTerritory(f, doc.territories.find((t) => t.id === id), now)),
+      groups: next.groups?.map((g) => (g.territoryIds.includes(id) ? { ...g, territoryIds: g.territoryIds.filter((x) => x !== id), updatedAt: now } : g)),
+    };
   }
   if (collection === 'sources') {
     const strip = <T extends { citations?: Citation[]; updatedAt: number }>(r: T): T =>
@@ -433,6 +502,9 @@ export function remove(doc: TimelineDoc, collection: Collection, id: string, now
       items: next.items.map((it) => (it.themes?.some((t) => t.highlightIds.includes(id))
         ? { ...it, themes: it.themes.map((t) => ({ ...t, highlightIds: t.highlightIds.filter((x) => x !== id) })), updatedAt: now }
         : it)),
+      territories: next.territories.map((t) => (t.strength?.some((s) => s.highlightIds?.includes(id))
+        ? { ...t, strength: t.strength.map((s) => (s.highlightIds?.includes(id) ? { ...s, highlightIds: s.highlightIds.filter((x) => x !== id) } : s)), updatedAt: now }
+        : t)),
     };
   } else {
     next = { ...next, highlights: next.highlights.map((h) => (h.usedBy.includes(id) ? { ...h, usedBy: h.usedBy.filter((x) => x !== id), updatedAt: now } : h)) };
@@ -589,6 +661,9 @@ export function mergeDocs(a: TimelineDoc, b: TimelineDoc): TimelineDoc {
     sources: mergeList(a.sources, b.sources, deleted),
     relations: mergeList(a.relations, b.relations, deleted),
     highlights: mergeList(a.highlights ?? [], b.highlights ?? [], deleted),
+    groups: mergeList(a.groups ?? [], b.groups ?? [], deleted),
+    // A region's parent is open vocabulary with no stamp of its own: the newer copy wins per region.
+    ...(a.regionParents || b.regionParents ? { regionParents: { ...(newer === a ? b : a).regionParents, ...newer.regionParents } } : {}),
     deleted,
     updatedAt: Math.max(a.updatedAt, b.updatedAt),
   };

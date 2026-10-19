@@ -838,10 +838,12 @@
             "id": "toolu_1",
             "name": "propose_from_highlight",
             "input": {
-              "dimension": {
-                "value": "social",
-                "quote": "The plague wiped out over 30,000 citizens, sailors and soldiers"
-              },
+              "lanes": [
+                {
+                  "value": "nature",
+                  "quote": "The plague wiped out over 30,000 citizens, sailors and soldiers"
+                }
+              ],
               "entries": [],
               "connections": [
                 {

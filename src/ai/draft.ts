@@ -1,5 +1,5 @@
 import { remove, upsert } from '../model/doc';
-import type { Dimension, Highlight, Provenance, Relation, Source, TimelineDoc, TimelineItem } from '../model/types';
+import type { Highlight, Lane, Provenance, Relation, Source, TimelineDoc, TimelineItem } from '../model/types';
 
 /**
  * A set of AI-drafted records waiting for Bob. Nothing here is in the doc
@@ -36,8 +36,8 @@ export interface DraftSet {
   provenance: Provenance;
   /** Drafted from this highlight: accepted records join its `usedBy`, and connections cite it. */
   highlightId?: string;
-  /** The dimension Claude suggests for the highlight, with the words it rests on. Bob takes it only by picking it. */
-  dimension?: { value: Dimension; quote: string };
+  /** The lanes Claude suggests for the highlight, each with the words it rests on. Bob takes one only by picking it. */
+  lanes?: { value: Lane; quote: string }[];
   entries: DraftEntry[];
   connections: DraftConnection[];
   /** What the validator left out, in Bob's words. */
@@ -47,13 +47,13 @@ export interface DraftSet {
 /**
  * Put an accepted entry and the sources it cites into the doc. Drafted from
  * Bob's highlight (`highlightId`), the highlight now justifies the entry and
- * lends it its dimension.
+ * lends it its lanes.
  */
 export function acceptEntry(doc: TimelineDoc, entry: DraftEntry, now = Date.now(), highlightId?: string): TimelineDoc {
   let d = doc;
   for (const s of entry.newSources) if (!d.sources.some((x) => x.id === s.id)) d = upsert(d, 'sources', s, now);
-  const dimension = d.highlights.find((h) => h.id === highlightId)?.dimension;
-  d = upsert(d, 'items', dimension && !entry.item.dimension ? { ...entry.item, dimension } : entry.item, now);
+  const lanes = d.highlights.find((h) => h.id === highlightId)?.lanes;
+  d = upsert(d, 'items', lanes?.length && !entry.item.lanes?.length ? { ...entry.item, lanes } : entry.item, now);
   if (entry.highlight) d = upsert(d, 'highlights', { ...entry.highlight, usedBy: [entry.item.id] }, now);
   return highlightId ? usedBy(d, highlightId, entry.item.id, now) : d;
 }

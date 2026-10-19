@@ -1,11 +1,11 @@
 import { axisTicks, formatRange, formatYear, toDecimalYear } from '../../model/dates';
 import { ELSEWHERE, type Era, type EraRegion } from '../../model/eras';
-import { DIMENSIONS, type DatedItem, type Dimension, type Relation, type TimelineItem } from '../../model/types';
+import { LANES, type DatedItem, type Lane, type Relation, type TimelineItem } from '../../model/types';
 import { anchors, arcCurve, loopCurve, type Box as Edges } from '../influenceLinks';
 import { makerOf, markOf, representationOf, warOf, type Representation } from '../representations';
 import { BAND_H, bandPrims, LANDMARK, LANDMARK_Y } from '../representations/era';
 import type { YearWindow } from '../timeNav';
-import { DIMENSION_LABEL, PIGMENT } from '../util';
+import { LANE_LABEL, PIGMENT } from '../util';
 import { tint, type Box, type Cluster, type Link, type MarkKind, type Measure, type Prim, type Scene, type Target } from './scene';
 
 /**
@@ -13,7 +13,7 @@ import { tint, type Box, type Cluster, type Link, type MarkKind, type Measure, t
  * indexes); `layout` runs every frame and returns only what is visible.
  *
  * Level 0 is the eras: a row per region, each era a band (`representations/era.ts`). Level 1 is
- * one era opened into its six dimension lanes (`eraLanes`). Level 2 is single entries in
+ * one era opened into its six lanes (`eraLanes`). Level 2 is single entries in
  * category lanes.
  */
 
@@ -562,10 +562,10 @@ function landmarks(c: Ctx, e: PEra, xa: number, xb: number, y: number) {
   }
 }
 
-/* ---------- level 1: an era opened into six dimension lanes ---------- */
+/* ---------- level 1: an era opened into six lanes ---------- */
 
-/** The lane under the six for entries with no dimension yet. */
-export const NO_DIMENSION = 'none';
+/** The lane under the six for entries in no lane yet. */
+export const NO_LANE = 'none';
 /** Level 1's "All eras", in the header row. */
 export const ERAS_BACK = '__eras';
 /** The header row itself, so a tap on it lands on nothing under it. */
@@ -580,10 +580,10 @@ const LANE1_EMPTY = 52;
 const P_HEAD = 30, P_MOMENT = 14, P_ROW = 12, P_ITEM = 30, P_YEAR = 92;
 
 export interface Lane1 {
-  id: Dimension | typeof NO_DIMENSION;
+  id: Lane | typeof NO_LANE;
   label: string;
   color: string;
-  /** Highlights in the era in this dimension. */
+  /** Highlights in the era in this lane. */
   count: number;
   /** Spans of change (periods, lives) and key moments, each by start. */
   spans: PItem[];
@@ -603,11 +603,12 @@ export interface EraLanes {
 }
 
 /**
- * An era's six lanes, in pigment order, then "No dimension yet" when anything has none. What's in
+ * An era's six lanes, in pigment order, then "No lane yet" when anything has none. What's in
  * it is what level 0 counts (`eraRegions`): its members and its inner eras' members, plus the inner
- * eras themselves. `dims` is each entry's dimension (`entryDimensions`).
+ * eras themselves. `lanesOf` is each entry's lanes (`entryLanes`); for now an entry sits in its
+ * first, until a polity's lanes (Phase 4 ticket 7) draw it in each.
  */
-export function eraLanes(D: Prepared, eraId: string, dims: ReadonlyMap<string, Dimension>): EraLanes | undefined {
+export function eraLanes(D: Prepared, eraId: string, lanesOf: ReadonlyMap<string, readonly Lane[]>): EraLanes | undefined {
   const R = D.regions.find((r) => r.eras.some((e) => e.id === eraId));
   if (!R) return undefined;
   const byEra = new Map(R.eras.map((e) => [e.id, e]));
@@ -624,14 +625,13 @@ export function eraLanes(D: Prepared, eraId: string, dims: ReadonlyMap<string, D
   }
   const items = [...ids].map((id) => D.byId.get(id)).filter((p): p is PItem => !!p && !p.draft)
     .sort((a, b) => a.s - b.s || b.e - a.e || a.id.localeCompare(b.id));
-  const dimmed = DIMENSIONS.reduce((n, d) => n + era.mix[d], 0);
   const defs: Omit<Lane1, 'spans' | 'moments' | 'order' | 'rows'>[] = [
-    ...DIMENSIONS.map((d) => ({ id: d, label: DIMENSION_LABEL[d], color: `var(--pig-${PIGMENT[d]})`, count: era.mix[d] })),
-    { id: NO_DIMENSION, label: 'No dimension yet', color: UMBER, count: Math.max(0, era.highlights - dimmed) },
+    ...LANES.map((d) => ({ id: d, label: LANE_LABEL[d], color: `var(--pig-${PIGMENT[d]})`, count: era.mix[d] })),
+    { id: NO_LANE, label: 'No lane yet', color: UMBER, count: era.noLane },
   ];
   const laneOf = new Map<string, number>(), rowOf = new Map<string, number>(), nextOf = new Map<string, number>();
   const lanes = defs.map((l, li): Lane1 => {
-    const mine = items.filter((it) => (dims.get(it.id) ?? NO_DIMENSION) === l.id);
+    const mine = items.filter((it) => (lanesOf.get(it.id)?.[0] ?? NO_LANE) === l.id);
     for (const it of mine) laneOf.set(it.id, li);
     const spans = mine.filter((it) => it.kind !== 'event');
     // Packed into rows by time only, so rows stay put while zooming.
@@ -646,8 +646,8 @@ export function eraLanes(D: Prepared, eraId: string, dims: ReadonlyMap<string, D
     }
     return { ...l, spans, moments: mine.filter((it) => it.kind === 'event'), order: mine, rows: rowEnd.length };
   });
-  // "No dimension yet" is last, so leaving it out moves no other lane.
-  return { era, lanes: lanes.filter((l) => l.id !== NO_DIMENSION || l.order.length), laneOf, rowOf, nextOf };
+  // "No lane yet" is last, so leaving it out moves no other lane.
+  return { era, lanes: lanes.filter((l) => l.id !== NO_LANE || l.order.length), laneOf, rowOf, nextOf };
 }
 
 function laneH(L: Lane1, phone: boolean): number {
@@ -740,7 +740,12 @@ function lanes1(c: Ctx, EL: EraLanes, phone: boolean) {
   head1(c, EL, phone);
 }
 
-const emptyNote = (L: Lane1) => `Nothing ${L.label.toLowerCase()} highlighted here yet.`;
+/** What an empty lane says, in Bob's words. */
+const EMPTY_NOTE: Record<Lane1['id'], string> = {
+  politics: 'No politics or law here yet.', war: 'No wars here yet.', economy: 'Nothing on the economy here yet.',
+  ideas: 'No philosophy or religion here yet.', technology: 'No technology here yet.', nature: 'Nothing on nature here yet.', none: '',
+};
+const emptyNote = (L: Lane1) => EMPTY_NOTE[L.id];
 
 function lane1(c: Ctx, EL: EraLanes, L: Lane1, top: number, h: number) {
   const { E, S, X, x0, x1 } = c;

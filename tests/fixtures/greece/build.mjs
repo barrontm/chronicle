@@ -1,7 +1,7 @@
 // Builds the Classical Greece fixture (TEST DATA ONLY, never shipped in the app).
 //   node tests/fixtures/greece/build.mjs
 // Writes, next to this file:
-//   classical-greece.json  a schema-8 doc the app imports today (entries, eras in a region, highlights, themes, territories, a migration, trends, notes, sources, connections)
+//   classical-greece.json  a schema-9 doc the app imports today (entries, eras in a region, highlights, themes, territories, a migration, trends, notes, sources, connections)
 //   next.json              the shapes the schema does not have yet (regimes, economy, campaign routes, goods flows),
 //                          taken from Bob's chosen prototypes in docs/prototypes. Each phase that adds a shape moves its part into the doc.
 // Dates are astronomical years (431 BCE = -430). In this file BCE years are written positive and '~' marks approximate.
@@ -49,6 +49,7 @@ const OITEMS = grab(ovw, 'ITEMS'), OTHEMES = grab(ovw, 'CLASSICAL_THEMES');
 // ---------- ids, sources, small helpers ----------
 const slug = (s) => s.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
 const CAT = { pol: 'politics', war: 'war', ideas: 'ideas', sci: 'science', tech: 'technology', soc: 'society', arts: 'arts' };
+const DIM_LANE = { political: ['politics'], economic: ['economy'], intellectual: ['ideas'], religious: ['ideas'], technological: ['technology'], social: [] };
 const DIMTAG = { pol: 'political', eco: 'economic', soc: 'social', tec: 'technological', int: 'intellectual', rel: 'religious' };
 const sources = [
   { id: 's_thuc', kind: 'book', title: 'History of the Peloponnesian War', authors: 'Thucydides; trans. Rex Warner', year: '1972', publisher: 'Penguin', remarks: 'Our main source for 431–411 BCE; breaks off mid-sentence.' },
@@ -250,7 +251,6 @@ for (const r of rows) {
   if (r.o.w) cites.push({ sourceId: wpSrc(r.o.w) });
   if (cites.length) it.citations = cites;
   if (r.o.at) it.places = [r.o.at];
-  if (DIMTAG[r.dim]) it.dimension = DIMTAG[r.dim];
   const tags = [...(r.o.tags ?? []), ...(DIMTAG[r.dim] ? [DIMTAG[r.dim]] : [])];
   if (tags.length) it.tags = tags;
   // Eras are periods in the Greece row of the overview (level 0).
@@ -359,10 +359,10 @@ const highlights = [
   ...BATTLES.filter((b) => b.q).map((b) => ({ id: `h_${b.id}`, q: b.q, dim: 'pol', on: `i_b_${b.id}` })),
 ].map(({ id, q, dim, on }) => {
   if (!byId.has(on)) throw new Error(`highlight ${id} on ${on}`);
-  return { id, sourceId: wp(q[1]), text: q[0], ...(q[2] ? { anchor: { section: q[2], exact: q[0] } } : {}), dimension: DIMTAG[dim], usedBy: [on], updatedAt: NOW };
+  return { id, sourceId: wp(q[1]), text: q[0], ...(q[2] ? { anchor: { section: q[2], exact: q[0] } } : {}), dim: DIMTAG[dim], usedBy: [on], updatedAt: NOW };
 });
 // Bob's themes for the Classical period, over those highlights; each takes the dimension most of its highlights have.
-const hdim = new Map(highlights.map((h) => [h.id, h.dimension]));
+const hdim = new Map(highlights.map((h) => [h.id, h.dim]));
 items.find((i) => i.id === 'i_classical').themes = OTHEMES.map((th) => {
   const highlightIds = th.items.map((x) => `h_${x}`).filter((h) => hdim.has(h));
   const n = {};
@@ -370,9 +370,32 @@ items.find((i) => i.id === 'i_classical').themes = OTHEMES.map((th) => {
   return { id: th.id, label: th.label, dimension: Object.entries(n).sort((a, b) => b[1] - a[1])[0][0], highlightIds };
 });
 
+// v9: lanes, the overview mark, strength, regions and their parents, a group, and who took part in what.
+const dimOf = new Map(rows.map((r) => [`i_${r.id}`, DIMTAG[r.dim]]));
+const ov = overviewShapes();
+for (const it of items) {
+  if (ov.lanes[it.id]) it.lanes = ov.lanes[it.id];
+  if (ov.marks[it.id]) it.overview = ov.marks[it.id];
+}
+for (const h of highlights) {
+  // A highlight is in its entry's lanes; on an era (which has none), its dimension's lane.
+  const lanes = ov.lanes[h.usedBy[0]] ?? DIM_LANE[h.dim] ?? [];
+  delete h.dim;
+  if (lanes.length) h.lanes = lanes;
+}
+for (const t of territories) {
+  if (ov.regions[t.id]) t.region = ov.regions[t.id];
+  if (ov.strength[t.id]) t.strength = ov.strength[t.id];
+}
+for (const p of ov.participants) {
+  p.sides.forEach((side, i) => {
+    for (const tid of side) relations.push({ id: `r_${tid}_${p.entryId}`, fromId: tid, toId: p.entryId, type: 'related', ...(p.sides.length > 1 && p.sides[1].length ? { side: i + 1 } : {}), updatedAt: NOW });
+  });
+}
+
 const usedWp = [...wpIds.values()].map((s) => ({ ...s }));
 const doc = {
-  schemaVersion: 8, id: 'doc_classical_greece', title: 'Classical Greece (test fixture)', updatedAt: NOW,
+  schemaVersion: 9, id: 'doc_classical_greece', title: 'Classical Greece (test fixture)', updatedAt: NOW,
   categories: [
     { id: 'politics', label: 'Politics & government', color: 'var(--pig-lapis)' },
     { id: 'war', label: 'War & conflict', color: 'var(--pig-cinnabar)' },
@@ -385,6 +408,8 @@ const doc = {
   items, series, territories, flows, notes, highlights,
   sources: [...sources, ...usedWp].map((s) => ({ ...s, updatedAt: NOW })),
   relations, deleted: {},
+  groups: ov.groups.map((g) => ({ id: g.id, title: g.title, territoryIds: g.members, updatedAt: NOW })),
+  regionParents: ov.regionParents,
 };
 
 // ---------- the sidecar: shapes the schema does not have yet ----------
@@ -417,14 +442,13 @@ const next = {
     },
     goods: GOODS.map(({ q, pts, ...g }) => ({ ...g, points: pts.map(pt) })),
   },
-  // Phase 4: the overview (schema v9, settled by docs/prototypes/polities.html).
-  overview: overviewShapes(),
+  // Phase 4: the overview. Lanes, marks, strength, regions, groups and participants are in the doc (v9); what's left is ticket 8's.
+  overview: { alliances: ov.alliances },
 };
 
 // Lanes, the overview mark, strength points, regions and their parents, a group of city-states, and the polities
 // that took part in wars and alliances (territories as connection ends, with a side).
 function overviewShapes() {
-  const DIM_LANE = { political: ['politics'], economic: ['economy'], intellectual: ['ideas'], religious: ['ideas'], technological: ['technology'], social: [] };
   const WAR = /Battle|War\b|Wars\b|Siege|invasion|[Ee]xpedition|[Rr]evolt|surrenders|falls|taken|attack|victories|destroyed|conquest|March of|seizes|takes|garrison|^Delium$|^Mantinea$|^Notium$|^Arginusae$|^Assinarus$|^Cynossema$|^Cyzicus$|^Aegospotami$|^Pylos/;
   // What Bob set by hand, which the automatic sort never overrides.
   const SET = {
@@ -440,7 +464,7 @@ function overviewShapes() {
   const lanes = {};
   for (const i of items) {
     if (i.subject === 'period') continue;
-    const auto = WAR.test(i.title) || i.id.startsWith('i_b_') ? ['war'] : DIM_LANE[i.dimension] ?? [];
+    const auto = WAR.test(i.title) || i.id.startsWith('i_b_') ? ['war'] : DIM_LANE[dimOf.get(i.id)] ?? [];
     const l = SET[i.id] ?? auto;
     if (l.length) lanes[i.id] = l;
   }
@@ -448,6 +472,7 @@ function overviewShapes() {
   const at = (n, level, ...highlightIds) => ({ at: y(n), level, ...(highlightIds.length ? { highlightIds } : {}) });
   return {
     lanes,
+    set: SET,
     marks: { i_persian: 'shown', i_pelop: 'shown', i_plague: 'shown', i_delian_founded: 'shown', i_alexander_persia: 'world', i_academy: 'shown' },
     strength: {
       t_athens: [at(600, 1), at(490, 2), at(479, 3), at(454, 5, 'h_delian'), at(431, 5), at(413, 4, 'h_decelea'), at(404, 2, 'h_thirty'), at(377, 3), at(338, 1, 'h_chaeronea')],

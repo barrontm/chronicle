@@ -8,11 +8,12 @@ import { toDecimalYear } from '../../model/dates';
 import { CANT_ADD, firstChoice } from '../../model/passage';
 import { describeRelation, upsert } from '../../model/doc';
 import { KIND_LABEL, factRelations, findInChronicle, subjectFacts, type Subject } from '../../model/subjects';
-import { DIMENSIONS, type Dimension, type Highlight, type Relation } from '../../model/types';
+import type { Highlight, Lane, Relation } from '../../model/types';
 import { useDoc } from '../DocContext';
 import { DraftConnectionRow, DraftEntryRow, DroppedList } from '../panels/DraftRows';
 import { useApiKey, useOnline } from '../useAi';
-import { DIMENSION_LABEL, PIGMENT } from '../util';
+import { lanesInWords, PIGMENT } from '../util';
+import { LaneChips } from '../LaneChips';
 import { Glyph } from './Glyph';
 import { useHighlightDrafts, type Ghost } from './highlightDrafts';
 import type { RecordRef } from './ReaderPane';
@@ -36,12 +37,12 @@ interface Row {
   title: string;
 }
 
-const pigment = (d?: Dimension) => `var(--pig-${PIGMENT[d ?? 'none']})`;
+const pigment = (d?: Lane) => `var(--pig-${PIGMENT[d ?? 'none']})`;
 
 /**
  * The capture tray under the reader's text. With a highlight open it shows
  * the card: the quote, what it could become (the article's subject and the
- * pages the passage links, one chosen), the chosen one's facts, a dimension
+ * pages the passage links, one chosen), the chosen one's facts, its lanes
  * and what to do with it. Otherwise one line counts the article's highlights. Closing
  * the card, or moving on, keeps the highlight as it is.
  */
@@ -272,7 +273,8 @@ export function CaptureTray({ marks, candidates, articleTitle, onAdd, onAsk, onO
 
   // ----- Claude, for what has no article of its own -----
   const set = drafts.sets[h.id];
-  const suggestedDim = set?.dimension?.value;
+  const suggested = set?.lanes?.map((l) => l.value) ?? [];
+  const notPicked = suggested.filter((l) => !h.lanes?.includes(l));
   const ctl = asking[h.id];
   const ask = async () => {
     if (!navigator.onLine) { setAskError((m) => ({ ...m, [h.id]: ASK_OFFLINE })); return; }
@@ -324,7 +326,7 @@ export function CaptureTray({ marks, candidates, articleTitle, onAdd, onAsk, onO
                     update((d) => acceptEntry(d, e, Date.now(), h.id));
                     if (e.item.start) onShowYear?.(Math.round(toDecimalYear(e.item.start)));
                   }}
-                  onEdit={onEdit && (() => onEdit({ item: { ...e.item, ...(h.dimension && !e.item.dimension ? { dimension: h.dimension } : {}) }, newSources: e.newSources, highlight: h }))}
+                  onEdit={onEdit && (() => onEdit({ item: { ...e.item, ...(h.lanes?.length && !e.item.lanes?.length ? { lanes: h.lanes } : {}) }, newSources: e.newSources, highlight: h }))}
                   onReject={() => setStatus(e, 'rejected')}
                   onRestore={() => setStatus(e, 'pending')}
                   onUndo={() => update((d) => undoEntry(d, set, e))}
@@ -416,30 +418,14 @@ export function CaptureTray({ marks, candidates, articleTitle, onAdd, onAsk, onO
 
   return (
     <div ref={tray} className="tray" data-testid="capture-tray">
-      <article ref={card} className="tray-card" aria-label="Highlight" style={{ '--c': pigment(h.dimension) } as React.CSSProperties}>
+      <article ref={card} className="tray-card" aria-label="Highlight" style={{ '--c': pigment(h.lanes?.[0]) } as React.CSSProperties}>
         <blockquote className="q">“{h.text}”</blockquote>
         <p className="src">{articleTitle}{section ? ` › ${section}` : ''}</p>
         {becomes}
-        <div className="dimpick" role="group" aria-label="Dimension">
-          <span className="lbl">Dimension</span>
-          {DIMENSIONS.map((d) => (
-            <button
-              type="button"
-              key={d}
-              className={d === suggestedDim ? 'sug' : undefined}
-              style={{ '--d': pigment(d) } as React.CSSProperties}
-              title={`${DIMENSION_LABEL[d]}${d === suggestedDim ? ' (suggested by Claude)' : ''}`}
-              aria-label={`${DIMENSION_LABEL[d]}${d === suggestedDim ? ', suggested by Claude' : ''}`}
-              aria-pressed={h.dimension === d}
-              disabled={marks.readOnly}
-              onClick={() => marks.setDimension(h.dimension === d ? undefined : d)}
-            ><i /></button>
-          ))}
-          <span className="dn">
-            {h.dimension ? <>{DIMENSION_LABEL[h.dimension]}{h.dimension === suggestedDim && <em> · Claude’s suggestion</em>}</>
-              : suggestedDim ? <><em>Claude suggests {DIMENSION_LABEL[suggestedDim]}</em> · pick it to use it</>
-              : 'None yet'}
-          </span>
+        <div className="dimpick">
+          <span className="lbl">Lanes</span>
+          <LaneChips value={h.lanes} suggested={suggested} disabled={marks.readOnly} onToggle={marks.toggleLane} />
+          {notPicked.length > 0 && <p className="dn"><em>Claude suggests {lanesInWords(notPicked)}</em> · pick {notPicked.length === 1 ? 'it' : 'them'} to use {notPicked.length === 1 ? 'it' : 'them'}</p>}
         </div>
         {!marks.readOnly && (
           <section ref={claudeSection} className="claude" aria-label="Claude">

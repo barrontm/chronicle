@@ -1,4 +1,4 @@
-import type { Citation, Dimension, Source, TimelineDoc } from '../model/types';
+import type { Citation, Lane, Source, TimelineDoc } from '../model/types';
 
 const compact = new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 2 });
 const plain = new Intl.NumberFormat('en', { maximumFractionDigits: 2 });
@@ -16,14 +16,17 @@ export function formatCitation(source: Source | undefined, c: Citation): string 
   return `${parts}${year}${c.locator ? `, ${c.locator}` : ''}`;
 }
 
-export const DIMENSION_LABEL: Record<Dimension, string> = {
-  political: 'Political', economic: 'Economic', social: 'Social', technological: 'Technological', intellectual: 'Intellectual', religious: 'Religious',
+export const LANE_LABEL: Record<Lane, string> = {
+  politics: 'Politics and law', war: 'War', economy: 'Economy', ideas: 'Philosophy and religion', technology: 'Technology', nature: 'Nature',
 };
 
-/** Each dimension's pigment (`--pig-…`); umber for none. */
-export const PIGMENT: Record<Dimension | 'none', string> = {
-  political: 'lapis', economic: 'ochre', social: 'madder', technological: 'verdigris', intellectual: 'indigo', religious: 'cinnabar', none: 'umber',
+/** Each lane's pigment (`--pig-…`); umber for none. */
+export const PIGMENT: Record<Lane | 'none', string> = {
+  politics: 'lapis', war: 'cinnabar', economy: 'ochre', ideas: 'indigo', technology: 'verdigris', nature: 'terre', none: 'umber',
 };
+
+/** The lanes in words, in pigment order: "War, Economy". */
+export const lanesInWords = (lanes: readonly Lane[] | undefined) => (lanes ?? []).map((l) => LANE_LABEL[l]).join(', ');
 
 export function titleOf(doc: TimelineDoc, id: string): string | undefined {
   return doc.items.find((i) => i.id === id)?.title ?? doc.series.find((s) => s.id === id)?.title ?? doc.territories.find((t) => t.id === id)?.title ?? doc.flows.find((f) => f.id === id)?.title;

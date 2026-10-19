@@ -73,9 +73,20 @@ export interface Excerpt {
   sourceId: string;
 }
 
-/** The six sides of an era the app draws, in pigment order. Categories stay Bob's topics. */
+/** Before v9: the six sides of an era. Still read from older entries and highlights; v9 writes `lanes`. */
 export const DIMENSIONS = ['political', 'economic', 'social', 'technological', 'intellectual', 'religious'] as const;
 export type Dimension = (typeof DIMENSIONS)[number];
+
+/**
+ * The six lanes under a polity or world event, in pigment order (v9). An entry or highlight can be
+ * in several. Categories stay Bob's topics; lanes are what the overview draws.
+ */
+export const LANES = ['politics', 'war', 'economy', 'ideas', 'technology', 'nature'] as const;
+export type Lane = (typeof LANES)[number];
+
+/** What shows at the top of the overview: "shown" by Bob's choice, or a world event (gold, always shown). */
+export const OVERVIEW_MARKS = ['shown', 'world'] as const;
+export type OverviewMark = (typeof OVERVIEW_MARKS)[number];
 
 /** What kind of thing an entry is, so the timeline and map can draw it as one (see `subjects.ts`). */
 export const SUBJECT_KINDS = ['person', 'polity', 'period', 'war', 'battle', 'event', 'idea', 'technology', 'economy', 'work', 'place', 'migration'] as const;
@@ -107,7 +118,10 @@ export interface Highlight {
   text: string;
   /** Absent for quotes that weren't made in the reader (migrated excerpts). */
   anchor?: TextAnchor;
+  /** Before v9; kept so nothing is lost. */
   dimension?: Dimension;
+  /** Which lanes the passage is about (v9), in `LANES` order. */
+  lanes?: Lane[];
   /** Wikidata id of the article's subject, when known. */
   subjectQid?: string;
   /** Ids of the records this highlight justifies (entries, connections…). */
@@ -153,8 +167,12 @@ export interface TimelineItem {
   citations?: Citation[];
   tags?: string[];
   places?: Place[];
-  /** Which of the six dimensions this entry is mostly about. */
+  /** Before v9: which of the six dimensions it was mostly about. Kept so nothing is lost; read `lanes`. */
   dimension?: Dimension;
+  /** Bob's lanes (v9), in `LANES` order. When absent, `lanesOf` sorts it automatically. */
+  lanes?: Lane[];
+  /** Shown at the top of the overview, or a world event (v9). */
+  overview?: OverviewMark;
   /** What kind of thing it is. Missing on older entries, which draw as their `kind`. */
   subject?: SubjectKind;
   /** Periods only: the row this era sits in on the overview, such as "Greece". Bob's own words. */
@@ -229,6 +247,8 @@ export interface Relation {
   effect?: string;
   /** Highlights that are the evidence for this connection. */
   highlightIds?: string[];
+  /** From a territory to a war, battle, alliance or treaty (v9): which side it took part on. */
+  side?: 1 | 2;
   drafted?: Provenance;
   updatedAt: number;
 }
@@ -274,11 +294,23 @@ export interface TerritorySnapshot {
   areaKm2?: number;
 }
 
+/** Bob's reading of a polity's power at a date, 1 (a sliver) to 5 (dominant); straight lines between points. */
+export interface StrengthPoint {
+  at: HistDate;
+  level: 1 | 2 | 3 | 4 | 5;
+  /** Highlights it rests on. */
+  highlightIds?: string[];
+}
+
 export interface Territory {
   id: string;
   title: string;
   categoryId: string;
   snapshots: TerritorySnapshot[];
+  /** Its row on the overview, such as "Greece" (v9). Bob's own words, like a period's `region`. */
+  region?: string;
+  /** Bob's strength points (v9), which override the thickness its area gives it. */
+  strength?: StrengthPoint[];
   /** The timeline entry for this polity (usually a period), if any. */
   itemId?: string;
   wikidataId?: string;
@@ -328,7 +360,15 @@ export interface Flow {
   updatedAt: number;
 }
 
-export const SCHEMA_VERSION = 8;
+/** City-states that fold into one strip on the overview (v9), such as Classical Greece. Its region is its members'. */
+export interface PolityGroup {
+  id: string;
+  title: string;
+  territoryIds: string[];
+  updatedAt: number;
+}
+
+export const SCHEMA_VERSION = 9;
 
 export interface TimelineDoc {
   schemaVersion: number;
@@ -343,6 +383,10 @@ export interface TimelineDoc {
   sources: Source[];
   relations: Relation[];
   highlights: Highlight[];
+  /** Polity groups (v9). Missing on docs made before v9. */
+  groups?: PolityGroup[];
+  /** Region → its parent (v9), such as "Greece" → "Mediterranean". Both are Bob's words. */
+  regionParents?: Record<string, string>;
   /** id → epoch ms when deleted. Lets a merge know a missing item was deleted, not new. */
   deleted: Record<string, number>;
   updatedAt: number;

@@ -323,7 +323,7 @@ test('what an older version read from Wikidata is looked up again', async ({ pag
   await expect(page.getByTestId('reader').getByTestId('article-subject')).toHaveText('Person · 494–429 BCE');
 });
 
-test('the capture tray keeps a highlight, gives it a dimension, and adds the article to the timeline @phone', async ({ page }, info) => {
+test('the capture tray keeps a highlight, puts it in two lanes, and adds the article to the timeline in both @phone', async ({ page }, info) => {
   const phone = info.project.name.includes('phone');
   await mockArticles(page);
   await mockSummaries(page);
@@ -352,9 +352,14 @@ test('the capture tray keeps a highlight, gives it a dimension, and adds the art
   await expect(tray.getByRole('radio', { name: /Pericles/ })).toContainText('This article · Person');
   await expect(tray).toContainText('494–429 BCE');
 
-  // A dimension recolors the mark; keeping it closes the card and leaves a kept mark.
-  await tray.getByRole('button', { name: 'Political' }).click();
-  await expect(tray.getByRole('button', { name: 'Political' })).toHaveAttribute('aria-pressed', 'true');
+  // Lanes recolor the mark in the first one's pigment; keeping it closes the card and leaves a kept mark.
+  const lanes = tray.getByRole('group', { name: 'Lanes' });
+  await lanes.getByRole('button', { name: 'War' }).click();
+  await expect.poll(() => marks(page)).toEqual([`chronicle-mark-cinnabar-open: ${quote}`]);
+  await lanes.getByRole('button', { name: 'Politics and law' }).click();
+  await expect(lanes.getByRole('button', { name: 'Politics and law' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(lanes.getByRole('button', { name: 'War' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(lanes.getByRole('button', { name: 'Economy' })).toHaveAttribute('aria-pressed', 'false');
   await expect.poll(() => marks(page)).toEqual([`chronicle-mark-lapis-open: ${quote}`]);
   await tray.getByRole('button', { name: 'Just keep the highlight' }).click();
   await expect(tray.getByRole('status')).toHaveText('Kept as a highlight.');
@@ -374,9 +379,10 @@ test('the capture tray keeps a highlight, gives it a dimension, and adds the art
   const entry = page.getByTestId('item-view');
   await expect(entry.getByRole('heading', { name: 'Pericles' })).toBeVisible();
   // Saved as what it is, so the new timeline can draw it as a person.
-  await expect.poll(() => savedItem(page, 'Pericles')).toMatchObject({ subject: 'person' });
+  await expect.poll(() => savedItem(page, 'Pericles')).toMatchObject({ subject: 'person', lanes: ['politics', 'war'] });
+  await expect(entry.getByTestId('item-lanes')).toHaveText('Politics and law, War');
   await expect(entry.getByTestId('excerpt')).toContainText(quote);
-  await expect(entry.getByTestId('excerpt')).toContainText('Political');
+  await expect(entry.getByTestId('excerpt')).toContainText('Politics and law, War');
   // The card now says it's on the entry; closing it leaves an added mark.
   if (phone) await page.getByRole('button', { name: 'Close panel' }).click(); // the entry's sheet covers the reader
   await expect(tray.getByRole('radio', { name: /Pericles/ })).toContainText('Linked');
@@ -390,7 +396,7 @@ test('the capture tray keeps a highlight, gives it a dimension, and adds the art
   await page.getByRole('tab', { name: /Highlights/ }).click();
   const group = page.getByTestId('highlight-group');
   await expect(group.getByRole('heading')).toHaveText('Pericles');
-  await expect(group).toContainText('Political · on Pericles');
+  await expect(group).toContainText('Politics and law, War · on Pericles');
 });
 
 test('a highlight becomes a page its passage links: pick the war, add it, and see the highlight on it @phone', async ({ page }, info) => {
@@ -469,7 +475,7 @@ test('a highlight becomes a page its passage links: pick the war, add it, and se
   await expect(page.getByTestId('highlight-group')).toContainText('on Peloponnesian War');
 });
 
-test('Claude drafts from the tribute passage: a suggested dimension, an event on the map and a "funded" connection, accepted from the tray', async ({ page }) => {
+test('Claude drafts from the tribute passage: a suggested lane, an event on the map and a "funded" connection, accepted from the tray', async ({ page }) => {
   test.slow();
   const tribute = 'It was from the alliance\'s treasury that Pericles drew the funds necessary to enable his ambitious building plan, centred on the "Periclean Acropolis", which included the Propylaea, the Parthenon and the golden statue of Athena, sculpted by Pericles\'s friend, Phidias. In 449 BC Pericles proposed a decree allowing the use of 9,000 talents to finance the major rebuilding programme of Athenian temples.';
   await mockArticles(page);
@@ -523,9 +529,11 @@ test('Claude drafts from the tribute passage: a suggested dimension, an event on
   await page.getByRole('button', { name: 'Close panel' }).click();
   await askButton.click();
 
-  // Claude suggests a dimension; it's marked, not taken.
-  await expect(tray).toContainText('Claude suggests Economic · pick it to use it');
-  await expect(tray.getByRole('button', { name: 'Economic, suggested by Claude' })).toHaveAttribute('aria-pressed', 'false');
+  // Claude suggests a lane; it's marked, not taken.
+  const economy = tray.getByRole('group', { name: 'Lanes' }).getByRole('button', { name: 'Economy' });
+  await expect(tray).toContainText('Claude suggests Economy · pick it to use it');
+  await expect(economy).toHaveClass('sug');
+  await expect(economy).toHaveAttribute('aria-pressed', 'false');
   expect(asked).toEqual(['sk-ant-test-key-1234']);
 
   // The drafted event waits, dashed on the map; its connection waits for it.
@@ -553,8 +561,9 @@ test('Claude drafts from the tribute passage: a suggested dimension, an event on
   await page.getByRole('button', { name: 'Close panel' }).click();
 
   // Picking the suggestion, then accepting both: the event is on the map in its year, solid.
-  await tray.getByRole('button', { name: 'Economic, suggested by Claude' }).click();
-  await expect(tray).toContainText('Economic · Claude’s suggestion');
+  await economy.click();
+  await expect(economy).toHaveAttribute('aria-pressed', 'true');
+  await expect(tray).not.toContainText('Claude suggests');
   await entry.getByRole('button', { name: 'Accept' }).click();
   await expect(entry).toContainText('Added · on the map and timeline');
   await expect(page.locator('.map-label.draft-pin')).toHaveCount(0);
@@ -568,7 +577,7 @@ test('Claude drafts from the tribute passage: a suggested dimension, an event on
   await page.getByRole('button', { name: 'Library' }).click();
   await page.getByRole('tab', { name: /Highlights/ }).click();
   const group = page.getByTestId('highlight-group');
-  await expect(group).toContainText('Economic · on Decree funding the rebuilding of Athenian temples, Delian League funded Decree funding the rebuilding of Athenian temples');
+  await expect(group).toContainText('Economy · on Decree funding the rebuilding of Athenian temples, Delian League funded Decree funding the rebuilding of Athenian temples');
   await expect(group).not.toContainText('waiting');
 });
 

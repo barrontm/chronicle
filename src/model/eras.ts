@@ -1,9 +1,10 @@
 import { formatRange, toDecimalYear } from './dates';
-import { DIMENSIONS, type DatedItem, type Dimension, type Highlight, type HistDate, type Relation, type TimelineItem } from './types';
+import { entryLanes } from './lanes';
+import { LANES, type DatedItem, type Highlight, type HistDate, type Lane, type Relation, type TimelineItem } from './types';
 
 /**
  * Eras for the overview (the timeline's level 0): every period, in a row per region, with the
- * highlights in it and the mix of their dimensions.
+ * highlights in it and the mix of their lanes.
  *
  * What's in an era: the era itself and its themes, and every entry that is `part of` it (through
  * a war, say) or, failing that, whose middle falls in its dates. An entry in the dates of eras
@@ -27,8 +28,10 @@ export interface Era {
   parent?: string;
   /** How many highlights are in it, counting its inner eras'. */
   highlights: number;
-  /** Of those, how many are in each dimension (a highlight without one takes its entry's). */
-  mix: Record<Dimension, number>;
+  /** Of those, how many are in each lane (a highlight without lanes takes its entry's). One in two lanes counts in both. */
+  mix: Record<Lane, number>;
+  /** Of those, how many are in no lane yet. */
+  noLane: number;
   /** Entries in it and not in an inner era (never eras), for its landmarks. */
   members: string[];
 }
@@ -51,31 +54,7 @@ export function isEra(item: TimelineItem): item is DatedItem {
 
 /** A band shows an approximate date with a dashed edge, so its dates in words leave out the "c.". */
 const exact = (d: HistDate): HistDate => ({ ...d, approx: undefined });
-const emptyMix = () => Object.fromEntries(DIMENSIONS.map((d) => [d, 0])) as Record<Dimension, number>;
-
-/**
- * Each entry's dimension, for its lane inside an era (level 1): its own, else the one most of
- * the highlights it uses have (the first in pigment order on a tie). Entries with neither are left out.
- */
-export function entryDimensions(items: TimelineItem[], highlights: Highlight[]): Map<string, Dimension> {
-  const votes = new Map<string, Record<Dimension, number>>();
-  for (const h of highlights) {
-    if (!h.dimension) continue;
-    for (const id of h.usedBy) {
-      let v = votes.get(id);
-      if (!v) votes.set(id, (v = emptyMix()));
-      v[h.dimension]++;
-    }
-  }
-  const out = new Map<string, Dimension>();
-  for (const it of items) {
-    const v = votes.get(it.id);
-    const top = v && DIMENSIONS.reduce<Dimension | undefined>((b, d) => (v[d] && (!b || v[d] > v[b]) ? d : b), undefined);
-    const dim = it.dimension ?? top;
-    if (dim) out.set(it.id, dim);
-  }
-  return out;
-}
+const emptyMix = () => Object.fromEntries(LANES.map((l) => [l, 0])) as Record<Lane, number>;
 
 /**
  * Regions with their eras, the most highlighted region first and "Elsewhere" last; eras earliest
@@ -89,7 +68,7 @@ export function eraRegions(items: TimelineItem[], highlights: Highlight[], relat
     const s = toDecimalYear(it.start);
     eras.set(it.id, {
       id: it.id, title: it.title, region: it.region?.trim() ?? ELSEWHERE, s, e: Math.max(s, it.end ? toDecimalYear(it.end) : now),
-      approx: !!it.start.approx, endApprox: !!it.end?.approx, when: formatRange(exact(it.start), it.end && exact(it.end)), highlights: 0, mix: emptyMix(), members: [],
+      approx: !!it.start.approx, endApprox: !!it.end?.approx, when: formatRange(exact(it.start), it.end && exact(it.end)), highlights: 0, mix: emptyMix(), noLane: 0, members: [],
     });
   }
   if (!eras.size) return [];
@@ -155,22 +134,24 @@ export function eraRegions(items: TimelineItem[], highlights: Highlight[], relat
 
   // Each highlight counts once for every era it's in, and for the eras around those.
   const counted = new Map<string, Set<string>>();
-  const count = (h: Highlight, era: Era, dim: Dimension | undefined) => {
+  const count = (h: Highlight, era: Era, lanes: readonly Lane[]) => {
     for (const e of withParents(era)) {
       let seen = counted.get(e.id);
       if (!seen) counted.set(e.id, (seen = new Set()));
       if (seen.has(h.id)) continue;
       seen.add(h.id);
       e.highlights++;
-      if (dim) e.mix[dim]++;
+      for (const l of lanes) e.mix[l]++;
+      if (!lanes.length) e.noLane++;
     }
   };
   const themed = new Map<string, string[]>();
   for (const it of items) for (const t of eras.has(it.id) ? it.themes ?? [] : []) for (const hid of t.highlightIds) themed.set(hid, [...(themed.get(hid) ?? []), it.id]);
   const regionSeen = new Map<string, Set<string>>();
+  const laneMap = entryLanes(items, highlights);
   for (const h of highlights) {
     const users = [...h.usedBy, ...(themed.get(h.id) ?? [])];
-    const dim = h.dimension ?? users.map((id) => byId.get(id)?.dimension).find(Boolean);
+    const dim = h.lanes?.length ? h.lanes : users.map((id) => laneMap.get(id)).find(Boolean) ?? [];
     for (const id of users) {
       for (const era of homeOf(id)) {
         count(h, era, dim);

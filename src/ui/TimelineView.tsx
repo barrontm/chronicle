@@ -1,6 +1,7 @@
 import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef } from 'react';
 import { isDated, jsDateToDecimalYear } from '../model/dates';
-import { entryDimensions, eraRegions } from '../model/eras';
+import { eraRegions } from '../model/eras';
+import { entryLanes } from '../model/lanes';
 import type { Category, DatedItem, Highlight, MediaRef, Relation, TimelineItem } from '../model/types';
 import { draftArrows, influenceArrows, influenceClasses } from './influenceLinks';
 import { createTimeline, type MovedDates, type TimelineHandle } from './timeline/createTimeline';
@@ -103,8 +104,8 @@ export const TimelineView = forwardRef<TimelineControl, Props>(function Timeline
     const shown = new Set(categories.map((c) => c.id));
     return eraRegions(items.filter((i) => shown.has(i.categoryId)), highlights, relations, jsDateToDecimalYear(new Date()));
   }, [items, categories, highlights, relations]);
-  // Level 1's lanes: each entry's dimension.
-  const dimensions = useMemo(() => entryDimensions(items, highlights), [items, highlights]);
+  // Level 1's lanes: each entry's lanes.
+  const laneMap = useMemo(() => entryLanes(items, highlights), [items, highlights]);
 
   useEffect(() => {
     tl.current?.setData({
@@ -115,9 +116,9 @@ export const TimelineView = forwardRef<TimelineControl, Props>(function Timeline
       drafts: drafts.items,
       relations,
       eras,
-      dimensions,
+      entryLanes: laneMap,
     });
-  }, [items, categories, thumbFor, prominence, drafts.items, relations, eras, dimensions]);
+  }, [items, categories, thumbFor, prominence, drafts.items, relations, eras, laneMap]);
 
   // The open entry's connections light up with arrows; Claude's drafted ones show whenever their highlight is open.
   useEffect(() => {

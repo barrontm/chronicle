@@ -1,6 +1,6 @@
 import type { AiTool } from '../client';
 import { RELATION_TYPES } from '../../model/doc';
-import { DIMENSIONS, type Category } from '../../model/types';
+import { LANES, type Category } from '../../model/types';
 
 /** The one tool Claude answers through, built from the doc's own types and ids. */
 
@@ -11,18 +11,22 @@ const QUOTE = { type: 'string', description: 'Words copied exactly from the high
 export function submitTool(categories: Category[]): AiTool {
   return {
     name: SUBMIT,
-    description: 'Propose a dimension, entries and connections from Bob’s highlight for him to review. Call this once.',
+    description: 'Propose lanes, entries and connections from Bob’s highlight for him to review. Call this once.',
     input_schema: {
       type: 'object',
       properties: {
-        dimension: {
-          type: 'object',
-          properties: {
-            value: { type: 'string', enum: [...DIMENSIONS] },
-            quote: QUOTE,
+        lanes: {
+          type: 'array',
+          description: 'The lane the passage is mostly about first; a second only when the passage plainly changes that too.',
+          items: {
+            type: 'object',
+            properties: {
+              value: { type: 'string', enum: [...LANES] },
+              quote: QUOTE,
+            },
+            required: ['value', 'quote'],
+            additionalProperties: false,
           },
-          required: ['value', 'quote'],
-          additionalProperties: false,
         },
         entries: {
           type: 'array',
@@ -59,7 +63,7 @@ export function submitTool(categories: Category[]): AiTool {
           },
         },
       },
-      required: ['dimension', 'entries', 'connections'],
+      required: ['lanes', 'entries', 'connections'],
     },
   };
 }
