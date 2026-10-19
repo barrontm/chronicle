@@ -58,6 +58,57 @@ export function acceptEntry(doc: TimelineDoc, entry: DraftEntry, now = Date.now(
   return highlightId ? usedBy(d, highlightId, entry.item.id, now) : d;
 }
 
+/**
+ * What Bob ticked under "Becomes", or filled in himself, for one highlight:
+ * records he has, to link it to (with the connections Wikidata suggests), and
+ * new entries, to add the same way as an accepted draft.
+ */
+export interface Becoming {
+  link: { id: string; relations?: Relation[] }[];
+  add: { item: TimelineItem; newSources?: Source[]; relations?: Relation[] }[];
+}
+
+/** What `addBecoming` changed, so one Undo can take it all back. */
+export interface Became { highlightId: string; added: string[]; linked: string[]; relations: string[] }
+
+/**
+ * Link the highlight to the records Bob has and add the new ones through
+ * `acceptEntry`, so each cites the highlight and takes its lanes. Connections
+ * go in once both their ends are there.
+ */
+export function addBecoming(doc: TimelineDoc, highlightId: string, b: Becoming, now = Date.now()): { doc: TimelineDoc; became: Became } {
+  const before = doc.highlights.find((h) => h.id === highlightId)?.usedBy ?? [];
+  const became: Became = { highlightId, added: [], linked: [], relations: [] };
+  let d = doc;
+  for (const l of b.link) {
+    if (!before.includes(l.id) && !became.linked.includes(l.id)) became.linked.push(l.id);
+    d = usedBy(d, highlightId, l.id, now);
+  }
+  for (const a of b.add) {
+    d = acceptEntry(d, { item: a.item, newSources: a.newSources ?? [], why: '', problems: [], status: 'pending' }, now, highlightId);
+    became.added.push(a.item.id);
+  }
+  const ids = new Set(d.items.map((i) => i.id));
+  for (const r of [...b.link, ...b.add].flatMap((x) => x.relations ?? [])) {
+    if (!ids.has(r.fromId) || !ids.has(r.toId) || d.relations.some((x) => x.id === r.id)) continue;
+    d = upsert(d, 'relations', r, now);
+    became.relations.push(r.id);
+  }
+  return { doc: d, became };
+}
+
+/** Take back what `addBecoming` did: its connections and new entries go, and the highlight lets go of what it linked. */
+export function undoBecoming(doc: TimelineDoc, became: Became, now = Date.now()): TimelineDoc {
+  let d = doc;
+  for (const id of became.relations) if (d.relations.some((r) => r.id === id)) d = remove(d, 'relations', id, now);
+  for (const id of became.added) if (d.items.some((i) => i.id === id)) d = remove(d, 'items', id, now);
+  const h = d.highlights.find((x) => x.id === became.highlightId);
+  if (h && became.linked.some((id) => h.usedBy.includes(id))) {
+    d = upsert(d, 'highlights', { ...h, usedBy: h.usedBy.filter((id) => !became.linked.includes(id)) }, now);
+  }
+  return d;
+}
+
 /** A connection can be accepted once both its ends are on the timeline. */
 export function canAcceptConnection(doc: TimelineDoc, c: DraftConnection): boolean {
   const ids = new Set(doc.items.map((i) => i.id));

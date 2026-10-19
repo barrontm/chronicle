@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  parseCentury,
   formatItemDates,
   axisTicks,
   compareHistDate,
@@ -61,6 +62,25 @@ describe('parseHistDate', () => {
       const d = parseHistDate(s)!;
       expect(parseHistDate(toInputString(d))).toEqual(d);
     }
+  });
+});
+
+describe('parseCentury', () => {
+  it('reads a BCE century as its hundred years, counting down', () => {
+    expect(parseCentury('5th century BC')).toEqual({ n: 5, era: 'BCE', start: { y: -499, approx: true }, end: { y: -400, approx: true }, middle: { y: -449, approx: true } });
+    expect(parseCentury('c. 5th century BCE')?.middle).toEqual({ y: -449, approx: true });
+    // The 1st century BCE ends in 1 BCE, astronomical year 0.
+    expect(parseCentury('1st century BC')).toMatchObject({ start: { y: -99 }, end: { y: 0 }, middle: { y: -49 } });
+  });
+
+  it('reads a CE century, with or without its era', () => {
+    expect(parseCentury('the 1st century AD')).toMatchObject({ era: 'CE', start: { y: 1 }, end: { y: 100 }, middle: { y: 50 } });
+    expect(parseCentury('21st century')).toMatchObject({ start: { y: 2001 }, end: { y: 2100 } });
+    expect(parseCentury('2nd Century CE')?.n).toBe(2);
+  });
+
+  it('leaves anything else alone', () => {
+    for (const s of ['431 BCE', '5th century of the Republic', 'century', '0th century BC', 'c. 450 BCE']) expect(parseCentury(s)).toBeNull();
   });
 });
 

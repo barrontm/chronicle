@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createEmptyDoc, upsert } from '../model/doc';
 import type { Highlight, TimelineDoc, TimelineItem } from '../model/types';
-import { acceptConnection, acceptEntry, pendingOnTimeline, statusIn, undoConnection, undoEntry, waiting, type DraftConnection, type DraftEntry, type DraftSet } from './draft';
+import { acceptConnection, acceptEntry, addBecoming, pendingOnTimeline, statusIn, undoBecoming, undoConnection, undoEntry, waiting, type DraftConnection, type DraftEntry, type DraftSet } from './draft';
 
 const item = (id: string, over: Partial<TimelineItem> = {}): TimelineItem => ({ id, kind: 'event', title: id, start: { y: -448 }, categoryId: 'politics', updatedAt: 0, ...over });
 const highlight: Highlight = { id: 'h1', sourceId: 's1', text: 'In 449 BC Pericles proposed a decree.', lanes: ['economy', 'politics'], usedBy: ['i_old'], updatedAt: 1 };
@@ -78,5 +78,27 @@ describe('drafts on the timeline', () => {
     expect(pendingOnTimeline(doc, [{ ...set, entries: [decree, undated, rejected] }, null])).toEqual({ items: [decree.item], relations: [funded.relation] });
     const d = acceptConnection(acceptEntry(doc, decree, 5, 'h1'), funded, 5, 'h1');
     expect(pendingOnTimeline(d, [set])).toEqual({ items: [], relations: [] });
+  });
+});
+
+describe('what a highlight becomes, ticked or filled in by hand', () => {
+  it('links what Bob has, adds the new ones citing the highlight in its lanes, and connects them once both ends are there', () => {
+    const { doc } = setup();
+    const linked = { id: 'i_delian', relations: [{ id: 'r_a', fromId: 'i_delian', toId: 'i_mines', type: 'related' as const, updatedAt: 0 }] };
+    const mines = item('i_mines', { kind: 'span', subject: 'place', start: undefined });
+    const fleet = item('i_fleet', { lanes: ['war'] });
+    const dangling = { id: 'r_b', fromId: 'i_fleet', toId: 'i_nowhere', type: 'caused' as const, updatedAt: 0 };
+    const { doc: d, became } = addBecoming(doc, 'h1', { link: [linked, { id: 'i_old' }], add: [{ item: mines }, { item: fleet, relations: [dangling] }] }, 5);
+    expect(d.highlights[0].usedBy).toEqual(['i_old', 'i_delian', 'i_mines', 'i_fleet']);
+    expect(d.items.find((i) => i.id === 'i_mines')?.lanes).toEqual(['economy', 'politics']);
+    expect(d.items.find((i) => i.id === 'i_fleet')?.lanes).toEqual(['war']); // its own lanes win
+    expect(d.relations.map((r) => r.id)).toEqual(['r_a']);
+    // i_old was already linked, so Undo leaves it.
+    expect(became).toEqual({ highlightId: 'h1', added: ['i_mines', 'i_fleet'], linked: ['i_delian'], relations: ['r_a'] });
+
+    const back = undoBecoming(d, became, 6);
+    expect(back.items.map((i) => i.id)).toEqual(['i_delian']);
+    expect(back.relations).toEqual([]);
+    expect(back.highlights[0].usedBy).toEqual(['i_old']);
   });
 });

@@ -111,6 +111,34 @@ export function parseHistDate(input: string): HistDate | null {
   return isValidHistDate(d) ? d : null;
 }
 
+/** A century as text says it: "5th century BC", "c. 5th century BCE", "the 2nd century AD". */
+export interface Century {
+  /** 5 for the 5th century. */
+  n: number;
+  era: 'BCE' | 'CE';
+  /** Its first and last years and its middle, all approximate ("c."). */
+  start: HistDate;
+  end: HistDate;
+  middle: HistDate;
+}
+
+/**
+ * Read a century: "5th century BCE" is 500–401 BCE, its middle c. 450 BCE;
+ * "5th century" (no era) is CE, 401–500. Returns null for anything else.
+ */
+export function parseCentury(input: string): Century | null {
+  const m = input.trim().toLowerCase().replace(/\s+/g, ' ')
+    .match(/^(?:(?:circa|ca\.?|c\.?|~)\s*)?(?:the )?(\d{1,3})(?:st|nd|rd|th) century(?: (bce|bc|b\.c\.e?\.?|ce|ad|a\.d\.|c\.e\.))?$/);
+  if (!m) return null;
+  const n = Number(m[1]);
+  if (n < 1) return null;
+  const era: 'BCE' | 'CE' = m[2] && /^b/.test(m[2]) ? 'BCE' : 'CE';
+  const [first, last, mid] = era === 'BCE' ? [n * 100, n * 100 - 99, n * 100 - 50] : [n * 100 - 99, n * 100, n * 100 - 50];
+  const at = (year: number): HistDate => ({ y: toAstronomical(year, era), approx: true });
+  const out = { n, era, start: at(first), end: at(last), middle: at(mid) };
+  return isValidHistDate(out.start) && isValidHistDate(out.end) ? out : null;
+}
+
 /** Inverse of parseHistDate for editing forms: always produces text parseHistDate accepts. */
 export function toInputString(d: HistDate): string {
   const { year, era } = fromAstronomical(d.y);

@@ -5,6 +5,7 @@
 # Bar (ROADMAP Phase 2 ticket 5, lanes since Phase 4 ticket 2): every case validates; the first
 # lane is right or allowed in at least 4 of 5; every date matches the passage; every connection has an effect and cites
 # its highlight; no number the passage lacks (the validator drops those, so "validates" covers it).
+# Since Phase 4 ticket 3: Laurion's lane and place are right as well.
 description: Draft records from a passage Bob highlighted
 tests:
   - description: tribute-building-programme
@@ -105,6 +106,30 @@ tests:
       - type: javascript
         metric: every date matches the passage
         value: "output.entries.filter((e) => !e.item.wikidataId).every((e) => e.item.start.y === -482 || e.item.start.y === -481)"
+      - type: javascript
+        metric: every connection has an effect and cites the highlight
+        value: "output.connections.every((c) => c.relation.effect && c.relation.highlightIds?.includes('h_case'))"
+
+  - description: laurion-silver
+    vars:
+      article: Classical_Athens
+      passage: "The silver mines of Laurion contributed significantly to the development of Athens in the 5th century BC, when the Athenians learned to prospect, treat, and refine the ore and used the proceeds to build a massive fleet, at the instigation of Themistocles."
+    assert:
+      - type: javascript
+        metric: validates (nothing dropped for its words, dates or numbers)
+        value: "!output.dropped.some((d) => /words it rests on|date|number/.test(d))"
+      - type: javascript
+        metric: the first lane is Economy
+        value: "output.lanes?.[0]?.value === 'economy'"
+      - type: javascript
+        metric: drafts an event in the 5th century BCE
+        value: "output.entries.some((e) => !e.item.wikidataId && e.item.kind === 'event' && e.item.start.y >= -499 && e.item.start.y <= -400)"
+      - type: javascript
+        metric: pins it at Laurion (coordinates from the place lookup)
+        value: "output.entries.some((e) => !e.item.wikidataId && e.item.places?.some((p) => Math.abs(p.lat - 37.7) < 0.2 && Math.abs(p.lon - 24.05) < 0.2))"
+      - type: javascript
+        metric: every date matches the passage (the 5th century BCE)
+        value: "output.entries.filter((e) => !e.item.wikidataId).every((e) => e.item.start.y >= -499 && e.item.start.y <= -400)"
       - type: javascript
         metric: every connection has an effect and cites the highlight
         value: "output.connections.every((c) => c.relation.effect && c.relation.highlightIds?.includes('h_case'))"

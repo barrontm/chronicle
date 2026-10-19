@@ -245,9 +245,32 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .tray-card .becomes > .lbl { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); margin-bottom: 6px; }
 .tray-card .becomes > .lbl span { text-transform: none; letter-spacing: 0; font-size: 11.5px; }
 .tray-card .cands { display: grid; gap: 2px; margin: 0 -8px 8px -6px; }
-.tray-card .cand { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; align-items: center; gap: 8px; width: 100%; min-height: 34px; text-align: left; border: 1px solid transparent; background: none; border-radius: 5px; padding: 4px 8px 4px 6px; color: inherit; font: inherit; cursor: pointer; }
+.tray-card .cand-row { display: flex; align-items: center; gap: 4px; }
+.tray-card .cand { display: grid; grid-template-columns: 16px 22px minmax(0, 1fr) auto; align-items: center; gap: 8px; flex: 1; min-width: 0; width: 100%; min-height: 34px; text-align: left; border: 1px solid transparent; background: none; border-radius: 5px; padding: 4px 8px 4px 6px; color: inherit; font: inherit; cursor: pointer; }
 .tray-card .cand:hover { background: color-mix(in srgb, var(--ink) 4%, transparent); }
 .tray-card .cand[aria-checked="true"] { border-color: color-mix(in srgb, var(--c) 50%, var(--rule)); background: color-mix(in srgb, var(--c) 7%, var(--panel)); }
+.tray-card .cand[aria-disabled="true"] { cursor: default; }
+.tray-card .cand[data-cant] .line { opacity: 0.7; }
+/* The tick: an empty box, filled in the highlight's pigment when ticked; dashed when it can't be ticked yet. */
+.tray-card .tick { width: 14px; height: 14px; border: 1.5px solid var(--ink-2); border-radius: 3px; position: relative; background: var(--panel); }
+.tray-card .cand[aria-checked="true"] .tick { background: var(--c); border-color: var(--c); }
+.tray-card .cand[aria-checked="true"] .tick::after { content: ''; position: absolute; left: 3.5px; top: 0.5px; width: 4px; height: 8px; border: solid var(--panel); border-width: 0 2px 2px 0; transform: rotate(45deg); }
+.tray-card .cand[data-cant] .tick { border-style: dashed; border-color: var(--muted); }
+.tray-card .tick.plus { border-style: dashed; border-color: var(--muted); }
+.tray-card .tick.plus::before, .tray-card .tick.plus::after { content: ''; position: absolute; background: var(--muted); left: 50%; top: 50%; transform: translate(-50%, -50%); }
+.tray-card .tick.plus::before { width: 8px; height: 1.5px; }
+.tray-card .tick.plus::after { width: 1.5px; height: 8px; }
+.tray-card .cand.other .ct { font-style: italic; color: var(--ink-2); }
+.tray-card .cand-row .open { font-size: 12px; color: var(--ink-2); padding: 6px 4px; }
+.tray-card .cand-more { padding: 4px 0 2px; }
+/* "Something else…": Bob's own entry, filled in under the list. */
+.tray-card .own { display: grid; gap: 8px; margin: 0 0 10px 30px; padding: 10px 12px; border: 1px solid var(--rule); border-radius: 6px; background: var(--bg); }
+.tray-card .own label { display: grid; gap: 3px; font-size: 11.5px; font-weight: 600; color: var(--ink-2); }
+.tray-card .own input { width: 100%; border: 1px solid var(--rule); background: var(--panel); border-radius: var(--radius-s); padding: 6px 8px; font: 13.5px var(--font-ui); color: var(--ink); font-weight: 400; }
+.tray-card .own-dates { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; }
+.tray-card .own .segmented { justify-self: start; }
+.tray-card .own-acts { display: flex; flex-wrap: wrap; gap: 6px; }
+.tray-card .tray-done { margin: 0 0 10px 30px; font-size: 12.5px; color: var(--ink-2); }
 .tray-card .cand .line { display: block; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .tray-card .cand .ct { font: 500 15.5px/1.4 var(--font-read); }
 .tray-card .cand .ck { font-size: 11.5px; color: var(--muted); margin-left: 6px; }
@@ -255,7 +278,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .tray-card .tag.linked { background: var(--ink); border-color: var(--ink); color: var(--panel); }
 .tray-card .tag { font: 500 10px/1 var(--font-ui); letter-spacing: 0.04em; padding: 3px 5px; border-radius: 3px; white-space: nowrap; color: var(--ink-2); border: 1px solid var(--rule); }
 .tray-card .tag.have { background: var(--rule-soft); border-color: transparent; }
-.tray-card .facts { margin: 0 0 8px 30px; display: grid; gap: 3px; }
+.tray-card .facts { margin: 0 0 8px 54px; display: grid; gap: 3px; }
 .tray-card .fact { display: grid; grid-template-columns: 92px minmax(0, 1fr); gap: 8px; align-items: baseline; }
 .tray-card .fact dt { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
 .tray-card .fact dd { margin: 0; font: 15px/1.35 var(--font-read); min-width: 0; }
@@ -263,6 +286,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .tray-card .fact .pin { color: var(--muted); font: 11.5px var(--font-ui); }
 .tray-note { margin: 0 0 10px; font: italic 13.5px/1.4 var(--font-read); color: var(--muted); }
 .tray-card .becomes .tray-note { margin-left: 30px; }
+.tray-card .cand-item > .tray-note, .tray-card .cand-more .tray-note { margin-left: 54px; }
 .dimpick { padding: 8px 0 10px; border-top: 1px solid var(--rule-soft); }
 .dimpick .lbl { display: block; margin-bottom: 6px; font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
 .dimpick .dn { margin: 6px 0 0; font-size: 12.5px; color: var(--ink-2); }
@@ -329,6 +353,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
   .tray::before { content: ''; display: block; width: 36px; height: 4px; margin: 6px auto 0; border-radius: 2px; background: var(--rule); }
   .tray-bar, .tray-card { padding-left: 16px; padding-right: 16px; }
   .tray-card { max-height: 58vh; }
+  .tray-card .own, .tray-card .tray-done { margin-left: 0; }
   .trail { order: 10; width: 100%; }
   .search.phone { order: 11; width: 100%; }
   .search.phone input, .search.phone input:focus { flex: 1; width: auto; font-size: 16px; }

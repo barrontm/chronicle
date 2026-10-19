@@ -26,6 +26,8 @@ describe('classifying the Greece fixture’s subjects', () => {
     ['Athens', 'Q1524', 'place'], // today's city: a big city, though it is also a "free city"
     ['Delian_League', 'Q193235', 'polity'], // a confederation
     ['Sparta', 'Q5690', 'polity'],
+    ['Mines_of_Laurion', 'Q3314937', 'place'], // a mine, with coordinates
+    ['Themistocles', 'Q179552', 'person'],
   ])('%s is a %s', (key, qid, kind) => {
     const s = subjectOf(key);
     expect(s.qid).toBe(qid);
