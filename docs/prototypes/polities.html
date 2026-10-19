@@ -180,14 +180,14 @@ button, input { font: inherit; color: inherit; }
 
 <div class="proto">
   <div class="pbar">
-    <h1>Polity overview <span>Phase 4 prototype · Classical Greece fixture plus a generated world (test data)</span></h1>
+    <h1>Polity overview <span>Phase 4 prototype · Classical Greece fixture plus a generated world (test data) · ✓ marks Bob’s picks (2026-10-19)</span></h1>
   </div>
   <div class="pbar controls" role="group" aria-label="Prototype controls">
     <fieldset class="seg device-seg"><legend>Device</legend><span class="opts"><button id="dev-laptop" data-set="device" data-v="laptop">Laptop</button><button id="dev-phone" data-set="device" data-v="phone">Phone</button></span></fieldset>
     <fieldset class="seg"><legend>Theme</legend><span class="opts"><button id="th-auto" data-set="theme" data-v="auto">Auto</button><button id="th-light" data-set="theme" data-v="light">Light</button><button id="th-dark" data-set="theme" data-v="dark">Dark</button></span></fieldset>
-    <fieldset class="seg"><legend>World events</legend><span class="opts"><button id="we-row" data-set="world" data-v="row">A · Own row</button><button id="we-place" data-set="world" data-v="place">B · In place</button></span></fieldset>
-    <fieldset class="seg"><legend>Order</legend><span class="opts"><button id="or-auto" data-set="order" data-v="auto">A · Automatic</button><button id="or-drag" data-set="order" data-v="drag">B · Drag</button></span></fieldset>
-    <fieldset class="seg"><legend>Threads</legend><span class="opts"><button id="thr-rib" data-set="threads" data-v="ribbons">A · Ribbons</button><button id="thr-arc" data-set="threads" data-v="arcs">B · Arcs</button></span></fieldset>
+    <fieldset class="seg"><legend>World events</legend><span class="opts"><button id="we-row" data-set="world" data-v="row">A · Own row</button><button id="we-place" data-set="world" data-v="place">B · In place ✓</button></span></fieldset>
+    <fieldset class="seg"><legend>Order</legend><span class="opts"><button id="or-auto" data-set="order" data-v="auto">A · Automatic ✓</button><button id="or-drag" data-set="order" data-v="drag">B · Drag</button></span></fieldset>
+    <fieldset class="seg"><legend>Threads</legend><span class="opts"><button id="thr-rib" data-set="threads" data-v="ribbons">A · Ribbons ✓</button><button id="thr-arc" data-set="threads" data-v="arcs">B · Arcs</button></span></fieldset>
     <label class="check"><input type="checkbox" id="allthreads"> Show all threads</label>
   </div>
   <div class="pbar weights" role="group" aria-label="Prominence weights">
@@ -282,7 +282,7 @@ const T_MIN = -2999, T_MAX = 1700;
 
 // ---------- state ----------
 const st = {
-  device: store.get('device', 'laptop'), theme: store.get('theme', 'auto'), world: store.get('world', 'row'), order: store.get('order', 'auto'),
+  device: store.get('device', 'laptop'), theme: store.get('theme', 'auto'), world: store.get('world', 'place'), order: store.get('order', 'auto'),
   threads: store.get('threads', 'ribbons'), allThreads: store.get('allThreads', false), w: store.get('w', { h: 3, c: 2, n: 2, m: 10 }),
   t0: -800, t1: -100, year: -430, picked: { type: 'pol', id: 't_athens' }, open: null, openLane: null,
   unfolded: new Set(['g_classical_greece']), focusRegion: null, manual: store.get('manual', null), playing: false, step: 1,

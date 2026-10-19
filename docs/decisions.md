@@ -2,6 +2,28 @@
 
 A log of choices that shouldn't be re-litigated every session. Newest first. To change a decision, add a new entry that supersedes the old one.
 
+## 2026-10-19 — The overview prototype: Bob's picks, and what v9 holds
+Phase 4's prototype (`docs/prototypes/polities.html`) ran on the Greece fixture plus a generated stress appendix (`tests/fixtures/overview/build.mjs`: about 120 polities in 16 regions under 3 parents, 2,000 entries, 3000 BCE to 1700). Bob chose:
+- **World events in place**, a gold rule along every region they touched and named in their home region, over a gold row of their own.
+- **Automatic order** over rows he drags, so there is no manual order to store.
+- **Ribbons** over arcs for threads.
+- **The prominence weights as drawn**: highlights ×3, connections ×2, notes ×2, +10 for "Show in the overview".
+
+The rules are in `docs/design.md` (Overview, Long range).
+
+Two things the prototype settled on the way. First, thickness from area uses area to the power 0.4: with the square root, everything in Europe around 1500 was a hairline beside the Qing. Second, the automatic order puts geography first inside a region parent and lets connections choose only where parents meet. When connections led everywhere, generated wars between neighbours outweighed what Bob studied and scattered the rows; geography first gives Macedon, Greece, Persia, with China far off.
+
+**v9 holds** (Phase 4 ticket 2):
+- `lanes?: Lane[]` on entries and highlights, several allowed, filled from `dimension` on upgrade as planned.
+- `overview?: 'shown' | 'world'` on entries.
+- `strength?: { at: HistDate; level: 1–5; highlightIds?: string[] }[]` on territories, straight lines between points.
+- `region?: string` on territories. A strip needs a row, and most polities have no period to take one from. It is filled from the territory's period's `region` when it has one.
+- `regionParents?: Record<string, string>` on the doc, region → parent, both open vocabulary like `region`.
+- `groups?: { id, title, territoryIds, updatedAt }[]` on the doc: a group of city-states that folds into one strip. Its region is its members'.
+- Territories as connection ends, and `side?: 1 | 2` on a connection from a territory to an entry: who took part in a war, battle, alliance or treaty, and on which side. Ticket 8's `contactsAt` reads them: opposite sides of a war or battle are at war, the same side are allied, and opposite sides of anything else are at peace. Trade comes from flows.
+
+The Delian League stays a territory. When it is `part-of` a polity's entry it draws as that polity's reach on the map (ticket 8), not as a strip. No manual order is stored, since Bob chose the automatic one. The six lanes' pigments are now rules: War cinnabar and Nature terre verte are new, and madder retires with the social dimension.
+
 ## 2026-10-18 — Phase 3 checkpoint: the overview is polities and world events
 Bob's new ideas change what the zoomed-out timeline is. Until now it was era bands, a row per region, and the "All" stop showed Bob's categories as lanes down the left. Now the top of the timeline shows **polities and world events**. Each polity is a strip whose thickness follows its power, and related polities sit together (Greece, Macedon and Persia near each other, China far off). World events (the Reformation, the split of the Roman Empire, the spread of a religion, the steam engine) are gold. Opening a polity or world event drops its lanes beneath it, and the map follows a picked polity, an open lane, or a click on an area. The full direction is in `docs/vision.md` (The overview).
 

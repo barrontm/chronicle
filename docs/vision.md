@@ -100,7 +100,7 @@ Bob will add thousands of things across millennia. Zoomed out, the timeline shou
 - v6: `highlights`, `dimension`, `themes` on periods; `effect` and `highlightIds` on connections.
 - v7: `subject` and `region` on entries, for the new timeline.
 - v8: places may have no start or no end (done, Phase 3 ticket 4).
-- v9: `lanes` on entries and highlights (filled from `dimension`), the overview mark, `strength` on territories, region parents, territories as connection ends.
+- v9: `lanes` on entries and highlights (filled from `dimension`), the overview mark, `strength` and `region` on territories, region parents, polity groups, territories as connection ends (with a side).
 - v10: `regimes` on territories, and alliances.
 - v11: `economies` (with `distribution`), plus `Flow.subject` and `goods`.
 - v12: `institutions` with `structures`, `reception` on ideas and works, `Flow.subject: 'ideas'`.
