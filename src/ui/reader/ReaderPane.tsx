@@ -30,7 +30,7 @@ const OFFLINE_READ = 'You’re offline, and this article isn’t saved on this d
 const OFFLINE_ADD = 'You’re offline. Adding to the map and timeline needs a connection; your highlight is saved.';
 
 /**
- * The reader column of the new layout: search Wikipedia and read the article
+ * The reader column of the reader layout: search Wikipedia and read the article
  * that's open. Opening and the reading trail are owned by the caller.
  */
 export function ReaderPane({ article, searching, onOpen, onSearching, onBack, onShowMap, onOpenRecord, onDraft, onShowYear, onOpenDrafting }: {

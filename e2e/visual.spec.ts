@@ -13,11 +13,13 @@ const FIXTURE = fileURLToPath(new URL('../tests/fixtures/sample-history.json', i
 // SwiftShader can shift a few anti-aliased map pixels between runs.
 const SHOT = { maxDiffPixelRatio: 0.01 };
 
+/** The classic layout (its Timeline, Map and Both views), with the fixture in view. */
 async function openWithFixture(page: Page) {
+  await page.addInitScript(() => localStorage.setItem('chronicle.classicLayout', 'true'));
   await page.goto('/');
   await expect(page.getByTestId('save-state')).toHaveText('Saved on this device');
   await page.getByTestId('import-input').setInputFiles(FIXTURE);
-  await expect(page.locator('.vis-item', { hasText: 'Aristotle' })).toBeVisible();
+  await expect(page.getByTestId('timeline').locator('.tl-mark[data-id=i_aristotle]')).toBeVisible();
   await page.getByRole('button', { name: 'More' }).click();
   await page.getByRole('menuitem', { name: 'Show everything' }).click();
 }

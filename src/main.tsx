@@ -4,7 +4,6 @@ import '@fontsource/spectral/600.css';
 import '@fontsource/spectral-sc/600.css';
 import '@fontsource/public-sans/400.css';
 import '@fontsource/public-sans/600.css';
-import 'vis-timeline/styles/vis-timeline-graph2d.min.css';
 import './ui/styles.css';
 
 import { StrictMode } from 'react';

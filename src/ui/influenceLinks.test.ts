@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Relation } from '../model/types';
-import { anchors, arcCurve, arcPath, draftArrows, influenceArrows, influenceClasses, loopCurve } from './influenceLinks';
+import { anchors, arcCurve, draftArrows, influenceArrows, influenceClasses, loopCurve } from './influenceLinks';
 
 const r = (fromId: string, toId: string, type: Relation['type'] = 'influenced'): Relation => ({ id: `${fromId}-${toId}`, fromId, toId, type, updatedAt: 1 });
 const rels = [r('socrates', 'plato'), r('plato', 'aristotle'), r('plato', 'academy', 'caused')];
@@ -52,7 +52,7 @@ describe('arrow geometry', () => {
   });
 
   it('draws a bowed curve between the points', () => {
-    expect(arcPath({ x: 0, y: 0 }, { x: 100, y: 0 })).toBe('M0 0 Q50 32 100 0');
+    expect(arcCurve({ x: 0, y: 0 }, { x: 100, y: 0 }).d).toBe('M0 0 Q50 32 100 0');
   });
 
   it('puts a label halfway along the curve', () => {
