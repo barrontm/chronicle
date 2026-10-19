@@ -50,6 +50,7 @@ An entry's places put it on the map as a pin: where a battle was fought, or wher
 Reading is how you add things, so Chronicle opens with the reader. (If you'd turned on "Try the new layout" before, this is it, now for everyone. **More → Use the classic layout** switches back to the older arrangement.)
 
 - On a laptop, the article you're reading sits beside the map, with the timeline under the map.
+- **Resizing**: drag the line between the article and the map to make the reader wider or narrower, and the line just under the year slider to give the map or the timeline more room. You can also click a line (or Tab to it) and use the arrow keys; hold Shift to move it further. The reader always keeps room for about a short column of text, and the map and the timeline each keep a strip you can still use. Chronicle remembers the sizes on this device. On a phone, the layout stays as it is.
 - On a phone, the article fills the screen. **Map** opens the map and timeline, and **Back to reading** returns to the article.
 - **Open an article** (top bar) searches Wikipedia and opens the whole article in the reader, with its pictures and footnotes.
 - Links in the article open in the reader too. **Back** returns to the article you came from, and the **reading trail** in the top bar lists the articles you've opened, so you can click back to any of them.

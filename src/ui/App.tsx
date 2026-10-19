@@ -27,6 +27,7 @@ import { ReaderPane, type ArticleRef } from './reader/ReaderPane';
 import { HighlightDraftsContext, useHighlightDraftStore } from './reader/highlightDrafts';
 import { downloadText } from './util';
 import { useStored } from './useStored';
+import { Splitter } from './Splitter';
 
 export function App({ store }: { store: DocStore }) {
   return (
@@ -37,6 +38,10 @@ export function App({ store }: { store: DocStore }) {
 }
 
 type View = 'timeline' | 'map' | 'split';
+
+/** The least room the map keeps beside the reader, and the least height the map and the timeline each keep (px). */
+const STAGE_MIN = 360;
+const PANE_MIN = 160;
 
 function useMedia(query: string): boolean {
   const [match, setMatch] = useState(() => matchMedia(query).matches);
@@ -121,6 +126,27 @@ function Workspace() {
     setTrail({ pages, at: pages.length - 1 });
   };
   const shownView: View = next ? 'split' : narrow && view === 'split' ? 'map' : view;
+  // Bob's pane sizes in the reader layout on a laptop, per device: the reader's width and the map's height (null = the default).
+  const [readerWidth, setReaderWidth] = useStored<number | null>('chronicle.readerWidth', () => null);
+  const [mapHeight, setMapHeight] = useStored<number | null>('chronicle.mapHeight', () => null);
+  const workspaceEl = useRef<HTMLDivElement>(null);
+  const stageEl = useRef<HTMLElement>(null);
+  const resizable = next && !narrow;
+  const readerEl = () => workspaceEl.current?.querySelector<HTMLElement>('.reader') ?? null;
+  const mapEl = () => stageEl.current?.querySelector<HTMLElement>('.map-pane') ?? null;
+  const readerLimits = (): [number, number] => {
+    // The reader keeps about 28em of text; the map keeps room to be a map.
+    const min = 28 * parseFloat(getComputedStyle(readerEl() ?? document.body).fontSize);
+    const ws = workspaceEl.current?.clientWidth ?? 0;
+    const drawer = workspaceEl.current?.querySelector<HTMLElement>('.drawer')?.offsetWidth ?? 0;
+    return [min, ws - drawer - STAGE_MIN];
+  };
+  const mapLimits = (): [number, number] => {
+    // The map and the timeline each keep about 160 px.
+    const map = mapEl()?.offsetHeight ?? 0;
+    const tl = stageEl.current?.querySelector<HTMLElement>('.timeline-host')?.offsetHeight ?? 0;
+    return [PANE_MIN, map + tl - PANE_MIN];
+  };
   const showMap = shownView !== 'timeline';
   const range = useMemo<[number, number]>(() => {
     const r = docYearRange(doc);
@@ -327,12 +353,31 @@ function Workspace() {
         <input ref={fileInput} type="file" accept="application/json,.json" hidden data-testid="import-input" onChange={(e) => void onImportFile(e.target.files?.[0])} />
       </header>
 
-      <div className={`workspace ${next ? 'next' : ''} ${panel ? 'with-drawer' : ''}`}>
+      <div
+        ref={workspaceEl}
+        className={`workspace ${next ? 'next' : ''} ${panel ? 'with-drawer' : ''} ${resizable && readerWidth !== null ? 'sized' : ''}`}
+        style={resizable && readerWidth !== null ? { '--reader-w': `${readerWidth}px` } as React.CSSProperties : undefined}
+      >
         {next && !(narrow && mapSheet) && (
           <ReaderPane article={article} searching={searching} onOpen={openArticle} onSearching={setSearching} onBack={trail.at > 0 ? () => setTrail({ ...trail, at: trail.at - 1 }) : undefined} onShowMap={narrow ? () => setMapSheet(true) : undefined} onOpenRecord={(r) => nav.open(r.type === 'item' ? { type: 'item', id: r.id } : { type: 'territory', id: r.id })} onDraft={(draft) => nav.open({ type: 'new-item', draft })} onShowYear={setYear} onOpenDrafting={() => nav.open({ type: 'ai-draft' })} />
         )}
+        {resizable && (
+          <Splitter
+            between="columns"
+            label="Resize the reader"
+            testId="reader-splitter"
+            measure={() => readerEl()?.offsetWidth ?? 0}
+            limits={readerLimits}
+            apply={(px) => { const ws = workspaceEl.current; if (ws) { ws.classList.add('sized'); ws.style.setProperty('--reader-w', `${px}px`); } }}
+            commit={setReaderWidth}
+          />
+        )}
         {(!next || !narrow || mapSheet) && (
-        <main className={`stage view-${shownView} ${next && narrow ? 'sheet' : ''}`}>
+        <main
+          ref={stageEl}
+          className={`stage view-${shownView} ${next && narrow ? 'sheet' : ''} ${resizable && mapHeight !== null ? 'sized' : ''}`}
+          style={resizable && mapHeight !== null ? { '--map-h': `${mapHeight}px` } as React.CSSProperties : undefined}
+        >
           {next && narrow && (
             <div className="sheet-head">
               <button className="btn small" onClick={() => setMapSheet(false)}>Back to reading</button>
@@ -388,6 +433,17 @@ function Workspace() {
                 picking={picking ? { onDone: (pt) => { picking.onDone(pt); setPicking(null); }, onCancel: () => setPicking(null) } : undefined}
               />
               <YearBar year={year} range={range} onYear={(y) => { setPlaying(false); setYear(y); }} playing={playing} onPlaying={setPlaying} speed={speed} onSpeed={setSpeed} />
+              {resizable && (
+                <Splitter
+                  between="rows"
+                  label="Resize the map and the timeline"
+                  testId="map-splitter"
+                  measure={() => mapEl()?.offsetHeight ?? 0}
+                  limits={mapLimits}
+                  apply={(px) => { const st = stageEl.current; if (st) { st.classList.add('sized'); st.style.setProperty('--map-h', `${px}px`); } }}
+                  commit={setMapHeight}
+                />
+              )}
             </>
           )}
           <div className="timeline-pane" hidden={shownView === 'map'}>

@@ -698,3 +698,53 @@ test('a place and a battle draw as what they are: Athens on its ground line with
   await expect(svg.locator(`circle[data-id="${salamis.id}"]`)).toHaveCount(0);
   await expect(svg.locator('rect[data-id="invasion"]')).toBeVisible();
 });
+
+test('the reader and the map resize with their handles, by drag or by keyboard, and keep their sizes after a reload', async ({ page }) => {
+  await open(page);
+  const reader = page.getByTestId('reader');
+  const map = page.locator('.map-pane');
+  const width = async () => Math.round((await reader.boundingBox())!.width);
+  const height = async () => Math.round((await map.boundingBox())!.height);
+  const drag = async (testId: string, dx: number, dy: number) => {
+    const box = (await page.getByTestId(testId).boundingBox())!;
+    const x = box.x + box.width / 2, y = box.y + box.height / 2;
+    await page.mouse.move(x, y);
+    await page.mouse.down();
+    await page.mouse.move(x + dx / 2, y + dy / 2);
+    await page.mouse.move(x + dx, y + dy);
+    await page.mouse.up();
+  };
+
+  const w0 = await width();
+  await drag('reader-splitter', 120, 0);
+  await expect.poll(width).toBe(w0 + 120);
+  const h0 = await height();
+  await drag('map-splitter', 0, -100);
+  await expect.poll(height).toBe(h0 - 100);
+  // The timeline keeps about 160 px.
+  await drag('map-splitter', 0, 2000);
+  await expect.poll(async () => Math.abs((await page.getByTestId('timeline').boundingBox())!.height - 160)).toBeLessThanOrEqual(1);
+  await drag('map-splitter', 0, -2000);
+  await expect.poll(height).toBe(160);
+  await drag('map-splitter', 0, h0 - 260);
+  await expect.poll(height).toBe(h0 - 100);
+
+  // Not past the limits: the reader keeps about 28em of text.
+  await drag('reader-splitter', -2000, 0);
+  await expect.poll(width).toBe(28 * 14);
+  await drag('reader-splitter', 200, 0);
+  const w1 = await width();
+
+  // The arrow keys move a focused handle.
+  const handle = page.getByRole('separator', { name: 'Resize the map and the timeline' });
+  await handle.focus();
+  await page.keyboard.press('ArrowUp');
+  await page.keyboard.press('ArrowUp');
+  await expect.poll(height).toBe(h0 - 100 - 32);
+  await expect(handle).toHaveAttribute('aria-valuenow', String(h0 - 100 - 32));
+
+  await page.reload();
+  await expect(page.getByTestId('save-state')).toHaveText('Saved on this device');
+  await expect.poll(width).toBe(w1);
+  await expect.poll(height).toBe(h0 - 100 - 32);
+});
