@@ -4,13 +4,13 @@ import type { Category, Flow, FlowCause, Relation, Series, Territory, TimelineIt
 import type { Area } from '../data/geo';
 import { addPoint, canFinish, closePart, EMPTY_DRAFT, toGeometry, undo, type Draft } from './drawing';
 import { activeRoutes, CAUSES, choroplethAt, mapKindOf } from './mapData';
-import type { BackdropStatus, MapCamera, MapOptions } from './MapView';
+import type { BackdropStatus, MapCamera, MapFit, MapOptions } from './MapView';
 import { formatValue } from './util';
 
 // MapLibre is large; load it only when the map is first shown.
 const MapView = lazy(() => import('./MapView'));
 
-export type { MapCamera, MapOptions };
+export type { MapCamera, MapFit, MapOptions };
 
 /** The Migration layer: shown or not, and causes Bob has filtered out. */
 export interface FlowOptions { show: boolean; hiddenCauses: FlowCause[] }
@@ -39,6 +39,8 @@ interface Props {
   onAddTerritory: () => void;
   camera: MapCamera;
   onCamera: (c: MapCamera) => void;
+  /** Fit the map to [west, south, east, north]; a new `at` fits again. */
+  fitTo?: MapFit;
   /** Set while Bob is drawing a border on the map. */
   drawing?: { onDone: (g: Area) => void; onCancel: () => void };
   /** Set while Bob is picking one point on the map (a migration route's end). */
@@ -86,6 +88,7 @@ export function MapPane(p: Props) {
           onBackdropStatus={setBackdrop}
           camera={p.camera}
           onCamera={p.onCamera}
+          fitTo={p.fitTo}
           draft={p.drawing ? draft : undefined}
           onDrawPoint={p.drawing ? (pt, nearFirst) => setDraft((d) => (nearFirst ? closePart(d) : addPoint(d, pt))) : p.picking ? (pt) => p.picking!.onDone(pt) : undefined}
         />

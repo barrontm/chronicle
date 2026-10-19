@@ -59,9 +59,19 @@ interface Props {
   /** Where to open the map, and a callback when Bob pans or zooms. */
   camera?: MapCamera;
   onCamera?: (c: MapCamera) => void;
+  /** Fit the map to a box (a search result's place or territory); a new `at` fits again. */
+  fitTo?: MapFit;
   /** While drawing a border: the shape so far, and where a click lands (and whether it's on the first point). */
   draft?: Draft;
   onDrawPoint?: (p: [number, number], nearFirst: boolean) => void;
+}
+
+export interface MapFit { bounds: [number, number, number, number]; at: number }
+
+/** A place is centred close up, a territory framed whole. */
+function fitMap(map: maplibregl.Map, [w, s, e, n]: MapFit['bounds']) {
+  if (w === e && s === n) map.easeTo({ center: [w, s], zoom: Math.max(map.getZoom(), 6), duration: 600 });
+  else map.fitBounds([[w, s], [e, n]], { padding: 60, maxZoom: 7, duration: 600 });
 }
 
 const BASE = import.meta.env.BASE_URL;
@@ -244,6 +254,7 @@ export default function MapView(props: Props) {
   const { year, items, territories, categories, relations, flows, dataSeries, options, fadeYears, selectedId, onBackdropStatus } = props;
   const host = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
+  const lastFit = useRef<MapFit['bounds'] | null>(null);
   const [ready, setReady] = useState(false);
   const colors = useColors();
   const territoryLabels = useRef(new Map<string, maplibregl.Marker>());
@@ -334,8 +345,12 @@ export default function MapView(props: Props) {
     });
     map.on('mouseout', () => popup.remove());
 
-    // The map's box changes when the drawer opens or the split moves.
-    const ro = new ResizeObserver(() => map.resize());
+    // The map's box changes as the drawer opens: a search result stays fitted until Bob moves the map himself.
+    map.on('movestart', (e) => { if (e.originalEvent) lastFit.current = null; });
+    const ro = new ResizeObserver(() => {
+      map.resize();
+      if (lastFit.current) fitMap(map, lastFit.current);
+    });
     ro.observe(host.current);
     return () => {
       ro.disconnect();
@@ -536,6 +551,15 @@ export default function MapView(props: Props) {
     const place = items.find((i) => i.id === selectedId)?.places?.[0];
     if (place && !map.getBounds().contains([place.lon, place.lat])) map.easeTo({ center: [place.lon, place.lat], duration: 600 });
   }, [selectedId, items, ready]);
+
+  // Fit to what Bob picked in the search.
+  const fitTo = props.fitTo;
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !ready || !fitTo) return;
+    lastFit.current = fitTo.bounds;
+    fitMap(map, fitTo.bounds);
+  }, [fitTo?.at, ready]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return <div ref={host} className="map-host" data-testid="map" data-ready={ready || undefined} />;
 }

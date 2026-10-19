@@ -6,7 +6,7 @@ Chronicle is your own history timeline. It starts empty: you fill it in as you r
 
 - Chronicle opens with the article you're reading beside the map, and the timeline under the map (see [The reader layout](#the-reader-layout)). **Open an article** (top bar) finds one on Wikipedia, and highlighting it is how you add things. Double-click the timeline to add something at that date.
 - Prefer the older arrangement? **More → Use the classic layout** brings back **Add** (an event, a period, a person, and the rest) and the **Timeline**, **Map** and **Both** views. Choose it again to go back. Both layouts draw the same timeline, and everything you've saved is the same in either.
-- **Library** lists your notes, sources, trends and territories. **Help** opens this manual.
+- **Library** lists your notes, sources, trends and territories. **Help** opens this manual. **Search** finds anything you've saved (see [Finding things](#finding-things)).
 - The top bar says **Saved on this device** once your changes are stored. There is no account and no cloud copy, so export a backup now and then (see [Backups and working offline](#backups-and-working-offline)).
 
 > Install Chronicle like an app: in Chrome or Edge use **Install** in the address bar; on iPhone use **Share → Add to Home Screen**; on Android use **Add to home screen**. It then opens in its own window and works offline.
@@ -80,6 +80,14 @@ Reading is how you add things, so Chronicle opens with the reader. (If you'd tur
 - With nothing open, the tray counts the article's highlights and how many are on your map and timeline.
 - **Library → Highlights** lists all your highlights under the article or book they came from, with their dimension, the entries and connections they're on, and how many of Claude's drafts are waiting. An entry's panel shows the highlights behind it.
 - Wikipedia articles change. When you reopen one, Chronicle finds your highlights in the new version, even when the words around them were edited. A dotted underline means it found something close but isn't sure it's the same passage. If a passage was deleted, the article says how many highlights it couldn't find; they're still saved.
+
+## Finding things
+
+- **Search** in the top bar looks through everything you've saved: entries, territories, notes, sources and highlights. On a laptop, press **/** to jump to it. On a phone, tap the magnifier, and **Cancel** closes it.
+- Capitals and accents don't matter: "pericles" finds Périclès. Every word you type has to be there.
+- Things whose name matches come first, then things that only mention your words somewhere: an entry's description, a note, a source's authors or remarks, or a highlight's text. You see up to 20 results. Each has its kind's mark (or says Note, Source or Highlight) and its dates, and the words around the match when it's only mentioned.
+- Use the arrow keys and **Enter**, or click a result. An entry opens and the timeline moves to it, and the map goes to its year and its place. A territory opens and the map shows all of it in its first year. A note or a source opens in the side panel. A highlight opens the entry it's on, or the highlights in the Library if it isn't on one yet.
+- Search works offline: everything it looks through is on your device.
 
 ## The timeline
 
