@@ -274,6 +274,31 @@ describe('draftFromHighlight', () => {
     expect(parseDoc(serializeDoc(d)).relations).toHaveLength(2);
   });
 
+  it('reads Bob’s Laurion passage as Economy, an event in its century, pinned where the silver was mined', async () => {
+    const { output } = await replay(rec('handmade-laurion'));
+    expect(output.lanes?.map((l) => l.value)).toEqual(['economy', 'war']);
+    expect(output.entries).toHaveLength(1);
+    expect(output.entries[0].item).toMatchObject({
+      kind: 'event', title: 'Laurion silver pays for the Athenian fleet', start: { y: -449, approx: true },
+      places: [{ name: 'Lavrio', lat: 37.7, lon: 24.05, role: 'site' }],
+      citations: [{ locator: 'Athenian democracy' }],
+    });
+    expect(output.connections.map((c) => [c.relation.fromId, c.relation.effect])).toEqual([['i_themistocles', 'instigated']]);
+    expect(output.dropped).toEqual([]);
+  });
+
+  it('keeps a century only when the passage gives that century', () => {
+    const laurion = { highlight: 'The silver mines of Laurion contributed significantly to the development of Athens in the 5th century BC.', section: '' };
+    const e = entry({ title: 'Laurion silver mined', start: '5th century BCE', quote: 'The silver mines of Laurion contributed significantly' });
+    const ok = checkHighlightAnswer(answer({ lanes: [], entries: [e] }), ctx({ scope: laurion }));
+    expect(ok.entries.map((x) => x.start)).toEqual([{ y: -449, approx: true }]);
+    const span = checkHighlightAnswer(answer({ lanes: [], entries: [{ ...e, kind: 'span', end: '5th century BCE' }] }), ctx({ scope: laurion }));
+    expect(span.entries.map((x) => [x.start, x.end])).toEqual([[{ y: -499, approx: true }, { y: -400, approx: true }]]);
+    const wrong = checkHighlightAnswer(answer({ lanes: [], entries: [{ ...e, start: '4th century BCE' }, { ...e, ref: 'e2', title: 'Silver mined', start: 'c. 450 BCE' }] }), ctx({ scope: laurion }));
+    expect(wrong.entries).toEqual([]);
+    expect(wrong.dropped).toEqual(['“Laurion silver mined”: the passage doesn’t give its date.', '“Silver mined”: the passage doesn’t give its date.']);
+  });
+
   it('says clearly when there is no key or no connection', async () => {
     const args = { highlight: { id: 'h', sourceId: 's', text: 'x', usedBy: [], updatedAt: 0 }, article: { key: 'X', title: 'X', text: { text: 'x', sections: [{ title: '', start: 0, end: 1 }] } }, candidates: [], doc: createEmptyDoc(), today: '2026-10-17' };
     await expect(draftFromHighlight({ ...args, apiKey: ' ' })).rejects.toMatchObject({ problem: 'no-key' });

@@ -1,14 +1,14 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
-  acceptConnection, acceptEntry, statusIn, undoConnection, undoEntry, waiting,
-  type DraftConnection, type DraftEntry, type DraftSet, type DraftStatus,
+  acceptConnection, acceptEntry, addBecoming, statusIn, undoBecoming, undoConnection, undoEntry, waiting,
+  type Became, type Becoming, type DraftConnection, type DraftEntry, type DraftSet, type DraftStatus,
 } from '../../ai/draft';
-import type { ItemDraft } from '../../media/wikipedia';
-import { toDecimalYear } from '../../model/dates';
-import { CANT_ADD, firstChoice } from '../../model/passage';
-import { describeRelation, upsert } from '../../model/doc';
+import { lookUpPlace, type ItemDraft } from '../../media/wikipedia';
+import { formatItemDates, toDecimalYear } from '../../model/dates';
+import { CANT_ADD, defaultChoices, ownEntry } from '../../model/passage';
+import { describeRelation } from '../../model/doc';
 import { KIND_LABEL, factRelations, findInChronicle, subjectFacts, type Subject } from '../../model/subjects';
-import type { Highlight, Lane, Relation } from '../../model/types';
+import type { Highlight, ItemKind, Lane, Place, Relation } from '../../model/types';
 import { useDoc } from '../DocContext';
 import { DraftConnectionRow, DraftEntryRow, DroppedList } from '../panels/DraftRows';
 import { useApiKey, useOnline } from '../useAi';
@@ -35,24 +35,33 @@ interface Row {
   /** This highlight is already on the record Bob has. */
   linked: boolean;
   title: string;
+  /** Why it can't be ticked, when it can't. */
+  cant?: string;
 }
+
+const ITEM_KIND: Record<ItemKind, string> = { event: 'Event', span: 'Period', person: 'Person' };
+const NO_FORM = { title: '', kind: 'event' as ItemKind, start: '', end: '', place: '', lanes: undefined as Lane[] | undefined };
+const inWords = (names: string[]) => (names.length < 2 ? names.join('') : `${names.slice(0, -1).join(', ')} and ${names.at(-1)}`);
 
 const pigment = (d?: Lane) => `var(--pig-${PIGMENT[d ?? 'none']})`;
 
 /**
  * The capture tray under the reader's text. With a highlight open it shows
  * the card: the quote, what it could become (the article's subject and the
- * pages the passage links, one chosen), the chosen one's facts, its lanes
- * and what to do with it. Otherwise one line counts the article's highlights. Closing
- * the card, or moving on, keeps the highlight as it is.
+ * pages the passage links, any number ticked, or something Bob fills in
+ * himself), the ticked ones' facts, its lanes and what to do with it.
+ * Otherwise one line counts the article's highlights. Closing the card, or
+ * moving on, keeps the highlight as it is.
  */
-export function CaptureTray({ marks, candidates, articleTitle, onAdd, onAsk, onOpenRecord, onEdit, onShowYear, onOpenDrafting }: {
+export function CaptureTray({ marks, candidates, articleTitle, onAdd, onDraftPage, onAsk, onOpenRecord, onEdit, onShowYear, onOpenDrafting }: {
   marks: Marks;
   /** What the open highlight could become: the article's subject first, then the pages its passage links. */
   candidates: { key: string; state: SubjectState }[];
   articleTitle: string;
-  /** Draft a page as an entry citing this highlight. Throws with a message Bob can read. */
+  /** Draft a page as an entry citing this highlight, and open it in the editor. Throws with a message Bob can read. */
   onAdd: (h: Highlight, key: string) => Promise<void>;
+  /** Draft a page as an entry citing this highlight, or say which entry Bob already has for it. Throws like `onAdd`. */
+  onDraftPage: (h: Highlight, key: string) => Promise<ItemDraft | { duplicateOf: string }>;
   /** Ask Claude to draft what the passage states. Throws with a message Bob can read. */
   onAsk: (h: Highlight, apiKey: string, signal: AbortSignal) => Promise<DraftSet>;
   onOpenRecord?: (r: RecordRef) => void;
@@ -71,8 +80,15 @@ export function CaptureTray({ marks, candidates, articleTitle, onAdd, onAsk, onO
   const [flash, setFlash] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  /** The candidate Bob picked, per highlight, this session. */
-  const [picked, setPicked] = useState<Record<string, string>>({});
+  /** The candidates Bob ticked, per highlight, this session (until he does, `defaultChoices`). */
+  const [ticked, setTicked] = useState<Record<string, string[]>>({});
+  /** The candidate whose reason for not being tickable is showing. */
+  const [whyNot, setWhyNot] = useState<string | null>(null);
+  /** What the last add did, so Undo can take it back. */
+  const [last, setLast] = useState<{ became: Became; msg: string; ticks?: string[] } | null>(null);
+  /** "Something else…": the form, open or not, and what's wrong with it. */
+  const [own, setOwn] = useState<typeof NO_FORM | null>(null);
+  const [ownError, setOwnError] = useState<string | null>(null);
   /** Suggested connections Bob unticked, by the other entry's id. */
   const [unticked, setUnticked] = useState<Set<string>>(new Set());
   /** Highlights Claude is reading, and what went wrong asking, by highlight id. Asking goes on if Bob moves on. */
@@ -82,17 +98,21 @@ export function CaptureTray({ marks, candidates, articleTitle, onAdd, onAsk, onO
   const openId = open?.highlight.id;
 
   // The map shows the open highlight's drafts, and a ghost of what it could become (set below, once the candidate is known).
-  const { show, setGhost } = drafts;
+  const { show, setGhosts } = drafts;
   useEffect(() => { show(openId ?? null); }, [openId, show]);
-  useEffect(() => () => { show(null); setGhost(null); }, [show, setGhost]);
-  const ghost = useRef<Ghost | null>(null);
-  ghost.current = null;
-  useEffect(() => setGhost(ghost.current));
+  useEffect(() => () => { show(null); setGhosts([]); }, [show, setGhosts]);
+  const ghosts = useRef<Ghost[]>([]);
+  ghosts.current = [];
+  useEffect(() => setGhosts(ghosts.current));
 
   // A newly opened card starts fresh, and the passage is lifted clear of the tray.
   useLayoutEffect(() => {
     setError(null);
     setBusy(false);
+    setWhyNot(null);
+    setLast(null);
+    setOwn(null);
+    setOwnError(null);
     if (!openId) return;
     setFlash(null);
     const frame = requestAnimationFrame(() => {
@@ -133,66 +153,61 @@ export function CaptureTray({ marks, candidates, articleTitle, onAdd, onAsk, onO
   const done = (msg: string) => { setFlash(msg); marks.keep(); };
   const inChronicle = (qid?: string) => !!qid && !!(findInChronicle(doc.items, qid) ?? findInChronicle(doc.territories, qid));
 
-  // Each candidate, with what Bob already has for it.
+  // Each candidate, with what Bob already has for it, and why it can't be ticked if it can't.
   const rows: Row[] = candidates.map(({ key, state }, i) => {
     const s = state.status === 'ready' ? state.subject : undefined;
     const item = s && findInChronicle(doc.items, s.qid);
     const territory = s && !item ? findInChronicle(doc.territories, s.qid) : undefined;
     const have = item ?? territory;
+    const title = s?.label ?? key.replace(/_/g, ' ');
+    const cant = marks.readOnly ? 'This timeline is read-only.'
+      : state.status === 'loading' ? 'Still looking it up on Wikidata.'
+      : state.status === 'offline' ? 'What it is will show when you’re back online.'
+      : !s ? `Wikidata doesn’t say what ${i === 0 ? 'this article' : title} is about, so there’s nothing to add to the map from it.`
+      : have ? undefined
+      : !s.kind ? 'Wikidata doesn’t say what kind of thing it is, so it can’t be drawn yet.'
+      : CANT_ADD[s.kind];
     return {
       key, state, subject: s, own: i === 0, have,
       ref: have && { type: item ? 'item' : 'territory', id: have.id },
       linked: !!have && h.usedBy.includes(have.id),
-      title: s?.label ?? key.replace(/_/g, ' '),
+      title, cant,
     };
   });
   const used = h.usedBy.length > 0;
-  const chosenKey = picked[h.id]
-    ?? rows.find((r) => r.linked)?.key
-    ?? rows.find((r, i) => i > 0 && r.subject && r.subject.qid === h.subjectQid)?.key
-    ?? rows[firstChoice(rows.map((r) => r.subject?.kind))]?.key;
-  const chosen = rows.find((r) => r.key === chosenKey) ?? rows[0];
-  const at = chosen?.subject?.facts.coords;
-  if (at && !chosen.have) ghost.current = { qid: chosen.subject!.qid, title: chosen.subject!.label ?? chosen.title, lat: at.lat, lon: at.lon };
+  const chosenKeys = ticked[h.id]
+    ?? defaultChoices(rows.map((r) => ({ kind: r.subject?.kind, linked: r.linked, remembered: !!r.subject && r.subject.qid === h.subjectQid }))).map((i) => rows[i].key);
+  const isTicked = (r: Row) => r.linked || (!r.cant && chosenKeys.includes(r.key));
+  const toLink = rows.filter((r) => isTicked(r) && !r.linked && r.have);
+  const toAdd = rows.filter((r) => isTicked(r) && !r.have);
+  for (const r of toAdd) {
+    const at = r.subject?.facts.coords;
+    if (at) ghosts.current.push({ qid: r.subject!.qid, title: r.title, lat: at.lat, lon: at.lon });
+  }
 
-  const choose = (r: Row) => {
-    setPicked((p) => ({ ...p, [h.id]: r.key }));
+  const toggle = (r: Row) => {
     setError(null);
-    if (r.subject) marks.setSubject(r.subject.qid);
+    if (r.linked) return;
+    if (r.cant) { setWhyNot((w) => (w === r.key ? null : r.key)); return; }
+    setWhyNot(null);
+    const on = chosenKeys.includes(r.key);
+    setTicked((t) => ({ ...t, [h.id]: on ? chosenKeys.filter((k) => k !== r.key) : [...chosenKeys, r.key] }));
+    if (!on && r.subject) marks.setSubject(r.subject.qid);
   };
 
-  let body: React.ReactNode = null;
-  let actions: React.ReactNode;
-  const keepOnly = used
-    ? <button type="button" className="btn primary" onClick={() => marks.keep()}>Done</button>
-    : <button type="button" className="btn primary" onClick={() => done('Kept as a highlight.')}>Keep the highlight</button>;
-  const justKeep = used
-    ? <button type="button" className="btn" onClick={() => marks.keep()}>Done</button>
-    : <button type="button" className="btn" onClick={() => done('Kept as a highlight.')}>Just keep the highlight</button>;
-  const named = chosen?.have?.title ?? chosen?.title ?? articleTitle;
+  // Linking to an entry Bob has: Wikidata's facts may connect it to others he has, with this highlight as evidence.
+  const suggestedFor = (r: Row) => (r.have && !r.linked && r.ref?.type === 'item' ? factRelations(r.have.id, r.subject!.facts, doc, h.id) : []);
+  const otherOf = (r: Relation, id: string) => (r.fromId === id ? r.toId : r.fromId);
+  const kept = (r: Row) => suggestedFor(r).filter((x) => !unticked.has(otherOf(x, r.have!.id)));
 
-  if (!chosen || !chosen.subject) {
-    const status = chosen?.state.status ?? 'loading';
-    const what = chosen?.own ? 'this article' : named;
-    body = (
-      <p className="tray-note" aria-busy={status === 'loading'}>
-        {status === 'loading' && `Looking up what ${what} is about…`}
-        {status === 'offline' && `You’re offline. What ${what} is about will show when you’re back online. Your highlight is saved.`}
-        {status === 'unknown' && `Wikidata doesn’t say what ${what} is about, so there’s nothing to add to the map from it. Your highlight is saved.`}
-      </p>
-    );
-    actions = keepOnly;
-  } else {
-    const s = chosen.subject;
-    const { have, ref, linked } = chosen;
+  /** Under a ticked candidate: its facts from Wikidata, and the connections linking it would make. */
+  const details = (r: Row) => {
+    const s = r.subject!;
     const facts = subjectFacts(s);
-    const cantAdd = !have && (!s.kind || CANT_ADD[s.kind]);
-    // Linking to an entry Bob has: Wikidata's facts may connect it to others he has, with this highlight as evidence.
-    const suggested = have && !linked && ref?.type === 'item' ? factRelations(have.id, s.facts, doc, h.id) : [];
-    const otherOf = (r: Relation) => (r.fromId === have?.id ? r.toId : r.fromId);
-    body = (
-      <>
-        {facts.length > 0 && (
+    const suggested = suggestedFor(r);
+    return (
+      <div className="cand-more">
+        {facts.length > 0 ? (
           <dl className="facts">
             {facts.map((f) => (
               <div className="fact" key={f.label}>
@@ -201,24 +216,18 @@ export function CaptureTray({ marks, candidates, articleTitle, onAdd, onAsk, onO
                   {f.values.map((v, i) => (
                     <span key={i}>{i > 0 && ', '}<span className={inChronicle(v.qid) ? 'have' : undefined}>{v.text}</span></span>
                   ))}
-                  {f.pin && !have && <span className="pin"> · a pin on the map</span>}
+                  {f.pin && !r.have && <span className="pin"> · a pin on the map</span>}
                 </dd>
               </div>
             ))}
           </dl>
-        )}
-        <p className="tray-note">
-          {linked ? `This highlight is on ${named}.`
-            : cantAdd && s.kind ? CANT_ADD[s.kind]
-            : facts.length ? `All of this comes from Wikidata${facts.some((f) => f.values.some((v) => inChronicle(v.qid))) ? '; underlined names are already in Chronicle' : ''}.`
-            : 'Wikidata gives no dates or places for this.'}
-        </p>
+        ) : <p className="tray-note">Wikidata gives no dates or places for this.</p>}
         {suggested.length > 0 && (
           <div className="suggested" data-testid="suggested-connections">
             <p className="tray-note">Linking also connects, with this highlight as evidence:</p>
-            {suggested.map((r) => {
-              const other = otherOf(r);
-              const name = `${describeRelation(r.type, r.fromId === have!.id ? 'out' : 'in')} ${doc.items.find((i) => i.id === other)?.title ?? ''}`;
+            {suggested.map((x) => {
+              const other = otherOf(x, r.have!.id);
+              const name = `${describeRelation(x.type, x.fromId === r.have!.id ? 'out' : 'in')} ${doc.items.find((i) => i.id === other)?.title ?? ''}`;
               return (
                 <label className="check" key={other}>
                   <input
@@ -231,44 +240,119 @@ export function CaptureTray({ marks, candidates, articleTitle, onAdd, onAsk, onO
             })}
           </div>
         )}
+      </div>
+    );
+  };
+
+  /** Link what Bob has and add the rest straight away, through the same path as Claude's drafts; one Undo takes it all back. */
+  const addTicked = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      const b: Becoming = { link: toLink.map((r) => ({ id: r.have!.id, relations: kept(r) })), add: [] };
+      const names = toLink.map((r) => r.have!.title);
+      for (const r of toAdd) {
+        const d = await onDraftPage({ ...h, subjectQid: r.subject!.qid }, r.key);
+        if ('duplicateOf' in d) b.link.push({ id: d.duplicateOf });
+        else b.add.push({ item: d.item, newSources: d.newSources, relations: d.relations });
+        names.push('duplicateOf' in d ? doc.items.find((i) => i.id === d.duplicateOf)?.title ?? r.title : d.item.title);
+      }
+      const { became } = addBecoming(doc, h.id, b);
+      update((d) => addBecoming(d, h.id, b).doc);
+      setTicked(({ [h.id]: _done, ...t }) => t);
+      setLast({ became, msg: `Added ${inWords(names)} to your map and timeline.`, ticks: chosenKeys });
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  /** "Something else…": Bob's own entry, its place looked up on the map, saved like a ticked one. */
+  const addOwn = async () => {
+    if (!own) return;
+    const lanes = own.lanes ?? h.lanes ?? [];
+    const name = own.place.trim();
+    const check = ownEntry({ ...own, lanes, place: undefined }, h, doc.categories[0]?.id ?? '');
+    if ('problem' in check) { setOwnError(check.problem); return; }
+    setBusy(true);
+    setOwnError(null);
+    let place: Place | undefined;
+    let note = '';
+    if (name && !navigator.onLine) note = ` You’re offline, so it has no pin yet; add ${name} in the editor later.`;
+    else if (name) {
+      try {
+        const hit = (await lookUpPlace(name))[0];
+        if (hit) { place = { name: hit.name, lat: hit.lat, lon: hit.lon, role: 'site' }; note = ` Pinned at ${hit.name}.`; }
+        else note = ` Couldn’t find ${name} on the map, so it has no pin yet.`;
+      } catch {
+        note = ` Couldn’t look up ${name}, so it has no pin yet.`;
+      }
+    }
+    setBusy(false);
+    const made = ownEntry({ ...own, lanes, place }, h, doc.categories[0]?.id ?? '');
+    if ('problem' in made) return;
+    const b: Becoming = { link: [], add: [{ item: made.item }] };
+    const { became } = addBecoming(doc, h.id, b);
+    update((d) => addBecoming(d, h.id, b).doc);
+    setOwn(null);
+    setLast({ became, msg: `Added ${made.item.title} to your map and timeline.${note}` });
+    if (made.item.start) onShowYear?.(Math.round(toDecimalYear(made.item.start)));
+  };
+
+  const undoLast = () => {
+    if (!last) return;
+    update((d) => undoBecoming(d, last.became));
+    // The ticks come back as they were, ready to add again.
+    if (last.ticks) setTicked((t) => ({ ...t, [h.id]: last.ticks! }));
+    setLast(null);
+  };
+
+  let actions: React.ReactNode;
+  const keepOnly = used
+    ? <button type="button" className="btn primary" onClick={() => marks.keep()}>Done</button>
+    : <button type="button" className="btn primary" onClick={() => done('Kept as a highlight.')}>Keep the highlight</button>;
+  const justKeep = used
+    ? <button type="button" className="btn" onClick={() => marks.keep()}>Done</button>
+    : <button type="button" className="btn" onClick={() => done('Kept as a highlight.')}>Just keep the highlight</button>;
+  const count = toLink.length + toAdd.length;
+  if (count === 0 || own) {
+    actions = keepOnly;
+  } else if (count === 1 && toLink.length) {
+    const r = toLink[0];
+    const named = r.have!.title;
+    actions = (
+      <>
+        <button type="button" className="btn primary" onClick={() => {
+          marks.setSubject(r.subject!.qid);
+          const b: Becoming = { link: [{ id: r.have!.id, relations: kept(r) }], add: [] };
+          update((d) => addBecoming(d, h.id, b).doc);
+          done(`Linked to ${named}.`);
+        }}>Link to {named}</button>
+        {justKeep}
       </>
     );
-    if (linked) {
-      actions = (
-        <>
-          {ref && onOpenRecord && <button type="button" className="btn primary" onClick={() => onOpenRecord(ref)}>Open {named}</button>}
-          <button type="button" className="btn" onClick={() => marks.keep()}>Done</button>
-        </>
-      );
-    } else if (have) {
-      actions = (
-        <>
-          <button type="button" className="btn primary" onClick={() => {
-            marks.setSubject(s.qid);
-            marks.link(have.id);
-            const keep = suggested.filter((r) => !unticked.has(otherOf(r)));
-            if (keep.length) update((d) => keep.reduce((next, r) => upsert(next, 'relations', r), d));
-            done(`Linked to ${named}.`);
-          }}>Link to {named}</button>
-          {justKeep}
-        </>
-      );
-    } else if (cantAdd) {
-      actions = keepOnly;
-    } else {
-      const add = async () => {
-        setBusy(true);
-        setError(null);
-        marks.setSubject(s.qid);
-        try { await onAdd({ ...h, subjectQid: s.qid }, chosen.key); } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
-      };
-      actions = (
-        <>
-          <button type="button" className="btn primary" disabled={busy} onClick={() => void add()}>{busy ? 'Reading Wikipedia…' : 'Add to map and timeline'}</button>
-          {justKeep}
-        </>
-      );
-    }
+  } else if (count === 1) {
+    const r = toAdd[0];
+    const add = async () => {
+      setBusy(true);
+      setError(null);
+      marks.setSubject(r.subject!.qid);
+      try { await onAdd({ ...h, subjectQid: r.subject!.qid }, r.key); } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
+    };
+    actions = (
+      <>
+        <button type="button" className="btn primary" disabled={busy} onClick={() => void add()}>{busy ? 'Reading Wikipedia…' : 'Add to map and timeline'}</button>
+        {justKeep}
+      </>
+    );
+  } else {
+    actions = (
+      <>
+        <button type="button" className="btn primary" disabled={busy} onClick={() => void addTicked()}>{busy ? 'Reading Wikipedia…' : `Add ${count} to map and timeline`}</button>
+        {justKeep}
+      </>
+    );
   }
 
   // ----- Claude, for what has no article of its own -----
@@ -378,41 +462,120 @@ export function CaptureTray({ marks, candidates, articleTitle, onAdd, onAsk, onO
     );
   }
 
+  // What the highlight is on besides the candidates and Claude's drafts: what Bob filled in himself.
+  const shownIds = new Set([...rows.flatMap((r) => (r.have ? [r.have.id] : [])), ...(set?.entries.map((e) => e.item.id) ?? [])]);
+  const others = h.usedBy.flatMap((id) => { const i = doc.items.find((x) => x.id === id); return i && !shownIds.has(id) ? [i] : []; });
+  const none = rows.every((r) => !r.subject) && rows[0];
   const n = rows.length;
   const becomes = (
     <div className="becomes">
-      <div className="lbl">Becomes <span>· {n === 1 ? 'the article’s subject' : `${n} in this passage, pick one`}</span></div>
-      <div className="cands" role="radiogroup" aria-label="Becomes">
+      <div className="lbl">Becomes <span>· {n === 1 ? 'the article’s subject' : `${n} in this passage`}, tick any</span></div>
+      <div className="cands" role="group" aria-label="Becomes">
         {rows.map((r) => {
           const kind = r.subject?.kind;
           const what = r.state.status === 'loading' ? 'Looking up…'
             : r.state.status === 'offline' ? 'Needs a connection'
             : kind ? KIND_LABEL[kind] : 'Not sure what kind';
           const there = r.have && (r.ref?.type === 'territory' ? ' · in Chronicle as a territory' : r.have.title !== r.title ? ` · in Chronicle as ${r.have.title}` : '');
-          const line = `${r.own ? `This article · ${what}` : what}${there || ''}`;
+          const line = `${r.own ? `This article · ${what}` : what}${there || ''}${r.subject && r.cant ? ' · can’t be added yet' : ''}`;
+          const on = isTicked(r);
           return (
-            <button
-              type="button"
-              key={r.key}
-              className="cand"
-              role="radio"
-              aria-checked={r === chosen}
-              aria-label={`${r.have?.title ?? r.title}, ${line}${r.linked ? ', linked' : r.have ? ', in Chronicle' : ''}`}
-              data-kind={kind}
-              disabled={marks.readOnly}
-              onClick={() => choose(r)}
-            >
-              <Glyph kind={kind} />
-              <span className="line">
-                <span className="ct">{r.have?.title ?? r.title}</span>
-                <span className="ck">{line}</span>
-              </span>
-              {r.linked ? <span className="tag linked">Linked</span> : r.have ? <span className="tag have">In Chronicle</span> : null}
-            </button>
+            <div className="cand-item" key={r.key}>
+              <div className="cand-row">
+                <button
+                  type="button"
+                  className="cand"
+                  role="checkbox"
+                  aria-checked={on}
+                  aria-disabled={r.linked || undefined}
+                  data-cant={(!r.linked && !!r.cant) || undefined}
+                  aria-label={`${r.have?.title ?? r.title}, ${line}${r.linked ? ', linked' : r.have ? ', in Chronicle' : ''}`}
+                  data-kind={kind}
+                  onClick={() => toggle(r)}
+                >
+                  <span className="tick" aria-hidden="true" />
+                  <Glyph kind={kind} />
+                  <span className="line">
+                    <span className="ct">{r.have?.title ?? r.title}</span>
+                    <span className="ck">{line}</span>
+                  </span>
+                  {r.linked ? <span className="tag linked">Linked</span> : r.have ? <span className="tag have">In Chronicle</span> : null}
+                </button>
+                {r.linked && r.ref && onOpenRecord && <button type="button" className="link open" onClick={() => onOpenRecord(r.ref!)} aria-label={`Open ${r.have!.title}`}>Open</button>}
+              </div>
+              {whyNot === r.key && r.cant && <p className="tray-note">{r.cant}{r.subject?.kind && CANT_ADD[r.subject.kind] ? '' : ' Your highlight is saved.'}</p>}
+              {on && !r.linked && r.subject && details(r)}
+            </div>
           );
         })}
+        {others.map((i) => (
+          <div className="cand-item" key={i.id}>
+            <div className="cand-row">
+              <button type="button" className="cand" role="checkbox" aria-checked aria-disabled aria-label={`${i.title}, ${ITEM_KIND[i.kind]}, linked`} data-kind={i.subject}>
+                <span className="tick" aria-hidden="true" />
+                <Glyph kind={i.subject} />
+                <span className="line">
+                  <span className="ct">{i.title}</span>
+                  <span className="ck">{i.subject ? KIND_LABEL[i.subject] : ITEM_KIND[i.kind]}{i.start ? ` · ${formatItemDates(i)}` : ''}</span>
+                </span>
+                <span className="tag linked">Linked</span>
+              </button>
+              {onOpenRecord && <button type="button" className="link open" onClick={() => onOpenRecord({ type: 'item', id: i.id })} aria-label={`Open ${i.title}`}>Open</button>}
+            </div>
+          </div>
+        ))}
+        {!marks.readOnly && (
+          <button type="button" className="cand other" aria-expanded={!!own} onClick={() => { setOwn((o) => (o ? null : { ...NO_FORM })); setOwnError(null); }}>
+            <span className="tick plus" aria-hidden="true" />
+            <span aria-hidden="true" />
+            <span className="line">
+              <span className="ct">Something else…</span>
+              <span className="ck">Fill one in yourself</span>
+            </span>
+          </button>
+        )}
       </div>
-      {body}
+      {own && (
+        <form className="own" aria-label="Something else" onSubmit={(e) => { e.preventDefault(); void addOwn(); }}>
+          <label className="own-title">Title<input value={own.title} autoFocus onChange={(e) => setOwn({ ...own, title: e.target.value })} placeholder="Laurion silver pays for the fleet" /></label>
+          <div className="segmented" role="group" aria-label="What is it?">
+            {(['event', 'span', 'person'] as ItemKind[]).map((k) => (
+              <button type="button" key={k} aria-pressed={own.kind === k} onClick={() => setOwn({ ...own, kind: k })}>{ITEM_KIND[k]}</button>
+            ))}
+          </div>
+          <div className="own-dates">
+            <label>{own.kind === 'person' ? 'Born' : own.kind === 'span' ? 'Starts' : 'When'}<input value={own.start} onChange={(e) => setOwn({ ...own, start: e.target.value })} placeholder="483 BCE" /></label>
+            {own.kind !== 'event' && <label>{own.kind === 'person' ? 'Died' : 'Ends'}<input value={own.end} onChange={(e) => setOwn({ ...own, end: e.target.value })} placeholder={own.kind === 'person' ? 'Blank if living' : '404 BCE'} /></label>}
+          </div>
+          <label className="own-place">Place<input value={own.place} onChange={(e) => setOwn({ ...own, place: e.target.value })} placeholder="Where it happened, if anywhere" /></label>
+          <LaneChips label="Its lanes" value={own.lanes ?? h.lanes} onToggle={(l) => {
+            const cur = own.lanes ?? h.lanes ?? [];
+            setOwn({ ...own, lanes: cur.includes(l) ? cur.filter((x) => x !== l) : [...cur, l] });
+          }} />
+          {ownError && <div className="notice bad" role="alert">{ownError}</div>}
+          <div className="own-acts">
+            <button type="submit" className="btn primary" disabled={busy}>{busy ? 'Finding the place…' : 'Add to map and timeline'}</button>
+            <button type="button" className="btn" onClick={() => { setOwn(null); setOwnError(null); }}>Cancel</button>
+          </div>
+        </form>
+      )}
+      {none && (
+        <p className="tray-note" aria-busy={none.state.status === 'loading'}>
+          {none.state.status === 'loading' && `Looking up what this article is about…`}
+          {none.state.status === 'offline' && `You’re offline. What this article is about will show when you’re back online. Your highlight is saved.`}
+          {none.state.status === 'unknown' && n === 1 && `Wikidata doesn’t say what this article is about, so there’s nothing to add to the map from it. Your highlight is saved.`}
+        </p>
+      )}
+      {rows.some((r) => isTicked(r) && !r.linked && r.subject && subjectFacts(r.subject).length) && (
+        <p className="tray-note">
+          All of this comes from Wikidata{rows.some((r) => isTicked(r) && r.subject && subjectFacts(r.subject).some((f) => f.values.some((v) => inChronicle(v.qid)))) ? '; underlined names are already in Chronicle' : ''}.
+        </p>
+      )}
+      {last && (
+        <p className="tray-done" role="status">
+          {last.msg} <button type="button" className="link" onClick={undoLast}>Undo</button>
+        </p>
+      )}
     </div>
   );
 

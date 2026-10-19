@@ -193,8 +193,8 @@ function Article({ article, onOpen, onOpenRecord, onDraft, onShowYear, onOpenDra
   const known: Record<string, SubjectState> = { ...subjects, [keys[0] ?? article.key]: subject };
   const candidates = keys.map((key) => ({ key, state: known[key] ?? LOADING }));
 
-  /** A page as a prefilled entry, quoting this highlight and citing the article Bob read. */
-  const addPage = async (h: Highlight, key: string) => {
+  /** A page as a prefilled entry, quoting this highlight and citing the article Bob read (or the entry he already has for it). */
+  const draftPage = async (h: Highlight, key: string): Promise<ItemDraft | { duplicateOf: string }> => {
     if (!navigator.onLine) throw new Error(OFFLINE_ADD);
     let out;
     try {
@@ -208,19 +208,26 @@ function Article({ article, onOpen, onOpenRecord, onDraft, onShowYear, onOpenDra
     } catch (e) {
       throw navigator.onLine ? e : new Error(OFFLINE_ADD);
     }
-    if ('duplicateOf' in out) { onOpenRecord?.({ type: 'item', id: out.duplicateOf }); return; }
+    if ('duplicateOf' in out) return out;
     const { draft } = out;
     // Cite the article Bob read (already a source), not the drafted page: that's where the highlight is.
     const page = new Set(draft.newSources.map((s) => s.id));
     const citations = draft.item.citations?.map((c) => (page.has(c.sourceId) ? { ...c, sourceId: h.sourceId } : c));
-    onDraft?.({
+    return {
       ...draft,
       item: { ...draft.item, ...(citations ? { citations } : {}), ...(h.lanes?.length ? { lanes: h.lanes } : {}) },
       newSources: [],
       highlight: h,
       // The highlight is the evidence Bob read for what Wikidata connects.
       ...(draft.relations ? { relations: draft.relations.map((r) => ({ ...r, highlightIds: [h.id] })) } : {}),
-    });
+    };
+  };
+
+  /** One page, opened in the editor to check before it's added. */
+  const addPage = async (h: Highlight, key: string) => {
+    const d = await draftPage(h, key);
+    if ('duplicateOf' in d) onOpenRecord?.({ type: 'item', id: d.duplicateOf });
+    else onDraft?.(d);
   };
 
   /** Ask Claude what the passage states that has no article of its own. The SDK loads only now. */
@@ -296,7 +303,7 @@ function Article({ article, onOpen, onOpenRecord, onDraft, onShowYear, onOpenDra
       {data && (
         <CaptureTray
           marks={marks} candidates={candidates} articleTitle={data.title}
-          onAdd={addPage} onAsk={askClaude} onOpenRecord={onOpenRecord} onEdit={onDraft} onShowYear={onShowYear} onOpenDrafting={onOpenDrafting}
+          onAdd={addPage} onDraftPage={draftPage} onAsk={askClaude} onOpenRecord={onOpenRecord} onEdit={onDraft} onShowYear={onShowYear} onOpenDrafting={onOpenDrafting}
         />
       )}
     </article>

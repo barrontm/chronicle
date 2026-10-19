@@ -497,6 +497,74 @@ if (any('desktop-reader-claude')) await readerClaude(await page('desktop-reader-
 if (any('dark-reader-claude')) await readerClaude(await page('dark-reader-claude', { ...desktop, colorScheme: 'dark' }), 'dark');
 if (any('phone-reader-claude')) await readerClaude(await page('phone-reader-claude', { viewport: { width: 412, height: 860 }, isMobile: true, hasTouch: true }), 'phone');
 
+// "Becomes" as ticks: Bob's Laurion passage in Classical Athens, the mines and Themistocles ticked, then "Something else…" filled in.
+async function readerBecomes(p, prefix) {
+  const cors = { 'Access-Control-Allow-Origin': '*' };
+  const passage = 'The silver <a rel="mw:WikiLink" href="./Mines_of_Laurion" title="Mines of Laurion">mines of Laurion</a> contributed significantly to the development of Athens in the 5th century BC, when the Athenians learned to prospect, treat, and refine the ore and used the proceeds to build a massive fleet, at the instigation of <a rel="mw:WikiLink" href="./Themistocles" title="Themistocles">Themistocles</a>.';
+  await p.route('https://en.wikipedia.org/w/rest.php/v1/search/page**', (r) => r.fulfill({ headers: cors, json: { pages: [{ key: 'Classical_Athens', title: 'Classical Athens', description: 'Athens in the 5th and 4th centuries BC', thumbnail: null }] } }));
+  await p.route('https://en.wikipedia.org/w/rest.php/v1/page/*/html', (r) => r.fulfill({
+    headers: { ...cors, 'Content-Type': 'text/html' },
+    body: '<!DOCTYPE html><html about="https://en.wikipedia.org/wiki/Special:Redirect/revision/42"><head><title>Classical Athens</title></head><body>' +
+      '<section data-mw-section-id="0"><p>The city of Athens during the classical period of ancient Greece was the major urban centre of the notable polis of Attica.</p></section>' +
+      '<section data-mw-section-id="1"><h2>Athenian democracy</h2><p>Most offices were filled by lot, although the ten strategoi (generals) were elected.</p>' +
+      `<p>${passage}</p><p>In 499 BC, Athens sent troops to aid the Ionian Greeks of Asia Minor.</p></section></body></html>`,
+  }));
+  const dir = new URL('../tests/fixtures/subjects/', import.meta.url);
+  const recs = readdirSync(dir).map((f) => JSON.parse(readFileSync(new URL(f, dir), 'utf8')));
+  const parents = Object.assign({}, ...recs.map((r) => r.parents));
+  const labels = Object.assign({}, ...recs.map((r) => r.labels));
+  await p.route('https://www.wikidata.org/w/api.php**', (r) => {
+    const u = new URL(r.request().url());
+    const title = u.searchParams.get('titles');
+    if (title) {
+      const rec = recs.find((x) => x.title === title);
+      return r.fulfill({ headers: cors, json: rec ? rec.entity : { entities: { '-1': { site: 'enwiki', title, missing: '' } } } });
+    }
+    const ids = (u.searchParams.get('ids') ?? '').split('|');
+    return r.fulfill({ headers: cors, json: { entities: Object.fromEntries(ids.map((q) => [q, { id: q, labels: labels[q] ? { en: { value: labels[q] } } : {} }])) } });
+  });
+  await p.route('https://query.wikidata.org/sparql**', (r) => {
+    const ids = [...(new URL(r.request().url()).searchParams.get('query') ?? '').matchAll(/wd:(Q\d+)/g)].map((m) => m[1]);
+    const entity = (q) => ({ value: `http://www.wikidata.org/entity/${q}` });
+    return r.fulfill({ headers: cors, json: { results: { bindings: ids.flatMap((c) => (parents[c] ?? []).map((x) => ({ c: entity(c), p: entity(x) }))) } } });
+  });
+  await p.getByTestId('article-search').getByLabel('Search Wikipedia').fill('classical athens');
+  await p.getByTestId('article-search').getByRole('button', { name: 'Search' }).click();
+  await p.getByTestId('article-results').getByRole('button').first().click();
+  await p.getByTestId('article').getByText('contributed significantly').waitFor();
+  const at = await p.evaluate((phone) => {
+    const para = [...document.querySelectorAll('.reader-text p')].find((x) => x.textContent.includes('Laurion'));
+    para.scrollIntoView({ block: 'start' });
+    const r = document.createRange();
+    r.selectNodeContents(para);
+    if (!phone) { getSelection().removeAllRanges(); getSelection().addRange(r); }
+    const b = r.getClientRects()[r.getClientRects().length - 1];
+    return { x: b.left + 20, y: b.top + b.height / 2 };
+  }, prefix === 'phone');
+  if (prefix === 'phone') await p.touchscreen.tap(at.x, at.y);
+  else { await p.getByRole('button', { name: 'Highlight' }).waitFor(); await p.keyboard.press('h'); }
+  await p.evaluate(() => getSelection().removeAllRanges());
+  const becomes = p.getByTestId('capture-tray').getByRole('group', { name: 'Becomes' });
+  await becomes.getByRole('checkbox', { name: /Mines of Lauri.*Place/ }).click();
+  await becomes.getByRole('checkbox', { name: /Themistocles/ }).click();
+  await becomes.getByRole('checkbox', { name: /Classical Athens/ }).click(); // says why it can't be ticked
+  await p.waitForTimeout(700);
+  await shot(p, `${prefix}-reader-becomes`);
+  await becomes.getByRole('button', { name: /Something else/ }).click();
+  const own = p.getByTestId('capture-tray').getByRole('form', { name: 'Something else' });
+  await own.getByLabel('Title').fill('Laurion silver pays for the fleet');
+  await own.getByRole('button', { name: 'Period' }).click();
+  await own.getByLabel('Starts').fill('c. 483 BCE');
+  await own.getByLabel('Ends').fill('480 BCE');
+  await own.getByLabel('Place').fill('Laurion');
+  await own.scrollIntoViewIfNeeded();
+  await p.waitForTimeout(300);
+  await shot(p, `${prefix}-reader-own`);
+}
+if (any('desktop-reader-becomes') || any('desktop-reader-own')) await readerBecomes(await page('desktop-reader-becomes', desktop), 'desktop');
+if (any('dark-reader-becomes') || any('dark-reader-own')) await readerBecomes(await page('dark-reader-becomes', { ...desktop, colorScheme: 'dark' }), 'dark');
+if (any('phone-reader-becomes') || any('phone-reader-own')) await readerBecomes(await page('phone-reader-becomes', { viewport: { width: 412, height: 860 }, isMobile: true, hasTouch: true }), 'phone');
+
 // Draft with AI: a recorded run replayed (no network, no key needed), one entry accepted.
 async function aiDraft(p, prefix) {
   const rec = JSON.parse(readFileSync(fileURLToPath(new URL('../tests/ai-evals/entries/recordings/handmade-persian-wars.json', import.meta.url)), 'utf8'));

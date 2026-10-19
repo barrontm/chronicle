@@ -1,0 +1,1152 @@
+{
+  "case": "laurion-silver",
+  "model": "claude-opus-5-5",
+  "prompt": "highlight@6",
+  "handmade": true,
+  "note": "Written by hand as test data before the live run: Wikipedia and Wikidata answers are real, Claude’s answer is made up (Bob’s Laurion passage, Phase 4 ticket 3).",
+  "exchanges": [
+    {
+      "url": "https://www.wikidata.org/w/api.php?action=wbgetentities&sites=enwiki&titles=Classical+Athens&normalize=1&props=claims%7Clabels&languages=en&format=json&origin=*",
+      "status": 200,
+      "body": {
+        "entities": {
+          "Q844930": {
+            "type": "item",
+            "id": "Q844930",
+            "labels": {
+              "en": {
+                "language": "en",
+                "value": "Classical Athens"
+              }
+            },
+            "claims": {
+              "P31": [
+                {
+                  "mainsnak": {
+                    "snaktype": "value",
+                    "property": "P31",
+                    "hash": "7a809d7b80764a8b91f7697deea21b4152b57091",
+                    "datavalue": {
+                      "value": {
+                        "entity-type": "item",
+                        "numeric-id": 148837,
+                        "id": "Q148837"
+                      },
+                      "type": "wikibase-entityid"
+                    },
+                    "datatype": "wikibase-item"
+                  },
+                  "type": "statement",
+                  "id": "q844930$874abfee-46a0-06ab-e3ef-67914f2a44c5",
+                  "rank": "preferred",
+                  "references": [
+                    {
+                      "hash": "1c5c0c83a11aae457084353ab219d30a8ba4a9e5",
+                      "snaks": {
+                        "P248": [
+                          {
+                            "snaktype": "value",
+                            "property": "P248",
+                            "hash": "04039aa3f6081ba04b20643dbe600f0cc21ee582",
+                            "datavalue": {
+                              "value": {
+                                "entity-type": "item",
+                                "numeric-id": 89910055,
+                                "id": "Q89910055"
+                              },
+                              "type": "wikibase-entityid"
+                            },
+                            "datatype": "wikibase-item"
+                          }
+                        ]
+                      },
+                      "snaks-order": [
+                        "P248"
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "mainsnak": {
+                    "snaktype": "value",
+                    "property": "P31",
+                    "hash": "4441c653c09b7127b7d39c2f526a738ab5fbd6a9",
+                    "datavalue": {
+                      "value": {
+                        "entity-type": "item",
+                        "numeric-id": 839954,
+                        "id": "Q839954"
+                      },
+                      "type": "wikibase-entityid"
+                    },
+                    "datatype": "wikibase-item"
+                  },
+                  "type": "statement",
+                  "id": "Q844930$641af6ef-4c0f-d86a-bb02-29ea098ef7ca",
+                  "rank": "normal",
+                  "references": [
+                    {
+                      "hash": "9ab12e437cae659f1cde616a32d6a290396a52a8",
+                      "snaks": {
+                        "P248": [
+                          {
+                            "snaktype": "value",
+                            "property": "P248",
+                            "hash": "de82718fd424421146acdaa9af7b9038de1a1209",
+                            "datavalue": {
+                              "value": {
+                                "entity-type": "item",
+                                "numeric-id": 90412636,
+                                "id": "Q90412636"
+                              },
+                              "type": "wikibase-entityid"
+                            },
+                            "datatype": "wikibase-item"
+                          }
+                        ]
+                      },
+                      "snaks-order": [
+                        "P248"
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "mainsnak": {
+                    "snaktype": "value",
+                    "property": "P31",
+                    "hash": "e875ed75d0b283ce7f5334ecf6a4aba2d39262fd",
+                    "datavalue": {
+                      "value": {
+                        "entity-type": "item",
+                        "numeric-id": 133442,
+                        "id": "Q133442"
+                      },
+                      "type": "wikibase-entityid"
+                    },
+                    "datatype": "wikibase-item"
+                  },
+                  "type": "statement",
+                  "id": "Q844930$1d7559f7-47cf-3a0e-4a6a-9e26b84ca567",
+                  "rank": "preferred"
+                },
+                {
+                  "mainsnak": {
+                    "snaktype": "value",
+                    "property": "P31",
+                    "hash": "953d9bb4f3f6e19ffa3af140ad48cddcc173ff2e",
+                    "datavalue": {
+                      "value": {
+                        "entity-type": "item",
+                        "numeric-id": 102202066,
+                        "id": "Q102202066"
+                      },
+                      "type": "wikibase-entityid"
+                    },
+                    "datatype": "wikibase-item"
+                  },
+                  "type": "statement",
+                  "id": "Q844930$E3898714-6735-4551-A1FA-FDE43CB2BCFE",
+                  "rank": "normal",
+                  "references": [
+                    {
+                      "hash": "9ab12e437cae659f1cde616a32d6a290396a52a8",
+                      "snaks": {
+                        "P248": [
+                          {
+                            "snaktype": "value",
+                            "property": "P248",
+                            "hash": "de82718fd424421146acdaa9af7b9038de1a1209",
+                            "datavalue": {
+                              "value": {
+                                "entity-type": "item",
+                                "numeric-id": 90412636,
+                                "id": "Q90412636"
+                              },
+                              "type": "wikibase-entityid"
+                            },
+                            "datatype": "wikibase-item"
+                          }
+                        ]
+                      },
+                      "snaks-order": [
+                        "P248"
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "P625": [
+                {
+                  "mainsnak": {
+                    "snaktype": "value",
+                    "property": "P625",
+                    "hash": "1210883e6f1658ea061964433a19c22923501052",
+                    "datavalue": {
+                      "value": {
+                        "latitude": 37.97222222222222,
+                        "longitude": 23.72222222222222,
+                        "altitude": null,
+                        "precision": 0.0002777777777777778,
+                        "globe": "http://www.wikidata.org/entity/Q2"
+                      },
+                      "type": "globecoordinate"
+                    },
+                    "datatype": "globe-coordinate"
+                  },
+                  "type": "statement",
+                  "id": "Q844930$0CC07867-F09D-40D4-BA93-65DDE623F561",
+                  "rank": "normal",
+                  "references": [
+                    {
+                      "hash": "60cce5d0acf0cc060796196012001192a048d885",
+                      "snaks": {
+                        "P143": [
+                          {
+                            "snaktype": "value",
+                            "property": "P143",
+                            "hash": "390e3b73e7cd926978cab220968d0e3451cfb814",
+                            "datavalue": {
+                              "value": {
+                                "entity-type": "item",
+                                "numeric-id": 199698,
+                                "id": "Q199698"
+                              },
+                              "type": "wikibase-entityid"
+                            },
+                            "datatype": "wikibase-item"
+                          }
+                        ]
+                      },
+                      "snaks-order": [
+                        "P143"
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "P122": [
+                {
+                  "mainsnak": {
+                    "snaktype": "value",
+                    "property": "P122",
+                    "hash": "148dd27d7bbb146a42b8aa37be5a120b2ed5a466",
+                    "datavalue": {
+                      "value": {
+                        "entity-type": "item",
+                        "numeric-id": 223767,
+                        "id": "Q223767"
+                      },
+                      "type": "wikibase-entityid"
+                    },
+                    "datatype": "wikibase-item"
+                  },
+                  "type": "statement",
+                  "id": "Q844930$5ff7bfaf-432d-d674-07d9-58235249bd78",
+                  "rank": "normal",
+                  "references": [
+                    {
+                      "hash": "288ab581e7d2d02995a26dfa8b091d96e78457fc",
+                      "snaks": {
+                        "P143": [
+                          {
+                            "snaktype": "value",
+                            "property": "P143",
+                            "hash": "6a164248fc96bfa583bbb495cb63ae6401ec203c",
+                            "datavalue": {
+                              "value": {
+                                "entity-type": "item",
+                                "numeric-id": 206855,
+                                "id": "Q206855"
+                              },
+                              "type": "wikibase-entityid"
+                            },
+                            "datatype": "wikibase-item"
+                          }
+                        ]
+                      },
+                      "snaks-order": [
+                        "P143"
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "P18": [
+                {
+                  "mainsnak": {
+                    "snaktype": "value",
+                    "property": "P18",
+                    "hash": "2d61da5223e3b3e7c1a92ae43b0ec9ed455f40d4",
+                    "datavalue": {
+                      "value": "View of the Acropolis Athens (pixinn.net).jpg",
+                      "type": "string"
+                    },
+                    "datatype": "commonsMedia"
+                  },
+                  "type": "statement",
+                  "id": "Q844930$62DD28F9-D192-4627-AA99-B444D357C600",
+                  "rank": "normal"
+                }
+              ],
+              "P155": [
+                {
+                  "mainsnak": {
+                    "snaktype": "value",
+                    "property": "P155",
+                    "hash": "7330feae3fdb315dfc7b3336c5b2f9f9c840568f",
+                    "datavalue": {
+                      "value": {
+                        "entity-type": "item",
+                        "numeric-id": 13534153,
+                        "id": "Q13534153"
+                      },
+                      "type": "wikibase-entityid"
+                    },
+                    "datatype": "wikibase-item"
+                  },
+                  "type": "statement",
+                  "id": "Q844930$7071404a-4cab-3716-f911-4db8b551b6ba",
+                  "rank": "normal"
+                }
+              ],
+              "P571": [
+                {
+                  "mainsnak": {
+                    "snaktype": "value",
+                    "property": "P571",
+                    "hash": "99b2c177ff6d5cee89b1de8e6fc5c8471109ec30",
+                    "datavalue": {
+                      "value": {
+                        "time": "-0508-00-00T00:00:00Z",
+                        "timezone": 0,
+                        "before": 0,
+                        "after": 0,
+                        "precision": 9,
+                        "calendarmodel": "http://www.wikidata.org/entity/Q1985786"
+                      },
+                      "type": "time"
+                    },
+                    "datatype": "time"
+                  },
+                  "type": "statement",
+                  "id": "Q844930$57ed124e-47ee-55f4-8618-09960c29cae8",
+                  "rank": "preferred"
+                },
+                {
+                  "mainsnak": {
+                    "snaktype": "value",
+                    "property": "P571",
+                    "hash": "337fd9027358f036fd6b3cfee1b89ce85ff8fa5c",
+                    "datavalue": {
+                      "value": {
+                        "time": "-0700-00-00T00:00:00Z",
+                        "timezone": 0,
+                        "before": 0,
+                        "after": 0,
+                        "precision": 7,
+                        "calendarmodel": "http://www.wikidata.org/entity/Q1985786"
+                      },
+                      "type": "time"
+                    },
+                    "datatype": "time"
+                  },
+                  "type": "statement",
+                  "qualifiers": {
+                    "P805": [
+                      {
+                        "snaktype": "value",
+                        "property": "P805",
+                        "hash": "90e9d58d7bd63902d35c0e250f7b9ee33a55ac01",
+                        "datavalue": {
+                          "value": {
+                            "entity-type": "item",
+                            "numeric-id": 28626,
+                            "id": "Q28626"
+                          },
+                          "type": "wikibase-entityid"
+                        },
+                        "datatype": "wikibase-item"
+                      }
+                    ]
+                  },
+                  "qualifiers-order": [
+                    "P805"
+                  ],
+                  "id": "Q844930$54f87e81-4115-3109-c610-ad82ef0010e8",
+                  "rank": "normal"
+                }
+              ],
+              "P156": [
+                {
+                  "mainsnak": {
+                    "snaktype": "value",
+                    "property": "P156",
+                    "hash": "58a768e82192c4ffe5e408490223cf660982192b",
+                    "datavalue": {
+                      "value": {
+                        "entity-type": "item",
+                        "numeric-id": 1524,
+                        "id": "Q1524"
+                      },
+                      "type": "wikibase-entityid"
+                    },
+                    "datatype": "wikibase-item"
+                  },
+                  "type": "statement",
+                  "id": "Q844930$f43c3874-41b4-91fc-0ed1-13b99a0a7f0b",
+                  "rank": "normal"
+                }
+              ],
+              "P361": [
+                {
+                  "mainsnak": {
+                    "snaktype": "value",
+                    "property": "P361",
+                    "hash": "4fe025faab6fabd220c61844bd65eb8b2d45547d",
+                    "datavalue": {
+                      "value": {
+                        "entity-type": "item",
+                        "numeric-id": 11772,
+                        "id": "Q11772"
+                      },
+                      "type": "wikibase-entityid"
+                    },
+                    "datatype": "wikibase-item"
+                  },
+                  "type": "statement",
+                  "id": "Q844930$98cd0af1-4f93-ccc4-4cc0-93856c79f6ad",
+                  "rank": "normal"
+                }
+              ]
+            }
+          }
+        },
+        "success": 1
+      }
+    },
+    {
+      "url": "https://www.wikidata.org/w/api.php?action=wbgetentities&ids=Q11772%7CQ13534153%7CQ1524%7CQ223767&props=labels&languages=en&format=json&origin=*",
+      "status": 200,
+      "body": {
+        "entities": {
+          "Q11772": {
+            "type": "item",
+            "id": "Q11772",
+            "labels": {
+              "en": {
+                "language": "en",
+                "value": "Ancient Greece"
+              }
+            }
+          },
+          "Q13534153": {
+            "type": "item",
+            "id": "Q13534153",
+            "labels": {
+              "en": {
+                "language": "en",
+                "value": "Athens"
+              }
+            }
+          },
+          "Q1524": {
+            "type": "item",
+            "id": "Q1524",
+            "labels": {
+              "en": {
+                "language": "en",
+                "value": "Athens"
+              }
+            }
+          },
+          "Q223767": {
+            "type": "item",
+            "id": "Q223767",
+            "labels": {
+              "en": {
+                "language": "en",
+                "value": "democracy in Athens"
+              }
+            }
+          }
+        },
+        "success": 1
+      }
+    },
+    {
+      "url": "https://www.wikidata.org/w/api.php?action=wbgetentities&sites=enwiki&titles=Mines+of+Laurion&normalize=1&props=claims%7Clabels&languages=en&format=json&origin=*",
+      "status": 200,
+      "body": {
+        "entities": {
+          "Q3314937": {
+            "type": "item",
+            "id": "Q3314937",
+            "labels": {
+              "en": {
+                "language": "en",
+                "value": "Mines of Laurium"
+              }
+            },
+            "claims": {
+              "P31": [
+                {
+                  "mainsnak": {
+                    "snaktype": "value",
+                    "property": "P31",
+                    "hash": "65e0ae2c2cec9ad8b1c2ab6f09d33db2bc8c2bdb",
+                    "datavalue": {
+                      "value": {
+                        "entity-type": "item",
+                        "numeric-id": 820477,
+                        "id": "Q820477"
+                      },
+                      "type": "wikibase-entityid"
+                    },
+                    "datatype": "wikibase-item"
+                  },
+                  "type": "statement",
+                  "id": "Q3314937$44dfe967-404e-9c7c-ab1c-3070aaad5702",
+                  "rank": "normal"
+                }
+              ],
+              "P625": [
+                {
+                  "mainsnak": {
+                    "snaktype": "value",
+                    "property": "P625",
+                    "hash": "09327c0a70024a05116a0bc7d41c24e56ea1fab1",
+                    "datavalue": {
+                      "value": {
+                        "latitude": 37.712252,
+                        "longitude": 24.039891,
+                        "altitude": null,
+                        "precision": 0.000001,
+                        "globe": "http://www.wikidata.org/entity/Q2"
+                      },
+                      "type": "globecoordinate"
+                    },
+                    "datatype": "globe-coordinate"
+                  },
+                  "type": "statement",
+                  "id": "Q3314937$9B64A2F0-1605-4EBE-B78C-BB08C43CA470",
+                  "rank": "normal"
+                }
+              ],
+              "P276": [
+                {
+                  "mainsnak": {
+                    "snaktype": "value",
+                    "property": "P276",
+                    "hash": "08a01ba58b07eb24715491cbe8bed9ce4dd2d5e7",
+                    "datavalue": {
+                      "value": {
+                        "entity-type": "item",
+                        "numeric-id": 985449,
+                        "id": "Q985449"
+                      },
+                      "type": "wikibase-entityid"
+                    },
+                    "datatype": "wikibase-item"
+                  },
+                  "type": "statement",
+                  "id": "Q3314937$2d8492ef-499a-1e74-6713-65fc68a2f649",
+                  "rank": "normal"
+                }
+              ]
+            }
+          }
+        },
+        "success": 1
+      }
+    },
+    {
+      "url": "https://query.wikidata.org/sparql?query=SELECT+%3Fc+%3Fp+WHERE+%7B+VALUES+%3Fc+%7B+wd%3AQ820477+%7D+%3Fc+wdt%3AP279+%3Fp+%7D&format=json",
+      "status": 200,
+      "body": {
+        "head": {
+          "vars": [
+            "c",
+            "p"
+          ]
+        },
+        "results": {
+          "bindings": [
+            {
+              "c": {
+                "type": "uri",
+                "value": "http://www.wikidata.org/entity/Q820477"
+              },
+              "p": {
+                "type": "uri",
+                "value": "http://www.wikidata.org/entity/Q4380225"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "url": "https://query.wikidata.org/sparql?query=SELECT+%3Fc+%3Fp+WHERE+%7B+VALUES+%3Fc+%7B+wd%3AQ4380225+%7D+%3Fc+wdt%3AP279+%3Fp+%7D&format=json",
+      "status": 200,
+      "body": {
+        "head": {
+          "vars": [
+            "c",
+            "p"
+          ]
+        },
+        "results": {
+          "bindings": [
+            {
+              "c": {
+                "type": "uri",
+                "value": "http://www.wikidata.org/entity/Q4380225"
+              },
+              "p": {
+                "type": "uri",
+                "value": "http://www.wikidata.org/entity/Q17350442"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "url": "https://query.wikidata.org/sparql?query=SELECT+%3Fc+%3Fp+WHERE+%7B+VALUES+%3Fc+%7B+wd%3AQ17350442+%7D+%3Fc+wdt%3AP279+%3Fp+%7D&format=json",
+      "status": 200,
+      "body": {
+        "head": {
+          "vars": [
+            "c",
+            "p"
+          ]
+        },
+        "results": {
+          "bindings": [
+            {
+              "c": {
+                "type": "uri",
+                "value": "http://www.wikidata.org/entity/Q17350442"
+              },
+              "p": {
+                "type": "uri",
+                "value": "http://www.wikidata.org/entity/Q618123"
+              }
+            },
+            {
+              "c": {
+                "type": "uri",
+                "value": "http://www.wikidata.org/entity/Q17350442"
+              },
+              "p": {
+                "type": "uri",
+                "value": "http://www.wikidata.org/entity/Q13226383"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "url": "https://www.wikidata.org/w/api.php?action=wbgetentities&ids=Q985449&props=labels&languages=en&format=json&origin=*",
+      "status": 200,
+      "body": {
+        "entities": {
+          "Q985449": {
+            "type": "item",
+            "id": "Q985449",
+            "labels": {
+              "en": {
+                "language": "en",
+                "value": "Laurium"
+              }
+            }
+          }
+        },
+        "success": 1
+      }
+    },
+    {
+      "url": "https://www.wikidata.org/w/api.php?action=wbgetentities&sites=enwiki&titles=Themistocles&normalize=1&props=claims%7Clabels&languages=en&format=json&origin=*",
+      "status": 200,
+      "body": {
+        "entities": {
+          "Q179552": {
+            "type": "item",
+            "id": "Q179552",
+            "labels": {
+              "en": {
+                "language": "en",
+                "value": "Themistocles"
+              }
+            },
+            "claims": {
+              "P31": [
+                {
+                  "mainsnak": {
+                    "snaktype": "value",
+                    "property": "P31",
+                    "hash": "ad7d38a03cdd40cdc373de0dc4e7b7fcbccb31d9",
+                    "datavalue": {
+                      "value": {
+                        "entity-type": "item",
+                        "numeric-id": 5,
+                        "id": "Q5"
+                      },
+                      "type": "wikibase-entityid"
+                    },
+                    "datatype": "wikibase-item"
+                  },
+                  "type": "statement",
+                  "id": "Q179552$0B3AEE2F-5053-4659-BF3D-80E4FDED2006",
+                  "rank": "normal",
+                  "references": [
+                    {
+                      "hash": "288ab581e7d2d02995a26dfa8b091d96e78457fc",
+                      "snaks": {
+                        "P143": [
+                          {
+                            "snaktype": "value",
+                            "property": "P143",
+                            "hash": "6a164248fc96bfa583bbb495cb63ae6401ec203c",
+                            "datavalue": {
+                              "value": {
+                                "entity-type": "item",
+                                "numeric-id": 206855,
+                                "id": "Q206855"
+                              },
+                              "type": "wikibase-entityid"
+                            },
+                            "datatype": "wikibase-item"
+                          }
+                        ]
+                      },
+                      "snaks-order": [
+                        "P143"
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "P570": [
+                {
+                  "mainsnak": {
+                    "snaktype": "value",
+                    "property": "P570",
+                    "hash": "ecb128cefe7aba4ae65bad6dc5e22172b3fc2105",
+                    "datavalue": {
+                      "value": {
+                        "time": "-0459-01-01T00:00:00Z",
+                        "timezone": 0,
+                        "before": 0,
+                        "after": 0,
+                        "precision": 9,
+                        "calendarmodel": "http://www.wikidata.org/entity/Q1985786"
+                      },
+                      "type": "time"
+                    },
+                    "datatype": "time"
+                  },
+                  "type": "statement",
+                  "id": "Q179552$CF2822F3-D70D-490F-88AE-C02C0AF28488",
+                  "rank": "normal",
+                  "references": [
+                    {
+                      "hash": "288ab581e7d2d02995a26dfa8b091d96e78457fc",
+                      "snaks": {
+                        "P143": [
+                          {
+                            "snaktype": "value",
+                            "property": "P143",
+                            "hash": "6a164248fc96bfa583bbb495cb63ae6401ec203c",
+                            "datavalue": {
+                              "value": {
+                                "entity-type": "item",
+                                "numeric-id": 206855,
+                                "id": "Q206855"
+                              },
+                              "type": "wikibase-entityid"
+                            },
+                            "datatype": "wikibase-item"
+                          }
+                        ]
+                      },
+                      "snaks-order": [
+                        "P143"
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "P18": [
+                {
+                  "mainsnak": {
+                    "snaktype": "value",
+                    "property": "P18",
+                    "hash": "c2f0381afcb846e8092d776e79f1decde3b04bbd",
+                    "datavalue": {
+                      "value": "Illustrerad Verldshistoria band I Ill 116.png",
+                      "type": "string"
+                    },
+                    "datatype": "commonsMedia"
+                  },
+                  "type": "statement",
+                  "qualifiers": {
+                    "P2096": [
+                      {
+                        "snaktype": "value",
+                        "property": "P2096",
+                        "hash": "986843030216b279b0e184fc6e66401451dc98b7",
+                        "datavalue": {
+                          "value": {
+                            "text": "Illustrazione di un'erma raffigurante Temistocle",
+                            "language": "it"
+                          },
+                          "type": "monolingualtext"
+                        },
+                        "datatype": "monolingualtext"
+                      }
+                    ]
+                  },
+                  "qualifiers-order": [
+                    "P2096"
+                  ],
+                  "id": "Q179552$8F1B7095-488F-4877-ACC0-1D9156D740AD",
+                  "rank": "normal",
+                  "references": [
+                    {
+                      "hash": "288ab581e7d2d02995a26dfa8b091d96e78457fc",
+                      "snaks": {
+                        "P143": [
+                          {
+                            "snaktype": "value",
+                            "property": "P143",
+                            "hash": "6a164248fc96bfa583bbb495cb63ae6401ec203c",
+                            "datavalue": {
+                              "value": {
+                                "entity-type": "item",
+                                "numeric-id": 206855,
+                                "id": "Q206855"
+                              },
+                              "type": "wikibase-entityid"
+                            },
+                            "datatype": "wikibase-item"
+                          }
+                        ]
+                      },
+                      "snaks-order": [
+                        "P143"
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "P569": [
+                {
+                  "mainsnak": {
+                    "snaktype": "value",
+                    "property": "P569",
+                    "hash": "3ab19761d2022a166714e81fdc582c8a9c85fa73",
+                    "datavalue": {
+                      "value": {
+                        "time": "-0524-01-01T00:00:00Z",
+                        "timezone": 0,
+                        "before": 0,
+                        "after": 0,
+                        "precision": 9,
+                        "calendarmodel": "http://www.wikidata.org/entity/Q1985727"
+                      },
+                      "type": "time"
+                    },
+                    "datatype": "time"
+                  },
+                  "type": "statement",
+                  "qualifiers": {
+                    "P31": [
+                      {
+                        "snaktype": "value",
+                        "property": "P31",
+                        "hash": "d5ac6d02e7a8948b72184d9e39cf10acbc5e61ed",
+                        "datavalue": {
+                          "value": {
+                            "entity-type": "item",
+                            "numeric-id": 26961029,
+                            "id": "Q26961029"
+                          },
+                          "type": "wikibase-entityid"
+                        },
+                        "datatype": "wikibase-item"
+                      }
+                    ]
+                  },
+                  "qualifiers-order": [
+                    "P31"
+                  ],
+                  "id": "Q179552$0D318181-F3F5-42B9-9DD0-D6F79B417B5D",
+                  "rank": "normal",
+                  "references": [
+                    {
+                      "hash": "288ab581e7d2d02995a26dfa8b091d96e78457fc",
+                      "snaks": {
+                        "P143": [
+                          {
+                            "snaktype": "value",
+                            "property": "P143",
+                            "hash": "6a164248fc96bfa583bbb495cb63ae6401ec203c",
+                            "datavalue": {
+                              "value": {
+                                "entity-type": "item",
+                                "numeric-id": 206855,
+                                "id": "Q206855"
+                              },
+                              "type": "wikibase-entityid"
+                            },
+                            "datatype": "wikibase-item"
+                          }
+                        ]
+                      },
+                      "snaks-order": [
+                        "P143"
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "P20": [
+                {
+                  "mainsnak": {
+                    "snaktype": "value",
+                    "property": "P20",
+                    "hash": "846642b69f7d9daec2fa01c3f3e5b19520f2092f",
+                    "datavalue": {
+                      "value": {
+                        "entity-type": "item",
+                        "numeric-id": 1432674,
+                        "id": "Q1432674"
+                      },
+                      "type": "wikibase-entityid"
+                    },
+                    "datatype": "wikibase-item"
+                  },
+                  "type": "statement",
+                  "id": "Q179552$02B5E488-9846-4B47-B0CF-9CECE3D0DEAC",
+                  "rank": "normal",
+                  "references": [
+                    {
+                      "hash": "281f2dc0391049315d95a26f8ff07415bc60d0e1",
+                      "snaks": {
+                        "P854": [
+                          {
+                            "snaktype": "value",
+                            "property": "P854",
+                            "hash": "9b954df0360452907abaec299d6abde2617de209",
+                            "datavalue": {
+                              "value": "http://earlyworldhistory.blogspot.com/2012/01/themistocles.html",
+                              "type": "string"
+                            },
+                            "datatype": "url"
+                          }
+                        ]
+                      },
+                      "snaks-order": [
+                        "P854"
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "P19": [
+                {
+                  "mainsnak": {
+                    "snaktype": "value",
+                    "property": "P19",
+                    "hash": "75fdea08395c1bc339b2b12d02bbbb92808f4eb7",
+                    "datavalue": {
+                      "value": {
+                        "entity-type": "item",
+                        "numeric-id": 1524,
+                        "id": "Q1524"
+                      },
+                      "type": "wikibase-entityid"
+                    },
+                    "datatype": "wikibase-item"
+                  },
+                  "type": "statement",
+                  "id": "Q179552$6CB57A26-183D-4D28-A05F-DEE03089E07D",
+                  "rank": "normal",
+                  "references": [
+                    {
+                      "hash": "267f88d1e6792add47f71150e6647e77ce0e2e54",
+                      "snaks": {
+                        "P854": [
+                          {
+                            "snaktype": "value",
+                            "property": "P854",
+                            "hash": "70cb3f1ef2eb72b6c3e62915a7c443bab235e341",
+                            "datavalue": {
+                              "value": "http://www.nytimes.com/books/98/10/11/reviews/981011.11griffit.html",
+                              "type": "string"
+                            },
+                            "datatype": "url"
+                          }
+                        ]
+                      },
+                      "snaks-order": [
+                        "P854"
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        },
+        "success": 1
+      }
+    },
+    {
+      "url": "https://api.anthropic.com/v1/messages?beta=true",
+      "body": {
+        "id": "msg_hand_laurion",
+        "type": "message",
+        "role": "assistant",
+        "model": "claude-opus-5-5",
+        "content": [
+          {
+            "type": "tool_use",
+            "id": "toolu_1",
+            "name": "propose_from_highlight",
+            "input": {
+              "lanes": [
+                {
+                  "value": "economy",
+                  "quote": "The silver mines of Laurion contributed significantly to the development of Athens"
+                },
+                {
+                  "value": "war",
+                  "quote": "used the proceeds to build a massive fleet"
+                }
+              ],
+              "entries": [
+                {
+                  "ref": "e1",
+                  "title": "Laurion silver pays for the Athenian fleet",
+                  "kind": "event",
+                  "start": "5th century BCE",
+                  "end": "",
+                  "place": "Laurion",
+                  "category": "society",
+                  "quote": "the Athenians learned to prospect, treat, and refine the ore and used the proceeds to build a massive fleet",
+                  "why": "How Athens turned its silver into sea power."
+                }
+              ],
+              "connections": [
+                {
+                  "from": "i_themistocles",
+                  "to": "e1",
+                  "type": "caused",
+                  "effect": "instigated",
+                  "quote": "at the instigation of Themistocles"
+                }
+              ]
+            }
+          }
+        ],
+        "stop_reason": "tool_use",
+        "stop_sequence": null,
+        "usage": {
+          "input_tokens": 9000,
+          "output_tokens": 300
+        }
+      }
+    },
+    {
+      "url": "https://en.wikipedia.org/w/api.php?action=query&generator=search&gsrsearch=Laurion&gsrlimit=8&gsrnamespace=0&prop=coordinates%7Cdescription&coprimary=primary&format=json&formatversion=2&origin=*",
+      "status": 200,
+      "body": {
+        "batchcomplete": true,
+        "continue": {
+          "gsroffset": 8,
+          "continue": "gsroffset||"
+        },
+        "query": {
+          "pages": [
+            {
+              "pageid": 17747,
+              "ns": 0,
+              "title": "Lead",
+              "index": 7,
+              "description": "Chemical element with atomic number 82 (Pb)",
+              "descriptionsource": "local"
+            },
+            {
+              "pageid": 231343,
+              "ns": 0,
+              "title": "Lavrio",
+              "index": 2,
+              "coordinates": [
+                {
+                  "lat": 37.7,
+                  "lon": 24.05,
+                  "primary": true,
+                  "globe": "earth"
+                }
+              ],
+              "description": "Town in southeastern Attica, Greece",
+              "descriptionsource": "local"
+            },
+            {
+              "pageid": 302613,
+              "ns": 0,
+              "title": "Attica",
+              "index": 5,
+              "description": "Historical region of Greece, including the city of Athens",
+              "descriptionsource": "local"
+            },
+            {
+              "pageid": 2246565,
+              "ns": 0,
+              "title": "Slaves on Dope",
+              "index": 6,
+              "description": "Canadian nu metal band",
+              "descriptionsource": "local"
+            },
+            {
+              "pageid": 40138782,
+              "ns": 0,
+              "title": "Argyroeides laurion",
+              "index": 4,
+              "description": "Panamanian species of moth",
+              "descriptionsource": "local"
+            },
+            {
+              "pageid": 43499642,
+              "ns": 0,
+              "title": "Dave Laurion",
+              "index": 3,
+              "description": "American ice hockey player and coach",
+              "descriptionsource": "local"
+            },
+            {
+              "pageid": 44970495,
+              "ns": 0,
+              "title": "Neochalcosia remota",
+              "index": 8,
+              "description": "Species of moth",
+              "descriptionsource": "local"
+            },
+            {
+              "pageid": 45270158,
+              "ns": 0,
+              "title": "Mines of Laurion",
+              "index": 1,
+              "description": "Mine in Greece",
+              "descriptionsource": "local"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

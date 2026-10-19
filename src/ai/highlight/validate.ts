@@ -1,5 +1,5 @@
 import { findAnchor, sectionAt, type ArticleText } from '../../model/anchor';
-import { fromAstronomical, parseHistDate } from '../../model/dates';
+import { fromAstronomical, parseCentury, parseHistDate } from '../../model/dates';
 import { RELATION_TYPES } from '../../model/doc';
 import { pageKey } from '../../model/passage';
 import { LANES, type Highlight, type HistDate, type ItemKind, type Lane, type RelationType } from '../../model/types';
@@ -85,6 +85,22 @@ export function unstatedNumbers(text: string, scope: Scope): string[] {
   return [...numbersIn(text)].filter((n) => !stated.has(n));
 }
 
+/** A date Claude wrote: a day, month or year, or a century ("5th century BCE", read as its middle, start or end). */
+interface ReadDate { date: HistDate; century?: number }
+function readDate(text: string, part: 'start' | 'end' | 'middle'): ReadDate | null {
+  const d = parseHistDate(text);
+  if (d) return { date: d };
+  const c = parseCentury(text);
+  return c ? { date: c[part], century: c.n } : null;
+}
+
+/** The passage states the date: its year as a number, or its century ("in the 5th century BC"). */
+function dateStated(r: ReadDate, scope: Scope): boolean {
+  const text = normalize(`${scope.highlight}\n${scope.section}`);
+  if (r.century) return new RegExp(`\\b${r.century}(st|nd|rd|th) century`).test(text);
+  return numbersIn(text).has(String(fromAstronomical(r.date.y).year));
+}
+
 const isObj = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v);
 const str = (v: unknown) => (typeof v === 'string' ? v.trim() : '');
 const KINDS: ItemKind[] = ['event', 'span', 'person'];
@@ -120,19 +136,19 @@ export function checkHighlightAnswer(input: unknown, ctx: HighlightContext): Che
     const name = `“${title}”`;
     if (titles.has(normalize(title))) { dropped.push(`${name}: you already have it, or it has its own article.`); continue; }
     if (!quoteHolds(quote, scope)) { dropped.push(`${name}: the words it rests on aren’t in the passage.`); continue; }
-    const start = parseHistDate(str(raw.start));
     const endText = str(raw.end);
-    const end = endText ? parseHistDate(endText) : undefined;
-    if (!start || end === null) { dropped.push(`${name}: its date (“${[str(raw.start), endText].filter(Boolean).join('–')}”) isn’t one Chronicle can read.`); continue; }
-    const years = [start, ...(end ? [end] : [])].map((d) => String(fromAstronomical(d.y).year));
-    const stated = numbersIn(`${scope.highlight}\n${scope.section}`);
-    if (years.some((y) => !stated.has(y))) { dropped.push(`${name}: the passage doesn’t give its date.`); continue; }
+    let kind = KINDS.includes(str(raw.kind) as ItemKind) ? (str(raw.kind) as ItemKind) : 'event';
+    if (kind === 'span' && !endText) kind = 'event';
+    const startRead = readDate(str(raw.start), kind === 'event' ? 'middle' : 'start');
+    const endRead = endText ? readDate(endText, 'end') : undefined;
+    if (!startRead || endRead === null) { dropped.push(`${name}: its date (“${[str(raw.start), endText].filter(Boolean).join('–')}”) isn’t one Chronicle can read.`); continue; }
+    const start = startRead.date;
+    const end = endRead?.date;
+    if ([startRead, ...(endRead ? [endRead] : [])].some((r) => !dateStated(r, scope))) { dropped.push(`${name}: the passage doesn’t give its date.`); continue; }
     if (end && end.y < start.y) { dropped.push(`${name}: it ends before it starts.`); continue; }
     const extra = unstatedNumbers(title, scope);
     if (extra.length) { dropped.push(`${name}: the passage doesn’t give the number ${extra[0]}.`); continue; }
     if (entries.length >= max) { dropped.push(`${name}: more than ${max} entries from one highlight.`); continue; }
-    let kind = KINDS.includes(str(raw.kind) as ItemKind) ? (str(raw.kind) as ItemKind) : 'event';
-    if (kind === 'span' && !end) kind = 'event';
     const cat = str(raw.category);
     const why = str(raw.why);
     const place = str(raw.place);

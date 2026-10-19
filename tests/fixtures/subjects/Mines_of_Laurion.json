@@ -1,0 +1,103 @@
+{
+ "key": "Mines_of_Laurion",
+ "title": "Mines of Laurion",
+ "entity": {
+  "entities": {
+   "Q3314937": {
+    "id": "Q3314937",
+    "labels": {
+     "en": {
+      "language": "en",
+      "value": "Mines of Laurium"
+     }
+    },
+    "claims": {
+     "P31": [
+      {
+       "mainsnak": {
+        "snaktype": "value",
+        "property": "P31",
+        "hash": "65e0ae2c2cec9ad8b1c2ab6f09d33db2bc8c2bdb",
+        "datavalue": {
+         "value": {
+          "entity-type": "item",
+          "numeric-id": 820477,
+          "id": "Q820477"
+         },
+         "type": "wikibase-entityid"
+        },
+        "datatype": "wikibase-item"
+       },
+       "rank": "normal"
+      }
+     ],
+     "P625": [
+      {
+       "mainsnak": {
+        "snaktype": "value",
+        "property": "P625",
+        "hash": "09327c0a70024a05116a0bc7d41c24e56ea1fab1",
+        "datavalue": {
+         "value": {
+          "latitude": 37.712252,
+          "longitude": 24.039891,
+          "altitude": null,
+          "precision": 0.000001,
+          "globe": "http://www.wikidata.org/entity/Q2"
+         },
+         "type": "globecoordinate"
+        },
+        "datatype": "globe-coordinate"
+       },
+       "rank": "normal"
+      }
+     ],
+     "P276": [
+      {
+       "mainsnak": {
+        "snaktype": "value",
+        "property": "P276",
+        "hash": "08a01ba58b07eb24715491cbe8bed9ce4dd2d5e7",
+        "datavalue": {
+         "value": {
+          "entity-type": "item",
+          "numeric-id": 985449,
+          "id": "Q985449"
+         },
+         "type": "wikibase-entityid"
+        },
+        "datatype": "wikibase-item"
+       },
+       "rank": "normal"
+      }
+     ]
+    }
+   }
+  }
+ },
+ "parents": {
+  "Q820477": [
+   "Q4380225"
+  ],
+  "Q4380225": [
+   "Q17350442"
+  ],
+  "Q17350442": [
+   "Q618123",
+   "Q13226383"
+  ],
+  "Q618123": [
+   "Q27096213",
+   "Q53617407"
+  ],
+  "Q13226383": [
+   "Q121359",
+   "Q618123",
+   "Q8205328",
+   "Q27096235"
+  ]
+ },
+ "labels": {
+  "Q985449": "Laurium"
+ }
+}

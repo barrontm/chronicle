@@ -80,15 +80,15 @@ function Workspace() {
   // Claude's drafts from highlights; the map shows the open highlight's.
   const highlightDrafts = useHighlightDraftStore(doc.highlights ?? NO_HIGHLIGHTS);
   const shownDraft = highlightDrafts.shown ? highlightDrafts.sets[highlightDrafts.shown] : null;
-  const { ghost } = highlightDrafts;
+  const { ghosts } = highlightDrafts;
   const draftItems = useMemo(() => {
     const drafted = [...pendingWithPlaces(aiDraft), ...pendingWithPlaces(shownDraft)].filter((i) => !doc.items.some((x) => x.id === i.id));
-    // What the open highlight could become, where it was: a ghost pin until Bob adds it.
-    const candidate: TimelineItem[] = ghost && !doc.items.some((i) => i.wikidataId === ghost.qid)
-      ? [{ id: `ghost-${ghost.qid}`, kind: 'event', title: ghost.title, start: { y: 0 }, categoryId: '', places: [{ lat: ghost.lat, lon: ghost.lon }], updatedAt: 0 }]
-      : [];
-    return [...drafted, ...candidate];
-  }, [aiDraft, shownDraft, doc.items, ghost]);
+    // What the open highlight could become, where each was: a ghost pin until Bob adds it.
+    const candidates: TimelineItem[] = ghosts
+      .filter((g) => !doc.items.some((i) => i.wikidataId === g.qid))
+      .map((g) => ({ id: `ghost-${g.qid}`, kind: 'event', title: g.title, start: { y: 0 }, categoryId: '', places: [{ lat: g.lat, lon: g.lon }], updatedAt: 0 }));
+    return [...drafted, ...candidates];
+  }, [aiDraft, shownDraft, doc.items, ghosts]);
   const timelineDrafts = useMemo(() => pendingOnTimeline(doc, [aiDraft, shownDraft]), [doc, aiDraft, shownDraft]);
   // The last entry Bob dragged to new dates, so he can take it back.
   const [moved, setMoved] = useState<{ before: TimelineItem; title: string; when: string } | null>(null);

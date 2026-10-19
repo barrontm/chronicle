@@ -349,7 +349,7 @@ test('the capture tray keeps a highlight, puts it in two lanes, and adds the art
   const tray = page.getByTestId('capture-tray');
   await expect(tray.getByRole('blockquote')).toHaveText(`“${quote}”`);
   await expect(tray).toContainText('Becomes · the article’s subject');
-  await expect(tray.getByRole('radio', { name: /Pericles/ })).toContainText('This article · Person');
+  await expect(tray.getByRole('checkbox', { name: /Pericles/ })).toContainText('This article · Person');
   await expect(tray).toContainText('494–429 BCE');
 
   // Lanes recolor the mark in the first one's pigment; keeping it closes the card and leaves a kept mark.
@@ -385,7 +385,7 @@ test('the capture tray keeps a highlight, puts it in two lanes, and adds the art
   await expect(entry.getByTestId('excerpt')).toContainText('Politics and law, War');
   // The card now says it's on the entry; closing it leaves an added mark.
   if (phone) await page.getByRole('button', { name: 'Close panel' }).click(); // the entry's sheet covers the reader
-  await expect(tray.getByRole('radio', { name: /Pericles/ })).toContainText('Linked');
+  await expect(tray.getByRole('checkbox', { name: /Pericles/ })).toContainText('Linked');
   await tray.getByRole('button', { name: 'Done' }).click();
   await expect.poll(() => marks(page)).toEqual([`chronicle-mark-lapis-added: ${quote}`]);
   await expect(tray.getByRole('status')).toHaveText('1 highlight in this article · 1 on your map and timeline');
@@ -424,26 +424,27 @@ test('a highlight becomes a page its passage links: pick the war, add it, and se
   };
   await highlight();
 
-  // The article's subject first, then the pages the passage links; the war is chosen first.
+  // The article's subject first, then the pages the passage links; the war is ticked first.
   const tray = page.getByTestId('capture-tray');
   await expect(tray.getByRole('blockquote')).toHaveText(`“${quote}”`);
-  await expect(tray).toContainText('Becomes · 3 in this passage, pick one');
-  const radios = tray.getByRole('radio');
-  await expect(radios).toHaveCount(3);
-  await expect(radios.nth(0)).toContainText('PericlesThis article · Person');
-  await expect(radios.nth(1)).toContainText('Peloponnesian WarWar');
-  await expect(radios.nth(2)).toContainText('SpartaPolity');
-  const war = tray.getByRole('radio', { name: /Peloponnesian War/ });
+  await expect(tray).toContainText('Becomes · 3 in this passage, tick any');
+  const ticks = tray.getByRole('group', { name: 'Becomes' }).getByRole('checkbox');
+  await expect(ticks).toHaveCount(3);
+  await expect(ticks.nth(0)).toContainText('PericlesThis article · Person');
+  await expect(ticks.nth(1)).toContainText('Peloponnesian WarWar');
+  await expect(ticks.nth(2)).toContainText('SpartaPolity · can’t be added yet');
+  const war = tray.getByRole('checkbox', { name: /Peloponnesian War/ });
   await expect(war).toHaveAttribute('aria-checked', 'true');
+  await expect(ticks.nth(0)).toHaveAttribute('aria-checked', 'false');
   await expect(tray).toContainText('431 BCE – 25 Apr 404 BCE');
 
-  // Sparta is a polity: it can't be added from here, and the card says why.
-  await tray.getByRole('radio', { name: /Sparta/ }).click();
+  // Sparta is a polity: it can't be ticked from here, and the card says why.
+  const sparta = tray.getByRole('checkbox', { name: /Sparta/ });
+  await sparta.click();
   await expect(tray).toContainText('Polities come from the territory tools');
-  await expect(tray.getByRole('button', { name: 'Add to map and timeline' })).toHaveCount(0);
+  await expect(sparta).toHaveAttribute('aria-checked', 'false');
 
-  // Back to the war: it's added, quoting the highlight and citing the article Bob read.
-  await war.click();
+  // The war alone is ticked: it's added through the editor, quoting the highlight and citing the article Bob read.
   await tray.getByRole('button', { name: 'Add to map and timeline' }).click();
   const editor = page.getByTestId('item-editor');
   await expect(editor.getByLabel('Title')).toHaveValue('Peloponnesian War');
@@ -464,7 +465,7 @@ test('a highlight becomes a page its passage links: pick the war, add it, and se
   const at = await findText(page, 'took Athens');
   if (phone) await page.touchscreen.tap(at.x, at.y);
   else await page.mouse.click(at.x, at.y);
-  await expect(tray.getByRole('radio', { name: /Sparta/ })).toContainText('Polity');
+  await expect(tray.getByRole('checkbox', { name: /Sparta/ })).toContainText('Polity');
   await expect(war).toHaveAttribute('aria-checked', 'true');
   await expect(war).toContainText('Linked');
   await page.context().setOffline(false);
@@ -473,6 +474,117 @@ test('a highlight becomes a page its passage links: pick the war, add it, and se
   await page.getByRole('button', { name: 'Library' }).click();
   await page.getByRole('tab', { name: /Highlights/ }).click();
   await expect(page.getByTestId('highlight-group')).toContainText('on Peloponnesian War');
+});
+
+test('Bob’s Laurion passage becomes several records: two candidates ticked, one filled in by hand, and Claude’s event pinned at the mines', async ({ page }) => {
+  test.slow();
+  const passage = 'The silver mines of Laurion contributed significantly to the development of Athens in the 5th century BC, when the Athenians learned to prospect, treat, and refine the ore and used the proceeds to build a massive fleet, at the instigation of Themistocles.';
+  await mockArticles(page);
+  Object.assign(QIDS, { Classical_Athens: 'Q844930', Mines_of_Laurion: 'Q3314937', Themistocles: 'Q179552' });
+  await mockSummaries(page);
+  await page.route('https://en.wikipedia.org/w/rest.php/v1/search/page**', (route) =>
+    route.fulfill({ headers: cors, json: { pages: [{ key: 'Classical_Athens', title: 'Classical Athens', description: 'Athens in the 5th and 4th centuries BC', thumbnail: null }] } }));
+  const linked = passage
+    .replace('mines of Laurion', '<a rel="mw:WikiLink" href="./Mines_of_Laurion" title="Mines of Laurion">mines of Laurion</a>')
+    .replace(/Themistocles\.$/, '<a rel="mw:WikiLink" href="./Themistocles" title="Themistocles">Themistocles</a>.');
+  await page.route('https://en.wikipedia.org/w/rest.php/v1/page/Classical_Athens/html', (route) => route.fulfill({
+    headers: { ...cors, 'Content-Type': 'text/html' },
+    body: '<!DOCTYPE html><html about="https://en.wikipedia.org/wiki/Special:Redirect/revision/42"><head><title>Classical Athens</title></head><body>' +
+      '<section data-mw-section-id="0"><p>Classical Athens was the city in its golden age.</p></section>' +
+      `<section data-mw-section-id="1"><h2 id="Athenian_democracy">Athenian democracy</h2><p>Most offices were filled by lot.</p><p>${linked}</p></section></body></html>`,
+  }));
+  // Claude's answer and its place lookup replayed from a recording; Bob's own place lookup answers the same.
+  const { replayer } = await import('../tests/ai-evals/replay');
+  const rec = JSON.parse(readFileSync(new URL('../tests/ai-evals/highlight/recordings/handmade-laurion.json', import.meta.url), 'utf8'));
+  const next = replayer(rec);
+  const lavrio = rec.exchanges.find((e: { url: string }) => e.url.includes('generator=search')).body;
+  const ai = { ...cors, 'Access-Control-Allow-Headers': '*', 'Access-Control-Allow-Methods': '*' };
+  for (const pattern of ['https://api.anthropic.com/**', 'https://en.wikipedia.org/w/api.php**']) {
+    await page.route(pattern, (route) => {
+      const req = route.request();
+      if (req.method() === 'OPTIONS') return route.fulfill({ status: 204, headers: ai });
+      const e = next(req.url());
+      if (e) return route.fulfill({ status: e.status ?? 200, headers: ai, json: e.body });
+      return req.url().includes('generator=search') ? route.fulfill({ headers: ai, json: lavrio }) : route.fulfill({ status: 404, headers: ai, body: 'not recorded' });
+    });
+  }
+  await page.addInitScript(() => localStorage.setItem('chronicle.anthropicKey', 'sk-ant-test-key-1234'));
+  await open(page);
+  await search(page, 'classical athens', 'Classical Athens');
+  await expect(page.getByTestId('reader').getByText('contributed significantly')).toBeVisible();
+  await expect(page.locator('[data-testid=map][data-ready]')).toBeVisible();
+
+  await page.evaluate(() => {
+    const p = [...document.querySelectorAll('.reader-text p')].find((x) => x.textContent!.includes('Laurion'))!;
+    const r = document.createRange();
+    r.selectNodeContents(p);
+    getSelection()!.removeAllRanges();
+    getSelection()!.addRange(r);
+  });
+  await expect(page.getByRole('button', { name: 'Highlight' })).toBeVisible();
+  await page.keyboard.press('h');
+  const tray = page.getByTestId('capture-tray');
+  await expect(tray.getByRole('blockquote')).toContainText('The silver mines of Laurion');
+
+  // The article is a polity, so nothing is ticked at first; the mines (a place) and Themistocles can be.
+  const becomes = tray.getByRole('group', { name: 'Becomes' });
+  await expect(becomes.getByRole('checkbox', { name: /Classical Athens/ })).toContainText('This article · Polity · can’t be added yet');
+  // Wikidata calls the mines "Mines of Laurium", Wikipedia "Mines of Laurion".
+  const mines = becomes.getByRole('checkbox', { name: /Mines of Lauri/ });
+  const themistocles = becomes.getByRole('checkbox', { name: /Themistocles/ });
+  await expect(mines).toContainText('Place');
+  await expect(mines).toHaveAttribute('aria-checked', 'false');
+  await expect(themistocles).toHaveAttribute('aria-checked', 'false');
+  await expect(tray.getByRole('button', { name: 'Keep the highlight' })).toBeVisible();
+
+  // Ticking both: each shows its facts, the mines' ghost is on the map, and one button adds both.
+  await mines.click();
+  await themistocles.click();
+  await expect(mines).toHaveAttribute('aria-checked', 'true');
+  await expect(themistocles).toHaveAttribute('aria-checked', 'true');
+  await expect(page.locator('.map-label.draft-pin', { hasText: 'Mines of Laurium' })).toBeVisible();
+  await tray.getByRole('button', { name: 'Add 2 to map and timeline' }).click();
+  const done = tray.locator('.tray-done');
+  await expect(done).toContainText('Added Mines of Laurion and Themistocles to your map and timeline.');
+  await expect(mines).toContainText('Linked');
+  await expect(themistocles).toContainText('Linked');
+  // Undo takes both back, still ticked; adding again puts them back.
+  await done.getByRole('button', { name: 'Undo' }).click();
+  await expect(mines).not.toContainText('Linked');
+  await expect(mines).toHaveAttribute('aria-checked', 'true');
+  await expect.poll(() => savedItem(page, 'Themistocles')).toBeUndefined();
+  await tray.getByRole('button', { name: 'Add 2 to map and timeline' }).click();
+  await expect(themistocles).toContainText('Linked');
+  await expect.poll(() => savedItem(page, 'Mines of Laurion')).toMatchObject({ subject: 'place', wikidataId: 'Q3314937' });
+
+  // Something else…: Bob fills in the event himself, in Economy, at Laurion.
+  await becomes.getByRole('button', { name: /Something else/ }).click();
+  const own = tray.getByRole('form', { name: 'Something else' });
+  await own.getByLabel('Title').fill('Laurion silver pays for the fleet');
+  await own.getByLabel('When').fill('483 BCE');
+  await own.getByLabel('Place').fill('Laurion');
+  await own.getByRole('group', { name: 'Its lanes' }).getByRole('button', { name: 'Economy' }).click();
+  await own.getByRole('button', { name: 'Add to map and timeline' }).click();
+  await expect(done).toContainText('Added Laurion silver pays for the fleet to your map and timeline. Pinned at Lavrio.');
+  await expect(becomes.getByRole('checkbox', { name: /Laurion silver pays for the fleet/ })).toContainText('Linked');
+  await expect.poll(() => savedItem(page, 'Laurion silver pays for the fleet')).toMatchObject({
+    kind: 'event', start: { y: -482 }, lanes: ['economy'], places: [{ name: 'Lavrio', lat: 37.7, lon: 24.05, role: 'site' }],
+  });
+  await expect(page.locator('.map-label.pin', { hasText: 'Laurion silver pays' })).toBeVisible();
+
+  // Claude reads the passage as Economy and pins its event where the silver was mined.
+  await tray.getByRole('button', { name: 'Ask Claude' }).click();
+  const drafted = tray.getByTestId('draft-entry');
+  await expect(drafted).toContainText('Laurion silver pays for the Athenian fleet');
+  await expect(drafted).toContainText('Event · c. 450 BCE · Lavrio');
+  await expect(tray).toContainText('Claude suggests Economy, War');
+  await tray.getByRole('button', { name: 'Discard the rest' }).click();
+
+  // All three are under the highlight in Library.
+  await tray.getByRole('button', { name: 'Done' }).click();
+  await page.getByRole('button', { name: 'Library' }).click();
+  await page.getByRole('tab', { name: /Highlights/ }).click();
+  await expect(page.getByTestId('highlight-group')).toContainText('on Mines of Laurion, Themistocles, Laurion silver pays for the fleet');
 });
 
 test('Claude drafts from the tribute passage: a suggested lane, an event on the map and a "funded" connection, accepted from the tray', async ({ page }) => {
@@ -614,7 +726,7 @@ test('adding a battle connects it to the war already in Chronicle, with the high
   }
   const tray = page.getByTestId('capture-tray');
   await expect(tray.getByRole('blockquote')).toHaveText(`“${quote}”`);
-  await expect(tray.getByRole('radio', { name: /Battle of Salamis/ })).toContainText('This article · Battle');
+  await expect(tray.getByRole('checkbox', { name: /Battle of Salamis/ })).toContainText('This article · Battle');
   // Not in Chronicle yet: a dashed ghost on the map where it was fought.
   if (!phone) await expect(page.locator('.map-label.draft-pin', { hasText: 'Battle of Salamis' })).toBeVisible();
   await tray.getByRole('button', { name: 'Add to map and timeline' }).click();
@@ -673,7 +785,7 @@ test('a place and a battle draw as what they are: Athens on its ground line with
     await findText(page, words, true);
     await expect(page.getByRole('button', { name: 'Highlight' })).toBeVisible();
     await page.keyboard.press('h');
-    await expect(tray.getByRole('radio', { name: new RegExp(title) })).toContainText(`This article · ${kind}`);
+    await expect(tray.getByRole('checkbox', { name: new RegExp(title) })).toContainText(`This article · ${kind}`);
     await tray.getByRole('button', { name: 'Add to map and timeline' }).click();
     await expect(editor.getByLabel('Title')).toHaveValue(title);
   };

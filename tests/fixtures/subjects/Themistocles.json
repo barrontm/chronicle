@@ -1,0 +1,162 @@
+{
+ "key": "Themistocles",
+ "title": "Themistocles",
+ "entity": {
+  "entities": {
+   "Q179552": {
+    "id": "Q179552",
+    "labels": {
+     "en": {
+      "language": "en",
+      "value": "Themistocles"
+     }
+    },
+    "claims": {
+     "P31": [
+      {
+       "mainsnak": {
+        "snaktype": "value",
+        "property": "P31",
+        "hash": "ad7d38a03cdd40cdc373de0dc4e7b7fcbccb31d9",
+        "datavalue": {
+         "value": {
+          "entity-type": "item",
+          "numeric-id": 5,
+          "id": "Q5"
+         },
+         "type": "wikibase-entityid"
+        },
+        "datatype": "wikibase-item"
+       },
+       "rank": "normal"
+      }
+     ],
+     "P569": [
+      {
+       "mainsnak": {
+        "snaktype": "value",
+        "property": "P569",
+        "hash": "3ab19761d2022a166714e81fdc582c8a9c85fa73",
+        "datavalue": {
+         "value": {
+          "time": "-0524-01-01T00:00:00Z",
+          "timezone": 0,
+          "before": 0,
+          "after": 0,
+          "precision": 9,
+          "calendarmodel": "http://www.wikidata.org/entity/Q1985727"
+         },
+         "type": "time"
+        },
+        "datatype": "time"
+       },
+       "rank": "normal"
+      }
+     ],
+     "P570": [
+      {
+       "mainsnak": {
+        "snaktype": "value",
+        "property": "P570",
+        "hash": "ecb128cefe7aba4ae65bad6dc5e22172b3fc2105",
+        "datavalue": {
+         "value": {
+          "time": "-0459-01-01T00:00:00Z",
+          "timezone": 0,
+          "before": 0,
+          "after": 0,
+          "precision": 9,
+          "calendarmodel": "http://www.wikidata.org/entity/Q1985786"
+         },
+         "type": "time"
+        },
+        "datatype": "time"
+       },
+       "rank": "normal"
+      }
+     ]
+    }
+   }
+  }
+ },
+ "parents": {
+  "Q5": [
+   "Q154954",
+   "Q164509",
+   "Q2250224",
+   "Q5891007"
+  ],
+  "Q154954": [
+   "Q3778211",
+   "Q5891007"
+  ],
+  "Q164509": [
+   "Q729",
+   "Q72638"
+  ],
+  "Q2250224": [
+   "Q215627",
+   "Q795052",
+   "Q141164427"
+  ],
+  "Q5891007": [
+   "Q15978631"
+  ],
+  "Q3778211": [
+   "Q106559804"
+  ],
+  "Q729": [
+   "Q36458",
+   "Q159344"
+  ],
+  "Q72638": [
+   "Q159344"
+  ],
+  "Q215627": [
+   "Q795052",
+   "Q106559804",
+   "Q141148364"
+  ],
+  "Q795052": [
+   "Q7239",
+   "Q24229398"
+  ],
+  "Q141164427": [
+   "Q24229398",
+   "Q141158817"
+  ],
+  "Q15978631": [
+   "Q171283"
+  ],
+  "Q106559804": [
+   "Q24229398"
+  ],
+  "Q36458": [
+   "Q3322575",
+   "Q112826975"
+  ],
+  "Q159344": [
+   "Q7239"
+  ],
+  "Q141148364": [
+   "Q488383"
+  ],
+  "Q7239": [
+   "Q27043948",
+   "Q28845870",
+   "Q141164427"
+  ],
+  "Q24229398": [
+   "Q488383",
+   "Q141159271"
+  ],
+  "Q141158817": [
+   "Q223557",
+   "Q141445716"
+  ],
+  "Q171283": [
+   "Q635162"
+  ]
+ },
+ "labels": {}
+}
