@@ -265,20 +265,29 @@ async function kinds(p, prefix) {
   await p.waitForTimeout(700);
   await shot(p, `${prefix}-kinds`);
 }
-// Level 0 on the Classical Greece fixture: the Eras stop, then the Classical period hovered.
+// Level 0 on the Classical Greece fixture: the Overview stop, then Classical Greece unfolded with Athens picked.
 const GREECE = fileURLToPath(new URL('../tests/fixtures/greece/classical-greece.json', import.meta.url));
-async function eras(p, prefix) {
+async function overview(p, prefix) {
   await p.getByTestId('import-input').setInputFiles(GREECE);
   if (prefix === 'phone') await p.getByTestId('reader').getByRole('button', { name: 'Map' }).click();
   await p.locator('[data-testid=timeline][data-ready]').waitFor();
-  await p.getByTestId('time-bar').getByRole('button', { name: 'Eras' }).click();
+  await p.getByTestId('time-bar').getByRole('button', { name: 'Overview' }).click();
   await p.waitForTimeout(700);
-  await shot(p, `${prefix}-eras`);
-  const band = p.locator('.tl-era[data-id=i_classical]');
-  const box = await band.boundingBox();
-  if (box) await p.mouse.move(box.x + 40, box.y + 12);
+  await shot(p, `${prefix}-overview`);
+  // Shift + wheel scrolls the bands down to Greece.
+  const tl = await p.getByTestId('timeline').boundingBox();
+  await p.mouse.move(tl.x + tl.width / 2, tl.y + tl.height / 2);
+  await p.keyboard.down('Shift');
+  await p.mouse.wheel(0, 200);
+  await p.keyboard.up('Shift');
+  await p.waitForTimeout(200);
+  await p.locator('.tl-strip[data-id="grp:g_classical_greece"]').click({ force: true });
+  await p.waitForTimeout(600);
+  const athens = await p.locator('.tl-strip[data-id="pol:t_athens"]').boundingBox();
+  if (athens) await p.mouse.click(athens.x + athens.width * 0.6, athens.y + athens.height / 2);
+  if (athens) await p.mouse.move(athens.x + athens.width * 0.6, athens.y + athens.height / 2);
   await p.waitForTimeout(300);
-  await shot(p, `${prefix}-eras-hover`);
+  await shot(p, `${prefix}-overview-group`);
 }
 // Level 1: the Classical period opened into its six lanes. With `era-zoom`, the opening itself as
 // a filmstrip of frames 50 ms apart (the page's clock is paused and stepped, so frames are exact).
@@ -287,7 +296,7 @@ async function eraLanes(p, prefix) {
   if (prefix === 'phone') await p.getByTestId('reader').getByRole('button', { name: 'Map' }).click();
   const timeline = p.locator('[data-testid=timeline][data-ready]');
   await timeline.waitFor();
-  await p.getByTestId('time-bar').getByRole('button', { name: 'Eras' }).click();
+  await p.getByTestId('time-bar').getByRole('button', { name: 'Overview' }).click();
   await p.waitForTimeout(700);
   const box = await p.locator('.tl-era[data-id=i_classical]').boundingBox();
   const film = wanted(`${prefix}-era-zoom`);
@@ -323,9 +332,9 @@ async function eraLanes(p, prefix) {
 if (any('desktop-era-lanes') || any('desktop-era-zoom')) await eraLanes(await page('desktop-era-lanes', desktop), 'desktop');
 if (any('dark-era-lanes')) await eraLanes(await page('dark-era-lanes', { ...desktop, colorScheme: 'dark' }), 'dark');
 if (any('phone-era-lanes') || any('phone-era-zoom')) await eraLanes(await page('phone-era-lanes', { viewport: { width: 412, height: 860 }, isMobile: true, hasTouch: true }), 'phone');
-if (any('desktop-eras')) await eras(await page('desktop-eras', desktop), 'desktop');
-if (any('dark-eras')) await eras(await page('dark-eras', { ...desktop, colorScheme: 'dark' }), 'dark');
-if (any('phone-eras')) await eras(await page('phone-eras', { viewport: { width: 412, height: 860 }, isMobile: true, hasTouch: true }), 'phone');
+if (any('desktop-overview')) await overview(await page('desktop-overview', desktop), 'desktop');
+if (any('dark-overview')) await overview(await page('dark-overview', { ...desktop, colorScheme: 'dark' }), 'dark');
+if (any('phone-overview')) await overview(await page('phone-overview', { viewport: { width: 412, height: 860 }, isMobile: true, hasTouch: true }), 'phone');
 
 // Tall, so every lane is in view.
 const tall = { ...desktop, viewport: { width: desktop.viewport.width, height: 1500 } };

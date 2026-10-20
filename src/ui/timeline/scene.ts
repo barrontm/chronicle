@@ -24,6 +24,14 @@ export const FONTS = {
   eraDates: '12.5px Spectral, Georgia, serif',
   tick0: '12.5px Spectral, Georgia, serif',
   tick0B: '600 12.5px Spectral, Georgia, serif',
+  // The overview: polities' names in small caps on their strips, region parents above their regions,
+  // eras' names in italic on their wash, world events' names in Spectral.
+  pol: '600 12.5px "Spectral SC", Spectral, Georgia, serif',
+  polSub: '11.5px Spectral, Georgia, serif',
+  parent: '600 11px "Spectral SC", Spectral, Georgia, serif',
+  wash: 'italic 12.5px Spectral, Georgia, serif',
+  washIn: 'italic 11px Spectral, Georgia, serif',
+  world: '500 12.5px Spectral, Georgia, serif',
   // Level 1: lane names in spaced capitals with their counts, an empty lane's note, the phone's list.
   dim: '600 11.5px "Public Sans", system-ui, sans-serif',
   dimCount: '11px "Public Sans", system-ui, sans-serif',
@@ -32,7 +40,7 @@ export const FONTS = {
 } as const;
 export type FontKey = keyof typeof FONTS;
 /** Letter spacing in px, which the font shorthand can't carry: the painter sets it and the layout measures with it. */
-export const SPACING: Partial<Record<FontKey, number>> = { era: 0.75, region: 1.7, dim: 0.7 };
+export const SPACING: Partial<Record<FontKey, number>> = { era: 0.75, region: 1.7, dim: 0.7, pol: 0.4, parent: 1.6 };
 /** Fonts drawn with old-style numerals. */
 export const OLDSTYLE = new Set<FontKey>(['eraDates', 'tick0', 'tick0B']);
 
@@ -60,8 +68,8 @@ export interface Arc extends Base { t: 5; d: string; stroke: string; sw?: number
 export interface Use extends Base { t: 6; x: number; y: number; w: number; g: SubjectKind | Diamond; color: string }
 /** Level 1's key moment: solid, or hollow with a dashed edge when its date is approximate. */
 export type Diamond = 'diamond' | 'diamond-approx';
-/** A filled path, such as a migration's bar ending in an arrow point. */
-export interface Shape extends Base { t: 7; d: string; fill: string; stroke?: string; sw?: number }
+/** A filled path, such as a migration's bar ending in an arrow point or a polity's strip. `fill: 'gilt'` is a world event's gold leaf. */
+export interface Shape extends Base { t: 7; d: string; fill: string; stroke?: string; sw?: number; dash?: boolean }
 export type Prim = Rect | Dot | Txt | Ln | Img | Arc | Use | Shape;
 
 /** Who an arrow links: influenced by, influenced, otherwise connected, or Claude's draft. */

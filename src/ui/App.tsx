@@ -3,7 +3,7 @@ import { docYearRange, presenceAt } from '../model/atYear';
 import { formatRange, toDecimalYear } from '../model/dates';
 import { applyUndo, bulkRemove, type Undo } from '../model/bulk';
 import { mergeDocs, parseDoc, serializeDoc, upsert } from '../model/doc';
-import { highlightProminence } from '../model/prominence';
+import { prominence as prominenceOf } from '../model/prominence';
 import type { HistDate, MediaRef, TimelineDoc, TimelineItem } from '../model/types';
 import type { Area } from '../data/geo';
 import type { DocStore } from '../store/store';
@@ -291,7 +291,7 @@ function Workspace() {
     else revealMap();
   };
   const categories = useMemo(() => doc.categories.filter((c) => !hidden.has(c.id)), [doc.categories, hidden]);
-  const prominence = useMemo(() => highlightProminence(doc.highlights ?? []), [doc.highlights]);
+  const prominence = useMemo(() => prominenceOf({ items: doc.items ?? [], highlights: doc.highlights ?? [], relations: doc.relations ?? [], notes: doc.notes ?? [] }), [doc.items, doc.highlights, doc.relations, doc.notes]);
   const thumbFor = useCallback((m: MediaRef) => mediaUrl(m, true), [mediaUrl]);
   const selectedId = panel?.type === 'item' ? panel.id : undefined;
 
@@ -536,6 +536,9 @@ function Workspace() {
             highlights={doc.highlights}
             picked={pickedNow}
             onPick={setPicked}
+            territories={doc.territories}
+            groups={doc.groups}
+            regionParents={doc.regionParents}
           />
           {(pickedNow.length > 0 || bulkDone) && (
             // One bar under the timeline: what's selected, and what the last bulk change did, with Undo.

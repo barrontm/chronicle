@@ -4,7 +4,8 @@ import { isDated } from '../../model/dates';
 import { parseDoc } from '../../model/doc';
 import { eraRegions } from '../../model/eras';
 import { entryLanes } from '../../model/lanes';
-import { highlightProminence } from '../../model/prominence';
+import { overview } from '../../model/overview';
+import { prominence as prominenceOf } from '../../model/prominence';
 import type { DatedItem, Lane, Relation } from '../../model/types';
 import {
   AXIS_H, describeEntry, describeEra, describeLane1, eraLanes, ERAS_BACK, HEAD1_H, hitBox, hitTest, laneAt, layout, maxScroll, MIN_HIT, NO_LANE, prepare, ROW_H, stepActive, stepEra, stepLane1,
@@ -319,57 +320,119 @@ describe('every kind of thing', () => {
   });
 });
 
-describe('level 0: eras', () => {
+describe('level 0: the overview', () => {
   const doc = parseDoc(readFileSync(new URL('../../../tests/fixtures/greece/classical-greece.json', import.meta.url), 'utf8'));
   const items = doc.items.filter(isDated);
   const lanes = doc.categories.map((c) => ({ id: c.id, label: c.label, color: c.color }));
-  const prominence = highlightProminence(doc.highlights);
-  const D = prepare(items, lanes, { now: 2026, prominence, relations: doc.relations, eras: eraRegions(items, doc.highlights, doc.relations, 2026) });
+  const prominence = prominenceOf(doc);
+  const O = overview({ ...doc, items, prominence, now: 2026 });
+  const D = prepare(items, lanes, { now: 2026, prominence, relations: doc.relations, eras: eraRegions(items, doc.highlights, doc.relations, 2026), overview: O });
   const textOf = (S: Scene) => [...S.z[2], ...S.gutter].flatMap((p) => (p.t === 2 ? [p.s] : []));
+  const open = new Map([['g_classical_greece', 1]]);
+  const at = (win: [number, number], extra: Partial<View> = {}, e = env(1200, 1400)) => layout(D, view(win[0], win[1], extra), e, 0);
+  const strip = (S: Scene, id: string) => S.z[1].find((p) => p.t === 7 && p.id === id);
 
-  it('lays out the Greece fixture’s eras in the Greece row, inner eras on a row under the outer ones', () => {
-    expect(D.regions.map((r) => r.label)).toEqual(['Greece']);
-    const row = Object.fromEntries(D.regions[0].eras.map((e) => [e.title, e.row]));
-    expect(row).toEqual({ 'Archaic Greece': 0, 'Classical Greece': 0, 'Hellenistic period': 0, 'The Fifty Years': 1, 'Spartan and Theban supremacy': 1, 'Macedon rises': 1 });
-    expect(D.regions[0].rows).toBe(2);
-    expect(D.eraExtent).toEqual({ start: -799, end: -30 });
+  it('puts the bands in the overview’s order, with a group folded into one sub-row and the Delian League in another', () => {
+    expect(D.bands.map((b) => b.label)).toEqual(['Italy', 'Macedon', 'Greece', 'Persia']);
+    expect(D.bands.map((b) => b.parentHead)).toEqual([true, false, false, true]);
+    const greece = D.bands[2];
+    expect(greece.subs.map((row) => row.map((x) => (x.pol ?? x.group).id))).toEqual([['g_classical_greece'], ['t_delian']]);
+    expect(greece.eras.map((e) => e.id)).toContain('i_classical');
+    expect(D.overviewExtent!.start).toBe(-799);
   });
 
-  it('draws the region’s name with its count, and each era as a band with its name, dates and lane strip', () => {
-    const S = layout(D, view(-820, -10), env(1200, 700), 0);
-    const text = textOf(S);
-    expect(text).toContain('Greece');
-    expect(text).toContain(`${doc.highlights.length} highlights`);
-    expect(text).toContain('Classical Greece');
-    expect(text).toContain('480–323 BCE');
-    const band = S.z[1].find((p) => p.cls?.startsWith('tl-era') && p.id === 'i_classical');
-    expect(band).toBeDefined();
-    const strip = S.z[1].filter((p) => p.k.endsWith('i_classical') && p.cls?.startsWith('tl-era-mix'));
-    expect(strip.map((p) => p.cls!.split(' ')[1])).toEqual(['politics', 'war', 'economy', 'ideas', 'technology', 'nature']);
+  it('draws a folded group as one strip named with its members, and its members when it unfolds', () => {
+    const folded = at([-820, -10]);
+    expect(strip(folded, 'grp:g_classical_greece')).toBeDefined();
+    expect(strip(folded, 'pol:t_athens')).toBeUndefined();
+    expect(textOf(folded)).toEqual(expect.arrayContaining(['▸ Classical Greece', 'Athens · Sparta · Corinth · Thebes']));
+    const S = at([-820, -10], { unfolded: open });
+    expect(strip(S, 'grp:g_classical_greece')).toBeUndefined();
+    for (const id of ['t_athens', 't_sparta', 't_corinth', 't_thebes']) expect(strip(S, `pol:${id}`)).toBeDefined();
+    expect(textOf(S)).toContain('Athens');
+    // The bracket folds it back.
+    const bracket = S.targets.find((t) => t.id === 'grp:g_classical_greece')!;
+    expect(bracket.w).toBeLessThan(20);
+    // Half open, the members' rows are half as tall and faded.
+    const half = at([-820, -10], { unfolded: new Map([['g_classical_greece', 0.5]]) });
+    expect(strip(half, 'pol:t_athens')!.a).toBeCloseTo(0.5);
+  });
+
+  it('makes a strip as thick as its strength: Athens thick at the Peloponnesian War, a sliver after Chaeronea', () => {
+    const S = at([-820, -10], { unfolded: open });
+    const athens = strip(S, 'pol:t_athens')!;
+    const target = S.targets.find((t) => t.id === 'pol:t_athens')!;
+    // Read the strip's thickness off its outline at a year.
+    const pts = athens.t === 7 ? athens.d.slice(1, -1).split('L').map((xy) => xy.split(' ').map(Number)) : [];
+    const half = pts.length / 2;
+    const thick = (year: number) => {
+      const x = S.plot.x + ((year + 820) / 810) * S.plot.w;
+      const k = pts.slice(0, half).reduce((b, p, i) => (Math.abs(p[0] - x) < Math.abs(pts[b][0] - x) ? i : b), 0);
+      return pts[pts.length - 1 - k][1] - pts[k][1];
+    };
+    expect(thick(-499)).toBeLessThan(thick(-430));
+    expect(thick(-300)).toBeLessThan(thick(-430) / 3);
+    // The whole row is its hit area, so even a sliver can be picked.
+    expect(target.h).toBeGreaterThanOrEqual(MIN_HIT);
+    expect(hitTest(S, target.x + target.w * 0.8, target.y + 2)?.id).toBe('pol:t_athens');
+  });
+
+  it('draws a strip with nothing known as an even, faint width with a dotted edge', () => {
+    const bare = overview({ ...doc, items, territories: doc.territories.map((t) => ({ ...t, strength: undefined, snapshots: t.snapshots.map(({ areaKm2: _, ...s }) => s) })), prominence, now: 2026 });
+    const D2 = prepare(items, lanes, { now: 2026, eras: eraRegions(items, doc.highlights, doc.relations, 2026), overview: bare });
+    const S = layout(D2, view(-820, -10), env(1200, 1400), 0);
+    expect(strip(S, 'pol:t_persia')).toMatchObject({ dash: true, stroke: 'var(--pig-umber)' });
+  });
+
+  it('gilds a world event along the top of every band it touched, named in its home band', () => {
+    const S = at([-820, -10]);
+    const gold = S.z[1].filter((p) => p.id === 'i_alexander_persia' && p.cls?.startsWith('tl-world'));
+    expect(gold).toHaveLength(2);
+    expect(gold.every((p) => p.t === 0 && p.fill === 'gilt' && p.stroke === 'var(--gold-ink)')).toBe(true);
+    // 7 px at home in Macedon, 3 px in Persia.
+    expect(gold.map((p) => (p.t === 0 ? p.h : 0)).sort()).toEqual([3, 7]);
+    expect(S.z[2].filter((p) => p.t === 2 && p.s === 'Alexander’s conquest of Persia')).toHaveLength(1);
+  });
+
+  it('puts the entries Bob shows at the top as their kind’s glyph and name, and opens them', () => {
+    const S = at([-820, -10]);
+    const glyphs = S.z[2].filter((p) => p.t === 6 && p.cls?.startsWith('tl-top'));
+    expect(glyphs.length).toBeGreaterThanOrEqual(3);
+    expect(textOf(S)).toContain('Peloponnesian War');
+    const t = S.targets.find((x) => x.id === 'i_pelop')!;
+    expect(hitTest(S, t.x + 4, t.y + t.h / 2)?.id).toBe('i_pelop');
+  });
+
+  it('puts eras behind as a wash named in italic, that opens the era where no strip is', () => {
+    const S = at([-820, -10]);
+    const wash = S.z[0].find((p) => p.cls?.startsWith('tl-era') && p.id === 'i_classical')!;
+    expect(wash.t === 0 && wash.fill).toBe('var(--band-2)');
+    expect(S.z[2].find((p) => p.t === 2 && p.s === 'Classical Greece' && p.f === 'wash')).toBeDefined();
     // The Archaic period's start is approximate: a dashed umber edge.
-    expect(S.z[1].find((p) => p.k === 'eai_archaic')).toMatchObject({ dash: true, stroke: 'var(--pig-umber)' });
-    // Clicking a band opens its era; a landmark opens its entry.
+    expect(S.z[0].find((p) => p.k === 'eai_archaic')).toMatchObject({ dash: true, stroke: 'var(--pig-umber)' });
     const t = S.targets.find((x) => x.id === 'i_classical')!;
-    expect(hitTest(S, t.x + 4, t.y + 10)?.id).toBe('i_classical');
-    const lm = S.z[2].find((p) => p.cls?.startsWith('tl-landmark'));
-    expect(lm?.id).toBeDefined();
-    expect(S.targets.some((x) => x.id === lm!.id && x.w >= MIN_HIT)).toBe(true);
+    expect(hitTest(S, t.x + 4, t.y + 6)?.id).toBe('i_classical');
   });
 
-  it('puts eras without a region in an Elsewhere row, last, and says so when there are none', () => {
-    const its = [{ ...sp('rome', -509, -27), subject: 'period', region: 'Rome' }, { ...sp('bronze', -3300, -1200), subject: 'period' }] as DatedItem[];
-    const D2 = prepare(its, LANES, { now: 2026, eras: eraRegions(its, [], [], 2026) });
-    expect(D2.regions.map((r) => r.label)).toEqual(['Rome', 'Elsewhere']);
-    const empty = layout(prepare([], LANES, { now: 2026 }), view(-800, 0), env(), 0);
-    expect(textOf(empty)).toContain('No eras yet');
+  it('says so in a thin row when a band has no polities in the years in view', () => {
+    const S = at([100, 300]);
+    expect(textOf(S).filter((s) => s === 'No polities in these years')).toHaveLength(4);
+    const empty = layout(prepare([], LANES, { now: 2026, overview: overview({ items: [], territories: [], relations: [], highlights: [], prominence: () => 0, now: 2026 }) }), view(-800, 0), env(), 0);
+    expect(textOf(empty)).toContain('Nothing in the overview yet');
   });
 
-  it('puts region names above their rows on a phone, with no gutter', () => {
-    const S = layout(D, view(-820, -10), { ...env(412, 700), gutter: 0 }, 0);
+  it('puts region names on their bands on a phone, with no gutter', () => {
+    const S = layout(D, view(-820, -10), { ...env(412, 1400), gutter: 0 }, 0);
     expect(S.gutter.length).toBe(0);
     const name = S.z[2].find((p) => p.t === 2 && p.s === 'Greece')!;
-    const band = S.z[1].find((p) => p.t === 0 && p.id === 'i_archaic')!;
-    expect(name.t === 2 && band.t === 0 && name.y < band.y).toBe(true);
+    const wash = S.z[0].find((p) => p.t === 0 && p.id === 'i_archaic')!;
+    expect(name.t === 2 && wash.t === 0 && name.y > wash.y && name.y < wash.y + wash.h).toBe(true);
+  });
+
+  it('scrolls as far as its bands go, further with a group open', () => {
+    const shut = maxScroll(D, 400, 0, 1200, view(-820, -10));
+    expect(shut).toBeGreaterThan(0);
+    expect(maxScroll(D, 400, 0, 1200, view(-820, -10, { unfolded: open }))).toBeGreaterThan(shut);
   });
 
   it('steps through eras with the arrow keys and describes them', () => {
@@ -385,7 +448,7 @@ describe('level 1: an era’s six lanes', () => {
   const doc = parseDoc(readFileSync(new URL('../../../tests/fixtures/greece/classical-greece.json', import.meta.url), 'utf8'));
   const items = doc.items.filter(isDated);
   const lanes = doc.categories.map((c) => ({ id: c.id, label: c.label, color: c.color }));
-  const D = prepare(items, lanes, { now: 2026, relations: doc.relations, eras: eraRegions(items, doc.highlights, doc.relations, 2026) });
+  const D = prepare(items, lanes, { now: 2026, relations: doc.relations, eras: eraRegions(items, doc.highlights, doc.relations, 2026), overview: overview({ ...doc, items, prominence: () => 0, now: 2026 }) });
   const dims = entryLanes(items, doc.highlights);
   const EL = eraLanes(D, 'i_classical', dims)!;
   const win = { start: -490, end: -312 };
@@ -448,7 +511,7 @@ describe('level 1: an era’s six lanes', () => {
     expect(t.h).toBeGreaterThanOrEqual(MIN_HIT);
     expect(hitTest(S, t.x + 4, t.y + t.h / 2)?.id).toBe('i_owls');
     // The lanes scroll under the header.
-    expect(maxScroll(D, 400, 1, 1200, EL)).toBeGreaterThan(0);
+    expect(maxScroll(D, 400, 1, 1200, { win, era: EL })).toBeGreaterThan(0);
     expect(owls.t === 0 && owls.y).toBeGreaterThan(AXIS_H + HEAD1_H);
   });
 
@@ -466,7 +529,7 @@ describe('level 1: an era’s six lanes', () => {
 
   it('grows out of the era’s band while it opens: the other rows fade and nothing answers a tap', () => {
     const S = open({ zoom: { t: 0.3, fade: false, scroll0: 0 } }, env(1200, 700));
-    const band = S.z[1].find((p) => p.cls?.startsWith('tl-era') && p.id === 'i_archaic')!;
+    const band = S.z[0].find((p) => p.cls?.startsWith('tl-era') && p.id === 'i_archaic')!;
     expect(band.a).toBeCloseTo(0.7);
     // The political lane is squeezed into the band, on its way to full height.
     const wash = (X: Scene) => X.z[0].find((p) => p.k === 'qwpolitics')!;

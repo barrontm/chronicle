@@ -282,7 +282,7 @@ const snap = (from, to, pts) => ({ from: hd(from), ...(to ? { to: hd(to) } : {})
 const TSRC = { name: 'Rough hand-drawn outline (test data), not a historical map' };
 const territories = [
   { id: 't_athens', title: 'Athens (Attica)', categoryId: 'politics', itemId: 'i_classical',
-    snapshots: [snap(700, null, [[23.35, 38.15], [23.6, 38.22], [23.95, 38.25], [24.05, 38.05], [24.03, 37.7], [23.9, 37.65], [23.6, 37.85], [23.35, 37.95]])] },
+    snapshots: [snap(700, 86, [[23.35, 38.15], [23.6, 38.22], [23.95, 38.25], [24.05, 38.05], [24.03, 37.7], [23.9, 37.65], [23.6, 37.85], [23.35, 37.95]])] },
   { id: 't_delian', title: 'Delian League (Athenian empire)', categoryId: 'politics', itemId: 'i_delian_founded',
     snapshots: [
       snap(477, 454, [[23.5, 40.6], [26.0, 40.9], [27.0, 40.3], [27.4, 38.0], [27.0, 36.9], [25.0, 36.2], [23.8, 36.6], [24.0, 37.7], [24.2, 38.3]]),
@@ -292,10 +292,10 @@ const territories = [
   { id: 't_sparta', title: 'Sparta (Laconia and Messenia)', categoryId: 'war',
     snapshots: [
       snap(700, 369, [[21.65, 37.2], [21.95, 37.5], [22.7, 37.5], [23.0, 37.2], [23.2, 36.45], [22.5, 36.4], [22.15, 36.5], [21.7, 36.8]]),
-      snap(369, null, [[22.2, 37.45], [22.7, 37.5], [23.0, 37.2], [23.2, 36.45], [22.5, 36.4], [22.4, 36.8], [22.1, 37.0]]),
+      snap(369, 192, [[22.2, 37.45], [22.7, 37.5], [23.0, 37.2], [23.2, 36.45], [22.5, 36.4], [22.4, 36.8], [22.1, 37.0]]),
     ] },
   { id: 't_corinth', title: 'Corinth', categoryId: 'politics',
-    snapshots: [snap(700, null, [[22.7, 38.05], [23.0, 38.05], [23.2, 37.95], [23.05, 37.8], [22.8, 37.75], [22.65, 37.9]])] },
+    snapshots: [snap(700, 146, [[22.7, 38.05], [23.0, 38.05], [23.2, 37.95], [23.05, 37.8], [22.8, 37.75], [22.65, 37.9]])] },
   { id: 't_thebes', title: 'Thebes (Boeotia)', categoryId: 'war',
     snapshots: [snap(700, 335, [[22.85, 38.4], [23.3, 38.5], [23.9, 38.45], [23.8, 38.26], [23.4, 38.22], [23.0, 38.2]])] },
   { id: 't_macedon', title: 'Macedon', categoryId: 'politics', itemId: 'i_macedon_rises',
@@ -309,7 +309,24 @@ const territories = [
       snap(733, 405, [[14.9, 37.0], [15.3, 37.35], [15.5, 37.0], [15.1, 36.7]]),
       snap(405, 367, [[14.0, 37.6], [15.6, 37.9], [15.7, 36.7], [14.4, 36.7]]),
     ] },
-].map((x) => ({ ...x, source: TSRC, updatedAt: NOW }));
+  // The overview's neighbour to the east: one big outline, so its strip's width comes from its area.
+  { id: 't_persia', title: 'Achaemenid Persia', categoryId: 'politics',
+    snapshots: [
+      snap(550, 525, [[27.0, 38.0], [36.0, 41.5], [45.0, 41.0], [55.0, 40.0], [62.0, 37.5], [66.0, 30.0], [58.0, 25.5], [50.0, 29.0], [44.0, 30.0], [36.0, 31.5], [30.0, 36.5]]),
+      snap(525, 330, [[26.5, 38.5], [36.0, 42.0], [45.0, 41.5], [55.0, 40.5], [64.0, 39.0], [71.0, 36.0], [72.0, 29.0], [66.0, 24.5], [57.0, 25.5], [50.0, 29.0], [44.0, 30.0], [36.0, 30.0], [32.0, 29.0], [30.5, 31.5], [30.5, 36.5]]),
+    ] },
+].map((x) => ({ ...x, snapshots: x.snapshots.map((sn) => ({ ...sn, areaKm2: Math.round(ringAreaKm2(sn.geometry.coordinates[0])) })), source: TSRC, updatedAt: NOW }));
+
+/** A ring's area in km² (spherical excess, as `src/data/geo.ts` reckons it). */
+function ringAreaKm2(ring) {
+  const R = 6371.0088, rad = Math.PI / 180;
+  let a = 0;
+  for (let i = 0; i < ring.length - 1; i++) {
+    const [x1, y1] = ring[i], [x2, y2] = ring[i + 1];
+    a += (x2 - x1) * rad * (2 + Math.sin(y1 * rad) + Math.sin(y2 * rad));
+  }
+  return Math.abs((a * R * R) / 2);
+}
 
 // ---------- migration: colonists abroad ----------
 const place = (name, lon, lat) => ({ name, lon, lat });
@@ -481,14 +498,14 @@ function overviewShapes() {
       t_macedon: [at(700, 1), at(359, 2, 'h_macedon'), at(338, 5, 'h_chaeronea'), at(323, 5)],
     },
     // A territory's region, and each region's parent (Mediterranean › Greece).
-    regions: { t_athens: 'Greece', t_sparta: 'Greece', t_corinth: 'Greece', t_thebes: 'Greece', t_delian: 'Greece', t_macedon: 'Macedon', t_syracuse: 'Italy' },
-    regionParents: { Greece: 'Mediterranean', Macedon: 'Mediterranean', Italy: 'Mediterranean' },
+    regions: { t_athens: 'Greece', t_sparta: 'Greece', t_corinth: 'Greece', t_thebes: 'Greece', t_delian: 'Greece', t_macedon: 'Macedon', t_syracuse: 'Italy', t_persia: 'Persia' },
+    regionParents: { Greece: 'Mediterranean', Macedon: 'Mediterranean', Italy: 'Mediterranean', Persia: 'Near East' },
     groups: [{ id: 'g_classical_greece', title: 'Classical Greece', region: 'Greece', members: ['t_athens', 't_sparta', 't_corinth', 't_thebes'] }],
     // The Delian League is Athens' reach, not a polity of its own: it draws as Athens' alliance on the map.
     alliances: { t_delian: { leader: 't_athens' } },
     // Who took part, and on which side: the contacts the map marks when a polity is picked.
     participants: [
-      { entryId: 'i_persian', how: 'war', sides: [['t_athens', 't_sparta', 't_corinth'], []] },
+      { entryId: 'i_persian', how: 'war', sides: [['t_athens', 't_sparta', 't_corinth'], ['t_persia']] },
       { entryId: 'i_pelop', how: 'war', sides: [['t_athens'], ['t_sparta', 't_corinth', 't_thebes']] },
       { entryId: 'i_sybota', how: 'war', sides: [['t_athens'], ['t_corinth']] },
       { entryId: 'i_sicilian', how: 'war', sides: [['t_athens'], ['t_syracuse', 't_sparta', 't_corinth']] },
@@ -497,6 +514,8 @@ function overviewShapes() {
       { entryId: 'i_mantinea362', how: 'war', sides: [['t_thebes'], ['t_sparta', 't_athens']] },
       { entryId: 'i_chaeronea', how: 'war', sides: [['t_macedon'], ['t_athens', 't_thebes']] },
       { entryId: 'i_lamian', how: 'war', sides: [['t_athens'], ['t_macedon']] },
+      { entryId: 'i_alexander_persia', how: 'war', sides: [['t_macedon'], ['t_persia']] },
+      { entryId: 'i_kings_peace', how: 'peace', sides: [['t_persia'], ['t_sparta']] },
       { entryId: 'i_delian_founded', how: 'alliance', sides: [['t_athens', 't_delian']] },
       { entryId: 'i_second_league', how: 'alliance', sides: [['t_athens', 't_thebes']] },
       { entryId: 'i_corinth_league', how: 'alliance', sides: [['t_macedon', 't_corinth']] },

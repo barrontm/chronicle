@@ -1,9 +1,12 @@
 import { axisTicks, formatRange, formatYear, toDecimalYear } from '../../model/dates';
 import { ELSEWHERE, type Era, type EraRegion } from '../../model/eras';
+import type { OGroup, OPolity, Overview } from '../../model/overview';
+import { areaWeight, strengthAt, strengthKnown, stripShare, UNKNOWN_SHARE } from '../../model/strength';
 import { LANES, type DatedItem, type Lane, type Relation, type TimelineItem } from '../../model/types';
 import { anchors, arcCurve, loopCurve, type Box as Edges } from '../influenceLinks';
 import { makerOf, markOf, representationOf, warOf, type Representation } from '../representations';
-import { BAND_H, bandPrims, LANDMARK, LANDMARK_Y } from '../representations/era';
+import { innerPrims, washPrims } from '../representations/era';
+import { stripPrims, type StripLook } from '../representations/polity';
 import type { YearWindow } from '../timeNav';
 import { LANE_LABEL, PIGMENT } from '../util';
 import { tint, type Box, type Cluster, type Link, type MarkKind, type Measure, type Prim, type Scene, type Target } from './scene';
@@ -12,8 +15,9 @@ import { tint, type Box, type Cluster, type Link, type MarkKind, type Measure, t
  * The new timeline's layout: pure. `prepare` runs once per data change (lanes, rows, sorted
  * indexes); `layout` runs every frame and returns only what is visible.
  *
- * Level 0 is the eras: a row per region, each era a band (`representations/era.ts`). Level 1 is
- * one era opened into its six lanes (`eraLanes`). Level 2 is single entries in
+ * Level 0 is the overview: a band per region with its polities as strips (`representations/polity.ts`)
+ * over its eras (`representations/era.ts`), world events in gold, and the entries Bob shows at the
+ * top. Level 1 is one era opened into its six lanes (`eraLanes`). Level 2 is single entries in
  * category lanes.
  */
 
@@ -72,6 +76,8 @@ export interface PItem {
   ticks?: PItem[];
   /** A work: the lifeline it's joined to. */
   maker?: string;
+  /** A world event (gold on the overview). */
+  world?: boolean;
 }
 
 export interface PLane {
@@ -94,8 +100,8 @@ export interface PLane {
   height: number;
 }
 
-/** An era at level 0: the row it sits in inside its region, and its landmarks, most prominent first. */
-export interface PEra extends Era { row: number; landmarks: PItem[] }
+/** An era: the row it sits in inside its region (level 1 opens it from there). */
+export interface PEra extends Era { row: number }
 export interface PRegion {
   name: string;
   /** Its name, or "Elsewhere". */
@@ -105,6 +111,29 @@ export interface PRegion {
   rows: number;
 }
 
+/** Level 0: a polity, whether anything is known of its strength, and which of its tone's two shades it takes. */
+export interface PPolity extends OPolity { unknown: boolean; alt: boolean }
+/** Level 0: a group of city-states, folded into one strip until it's clicked. */
+export interface PGroup extends Omit<OGroup, 'members'> { members: PPolity[]; alt: boolean }
+export type Slot = { pol: PPolity; group?: undefined } | { group: PGroup; pol?: undefined };
+/** A world event gilding a band: named there if it's its home. */
+export interface PWorld { it: PItem; home: boolean }
+/** Level 0: a region's band. */
+export interface PBand {
+  name: string;
+  label: string;
+  parent?: string;
+  /** The first band under its parent carries the parent's rule. */
+  parentHead: boolean;
+  tone: number;
+  /** Sub-rows, with groups folded: a succession shares one. */
+  subs: Slot[][];
+  /** Its eras, outer ones first: the backdrop. */
+  eras: PEra[];
+  worlds: PWorld[];
+  /** Whether any world event is named here, which gives it a line of its own. */
+  named: boolean;
+}
 export interface Prepared {
   lanes: PLane[];
   byId: Map<string, PItem>;
@@ -112,9 +141,14 @@ export interface Prepared {
   prominence: (id: string) => number;
   /** From the earliest start to the latest end, for "Show everything". */
   extent?: YearWindow;
-  /** Level 0: regions with their eras, and the years they cover. */
+  /** Level 1: regions with their eras. */
   regions: PRegion[];
-  eraExtent?: YearWindow;
+  /** Level 0: bands in their order, the top row, and the years they cover. */
+  bands: PBand[];
+  top: PItem[];
+  polById: Map<string, PPolity>;
+  groupById: Map<string, PGroup>;
+  overviewExtent?: YearWindow;
 }
 
 export interface PrepareOptions {
@@ -126,8 +160,10 @@ export interface PrepareOptions {
   drafts?: DatedItem[];
   /** Connections, for a war's battles (ticks on its bar) and a work's maker (the lifeline it's joined to). */
   relations?: Relation[];
-  /** Level 0: the eras in their regions (`eraRegions`). */
+  /** Level 0's eras and level 1's: the eras in their regions (`eraRegions`). */
   eras?: EraRegion[];
+  /** Level 0: the overview (`overview` in `src/model/overview.ts`). */
+  overview?: Overview;
 }
 
 export function prepare(items: DatedItem[], lanes: LaneInput[], o: PrepareOptions): Prepared {
@@ -146,7 +182,7 @@ export function prepare(items: DatedItem[], lanes: LaneInput[], o: PrepareOption
       id: ref.id, kind: markOf(ref), rep: representationOf(ref), title: ref.title, when: formatRange(ref.start, ref.end),
       dates: formatRange({ ...ref.start, approx: undefined }, ref.end && { ...ref.end, approx: undefined }),
       s, e: Math.max(e, s), approx: !!ref.start.approx, endApprox: !!ref.end?.approx, open: ref.kind !== 'event' && !ref.end, draft,
-      lane: li, row: 0, nextS: Infinity, thumb: draft ? undefined : o.thumbFor?.(ref),
+      lane: li, row: 0, nextS: Infinity, thumb: draft ? undefined : o.thumbFor?.(ref), world: ref.overview === 'world' || undefined,
     };
     byId.set(p.id, p);
     if (!draft) refs.set(p.id, ref);
@@ -201,26 +237,18 @@ export function prepare(items: DatedItem[], lanes: LaneInput[], o: PrepareOption
     return lane;
   });
   const prominence = o.prominence ?? (() => 0);
-  return { lanes: out, byId, contentH: top, prominence, extent: lo <= hi ? { start: lo, end: hi } : undefined, ...prepareEras(o.eras ?? [], byId, prominence) };
+  const eras = prepareEras(o.eras ?? [], byId);
+  return { lanes: out, byId, contentH: top, prominence, extent: lo <= hi ? { start: lo, end: hi } : undefined, ...eras, ...prepareOverview(o.overview, eras.regions, byId) };
 }
 
-/**
- * Level 0's rows. Inside a region, eras pack into rows by time only (so rows stay put while
- * zooming), outer eras above the eras inside them. Landmarks are an era's entries that Bob has
- * made something of, most prominent first.
- */
-function prepareEras(input: EraRegion[], byId: Map<string, PItem>, prominence: (id: string) => number): Pick<Prepared, 'regions' | 'eraExtent'> {
-  let lo = Infinity, hi = -Infinity;
+/** The eras in each region. Inside one, eras pack into rows by time only, outer eras above the eras inside them. */
+function prepareEras(input: EraRegion[], byId: Map<string, PItem>): Pick<Prepared, 'regions'> {
   const regions = input.map((r): PRegion => {
     const shown = r.eras.filter((e) => byId.has(e.id) && !byId.get(e.id)!.draft);
     const ids = new Set(shown.map((e) => e.id));
     const byEra = new Map(shown.map((e) => [e.id, e]));
     const depth = (e: Era) => { let d = 0; for (let p = e.parent; p && ids.has(p) && d < 50; p = byEra.get(p)!.parent) d++; return d; };
-    const eras = shown.map((e): PEra => ({
-      ...e, row: 0,
-      landmarks: e.members.map((id) => byId.get(id)).filter((p): p is PItem => !!p && !p.draft && prominence(p.id) > 0)
-        .sort((a, b) => prominence(b.id) - prominence(a.id) || a.s - b.s || a.id.localeCompare(b.id)),
-    }));
+    const eras = shown.map((e): PEra => ({ ...e, row: 0 }));
     const rowEnd: number[] = [];
     const levels = [...new Set(eras.map(depth))].sort((a, b) => a - b);
     for (const d of levels) {
@@ -233,37 +261,123 @@ function prepareEras(input: EraRegion[], byId: Map<string, PItem>, prominence: (
         e.row = row;
       }
     }
-    for (const e of eras) { lo = Math.min(lo, e.s); hi = Math.max(hi, e.e); }
     return { name: r.name, label: r.name === ELSEWHERE ? 'Elsewhere' : r.name, highlights: r.highlights, eras, rows: rowEnd.length };
   }).filter((r) => r.eras.length);
-  return { regions, eraExtent: lo <= hi ? { start: lo, end: hi } : undefined };
+  return { regions };
+}
+
+/**
+ * Level 0's bands, in the overview's order. Inside a band, polities (and folded groups) pack
+ * into sub-rows by time only, so a succession shares one and rows stay put while zooming.
+ */
+function prepareOverview(O: Overview | undefined, regions: PRegion[], byId: Map<string, PItem>): Pick<Prepared, 'bands' | 'top' | 'polById' | 'groupById' | 'overviewExtent'> {
+  const polById = new Map<string, PPolity>(), groupById = new Map<string, PGroup>();
+  let lo = Infinity, hi = -Infinity;
+  const span = (s: number, e: number) => { lo = Math.min(lo, s); hi = Math.max(hi, e); };
+  for (const R of regions) for (const e of R.eras) span(e.s, e.e);
+  const top = (O?.top ?? []).map((id) => byId.get(id)).filter((p): p is PItem => !!p && !p.draft);
+  for (const it of top) span(it.s, it.e);
+  if (!O) return { bands: [], top, polById, groupById, overviewExtent: lo <= hi ? { start: lo, end: hi } : undefined };
+  for (const p of O.polities) { polById.set(p.id, { ...p, unknown: !strengthKnown(p.t), alt: false }); span(p.s, p.e); }
+  for (const g of O.groups) groupById.set(g.id, { ...g, members: g.members.map((id) => polById.get(id)!), alt: false });
+  const eraRegion = new Map(regions.map((R) => [R.name, R]));
+  let lastParent: string | undefined;
+  const bands = O.regions.map((r, i): PBand => {
+    const slots: Slot[] = [
+      ...[...groupById.values()].filter((g) => g.region === r.name).map((group) => ({ group })),
+      ...[...polById.values()].filter((p) => p.region === r.name && !p.group).map((pol) => ({ pol })),
+    ];
+    const s0 = (x: Slot) => (x.pol ?? x.group).s, e0 = (x: Slot) => (x.pol ?? x.group).e;
+    slots.sort((a, b) => s0(a) - s0(b) || e0(b) - e0(a) || (a.pol ?? a.group).id.localeCompare((b.pol ?? b.group).id));
+    const subs: Slot[][] = [], ends: number[] = [];
+    for (const x of slots) {
+      let k = ends.findIndex((end) => end <= s0(x));
+      if (k < 0) { k = subs.length; subs.push([]); }
+      // Neighbours in a succession take the two shades in turn.
+      const alt = subs[k].length % 2 === 1;
+      if (x.pol) x.pol.alt = alt; else { x.group.alt = alt; x.group.members.forEach((m, j) => (m.alt = j % 2 === 1)); }
+      subs[k].push(x);
+      ends[k] = e0(x);
+    }
+    const worlds = O.worlds.filter((w) => w.touches.includes(r.name) && byId.has(w.id)).map((w) => ({ it: byId.get(w.id)!, home: w.home === r.name }));
+    for (const w of worlds) span(w.it.s, w.it.e);
+    const eras = [...(eraRegion.get(r.name)?.eras ?? [])].sort((a, b) => a.row - b.row || a.s - b.s);
+    const parentHead = !!r.parent && (i === 0 || r.parent !== lastParent);
+    lastParent = r.parent;
+    return { name: r.name, label: r.label, parent: r.parent, parentHead, tone: r.tone, subs, eras, worlds, named: worlds.some((w) => w.home) };
+  });
+  return { bands, top, polById, groupById, overviewExtent: lo <= hi ? { start: lo, end: hi } : undefined };
 }
 
 /* ---------- level 0 geometry ---------- */
 
-/** Below this width level 0 has no gutter: each region's name sits above its row. */
+/** Below this width levels 0 and 1 have no gutter: each region's name sits on its band. */
 export const PHONE_W = 600;
-const REGION_PAD = 8;
-/** The gap between region rows, kept free for threads (Phase 4). */
-const REGION_GAP = 18;
-const BAND_GAP = 4;
-const HEAD_H = 24;
+/** The top row: entries Bob shows in the overview, in up to three rows. */
+const TOP_ROWS = 3;
+const TOP_ROW_H = 20;
+const TOP_PAD = 6;
+const PARENT_H = 24;
+/** A band, top to bottom: the gold of world events, the line with its eras' names, a line naming its world events, then its sub-rows. */
+const GOLD_H = 9;
+const HEAD_LINE = 18;
+const WORLD_LINE = 16;
+const SUB_H = 32;
+const SUB_H_PHONE = 30;
+const EMPTY_H = 22;
+const BAND_PAD = 6;
+/** The gap between bands, kept free for threads (Phase 4b). */
+const BAND_GAP = 10;
 
-const regionH = (R: PRegion, phone: boolean) => (phone ? HEAD_H : 0) + REGION_PAD * 2 + R.rows * BAND_H + (R.rows - 1) * BAND_GAP;
-const erasH = (D: Prepared, phone: boolean) => D.regions.reduce((h, R) => h + regionH(R, phone) + REGION_GAP, 0);
+/** A sub-row on screen: what's in it, how tall and how faded (a group's members while it unfolds), and the group whose members it holds. */
+interface SubGeo { slots: Slot[]; y: number; h: number; a: number; group?: PGroup; folding?: number }
+interface BandGeo { B: PBand; top: number; bottom: number; empty: boolean; headY: number; worldY: number; subs: SubGeo[] }
+interface Geo { topH: number; bands: BandGeo[]; H: number }
 
-/** How far down level 0 an era's band is, in px from the top of the first region. */
-export function eraSpan(D: Prepared, id: string, phone: boolean): [number, number] | undefined {
-  let top = 0;
-  for (const R of D.regions) {
-    const e = R.eras.find((x) => x.id === id);
-    if (e) {
-      const y = top + (phone ? HEAD_H : 0) + REGION_PAD + e.row * (BAND_H + BAND_GAP);
-      return [y, y + BAND_H];
+const inWin = (x: { s: number; e: number }, win: YearWindow) => x.e >= win.start && x.s <= win.end;
+const unfoldOf = (V: Pick<View, 'unfolded'>, id: string) => V.unfolded?.get(id) ?? 0;
+
+/** Where every band and sub-row sits, in px from the top of the content (under the axis). */
+function overviewGeo(D: Prepared, V: Pick<View, 'win' | 'unfolded'>, phone: boolean): Geo {
+  const sub = phone ? SUB_H_PHONE : SUB_H;
+  const topH = D.top.length ? TOP_PAD * 2 + Math.min(TOP_ROWS, D.top.length) * TOP_ROW_H : 0;
+  let y = topH;
+  const bands = D.bands.map((B): BandGeo => {
+    if (B.parentHead) y += PARENT_H;
+    const top = y;
+    const headY = top + GOLD_H + 13;
+    y += GOLD_H + HEAD_LINE;
+    const worldY = y + 12;
+    if (B.named) y += WORLD_LINE;
+    // A band with no polities in the years in view is one thin row that says so.
+    const empty = !B.subs.some((row) => row.some((x) => inWin(x.pol ?? x.group, V.win)));
+    const subs: SubGeo[] = [];
+    if (empty) y += EMPTY_H;
+    else for (const row of B.subs) {
+      const groups = row.flatMap((x) => (x.group ? [x.group] : []));
+      const most = Math.max(0, ...groups.map((g) => unfoldOf(V, g.id)));
+      // A row of folded groups only gives way to their members as they unfold.
+      const h = groups.length === row.length ? sub * (1 - most) : sub;
+      subs.push({ slots: row, y, h, a: 1 });
+      y += h;
+      for (const g of groups) {
+        const f = unfoldOf(V, g.id);
+        if (f <= 0) continue;
+        for (const m of g.members) { subs.push({ slots: [{ pol: m }], y, h: sub * f, a: f, group: g, folding: f }); y += sub * f; }
+      }
     }
-    top += regionH(R, phone) + REGION_GAP;
-  }
-  return undefined;
+    y += BAND_PAD;
+    const bottom = y;
+    y += BAND_GAP;
+    return { B, top, bottom, empty, headY, worldY, subs };
+  });
+  return { topH, bands, H: y };
+}
+
+/** How far down level 0 an era's band is, in px from the top of the content. */
+export function eraSpan(D: Prepared, V: Pick<View, 'win' | 'unfolded'>, id: string, phone: boolean): [number, number] | undefined {
+  const g = overviewGeo(D, V, phone).bands.find((b) => b.B.eras.some((e) => e.id === id));
+  return g && [g.top, g.bottom];
 }
 
 /** The arrow keys at level 0: ←/→ the era before or after in its region, ↑/↓ the nearest in time in the region above or below. */
@@ -398,6 +512,10 @@ export interface View {
   zoom?: { t: number; fade: boolean; scroll0: number };
   /** Entries box-selected for bulk edit, each ringed. */
   picked?: ReadonlySet<string>;
+  /** Level 0: the strip or world event picked (`pol:<territory>`, or a world event's id), outlined in ink. */
+  pick?: string;
+  /** Level 0: how far open each group is (0 folded, 1 open), while it unfolds and after. */
+  unfolded?: ReadonlyMap<string, number>;
   /** The box Bob is drawing with ⌘ or Ctrl held, in px. */
   box?: Box;
 }
@@ -412,10 +530,10 @@ export interface Env {
 
 interface Ctx { D: Prepared; V: View; E: Env; S: Scene; X: (y: number) => number; x0: number; x1: number; top: number; bottom: number }
 
-/** How far the lanes (or, at level 0, the regions; at level 1, the open era's lanes) can scroll. */
-export function maxScroll(D: Prepared, h: number, level: Level = 2, w = Infinity, era?: EraLanes): number {
-  if (level === 1 && era) return Math.max(0, lanesH(era, w < PHONE_W) - (h - AXIS_H - HEAD1_H) + 8);
-  const content = level === 0 ? erasH(D, w < PHONE_W) : D.contentH;
+/** How far the lanes (or, at level 0, the bands; at level 1, the open era's lanes) can scroll. `V` is the view, for level 0's and 1's. */
+export function maxScroll(D: Prepared, h: number, level: Level = 2, w = Infinity, V?: Pick<View, 'win' | 'unfolded' | 'era'>): number {
+  if (level === 1 && V?.era) return Math.max(0, lanesH(V.era, w < PHONE_W) - (h - AXIS_H - HEAD1_H) + 8);
+  const content = level === 0 && V ? overviewGeo(D, V, w < PHONE_W).H : D.contentH;
   return Math.max(0, content - (h - AXIS_H) + 8);
 }
 
@@ -453,7 +571,7 @@ export function layout(D: Prepared, V: View, E: Env, level: Level = 2): Scene {
     z: [[], [], [], []], gutter: [], axis: [], targets: [], clusters: [], boxes: new Map(),
     plot: { x: x0, y: AXIS_H, w: Math.max(0, x1 - x0), h: Math.max(0, E.h - AXIS_H) },
     gutterBox: { x: 0, y: AXIS_H, w: x0, h: Math.max(0, E.h - AXIS_H) },
-    contentH: level === 0 ? erasH(D, E.w < PHONE_W) : level === 1 && V.era ? lanesH(V.era, E.w < PHONE_W) : D.contentH,
+    contentH: level === 0 ? overviewGeo(D, V, E.w < PHONE_W).H : level === 1 && V.era ? lanesH(V.era, E.w < PHONE_W) : D.contentH,
   };
   const span = V.win.end - V.win.start;
   const ppy = (x1 - x0) / span;
@@ -461,7 +579,7 @@ export function layout(D: Prepared, V: View, E: Env, level: Level = 2): Scene {
   const c: Ctx = { D, V, E, S, X, x0, x1, top: AXIS_H, bottom: E.h };
 
   if (level === 0) {
-    eraRows(c);
+    overviewRows(c);
     arrows(c);
     picks(c);
     focusRing(c);
@@ -493,79 +611,199 @@ export function layout(D: Prepared, V: View, E: Env, level: Level = 2): Scene {
   return S;
 }
 
-/* ---------- level 0: a row per region, an era a band ---------- */
+/* ---------- level 0: the overview ---------- */
 
-function eraRows(c: Ctx) {
+/** A world event's gold: a bar along the band's top (thinner away from home), or a dot for a moment. */
+function gold(c: Ctx, w: PItem, y: number, home: boolean, k: string, h = home ? 7 : 3) {
+  const { V, S, X } = c;
+  const xa = X(w.s), xb = Math.max(xa + 2, X(w.e));
+  const picked = V.pick === w.id || V.selected === w.id;
+  const sw = picked ? 1.6 : 0.6;
+  const role = roleOf(V, w);
+  if (xb - xa > 6) S.z[1].push({ t: 0, k: `wg${k}`, a: 1, cls: `tl-world${role}`, id: w.id, x: xa, y, w: xb - xa, h, r: 1.5, fill: 'gilt', stroke: 'var(--gold-ink)', sw });
+  else S.z[1].push({ t: 1, k: `wg${k}`, a: 1, cls: `tl-world${role}`, id: w.id, x: xa, y: y + h / 2, r: home ? 4.5 : 2.5, fill: 'gilt', stroke: 'var(--gold-ink)', sw: picked ? 1.6 : 0.8 });
+  return [xa, xb] as const;
+}
+
+function overviewRows(c: Ctx) {
   const { D, V, E, S, x0, x1 } = c;
-  if (!D.regions.length) {
+  if (!D.bands.length && !D.top.length) {
     const cx = (x0 + x1) / 2, cy = AXIS_H + Math.min(120, (E.h - AXIS_H) / 3);
-    S.z[2].push({ t: 2, k: 'empty', a: 1, cls: 'tl-empty', x: cx, y: cy, s: 'No eras yet', f: 'era', fill: 'var(--ink-2)', anchor: 'middle' });
-    S.z[2].push({ t: 2, k: 'empty2', a: 1, cls: 'tl-empty', x: cx, y: cy + 22, s: 'Periods you add show here, in a row for each region.', f: 'ui', fill: 'var(--muted)', anchor: 'middle' });
+    S.z[2].push({ t: 2, k: 'empty', a: 1, cls: 'tl-empty', x: cx, y: cy, s: 'Nothing in the overview yet', f: 'era', fill: 'var(--ink-2)', anchor: 'middle' });
+    S.z[2].push({ t: 2, k: 'empty2', a: 1, cls: 'tl-empty', x: cx, y: cy + 22, s: 'Polities and periods you add show here, in a band for each region.', f: 'ui', fill: 'var(--muted)', anchor: 'middle' });
     return;
   }
   const phone = E.w < PHONE_W;
-  let top = AXIS_H - V.scrollY;
-  for (const R of D.regions) {
-    const h = regionH(R, phone);
-    if (top + h >= AXIS_H && top <= E.h) region(c, R, top, h, phone);
-    top += h + REGION_GAP;
+  const G = overviewGeo(D, V, phone);
+  const base = AXIS_H - V.scrollY;
+  // The widest polity in view fills its row: the rest are scaled to it.
+  let widest = 0;
+  for (const p of D.polById.values()) {
+    if (!inWin(p, V.win) || p.t.strength?.length) continue;
+    const a = Math.max(p.s, V.win.start), b = Math.min(p.e, V.win.end);
+    for (let k = 0; k <= 24; k++) {
+      const st = strengthAt(p.t, a + ((b - a) * k) / 24);
+      if (st.by === 'area') widest = Math.max(widest, areaWeight(st.km2));
+    }
+  }
+  const shareOf = (p: PPolity) => (p.unknown ? () => UNKNOWN_SHARE : (y: number) => stripShare(strengthAt(p.t, y), widest));
+  if (G.topH) topRow(c, base, G.topH);
+  for (const g of G.bands) {
+    const top = base + g.top, bottom = base + g.bottom;
+    if (g.B.parentHead) parentRule(c, g.B, top - PARENT_H, phone);
+    if (bottom < AXIS_H || top > E.h) continue;
+    band(c, g, base, phone, shareOf);
   }
 }
 
-function region(c: Ctx, R: PRegion, top: number, h: number, phone: boolean) {
+function parentRule(c: Ctx, B: PBand, y: number, phone: boolean) {
+  const { E, S, x0, x1 } = c;
+  if (y + PARENT_H < AXIS_H || y > E.h) return;
+  const label = B.parent!.toUpperCase();
+  const ry = y + PARENT_H - 8.5;
+  if (phone) {
+    const w = E.measure('parent', label);
+    S.z[2].push({ t: 2, k: `pr${B.name}`, a: 1, cls: 'tl-parent', x: x0 + 12, y: ry + 4, s: label, f: 'parent', fill: 'var(--muted)' });
+    S.z[0].push({ t: 3, k: `prl${B.name}`, a: 1, x1: x0 + 20 + w, y1: ry, x2: x1, y2: ry, stroke: 'var(--rule)' });
+  } else {
+    S.gutter.push({ t: 2, k: `pr${B.name}`, a: 1, cls: 'tl-parent', x: 14, y: ry + 4, s: fit(E.measure, 'parent', label, E.gutter - 20), f: 'parent', fill: 'var(--muted)' });
+    S.z[0].push({ t: 3, k: `prl${B.name}`, a: 1, x1: x0, y1: ry, x2: x1, y2: ry, stroke: 'var(--rule)' });
+  }
+}
+
+function band(c: Ctx, g: BandGeo, base: number, phone: boolean, shareOf: (p: PPolity) => (y: number) => number) {
   const { D, V, E, S, X, x0, x1 } = c;
   const M = E.measure;
-  const bot = top + h;
-  const count = `${R.highlights} ${R.highlights === 1 ? 'highlight' : 'highlights'}`;
-  // A faint rule in the middle of the gap below, where threads will run.
-  const ry = bot + REGION_GAP / 2 - 0.5;
-  S.z[0].push({ t: 3, k: `rr${R.name}`, a: 1, x1: 0, y1: ry, x2: x1, y2: ry, stroke: 'var(--rule-soft)' });
+  const B = g.B;
+  const top = base + g.top, bottom = base + g.bottom, headY = base + g.headY;
+  S.z[0].push({ t: 0, k: `bb${B.name}`, a: 1, cls: 'tl-band', x: x0, y: top, w: x1 - x0, h: bottom - top, fill: 'var(--band)' });
+  // The region's name: on the band on a phone, in the gutter (staying in view while it scrolls past) otherwise.
+  let after = x0 + 6;
   if (phone) {
-    const name = fit(M, 'region', R.label, x1 - x0 - 24);
-    S.z[2].push({ t: 2, k: `rn${R.name}`, a: 1, cls: 'tl-region', x: x0 + 12, y: top + 18, s: name, f: 'region', fill: 'var(--ink-2)' });
-    const nx = x0 + 12 + M('region', name) + 10;
-    if (nx + M('ui', count) < x1 - 8) S.z[2].push({ t: 2, k: `rc${R.name}`, a: 1, x: nx, y: top + 18, s: count, f: 'ui', fill: 'var(--muted)' });
+    const name = fit(M, 'region', B.label, x1 - x0 - 24);
+    S.z[2].push({ t: 2, k: `rn${B.name}`, a: 1, cls: 'tl-region', x: x0 + 12, y: headY, s: name, f: 'region', fill: 'var(--ink)' });
+    after = x0 + 12 + M('region', name) + 14;
   } else {
-    S.gutter.push({ t: 3, k: `gr${R.name}`, a: 1, x1: 0, y1: ry, x2: E.gutter, y2: ry, stroke: 'var(--rule-soft)' });
-    // The name stays in view while its row scrolls past.
-    const ny = Math.min(Math.max(top + 26, AXIS_H + 26), bot - 22);
-    S.gutter.push({ t: 2, k: `rn${R.name}`, a: 1, cls: 'tl-region', x: 14, y: ny, s: fit(M, 'region', R.label, E.gutter - 24), f: 'region', fill: 'var(--ink-2)' });
-    S.gutter.push({ t: 2, k: `rc${R.name}`, a: 1, x: 14, y: ny + 17, s: count, f: 'ui', fill: 'var(--muted)' });
+    const ny = Math.min(Math.max(headY, AXIS_H + 18), bottom - 6);
+    S.gutter.push({ t: 2, k: `rn${B.name}`, a: 1, cls: 'tl-region', x: 14, y: ny, s: fit(M, 'region', B.label, E.gutter - 24), f: 'region', fill: 'var(--ink)' });
+    const gy = bottom + BAND_GAP / 2 - 0.5;
+    S.gutter.push({ t: 3, k: `gr${B.name}`, a: 1, x1: 0, y1: gy, x2: E.gutter, y2: gy, stroke: 'var(--rule-soft)' });
   }
-  const bandsTop = top + (phone ? HEAD_H : 0) + REGION_PAD;
-  for (const e of R.eras) {
-    if (e.e < V.win.start || e.s > V.win.end) continue;
-    const y = bandsTop + e.row * (BAND_H + BAND_GAP);
-    if (y + BAND_H < AXIS_H || y > E.h) continue;
-    const xa = X(e.s), xb = Math.max(X(e.e), xa + 3);
+  // Eras are the backdrop: a wash across the band each, inner ones a rule along its foot.
+  const outer = B.eras.filter((e) => !e.parent || !B.eras.some((o) => o.id === e.parent));
+  outer.forEach((e, i) => {
+    if (e.e < V.win.start || e.s > V.win.end) return;
+    const xa = X(e.s), xb = Math.max(X(e.e), xa + 1);
     const role = roleOf(V, D.byId.get(e.id)!);
-    const { marks, text } = bandPrims(e, { xa, xb, x0, x1, y, hot: V.hover === e.id, selected: V.selected === e.id, role }, M);
-    S.z[1].push(...marks);
+    const { marks, text } = washPrims(e, { xa, xb, x0, x1, top, bottom, nameY: headY, after, alt: i % 2 === 1, selected: V.selected === e.id, role }, M);
+    S.z[0].push(...marks);
     S.z[2].push(...text);
-    const rx = Math.max(xa, x0 - 4), rw = Math.max(MIN_HIT, Math.min(xb, x1 + 4) - rx);
-    S.boxes.set(e.id, { x: rx, y, w: rw, h: BAND_H });
-    S.targets.push({ id: e.id, x: rx, y, w: rw, h: BAND_H });
-    landmarks(c, e, xa, xb, y);
+    const rx = Math.max(xa, x0), rw = Math.min(xb, x1) - rx;
+    if (rw > 0) S.targets.push({ id: e.id, x: rx, y: top, w: Math.max(rw, 4), h: bottom - top });
+  });
+  for (const e of B.eras) {
+    if (outer.includes(e) || e.e < V.win.start || e.s > V.win.end) continue;
+    const { marks, text } = innerPrims(e, { xa: X(e.s), xb: X(e.e), x0, x1, bottom, role: roleOf(V, D.byId.get(e.id)!) }, M);
+    S.z[0].push(...marks);
+    S.z[2].push(...text);
+  }
+  if (g.empty) S.z[2].push({ t: 2, k: `be${B.name}`, a: 1, cls: 'tl-band-empty', x: x0 + 12, y: top + GOLD_H + HEAD_LINE + (B.named ? WORLD_LINE : 0) + 15, s: 'No polities in these years', f: 'ui', fill: 'var(--muted)' });
+  // World events: gold along the top of every band they touched, named on a line of their own at home.
+  const named: [number, number][] = [];
+  for (const { it, home } of B.worlds) {
+    if (it.e < V.win.start || it.s > V.win.end) continue;
+    const [xa, xb] = gold(c, it, top + 1, home, `${B.name}:${it.id}`);
+    S.targets.push({ id: it.id, x: xa - 4, y: top, w: Math.max(8, xb - xa + 8), h: GOLD_H + 3 });
+    if (!S.boxes.has(it.id)) S.boxes.set(it.id, { x: xa, y: top + 1, w: Math.max(2, xb - xa), h: 7 });
+    if (!home) continue;
+    // From where it starts, slid left if it would run off the right edge.
+    const w = M('world', it.title), lx = Math.max(Math.min(xa, x1 - 4 - w), x0 + 12);
+    if (lx + w > x1 - 4 || named.some(([a, b]) => lx < b && lx + w > a)) continue;
+    named.push([lx - 4, lx + w + 10]);
+    S.z[2].push({ t: 2, k: `wn${B.name}:${it.id}`, a: 1, cls: `tl-world-name${roleOf(V, it)}`, id: it.id, x: lx, y: base + g.worldY, s: it.title, f: 'world', fill: 'var(--gold-text)' });
+    S.targets.push({ id: it.id, x: lx - 2, y: base + g.worldY - 13, w: w + 4, h: 17 });
+  }
+  // Polities: strips in their sub-rows.
+  const tone = `var(--tone-${(B.tone % 3) + 1}`;
+  for (const sg of g.subs) {
+    const y = base + sg.y;
+    if (sg.h < 2 || y + sg.h < AXIS_H || y > E.h) continue;
+    const cy = y + sg.h / 2, T = Math.max(0, sg.h - 8);
+    const pad = (V.win.end - V.win.start) * 0.02;
+    for (const x of sg.slots) {
+      const o = x.pol ?? x.group;
+      const a = Math.max(o.s, V.win.start - pad), b = Math.min(o.e, V.win.end + pad);
+      if (b <= a) continue;
+      const fold = x.group ? 1 - unfoldOf(V, x.group.id) : sg.a;
+      if (fold <= 0.01) continue;
+      const tid = x.pol ? `pol:${x.pol.id}` : `grp:${x.group.id}`;
+      const fill = `${tone}${o.alt ? '-2' : ''})`;
+      const look: StripLook = {
+        a, b, X, cy, T, fill, left: x0, right: x1,
+        share: x.pol ? shareOf(x.pol) : groupShare(x.group, shareOf),
+        unknown: !!x.pol?.unknown,
+        picked: V.pick === tid || (!!x.pol?.itemId && V.selected === x.pol.itemId),
+        hot: V.hover === tid,
+        approxAt: x.pol?.approx && X(o.s) >= x0 ? X(o.s) : undefined,
+        name: x.pol ? x.pol.title : `▸ ${x.group.title}`,
+        sub: x.group?.members.map((m) => m.title).join(' · '),
+      };
+      const { marks, text } = stripPrims(tid, tid, look, M, fold);
+      S.z[1].push(...marks);
+      S.z[2].push(...text);
+      // The whole row is its hit area, so a sliver can still be picked.
+      if (fold > 0.5) S.targets.push({ id: tid, x: X(a), y: y + 2, w: Math.max(4, X(b) - X(a)), h: Math.max(4, sg.h - 4) });
+    }
+    // The bracket that folds a group back, along its members' rows.
+    if (sg.group && sg.group.members[0] === sg.slots[0].pol) {
+      const n = sg.group.members.length, h = sg.h * n;
+      S.z[2].push({ t: 7, k: `gb${sg.group.id}`, a: sg.a, cls: 'tl-bracket', d: `M${x0 + 9} ${y + 3}H${x0 + 3}V${y + h - 3}H${x0 + 9}`, fill: 'none', stroke: 'var(--ink-2)', sw: 1.3 });
+      if (sg.a > 0.5) S.targets.push({ id: `grp:${sg.group.id}`, x: x0, y, w: 12, h });
+    }
+  }
+  // Inner eras answer along the foot, over the strips.
+  for (const e of B.eras) {
+    if (outer.includes(e) || e.e < V.win.start || e.s > V.win.end || X(e.e) - X(e.s) < 70) continue;
+    S.targets.push({ id: e.id, x: Math.max(X(e.s), x0), y: bottom - 9, w: Math.min(X(e.e), x1) - Math.max(X(e.s), x0), h: 9 });
   }
 }
 
-/** An era's most prominent entries as their glyphs at their time, as many as fit without touching. */
-function landmarks(c: Ctx, e: PEra, xa: number, xb: number, y: number) {
-  const { D, V, S, X, x0, x1 } = c;
-  const lo = Math.max(xa, x0) + 9, hi = Math.min(xb, x1) - 9;
-  if (hi - lo < LANDMARK) return;
-  const cy = y + LANDMARK_Y;
-  const placed: number[] = [];
-  for (const it of e.landmarks) {
-    const x = X(it.kind === 'event' ? it.s : (Math.max(it.s, e.s) + Math.min(it.e, e.e)) / 2);
-    if (x - LANDMARK / 2 < lo || x + LANDMARK / 2 > hi || placed.some((p) => Math.abs(p - x) < LANDMARK + 6)) continue;
-    placed.push(x);
-    const hot = V.hover === it.id;
+/** A folded group is as thick as its members together: each adds its share, overlapping a little. */
+const groupShare = (g: PGroup, shareOf: (p: PPolity) => (y: number) => number) => {
+  const fs = g.members.map((m) => [m, shareOf(m)] as const);
+  return (y: number) => 1 - fs.reduce((acc, [m, f]) => (y >= m.s && y <= m.e ? acc * (1 - f(y) * 0.7) : acc), 1);
+};
+
+/** The top row: entries Bob shows in the overview as their kind's glyph and name, most prominent first, in up to three rows. */
+function topRow(c: Ctx, base: number, h: number) {
+  const { D, V, E, S, X, x0, x1 } = c;
+  const M = E.measure;
+  const y0 = base + TOP_PAD;
+  if (y0 + h < AXIS_H) return;
+  const taken: [number, number][][] = Array.from({ length: TOP_ROWS }, () => []);
+  for (const it of D.top) {
+    if (it.e < V.win.start || it.s > V.win.end) continue;
+    const xa = X(it.s), xb = Math.max(xa, X(it.e));
+    const label = titleOf(it), lw = M('ui', label);
+    const gx = xa - GLYPH / 2;
+    const span: [number, number] = [gx - 4, xb + 8 + lw + 6];
+    if (span[1] < x0 || span[0] > x1) continue;
+    const row = taken.findIndex((t) => !t.some(([a, b]) => span[0] < b && span[1] > a));
+    if (row < 0) continue;
+    taken[row].push(span);
+    const cy = y0 + row * TOP_ROW_H + TOP_ROW_H / 2;
     const role = roleOf(V, it);
-    if (hot) S.z[2].push({ t: 1, k: `elh${e.id}:${it.id}`, a: 1, x, y: cy, r: LANDMARK / 2 + 3, fill: 'var(--panel)', stroke: 'var(--ink)', sw: 1.5 });
-    S.z[2].push({ t: 6, k: `el${e.id}:${it.id}`, a: 1, cls: `tl-landmark${role}`, id: it.id, x: x - LANDMARK / 2, y: cy - LANDMARK / 2, w: LANDMARK, g: it.rep.kind, color: D.lanes[it.lane].color });
-    if (!S.boxes.has(it.id)) S.boxes.set(it.id, { x: x - LANDMARK / 2, y: cy - LANDMARK / 2, w: LANDMARK, h: LANDMARK });
-    S.targets.push({ id: it.id, x: x - MIN_HIT / 2, y: cy - MIN_HIT / 2, w: MIN_HIT, h: MIN_HIT });
+    const hot = V.hover === it.id;
+    // A world event no polity places is gold up here.
+    if (it.world) gold(c, it, cy - 4, true, `top:${it.id}`, 8);
+    else {
+      if (xb - xa > 2) S.z[1].push({ t: 3, k: `tl${it.id}`, a: 1, cls: `tl-top-span${role}`, id: it.id, x1: xa, y1: cy, x2: xb, y2: cy, stroke: 'var(--ink-2)', sw: 2 });
+      if (hot) S.z[2].push({ t: 1, k: `th${it.id}`, a: 1, x: xa, y: cy, r: GLYPH / 2 + 2, fill: 'var(--panel)', stroke: 'var(--ink)', sw: 1.5 });
+      S.z[2].push({ t: 6, k: `tg${it.id}`, a: 1, cls: `tl-top${role}`, id: it.id, x: gx, y: cy - GLYPH / 2, w: GLYPH, g: it.rep.kind, color: 'var(--ink-2)' });
+    }
+    S.z[2].push({ t: 2, k: `tt${it.id}`, a: 1, cls: `tl-top-name${role}`, id: it.id, x: xb + 8, y: cy + 4, s: label, f: 'ui', fill: 'var(--ink)' });
+    S.boxes.set(it.id, { x: gx, y: cy - GLYPH / 2, w: Math.max(GLYPH, xb - gx), h: GLYPH });
+    S.targets.push({ id: it.id, x: gx - 2, y: cy - TOP_ROW_H / 2, w: span[1] - gx, h: TOP_ROW_H });
   }
 }
 
@@ -719,15 +957,15 @@ function eraLevel(c: Ctx, EL: EraLanes) {
   // same time scale. With reduced motion the lanes only fade in where they'll be.
   const t = z.t;
   const c0: Ctx = { ...c, V: { ...V, scrollY: z.scroll0, hover: undefined, selected: undefined }, S: blank(S) };
-  eraRows(c0);
+  overviewRows(c0);
   for (let i = 0; i < 4; i++) for (const p of c0.S.z[i]) S.z[i].push({ ...p, a: p.a * (1 - t) });
   for (const p of c0.S.gutter) S.gutter.push({ ...p, a: p.a * (1 - t) });
   const c1: Ctx = { ...c, S: blank(S) };
   lanes1(c1, EL, phone);
-  const band = eraSpan(D, EL.era.id, phone);
-  const by = band ? AXIS_H + band[0] - z.scroll0 : AXIS_H;
+  const band = eraSpan(D, V, EL.era.id, phone);
+  const by = band ? AXIS_H + band[0] - z.scroll0 : AXIS_H, bh = band ? band[1] - band[0] : 60;
   const visH = Math.max(1, Math.min(HEAD1_H + lanesH(EL, phone) - V.scrollY, E.h - AXIS_H));
-  const Y = z.fade ? (y: number) => y : (y: number) => { const shut = by + clamp01((y - AXIS_H) / visH) * BAND_H; return shut + (y - shut) * t; };
+  const Y = z.fade ? (y: number) => y : (y: number) => { const shut = by + clamp01((y - AXIS_H) / visH) * bh; return shut + (y - shut) * t; };
   const ma = z.fade ? t : Math.min(1, t * 1.6), ta = z.fade ? t : clamp01((t - 0.45) / 0.55);
   for (let i = 0; i < 4; i++) for (const p of c1.S.z[i]) { const q = squash(p, Y, ma, ta); if (q) S.z[i].push(q); }
   for (const p of c1.S.gutter) { const q = squash(p, Y, ma, ta); if (q) S.gutter.push(q); }
