@@ -101,4 +101,25 @@ describe('what a highlight becomes, ticked or filled in by hand', () => {
     expect(back.relations).toEqual([]);
     expect(back.highlights[0].usedBy).toEqual(['i_old']);
   });
+
+  it('adds a polity with its territory, and Undo takes a new one away and puts back one Bob had', () => {
+    const { doc } = setup();
+    const sparta = item('i_sparta', { kind: 'span', subject: 'polity', wikidataId: 'Q5690' });
+    const fresh = { id: 't_new', title: 'Sparta', categoryId: 'c', snapshots: [], itemId: 'i_sparta', updatedAt: 0 };
+    const { doc: d, became } = addBecoming(doc, 'h1', { link: [], add: [{ item: sparta, territory: { next: fresh } }] }, 5);
+    expect(d.territories.find((t) => t.id === 't_new')).toMatchObject({ itemId: 'i_sparta' });
+    expect(became.territories).toEqual([{ next: fresh }]);
+    expect(undoBecoming(d, became, 6).territories.map((t) => t.id)).toEqual([]);
+
+    const had = { id: 't_had', title: 'Sparta', categoryId: 'c', snapshots: [{ from: { y: -500 } }], updatedAt: 1 };
+    const withHad = { ...doc, territories: [had] };
+    const taken = { next: { ...had, itemId: 'i_sparta', wikidataId: 'Q5690' }, before: had };
+    const r = addBecoming(withHad, 'h1', { link: [], add: [{ item: sparta, territory: taken }] }, 5);
+    expect(r.doc.territories[0]).toMatchObject({ itemId: 'i_sparta', wikidataId: 'Q5690' });
+    const back = undoBecoming(r.doc, r.became, 6);
+    expect(back.territories).toHaveLength(1);
+    expect(back.territories[0]).toMatchObject({ id: 't_had', snapshots: had.snapshots });
+    expect(back.territories[0].itemId).toBeUndefined();
+    expect(back.territories[0].wikidataId).toBeUndefined();
+  });
 });

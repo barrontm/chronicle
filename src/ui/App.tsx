@@ -382,7 +382,7 @@ function Workspace() {
         style={resizable && readerWidth !== null ? { '--reader-w': `${readerWidth}px` } as React.CSSProperties : undefined}
       >
         {next && !(narrow && mapSheet) && (
-          <ReaderPane article={article} searching={searching} onOpen={openArticle} onSearching={setSearching} onBack={trail.at > 0 ? () => setTrail({ ...trail, at: trail.at - 1 }) : undefined} onShowMap={narrow ? () => setMapSheet(true) : undefined} onOpenRecord={(r) => nav.open(r.type === 'item' ? { type: 'item', id: r.id } : { type: 'territory', id: r.id })} onDraft={(draft) => nav.open({ type: 'new-item', draft })} onShowYear={setYear} onOpenDrafting={() => nav.open({ type: 'ai-draft' })} />
+          <ReaderPane article={article} searching={searching} onOpen={openArticle} onSearching={setSearching} onBack={trail.at > 0 ? () => setTrail({ ...trail, at: trail.at - 1 }) : undefined} onShowMap={narrow ? () => setMapSheet(true) : undefined} onOpenRecord={(r) => nav.open(r.type === 'item' ? { type: 'item', id: r.id } : { type: 'territory', id: r.id })} onDraft={(draft) => nav.open({ type: 'new-item', draft })} onShowYear={setYear} onOpenDrafting={() => nav.open({ type: 'ai-draft' })} onDraw={nav.draw} />
         )}
         {resizable && (
           <Splitter

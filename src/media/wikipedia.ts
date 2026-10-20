@@ -220,13 +220,17 @@ export function kindAndDates(f: WikidataFacts): { kind: ItemKind; start?: HistDa
   return { kind: 'event', start: f.pointInTime ?? f.start };
 }
 
-/** A place is a lifespan from its founding (P571) to its abandonment (P576), either of which may be unknown. */
-export function asPlace(item: TimelineItem, f: WikidataFacts | undefined): TimelineItem {
+/**
+ * A place or a polity is a lifespan from its founding (P571) to its abandonment or dissolution
+ * (P576), either of which may be unknown.
+ */
+export function asLifespan(item: TimelineItem, f: WikidataFacts | undefined, subject: 'place' | 'polity' = 'place'): TimelineItem {
   const { start: _start, end: _end, ...rest } = item;
   const start = f?.start;
   const end = f?.end && (!start || compareHistDate(f.end, start) >= 0) ? f.end : undefined;
-  return { ...rest, kind: 'span', subject: 'place', ...(start ? { start } : {}), ...(end ? { end } : {}) };
+  return { ...rest, kind: 'span', subject, ...(start ? { start } : {}), ...(end ? { end } : {}) };
 }
+export const asPlace = (item: TimelineItem, f: WikidataFacts | undefined) => asLifespan(item, f, 'place');
 
 const capitalize = (s: string | undefined) => (s ? s[0].toUpperCase() + s.slice(1) : s);
 
@@ -371,12 +375,13 @@ export async function draftFromWikipedia(
     places = await fetchPlaces(facts, opts.signal);
   }
   const draft = buildDraft({ summary, facts, places, existingSources: opts.existingSources, categoryId: opts.categoryId, today: opts.today });
-  // What kind of thing it is, so the timeline can draw it as one; a period also gets the row it sits in.
+  // What kind of thing it is, so the timeline can draw it as one.
   if (entity) {
     const kind = opts.subject?.qid === entity.qid ? opts.subject.kind : toSubject(entity, await walkClasses(entity.classIds, opts.signal), {}).kind;
     if (kind) draft.item.subject = kind;
-    if (kind === 'place') draft.item = asPlace(draft.item, facts);
-    if (kind === 'period') {
+    if (kind === 'place' || kind === 'polity') draft.item = asLifespan(draft.item, facts, kind);
+    // A period, or a polity, also gets the row it sits in.
+    if (kind === 'period' || kind === 'polity') {
       const ids = [...(entity.facts.country ?? []), ...(entity.facts.continent ?? [])].slice(0, 50);
       try {
         const region = ids.length ? seedRegion(entity.facts, parseLabels(await getJson(buildLabelsUrl(ids), opts.signal)), regionsIn(opts.existingItems)) : undefined;

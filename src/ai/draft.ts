@@ -1,5 +1,5 @@
 import { remove, upsert } from '../model/doc';
-import type { Highlight, Lane, Provenance, Relation, Source, TimelineDoc, TimelineItem } from '../model/types';
+import type { Highlight, Lane, Provenance, Relation, Source, Territory, TimelineDoc, TimelineItem } from '../model/types';
 
 /**
  * A set of AI-drafted records waiting for Bob. Nothing here is in the doc
@@ -14,6 +14,8 @@ export interface DraftEntry {
   newSources: Source[];
   /** The page's intro, quoted; saved with the entry as a highlight. */
   highlight?: Highlight;
+  /** A polity's territory, saved with it: new, or one Bob had (as it was, so Undo puts it back). */
+  territory?: Tied;
   /** Claude's one-line reason, shown while reviewing and never saved. */
   why: string;
   /** Problems that stop it being accepted as it is (e.g. no date on Wikidata). */
@@ -54,8 +56,18 @@ export function acceptEntry(doc: TimelineDoc, entry: DraftEntry, now = Date.now(
   for (const s of entry.newSources) if (!d.sources.some((x) => x.id === s.id)) d = upsert(d, 'sources', s, now);
   const lanes = d.highlights.find((h) => h.id === highlightId)?.lanes;
   d = upsert(d, 'items', lanes?.length && !entry.item.lanes?.length ? { ...entry.item, lanes } : entry.item, now);
+  if (entry.territory) d = upsert(d, 'territories', entry.territory.next, now);
   if (entry.highlight) d = upsert(d, 'highlights', { ...entry.highlight, usedBy: [entry.item.id] }, now);
   return highlightId ? usedBy(d, highlightId, entry.item.id, now) : d;
+}
+
+/** A polity's territory as saved with its entry, and as it was before when Bob already had it. */
+export interface Tied { next: Territory; before?: Territory }
+
+/** Take back a polity's territory: a new one goes, one Bob had goes back to how it was. */
+function untie(doc: TimelineDoc, t: Tied, now: number): TimelineDoc {
+  if (t.before) return upsert(doc, 'territories', t.before, now);
+  return doc.territories.some((x) => x.id === t.next.id) ? remove(doc, 'territories', t.next.id, now) : doc;
 }
 
 /**
@@ -65,11 +77,11 @@ export function acceptEntry(doc: TimelineDoc, entry: DraftEntry, now = Date.now(
  */
 export interface Becoming {
   link: { id: string; relations?: Relation[] }[];
-  add: { item: TimelineItem; newSources?: Source[]; relations?: Relation[] }[];
+  add: { item: TimelineItem; newSources?: Source[]; relations?: Relation[]; territory?: Tied }[];
 }
 
 /** What `addBecoming` changed, so one Undo can take it all back. */
-export interface Became { highlightId: string; added: string[]; linked: string[]; relations: string[] }
+export interface Became { highlightId: string; added: string[]; linked: string[]; relations: string[]; territories?: Tied[] }
 
 /**
  * Link the highlight to the records Bob has and add the new ones through
@@ -85,8 +97,9 @@ export function addBecoming(doc: TimelineDoc, highlightId: string, b: Becoming, 
     d = usedBy(d, highlightId, l.id, now);
   }
   for (const a of b.add) {
-    d = acceptEntry(d, { item: a.item, newSources: a.newSources ?? [], why: '', problems: [], status: 'pending' }, now, highlightId);
+    d = acceptEntry(d, { item: a.item, newSources: a.newSources ?? [], territory: a.territory, why: '', problems: [], status: 'pending' }, now, highlightId);
     became.added.push(a.item.id);
+    if (a.territory) (became.territories ??= []).push(a.territory);
   }
   const ids = new Set(d.items.map((i) => i.id));
   for (const r of [...b.link, ...b.add].flatMap((x) => x.relations ?? [])) {
@@ -102,6 +115,7 @@ export function undoBecoming(doc: TimelineDoc, became: Became, now = Date.now())
   let d = doc;
   for (const id of became.relations) if (d.relations.some((r) => r.id === id)) d = remove(d, 'relations', id, now);
   for (const id of became.added) if (d.items.some((i) => i.id === id)) d = remove(d, 'items', id, now);
+  for (const t of became.territories ?? []) d = untie(d, t, now);
   const h = d.highlights.find((x) => x.id === became.highlightId);
   if (h && became.linked.some((id) => h.usedBy.includes(id))) {
     d = upsert(d, 'highlights', { ...h, usedBy: h.usedBy.filter((id) => !became.linked.includes(id)) }, now);
@@ -135,6 +149,7 @@ export function undoEntry(doc: TimelineDoc, set: DraftSet, entry: DraftEntry, no
   const id = entry.item.id;
   let d = doc;
   for (const c of set.connections) if (c.relation.fromId === id || c.relation.toId === id) d = undoConnection(d, c, now);
+  if (entry.territory) d = untie(d, entry.territory, now);
   return d.items.some((i) => i.id === id) ? remove(d, 'items', id, now) : d;
 }
 
