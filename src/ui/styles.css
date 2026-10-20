@@ -147,20 +147,15 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .search-open { padding: 6px 8px; }
 .search-open svg { display: block; }
 
-.workspace { display: grid; grid-template-columns: 1fr; min-height: 0; position: relative; }
-.workspace.with-drawer { grid-template-columns: 1fr var(--drawer); }
-.stage { display: flex; flex-direction: column; min-width: 0; min-height: 0; overflow: auto; }
-
-/* ---------- New layout: the reader beside the map over a timeline strip ---------- */
-.workspace.next { --reader-col: minmax(320px, 40em); grid-template-columns: var(--reader-col) auto 1fr; }
-.workspace.next.with-drawer { grid-template-columns: var(--reader-col) auto 1fr var(--drawer); }
+/* ---------- The reader beside the map over a timeline strip ---------- */
+.workspace { --reader-col: minmax(320px, 40em); display: grid; grid-template-columns: var(--reader-col) auto 1fr; min-height: 0; position: relative; }
+.workspace.with-drawer { grid-template-columns: var(--reader-col) auto 1fr var(--drawer); }
 /* Bob's own reader width (the splitter), kept inside what the window allows now. */
-.workspace.next.sized { --reader-col: max(320px, min(var(--reader-w), 100% - 360px)); }
-.workspace.next.sized.with-drawer { --reader-col: max(320px, min(var(--reader-w), 100% - 360px - var(--drawer))); }
-.workspace.next .stage { padding-top: 12px; }
-.workspace.next .lanebar { padding: 0 16px 8px; gap: 4px; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
-.workspace.next .lanebar .chip { flex: none; }
-.workspace.next .lanebar .chip { padding-block: 2px; font-size: 12px; }
+.workspace.sized { --reader-col: max(320px, min(var(--reader-w), 100% - 360px)); }
+.workspace.sized.with-drawer { --reader-col: max(320px, min(var(--reader-w), 100% - 360px - var(--drawer))); }
+.stage { display: flex; flex-direction: column; min-width: 0; min-height: 0; overflow: auto; padding-top: 12px; }
+.workspace .lanebar { padding: 0 16px 8px; gap: 4px; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+.workspace .lanebar .chip { flex: none; padding-block: 2px; font-size: 12px; }
 .reader { min-width: 0; min-height: 0; overflow: auto; background: var(--panel); padding: 24px 32px 48px; }
 .reader-tools { display: flex; justify-content: flex-end; margin: -8px -8px 8px 0; }
 .reader-search, .reader-article { max-width: 34em; margin: 0 auto; }
@@ -365,7 +360,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .splitter:hover::after, .splitter.dragging::after { background: var(--ink-2); }
 .splitter:focus-visible::after { background: var(--focus); }
 @media (max-width: 860px) {
-  .workspace.next, .workspace.next.with-drawer { grid-template-columns: 1fr; }
+  .workspace, .workspace.with-drawer { grid-template-columns: 1fr; }
   .reader { border-right: 0; padding: 16px 16px 96px; } /* room below the text for the docked Highlight button */
   .reader-title { font-size: 26px; }
   .reader-text { font-size: 17px; }
@@ -603,16 +598,14 @@ dialog h2 { font-family: var(--font-read); margin: 0 0 12px; font-weight: 600; }
 .lede { color: var(--ink-2); font-size: 13px; margin: 0 0 12px; }
 
 /* ---------- Map ---------- */
-.view-switch button { padding: 5px 10px; font-size: 13px; }
 .timeline-pane { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; }
-.timeline-pane[hidden] { display: none; }
-.stage.view-split .timeline-host { min-height: 240px; }
+.stage .timeline-host { min-height: 240px; }
 
 .map-pane { position: relative; flex: 1 1 auto; min-height: 280px; margin: 0 16px; border: 1px solid var(--rule); border-radius: var(--radius-m); overflow: hidden; background: var(--map-water); }
-.stage.view-split .map-pane { flex: 0 0 46%; }
+.stage .map-pane { flex: 0 0 46%; }
 /* Bob's own map height (the splitter): the map gives way first when the window is shorter. */
-.stage.view-split.sized .map-pane { flex: 0 1 var(--map-h); min-height: 160px; }
-.stage.view-split.sized .timeline-host { min-height: 160px; }
+.stage.sized .map-pane { flex: 0 1 var(--map-h); min-height: 160px; }
+.stage.sized .timeline-host { min-height: 160px; }
 /* More specific than MapLibre's own .maplibregl-map { position: relative }. */
 .map-pane .map-host { position: absolute; inset: 0; }
 .map-loading { display: grid; place-items: center; color: var(--ink-2); }
@@ -689,7 +682,6 @@ dialog h2 { font-family: var(--font-read); margin: 0 0 12px; font-weight: 600; }
   .map-pane { margin: 0 8px; }
   .yearbar { padding: 6px 8px; gap: 6px; }
   .year-input { width: 92px; font-size: 16px; }
-  .view-switch { order: 10; }
 }
 
 /* Help: the user manual */

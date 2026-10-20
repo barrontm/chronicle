@@ -13,7 +13,6 @@ import { ItemEditor, ItemView } from './panels/ItemPanels';
 import { Help } from './panels/Help';
 import { Library } from './panels/Library';
 import { BulkEdit } from './panels/BulkEdit';
-import { WikiImport } from './panels/WikiImport';
 import { pendingOnTimeline, pendingWithPlaces, type DraftSet } from '../ai/draft';
 import { NoteEditor, NoteView } from './panels/NotePanels';
 import { SeriesEditor } from './panels/SeriesEditor';
@@ -41,8 +40,6 @@ export function App({ store }: { store: DocStore }) {
   );
 }
 
-type View = 'timeline' | 'map' | 'split';
-
 /** The least room the map keeps beside the reader, and the least height the map and the timeline each keep (px). */
 const STAGE_MIN = 360;
 const PANE_MIN = 160;
@@ -63,6 +60,7 @@ const DraftReview = lazy(() => import('./panels/DraftReview').then((m) => ({ def
 
 // A doc saved by a newer version opens read-only and unparsed, so it may lack fields this version expects.
 const NO_HIGHLIGHTS: TimelineDoc['highlights'] = [];
+const NO_FLOWS: TimelineDoc['flows'] = [];
 const SAVE_LABEL = { loading: 'Opening…', saving: 'Saving…', saved: 'Saved on this device', error: 'Couldn’t save. Export a backup now.' } as const;
 
 function Workspace() {
@@ -77,7 +75,7 @@ function Workspace() {
   const followWindow = useMemo(() => (win ? { start: win.start, end: win.end } : undefined), [win?.start, win?.end]); // eslint-disable-line react-hooks/exhaustive-deps
   const timeline = useRef<TimelineControl>(null);
   const [canGoBackInTime, setCanGoBackInTime] = useState(false);
-  const [menu, setMenu] = useState<'add' | 'file' | null>(null);
+  const [menu, setMenu] = useState<'file' | null>(null);
   const [pendingImport, setPendingImport] = useState<TimelineDoc | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
@@ -146,11 +144,7 @@ function Workspace() {
 
   // ----- Map and the shared current year -----
   const narrow = useMedia('(max-width: 860px)');
-  const [view, setView] = useStored<View>('chronicle.view', () => 'timeline');
-  // The layout: the reader beside the map over the timeline (on a phone, the map is a sheet over the reader),
-  // unless Bob chose "Use the classic layout". A new key, so everyone starts on the reader layout, including whoever had tried it under "Try the new layout".
-  const [classic, setClassic] = useStored<boolean>('chronicle.classicLayout', () => false);
-  const next = !classic;
+  // The reader beside the map over the timeline; on a phone, the map and the timeline are a sheet over the reader.
   const [trail, setTrail] = useStored<{ pages: ArticleRef[]; at: number }>('chronicle.trail', () => ({ pages: [], at: -1 }));
   const article = trail.pages[trail.at] ?? null;
   const [searching, setSearching] = useState(false);
@@ -160,13 +154,12 @@ function Workspace() {
     const pages = [...trail.pages.slice(0, trail.at + 1).filter((p) => p.key !== a.key), a];
     setTrail({ pages, at: pages.length - 1 });
   };
-  const shownView: View = next ? 'split' : narrow && view === 'split' ? 'map' : view;
   // Bob's pane sizes in the reader layout on a laptop, per device: the reader's width and the map's height (null = the default).
   const [readerWidth, setReaderWidth] = useStored<number | null>('chronicle.readerWidth', () => null);
   const [mapHeight, setMapHeight] = useStored<number | null>('chronicle.mapHeight', () => null);
   const workspaceEl = useRef<HTMLDivElement>(null);
   const stageEl = useRef<HTMLElement>(null);
-  const resizable = next && !narrow;
+  const resizable = !narrow;
   const readerEl = () => workspaceEl.current?.querySelector<HTMLElement>('.reader') ?? null;
   const mapEl = () => stageEl.current?.querySelector<HTMLElement>('.map-pane') ?? null;
   const readerLimits = (): [number, number] => {
@@ -182,7 +175,6 @@ function Workspace() {
     const tl = stageEl.current?.querySelector<HTMLElement>('.timeline-host')?.offsetHeight ?? 0;
     return [PANE_MIN, map + tl - PANE_MIN];
   };
-  const showMap = shownView !== 'timeline';
   const range = useMemo<[number, number]>(() => {
     const r = docYearRange(doc);
     if (!r) return [-3000, 2030];
@@ -239,11 +231,8 @@ function Workspace() {
   // Events linger for a while after they happen; longer when playing fast so they can be seen.
   const fadeYears = Math.max(10, speed * 2);
 
-  // Bring the map into view for a panel action: a split on the laptop, the sheet on a phone in the reader layout.
-  const revealMap = () => {
-    if (next) { if (narrow) setMapSheet(true); }
-    else if (view === 'timeline') setView(narrow ? 'map' : 'split');
-  };
+  // Bring the map into view for a panel action: on a phone, the sheet.
+  const revealMap = () => { if (narrow) setMapSheet(true); };
 
   const panel = stack.at(-1);
   const nav: Nav = useMemo(() => ({
@@ -253,7 +242,7 @@ function Workspace() {
     close: () => setStack([]),
     canGoBack: stack.length > 1,
     showTime: (id) => {
-      if (next) { if (narrow) setMapSheet(true); } else if (view === 'map') setView('timeline');
+      if (narrow) setMapSheet(true);
       timeline.current?.focus(id);
     },
     showOnMap: (y) => {
@@ -272,7 +261,7 @@ function Workspace() {
       setPicking({ onDone });
       revealMap();
     },
-  }), [stack.length, view, narrow, setView, next]);
+  }), [stack.length, narrow]);
 
   // A search result: open it, and bring the timeline, the year and the map to it.
   const [mapFit, setMapFit] = useState<MapFit | undefined>();
@@ -307,7 +296,7 @@ function Workspace() {
     setStack([{ type: 'item', id }]);
     // With the map open, jump to the entry's year if it isn't on the map right now.
     const item = doc.items.find((i) => i.id === id);
-    if (showMap && item?.start && !playing && presenceAt(item, year, fadeYears, mapOptions.keepPast) === 0) setYearState(toDecimalYear(item.start));
+    if (item?.start && !playing && presenceAt(item, year, fadeYears, mapOptions.keepPast) === 0) setYearState(toDecimalYear(item.start));
   };
 
   // Escape closes menus first, then the drawer.
@@ -356,7 +345,7 @@ function Workspace() {
         />
         <span className="save-state" role="status" data-testid="save-state">{readOnly ? 'Read-only' : SAVE_LABEL[saveState]}</span>
         <span className="spacer" />
-        {next && trail.pages.length > 0 && (
+        {trail.pages.length > 0 && (
           <nav className="trail" aria-label="Reading trail">
             {trail.pages.map((p, i) => (
               <button key={p.key} className="trail-step" aria-current={i === trail.at ? 'page' : undefined} onClick={() => { setSearching(false); setTrail({ ...trail, at: i }); }}>{p.title}</button>
@@ -364,33 +353,7 @@ function Workspace() {
           </nav>
         )}
         <Search narrow={narrow} onPick={pickResult} />
-        {next ? (
-          <button className="btn primary" onClick={() => { setMenu(null); setMapSheet(false); setSearching(true); }}>Open an article</button>
-        ) : (<>
-        <div className="segmented view-switch" role="group" aria-label="View">
-          <button aria-pressed={shownView === 'timeline'} onClick={() => setView('timeline')}>Timeline</button>
-          <button aria-pressed={shownView === 'map'} onClick={() => setView('map')}>Map</button>
-          {!narrow && <button aria-pressed={shownView === 'split'} onClick={() => setView('split')}>Both</button>}
-        </div>
-        <div className="menu">
-          <button className="btn primary" aria-expanded={menu === 'add'} onClick={() => setMenu(menu === 'add' ? null : 'add')}>Add</button>
-          {menu === 'add' && (
-            <div className="menu-pop" role="menu">
-              <button role="menuitem" onClick={() => startNew({ type: 'new-item', kind: 'event' })}>Event</button>
-              <button role="menuitem" onClick={() => startNew({ type: 'new-item', kind: 'span' })}>Period, war or movement</button>
-              <button role="menuitem" onClick={() => startNew({ type: 'new-item', kind: 'person' })}>Person</button>
-              <button role="menuitem" onClick={() => startNew({ type: 'wiki-import' })}>From Wikipedia…</button>
-              <button role="menuitem" onClick={() => startNew({ type: 'ai-draft' })}>Draft with AI…</button>
-              <hr />
-              <button role="menuitem" onClick={() => startNew({ type: 'new-note', linkedIds: [] })}>Note</button>
-              <button role="menuitem" onClick={() => startNew({ type: 'new-source' })}>Source</button>
-              <button role="menuitem" onClick={() => startNew({ type: 'series', id: null })}>Trend over time</button>
-              <button role="menuitem" onClick={() => startNew({ type: 'territory-import', year: Math.round(year) })}>Territory on the map…</button>
-              <button role="menuitem" onClick={() => startNew({ type: 'new-flow' })}>Migration on the map…</button>
-            </div>
-          )}
-        </div>
-        </>)}
+        <button className="btn primary" onClick={() => { setMenu(null); setMapSheet(false); setSearching(true); }}>Open an article</button>
         <button className="btn" onClick={() => { setMenu(null); setStack([{ type: 'library', tab: 'notes' }]); }}>Library</button>
         <button className="btn quiet" onClick={() => { setMenu(null); setStack([{ type: 'help' }]); }}>Help</button>
         <div className="menu">
@@ -398,7 +361,7 @@ function Workspace() {
           {menu === 'file' && (
             <div className="menu-pop" role="menu">
               <button role="menuitem" onClick={() => { setMenu(null); timeline.current?.fit(); }}>Show everything</button>
-              <button role="menuitemcheckbox" aria-checked={classic} onClick={() => { setMenu(null); setMapSheet(false); setClassic(!classic); }}>Use the classic layout</button>
+              <button role="menuitem" onClick={() => startNew({ type: 'ai-draft' })}>Draft with AI…</button>
               <hr />
               <button role="menuitem" onClick={() => {
                 setMenu(null);
@@ -413,10 +376,10 @@ function Workspace() {
 
       <div
         ref={workspaceEl}
-        className={`workspace ${next ? 'next' : ''} ${panel ? 'with-drawer' : ''} ${resizable && readerWidth !== null ? 'sized' : ''}`}
+        className={`workspace ${panel ? 'with-drawer' : ''} ${resizable && readerWidth !== null ? 'sized' : ''}`}
         style={resizable && readerWidth !== null ? { '--reader-w': `${readerWidth}px` } as React.CSSProperties : undefined}
       >
-        {next && !(narrow && mapSheet) && (
+        {!(narrow && mapSheet) && (
           <ReaderPane article={article} searching={searching} onOpen={openArticle} onSearching={setSearching} onBack={trail.at > 0 ? () => setTrail({ ...trail, at: trail.at - 1 }) : undefined} onShowMap={narrow ? () => setMapSheet(true) : undefined} onOpenRecord={(r) => nav.open(r.type === 'item' ? { type: 'item', id: r.id } : { type: 'territory', id: r.id })} onDraft={(draft) => nav.open({ type: 'new-item', draft })} onShowYear={setYear} onOpenDrafting={() => nav.open({ type: 'ai-draft' })} onDraw={nav.draw} />
         )}
         {resizable && (
@@ -430,13 +393,13 @@ function Workspace() {
             commit={setReaderWidth}
           />
         )}
-        {(!next || !narrow || mapSheet) && (
+        {(!narrow || mapSheet) && (
         <main
           ref={stageEl}
-          className={`stage view-${shownView} ${next && narrow ? 'sheet' : ''} ${resizable && mapHeight !== null ? 'sized' : ''}`}
+          className={`stage ${narrow ? 'sheet' : ''} ${resizable && mapHeight !== null ? 'sized' : ''}`}
           style={resizable && mapHeight !== null ? { '--map-h': `${mapHeight}px` } as React.CSSProperties : undefined}
         >
-          {next && narrow && (
+          {narrow && (
             <div className="sheet-head">
               <button className="btn small" onClick={() => setMapSheet(false)}>Back to reading</button>
             </div>
@@ -462,68 +425,52 @@ function Workspace() {
             </div>
           )}
           {importError && <div className="notice bad" role="alert" style={{ margin: '0 16px 8px' }}>{importError}</div>}
-          {showMap && (
-            <>
-              <MapPane
-                year={year}
-                items={doc.items}
-                territories={doc.territories}
-                categories={categories}
-                relations={doc.relations}
-                series={doc.series}
-                flows={doc.flows}
-                draftItems={draftItems}
-                flowOptions={flowOptions}
-                onFlowOptions={setFlowOptions}
-                dataSeriesId={dataSeriesId}
-                onDataSeries={setDataSeriesId}
-                options={mapOptions}
-                onOptions={setMapOptions}
-                fadeYears={fadeYears}
-                selectedId={selectedId}
-                onOpenItem={(id) => setStack([{ type: 'item', id }])}
-                onOpenTerritory={(id) => setStack([{ type: 'territory', id }])}
-                onOpenFlow={(id) => setStack([{ type: 'flow', id }])}
-                onAddTerritory={() => startNew({ type: 'territory-import', year: Math.round(year) })}
-                camera={mapCamera}
-                fitTo={mapFit}
-                onCamera={setMapCamera}
-                drawing={drawing ? { onDone: (g) => { drawing.onDone(g, Math.round(year)); setDrawing(null); }, onCancel: () => setDrawing(null) } : undefined}
-                picking={picking ? { onDone: (pt) => { picking.onDone(pt); setPicking(null); }, onCancel: () => setPicking(null) } : undefined}
-                focus={next ? overviewFocus : undefined}
-                window={followWindow}
-                region={next ? region : undefined}
-                onRegion={next ? setRegion : undefined}
-              />
-              <YearBar year={year} range={range} onYear={(y) => { setPlaying(false); setYear(y); }} playing={playing} onPlaying={setPlaying} speed={speed} onSpeed={setSpeed} />
-              {resizable && (
-                <Splitter
-                  between="rows"
-                  label="Resize the map and the timeline"
-                  testId="map-splitter"
-                  measure={() => mapEl()?.offsetHeight ?? 0}
-                  limits={mapLimits}
-                  apply={(px) => { const st = stageEl.current; if (st) { st.classList.add('sized'); st.style.setProperty('--map-h', `${px}px`); } }}
-                  commit={setMapHeight}
-                />
-              )}
-            </>
+          <MapPane
+            year={year}
+            items={doc.items}
+            territories={doc.territories}
+            categories={categories}
+            relations={doc.relations}
+            series={doc.series}
+            flows={doc.flows ?? NO_FLOWS}
+            draftItems={draftItems}
+            flowOptions={flowOptions}
+            onFlowOptions={setFlowOptions}
+            dataSeriesId={dataSeriesId}
+            onDataSeries={setDataSeriesId}
+            options={mapOptions}
+            onOptions={setMapOptions}
+            fadeYears={fadeYears}
+            selectedId={selectedId}
+            onOpenItem={(id) => setStack([{ type: 'item', id }])}
+            onOpenTerritory={(id) => setStack([{ type: 'territory', id }])}
+            onOpenFlow={(id) => setStack([{ type: 'flow', id }])}
+            onAddTerritory={() => startNew({ type: 'territory-import', year: Math.round(year) })}
+            camera={mapCamera}
+            fitTo={mapFit}
+            onCamera={setMapCamera}
+            drawing={drawing ? { onDone: (g) => { drawing.onDone(g, Math.round(year)); setDrawing(null); }, onCancel: () => setDrawing(null) } : undefined}
+            picking={picking ? { onDone: (pt) => { picking.onDone(pt); setPicking(null); }, onCancel: () => setPicking(null) } : undefined}
+            focus={overviewFocus}
+            window={followWindow}
+            region={region}
+            onRegion={setRegion}
+          />
+          <YearBar year={year} range={range} onYear={(y) => { setPlaying(false); setYear(y); }} playing={playing} onPlaying={setPlaying} speed={speed} onSpeed={setSpeed} />
+          {resizable && (
+            <Splitter
+              between="rows"
+              label="Resize the map and the timeline"
+              testId="map-splitter"
+              measure={() => mapEl()?.offsetHeight ?? 0}
+              limits={mapLimits}
+              apply={(px) => { const st = stageEl.current; if (st) { st.classList.add('sized'); st.style.setProperty('--map-h', `${px}px`); } }}
+              commit={setMapHeight}
+            />
           )}
-          <div className="timeline-pane" hidden={shownView === 'map'}>
-          {isEmpty && next && (
+          <div className="timeline-pane">
+          {isEmpty && (
             <p className="empty-strip" data-testid="empty-state">Your map and timeline fill in as you add what you read.</p>
-          )}
-          {isEmpty && !next && (
-            <div className="empty-state" data-testid="empty-state">
-              <h2>Start with what you’re reading about</h2>
-              <p>Add an event, a period or a person. Double-click anywhere on the timeline to add something at that date.</p>
-              <div className="actions" style={{ justifyContent: 'center' }}>
-                <button className="btn primary" onClick={() => startNew({ type: 'new-item', kind: 'event' })}>Add an event</button>
-                <button className="btn" onClick={() => startNew({ type: 'new-item', kind: 'person' })}>Add a person</button>
-                <button className="btn" onClick={() => startNew({ type: 'new-item', kind: 'span' })}>Add a period</button>
-                <button className="btn" onClick={() => startNew({ type: 'wiki-import' })}>Add from Wikipedia</button>
-              </div>
-            </div>
           )}
           {canGoBackInTime && <button className="btn small focus-chip" onClick={() => timeline.current?.back()}>Back to where I was</button>}
           <TimelineView
@@ -537,7 +484,7 @@ function Workspace() {
             onAddAt={(year, categoryId) => setStack([{ type: 'new-item', year, categoryId }])}
             onWindow={setWin}
             onCanGoBack={setCanGoBackInTime}
-            year={showMap ? year : undefined}
+            year={year}
             onYear={(y) => { setPlaying(false); setYear(y); }}
             prominence={prominence}
             drafts={timelineDrafts}
@@ -549,7 +496,7 @@ function Workspace() {
             groups={doc.groups}
             regionParents={doc.regionParents}
             onFocus={setOverviewFocus}
-            region={next ? region?.name : undefined}
+            region={region?.name}
             onRegion={(r) => { if (!r) setRegion(undefined); }}
           />
           {(pickedNow.length > 0 || bulkDone) && (
@@ -619,7 +566,6 @@ function PanelBody({ panel, nav, aiDraft, onAiDraft, onBulkDone }: { panel: Pane
   switch (panel.type) {
     case 'item': return panel.edit ? <ItemEditor key={`e-${panel.id}`} id={panel.id} nav={nav} /> : <ItemView key={panel.id} id={panel.id} nav={nav} />;
     case 'new-item': return <ItemEditor key={`new-${panel.draft?.item.id ?? `${panel.year}-${panel.kind}-${panel.categoryId}`}`} id={null} init={panel} draft={panel.draft} nav={nav} />;
-    case 'wiki-import': return <WikiImport nav={nav} />;
     case 'ai-draft': return <Suspense fallback={<div className="notice" role="status">Opening…</div>}><DraftReview nav={nav} draft={aiDraft} onDraft={onAiDraft} /></Suspense>;
     case 'note': return panel.edit ? <NoteEditor key={`e-${panel.id}`} id={panel.id} nav={nav} /> : <NoteView key={panel.id} id={panel.id} nav={nav} />;
     case 'new-note': return <NoteEditor key="new-note" id={null} linkedIds={panel.linkedIds} nav={nav} />;
