@@ -336,6 +336,63 @@ if (any('desktop-overview')) await overview(await page('desktop-overview', deskt
 if (any('dark-overview')) await overview(await page('dark-overview', { ...desktop, colorScheme: 'dark' }), 'dark');
 if (any('phone-overview')) await overview(await page('phone-overview', { viewport: { width: 412, height: 860 }, isMobile: true, hasTouch: true }), 'phone');
 
+// Level 1 in a polity: Athens picked on the overview, then opened into its six lanes (closed), then
+// its War lane opened. With `polity-zoom`, the drop-down as a filmstrip of frames 50 ms apart.
+async function polityLanes(p, prefix) {
+  await p.getByTestId('import-input').setInputFiles(GREECE);
+  if (prefix === 'phone') await p.getByTestId('reader').getByRole('button', { name: 'Map' }).click();
+  const timeline = p.locator('[data-testid=timeline][data-ready]');
+  await timeline.waitFor();
+  await p.getByTestId('time-bar').getByRole('button', { name: 'Overview' }).click();
+  await p.waitForTimeout(700);
+  const tl = await timeline.boundingBox();
+  await p.mouse.move(tl.x + tl.width / 2, tl.y + tl.height / 2);
+  await p.keyboard.down('Shift');
+  await p.mouse.wheel(0, 200);
+  await p.keyboard.up('Shift');
+  await p.waitForTimeout(200);
+  await p.locator('.tl-strip[data-id="grp:g_classical_greece"]').click({ force: true });
+  await p.waitForTimeout(600);
+  const athens = await p.locator('.tl-strip[data-id="pol:t_athens"]').boundingBox();
+  await p.mouse.click(athens.x + athens.width * 0.6, athens.y + athens.height / 2);
+  await p.waitForTimeout(500);
+  await shot(p, `${prefix}-polity-picked`);
+  const film = wanted(`${prefix}-polity-zoom`);
+  if (film) {
+    await p.clock.install();
+    await p.clock.pauseAt(new Date(Date.now() + 1000));
+  }
+  // Clicking it again opens it (the pill can sit under the playhead).
+  await p.mouse.click(athens.x + athens.width * 0.6, athens.y + athens.height / 2);
+  if (film) {
+    const frames = [];
+    for (let i = 0; i <= 8; i++) {
+      frames.push({ caption: `${i * 50} ms`, png: (await timeline.screenshot()).toString('base64') });
+      await p.clock.runFor(50);
+    }
+    await p.clock.resume();
+    const sheet = await (await browser.newContext({ viewport: { width: 1500, height: 100 } })).newPage();
+    const w = Math.floor(1480 / 3) - 8;
+    await sheet.setContent(`<style>body{margin:8px;font:14px system-ui;display:flex;flex-wrap:wrap;gap:8px}figure{margin:0}img{width:${w}px;display:block;border:1px solid #ccc}figcaption{padding:2px 0;font-weight:600}</style>${frames.map((f) => `<figure><img src="data:image/png;base64,${f.png}"><figcaption>${f.caption}</figcaption></figure>`).join('')}`);
+    await sheet.screenshot({ path: `${OUT}${prefix}-polity-zoom.png`, fullPage: true });
+    taken.push(`${prefix}-polity-zoom`);
+  }
+  await p.waitForTimeout(700);
+  await shot(p, `${prefix}-polity`);
+  if (prefix === 'phone') {
+    await p.keyboard.down('Shift');
+    await p.mouse.wheel(0, 170);
+    await p.keyboard.up('Shift');
+    await p.waitForTimeout(200);
+  }
+  await p.locator('text.tl-lane-toggle[data-id="__lane:war"]').click({ force: true });
+  await p.waitForTimeout(400);
+  await shot(p, `${prefix}-polity-war`);
+}
+if (any('desktop-polity')) await polityLanes(await page('desktop-polity', desktop), 'desktop');
+if (any('dark-polity')) await polityLanes(await page('dark-polity', { ...desktop, colorScheme: 'dark' }), 'dark');
+if (any('phone-polity')) await polityLanes(await page('phone-polity', { viewport: { width: 412, height: 860 }, isMobile: true, hasTouch: true }), 'phone');
+
 // Tall, so every lane is in view.
 const tall = { ...desktop, viewport: { width: desktop.viewport.width, height: 1500 } };
 if (any('desktop-kinds')) await kinds(await page('desktop-kinds', tall), 'desktop');

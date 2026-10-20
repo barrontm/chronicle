@@ -5,10 +5,11 @@ import { parseDoc } from '../../model/doc';
 import { eraRegions } from '../../model/eras';
 import { entryLanes } from '../../model/lanes';
 import { overview } from '../../model/overview';
+import { polityMembers } from '../../model/polities';
 import { prominence as prominenceOf } from '../../model/prominence';
 import type { DatedItem, Lane, Relation } from '../../model/types';
 import {
-  AXIS_H, describeEntry, describeEra, describeLane1, eraLanes, ERAS_BACK, HEAD1_H, hitBox, hitTest, laneAt, layout, maxScroll, MIN_HIT, NO_LANE, prepare, ROW_H, stepActive, stepEra, stepLane1,
+  AXIS_H, describeEntry, describeEra, describeLane1, eraLanes, ERAS_BACK, HEAD1_H, LANE_TOGGLE, OPEN_PICK, polityLanes, hitBox, hitTest, laneAt, layout, maxScroll, MIN_HIT, NO_LANE, prepare, ROW_H, stepActive, stepEra, stepLane1,
   type Env, type View,
 } from './layout';
 import type { Measure, Prim, Scene } from './scene';
@@ -455,12 +456,14 @@ describe('level 1: an era’s six lanes', () => {
   const open = (extra: Partial<View> = {}, e = env(1200, 2400)) => layout(D, view(win.start, win.end, { era: EL, ...extra }), e, 1);
   const textOf = (S: Scene) => [...S.z[2], ...S.z[3], ...S.gutter].flatMap((p) => (p.t === 2 ? [p.s] : []));
 
-  it('puts the era’s entries, and its inner eras, in their first lane, the lanes in pigment order', () => {
+  it('puts the era’s entries, and its inner eras, in each of their lanes, the lanes in pigment order', () => {
     expect(EL.lanes.map((l) => l.id)).toEqual(['politics', 'war', 'economy', 'ideas', 'technology', 'nature', NO_LANE]);
     const lane = (id: string) => EL.lanes[EL.laneOf.get(id)!].id;
     expect(lane('i_owls')).toBe('economy');
     expect(lane('i_plato')).toBe('ideas');
-    expect(lane('i_plague')).toBe('ideas'); // Philosophy and religion, and Nature: its first, until ticket 7 draws it in each
+    // Philosophy and religion, and Nature: drawn in each, the arrow keys starting from its first.
+    expect(lane('i_plague')).toBe('ideas');
+    expect(EL.lanes.filter((l) => l.order.some((x) => x.id === 'i_plague')).map((l) => l.id)).toEqual(['ideas', 'nature']);
     expect(lane('i_b_potidaea')).toBe('war');
     expect(lane('i_pentecontaetia')).toBe(NO_LANE); // an inner era, in no lane of its own
     expect(EL.laneOf.has('i_classical')).toBe(false);
@@ -469,15 +472,15 @@ describe('level 1: an era’s six lanes', () => {
     expect(eco.spans.map((x) => x.id)).toContain('i_owls');
     expect(eco.moments.every((m) => m.kind === 'event')).toBe(true);
     // Lane counts are the era's highlights in each lane, as level 0's strip counts them.
-    expect(EL.lanes.slice(0, 6).map((l) => l.count)).toEqual(['politics', 'war', 'economy', 'ideas', 'technology', 'nature'].map((d) => EL.era.mix[d as keyof typeof EL.era.mix]));
+    expect(EL.lanes.slice(0, 6).map((l) => l.count)).toEqual(['politics', 'war', 'economy', 'ideas', 'technology', 'nature'].map((d) => EL.era!.mix[d as keyof NonNullable<typeof EL.era>["mix"]]));
     // Spans that overlap take different rows; one that follows can share.
     for (const L of EL.lanes) for (const a of L.spans) for (const b of L.spans) {
-      if (a !== b && EL.rowOf.get(a.id) === EL.rowOf.get(b.id)) expect(a.e <= b.s || b.e <= a.s).toBe(true);
+      if (a !== b && EL.rowOf.get(`${L.id}:${a.id}`) === EL.rowOf.get(`${L.id}:${b.id}`)) expect(a.e <= b.s || b.e <= a.s).toBe(true);
     }
   });
 
   it('gives entries in no lane a lane of their own at the bottom, and says when a lane is empty', () => {
-    const fewer = new Map([...dims].filter(([id, d]) => d[0] !== 'technology' && id !== 'i_plato'));
+    const fewer = new Map([...dims].filter(([id, d]) => !d.includes('technology') && id !== 'i_plato'));
     const E2 = eraLanes(D, 'i_classical', fewer)!;
     expect(E2.lanes.map((l) => l.id).at(-1)).toBe(NO_LANE);
     expect(E2.lanes.at(-1)!.label).toBe('No lane yet');
@@ -496,7 +499,7 @@ describe('level 1: an era’s six lanes', () => {
     expect(text).toContain('Classical Greece');
     expect(text).toContain('‹ All eras');
     expect(text).toContain('ECONOMY');
-    expect(text).toContain(`${EL.era.mix.politics} highlights`);
+    expect(text).toContain(`${EL.era!.mix.politics} highlights`);
     expect(text).toContain('Athenian silver “owls”');
     const owls = S.z[1].find((p) => p.id === 'i_owls' && p.cls?.includes('tl-phase'))!;
     expect(owls.t === 0 && owls.dash).toBe(true); // it starts c. 510 BCE
@@ -524,7 +527,7 @@ describe('level 1: an era’s six lanes', () => {
     const item = S.z[2].find((p) => p.t === 2 && p.id === 'i_owls' && p.cls?.startsWith('tl-list-item'));
     expect(item).toBeDefined();
     // The bar above the list has no label of its own.
-    expect(S.z[2].some((p) => p.k === 'qbti_owls')).toBe(false);
+    expect(S.z[2].some((p) => p.k === 'qbteconomyi_owls')).toBe(false);
   });
 
   it('grows out of the era’s band while it opens: the other rows fade and nothing answers a tap', () => {
@@ -550,6 +553,97 @@ describe('level 1: an era’s six lanes', () => {
     expect(stepLane1(EL, eco[0].id, 'Home', win)).toBe(eco[0].id);
     expect(EL.laneOf.get(stepLane1(EL, eco[0].id, 'ArrowDown', win)!)).toBe(3);
     expect(describeLane1(EL, 'i_owls')).toMatch(/^Athenian silver “owls”, c\. 510 BCE – 322 BCE, Economy, \d+ of \d+$/);
+  });
+});
+
+describe('level 1: a polity’s six lanes', () => {
+  const doc = parseDoc(readFileSync(new URL('../../../tests/fixtures/greece/classical-greece.json', import.meta.url), 'utf8'));
+  const items = doc.items.filter(isDated);
+  const lanes = doc.categories.map((c) => ({ id: c.id, label: c.label, color: c.color }));
+  const prominence = prominenceOf(doc);
+  const D = prepare(items, lanes, { now: 2026, prominence, relations: doc.relations, eras: eraRegions(items, doc.highlights, doc.relations, 2026), overview: overview({ ...doc, items, prominence, now: 2026 }) });
+  const dims = entryLanes(items, doc.highlights);
+  const members = polityMembers(doc);
+  const athens = () => polityLanes(D, 'pol:t_athens', members.get('t_athens')!, dims)!;
+  const win = { start: -520, end: -300 };
+  const at = (EL: ReturnType<typeof athens>, e = env(1200, 2400), extra: Partial<View> = {}) => layout(D, view(win.start, win.end, { era: EL, ...extra }), e, 1);
+  const textOf = (S: Scene) => [...S.z[2], ...S.z[3], ...S.gutter].flatMap((p) => (p.t === 2 ? [p.s] : []));
+  const inLane = (EL: ReturnType<typeof athens>, lane: string) => EL.lanes.find((l) => l.id === lane)!.order.map((x) => x.id);
+
+  it('holds Athens’ entries in their lanes: Laurion in Economy, the war in War, an entry in each of its lanes', () => {
+    const EL = athens();
+    expect(EL.head).toMatchObject({ id: 'pol:t_athens', title: 'Athens (Attica)', back: '‹ Overview', opens: 'i_classical' });
+    expect(EL.compact).toBe(true);
+    expect(inLane(EL, 'economy')).toContain('i_laurion');
+    expect(inLane(EL, 'nature')).toContain('i_laurion');
+    expect(inLane(EL, 'war')).toContain('i_pelop');
+    expect(EL.laneOf.has('i_classical')).toBe(false); // its own entry is the strip
+    expect(EL.lanes.find((l) => l.id === 'war')!.countLabel).toMatch(/^\d+ entries$/);
+    // Closed, the Economy lane names Laurion and the War lane the Peloponnesian War (the e2e test looks for them).
+    expect(EL.lanes.find((l) => l.id === 'economy')!.ranked.slice(0, 3).map((x) => x.id)).toContain('i_laurion');
+    expect(EL.lanes.find((l) => l.id === 'war')!.ranked.slice(0, 3).map((x) => x.id)).toContain('i_pelop');
+  });
+
+  it('starts with every lane closed: ticks, and up to five of the most prominent named without overlapping', () => {
+    const EL = athens();
+    const S = at(EL);
+    for (const L of EL.lanes) {
+      const named = S.z[2].filter((p) => p.t === 2 && p.k.startsWith(`qnt${L.id}`));
+      expect(named.length).toBeLessThanOrEqual(5);
+      const xs = named.map((p) => (p.t === 2 ? [p.x, p.x + measure('ui', p.s)] : [0, 0])).sort((a, b) => a[0] - b[0]);
+      for (let i = 1; i < xs.length; i++) expect(xs[i][0]).toBeGreaterThan(xs[i - 1][1]);
+    }
+    const war = EL.lanes.find((l) => l.id === 'war')!;
+    expect(S.z[0].filter((p) => p.k.startsWith('qtwar')).length).toBeGreaterThan(5);
+    // The most prominent war is named.
+    expect(S.z[2].some((p) => p.t === 2 && p.id === war.ranked[0].id)).toBe(true);
+    // The lane's name says how many and opens it.
+    expect(textOf(S)).toContain(`Show all ${war.order.length} ▾`);
+    const toggle = S.targets.find((t) => t.id === `${LANE_TOGGLE}war` && t.gutter)!;
+    expect(hitTest(S, toggle.x + 20, toggle.y + 12)?.id).toBe(`${LANE_TOGGLE}war`);
+  });
+
+  it('opens one lane to all its entries, and says when a lane is empty', () => {
+    const EL = athens();
+    const closedH = maxScroll(D, 400, 1, 1200, { win, era: EL });
+    EL.open = 'war';
+    const S = at(EL);
+    expect(maxScroll(D, 400, 1, 1200, { win, era: EL })).toBeGreaterThan(closedH);
+    expect(S.z[1].some((p) => p.id === 'i_pelop' && p.cls?.includes('tl-phase'))).toBe(true);
+    expect(textOf(S)).toContain('Show fewer ▴');
+    const none = polityLanes(D, 'pol:t_syracuse', [], dims)!;
+    expect(textOf(at(none))).toContain('No technology here yet.');
+  });
+
+  it('is a vertical list on a phone: three most prominent per closed lane, then "Show all"', () => {
+    const EL = athens();
+    const S = at(EL, { ...env(412, 6000), gutter: 0 });
+    const war = EL.lanes.find((l) => l.id === 'war')!;
+    expect(S.z[2].filter((p) => p.t === 2 && p.k.startsWith('qltwar')).length).toBe(3);
+    expect(textOf(S)).toContain(`Show all ${war.order.length} ▾`);
+  });
+
+  it('grows out of Athens’ strip while it opens', () => {
+    const unfolded = new Map([['g_classical_greece', 1]]);
+    const S = at(athens(), env(1200, 700), { zoom: { t: 0.2, fade: false, scroll0: 0 }, unfolded });
+    const done = at(athens(), env(1200, 700), { unfolded });
+    const wash = (X: Scene) => X.z[0].find((p) => p.k === 'qwpolitics')!;
+    const [now, open] = [wash(S), wash(done)];
+    expect(now.t === 0 && open.t === 0 && now.h < open.h * 0.5).toBe(true);
+    expect(S.targets.filter((t) => t.id !== 'playhead')).toEqual([]);
+  });
+
+  it('opens a world event the same way, with what is part of it and connected to it', () => {
+    const EL = polityLanes(D, 'i_alexander_persia', ['i_issus', 'i_gaugamela'], dims)!;
+    expect(EL.head.sub).toBe('World event · 2 entries');
+    expect(inLane(EL, 'war')).toEqual(['i_issus', 'i_gaugamela']);
+  });
+
+  it('puts "Open ▾" on the picked strip at level 0', () => {
+    const S = layout(D, view(win.start, win.end, { pick: 'pol:t_macedon' }), env(1200, 900), 0);
+    const pill = S.targets.find((t) => t.id === OPEN_PICK)!;
+    expect(pill).toBeDefined();
+    expect(hitTest(S, pill.x + pill.w / 2, pill.y + pill.h / 2)?.id).toBe(OPEN_PICK);
   });
 });
 

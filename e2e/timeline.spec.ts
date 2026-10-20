@@ -304,6 +304,56 @@ test('an era opens into its six lanes, says when one is empty, and Esc goes back
   await expect(page.getByTestId('time-bar').getByRole('button', { name: 'Overview' })).toHaveAttribute('aria-pressed', 'true');
 });
 
+test('Athens opens into its six lanes: Laurion in Economy, the war in War; a lane opens to all of it, and Esc steps back @phone', async ({ page, isMobile }) => {
+  test.slow();
+  await page.goto('/');
+  await expect(page.getByTestId('save-state')).toHaveText('Saved on this device');
+  await page.getByTestId('import-input').setInputFiles(fileURLToPath(new URL('../tests/fixtures/greece/classical-greece.json', import.meta.url)));
+  await expect(page.locator('.doc-title')).toHaveValue(/Classical Greece/);
+  if (isMobile) await page.getByTestId('reader').getByRole('button', { name: 'Map' }).click();
+  const timeline = page.locator('[data-testid=timeline][data-ready]');
+  await expect(timeline).toBeVisible();
+  await page.getByTestId('time-bar').getByRole('button', { name: 'Overview' }).click();
+  await expect(timeline).toHaveAttribute('data-level', '0');
+
+  // Unfold Classical Greece, pick Athens, and click it again to open it.
+  const group = timeline.locator('.tl-strip[data-id="grp:g_classical_greece"]');
+  await scrollToMark(timeline, group);
+  await group.click({ position: { x: 30, y: 6 }, force: true });
+  const athens = timeline.locator('.tl-strip[data-id="pol:t_athens"]');
+  await expect(athens).toBeVisible();
+  await expect(timeline).toHaveAttribute('data-level', '0');
+  const a = (await athens.boundingBox())!;
+  await page.mouse.click(a.x + a.width * 0.45, a.y + a.height / 2);
+  await expect(athens).toHaveClass(/picked/);
+  await expect(timeline.locator('text.tl-open-pill')).toBeVisible();
+  await page.mouse.click(a.x + a.width * 0.45, a.y + a.height / 2);
+  await expect(timeline).toHaveAttribute('data-level', '1');
+  await expect(timeline.locator('text.tl-era-head', { hasText: 'Athens (Attica)' })).toBeVisible();
+  await expect(timeline.locator('text.tl-back', { hasText: '‹ Overview' })).toBeVisible();
+
+  // Closed lanes name their most prominent: the Peloponnesian War in War, the silver strike at Laurion in Economy (further down).
+  const named = (id: string) => timeline.locator(isMobile ? `text.tl-list-item[data-id=${id}]` : `.tl-named[data-id=${id}]`);
+  await scrollToMark(timeline, named('i_pelop'));
+  await scrollToMark(timeline, named('i_laurion'));
+
+  // Opening War shows all of it; Esc closes it again, then folds Athens back into the overview, then lets go of it.
+  const toggle = timeline.locator('text.tl-lane-toggle[data-id="__lane:war"]');
+  await expect(toggle).toHaveText(/^Show all \d+ ▾$/);
+  await toggle.click({ force: true });
+  await expect(toggle).toHaveText('Show fewer ▴');
+  if (!isMobile) await scrollToMark(timeline, timeline.locator('.tl-phase[data-id=i_pelop]'));
+  await scrollToMark(timeline, timeline.locator(isMobile ? 'text.tl-list-item[data-id=i_sybota]' : '.tl-moment[data-id=i_sybota]'));
+  await timeline.press('Escape');
+  await expect(toggle).toHaveText(/^Show all \d+ ▾$/);
+  await expect(timeline).toHaveAttribute('data-level', '1');
+  await timeline.press('Escape');
+  await expect(timeline).toHaveAttribute('data-level', '0');
+  await expect(athens).toHaveClass(/picked/);
+  await timeline.press('Escape');
+  await expect(athens).not.toHaveClass(/picked/);
+});
+
 /** Open an entry by name from Search (`/`), which also brings it into view on the timeline. */
 async function openFromSearch(page: Page, name: string) {
   await page.locator('.brand').click();

@@ -6,8 +6,8 @@ import { bandSummary } from '../representations/era';
 import { DEEP_LIMITS, panBy, windowAround, zoomAround, type YearWindow } from '../timeNav';
 import { attachGestures } from './gestures';
 import {
-  AXIS_H, describeEntry, describeEra, describeLane1, eraLanes, eraSpan, ERAS_BACK, HEAD1_H, HEAD_ROW, hitBox, hitTest, lane1Span, laneAt, layout, maxScroll, PHONE_W, prepare, rowSpan,
-  stepActive, stepEra, stepLane1, type LaneInput, type Level, type PEra, type Prepared, type StepKey, type View,
+  AXIS_H, describeEntry, describeEra, describeLane1, eraLanes, eraSpan, ERAS_BACK, HEAD1_H, HEAD_ROW, LANE_TOGGLE, laneTop, OPEN_PICK, polityLanes, hitBox, hitTest, lane1Span, laneAt, layout, maxScroll, PHONE_W, prepare, rowSpan,
+  stepActive, stepEra, stepLane1, type EraLanes, type Head1, type LaneInput, type Level, type PEra, type Prepared, type StepKey, type View,
 } from './layout';
 import { svgPainter } from './paint';
 import { FONTS, SPACING, type FontKey, type Link, type Measure, type Scene, type Target } from './scene';
@@ -31,8 +31,10 @@ export interface TimelineData {
   eras?: EraRegion[];
   /** Level 0: the overview's bands, polities, world events and top row. */
   overview?: Overview;
-  /** Level 1: each entry's lanes (`entryLanes`), for its lane inside an era. */
+  /** Level 1: each entry's lanes (`entryLanes`), for its lanes inside an era or a polity. */
   entryLanes?: ReadonlyMap<string, readonly Lane[]>;
+  /** Level 1: what's in a polity (`pol:<territory>`) or a world event (its id), opened from the overview. */
+  membersOf?: (pick: string) => readonly string[];
 }
 
 /** New dates for an entry Bob dragged (or moved with Alt and an arrow key). */
@@ -130,6 +132,7 @@ export function createTimeline(host: HTMLElement, cb: TimelineCallbacks, initial
   let source = new Map<string, DatedItem>();
   let draftKey = '';
   let dims: ReadonlyMap<string, readonly Lane[]> = new Map();
+  let membersOf: (pick: string) => readonly string[] = () => [];
   /** Level 1: the window at level 0 before the era opened, to go back to. */
   let before0: YearWindow | null = null;
   /** An era opening (to 1) or closing (to 0). */
@@ -273,7 +276,7 @@ export function createTimeline(host: HTMLElement, cb: TimelineCallbacks, initial
         if (id) { openEra(id); return; }
       }
       if (level === 1 && V.era && factor > 1) {
-        const fitted = fitEra(V.era.era), span = V.win.end - V.win.start, most = fitted.end - fitted.start;
+        const fitted = fitHead(V.era.head), span = V.win.end - V.win.start, most = fitted.end - fitted.start;
         if (span >= most * 0.98) { closeEra(); return; }
         factor = Math.min(factor, most / span);
       }
@@ -286,6 +289,8 @@ export function createTimeline(host: HTMLElement, cb: TimelineCallbacks, initial
       if (mod) { if (cb.onPick) togglePick(t); return; }
       if (t?.id === 'playhead' || t?.id === HEAD_ROW) return;
       if (t?.id === ERAS_BACK) { closeEra(); return; }
+      if (t?.id === OPEN_PICK) { if (V.pick) openPick(V.pick); return; }
+      if (t?.id.startsWith(LANE_TOGGLE)) { toggleLane(t.id.slice(LANE_TOGGLE.length)); return; }
       if (t?.cluster) {
         // Zoom to fit the cluster, so its members have room to split.
         const { s, e } = t.cluster;
@@ -296,8 +301,12 @@ export function createTimeline(host: HTMLElement, cb: TimelineCallbacks, initial
       if (level === 0 && t) {
         // A group unfolds into its members, and its bracket folds it back.
         if (t.id.startsWith('grp:')) { toggleGroup(t.id.slice(4)); return; }
-        // A strip or a world event is picked (opening it is Phase 4 ticket 7).
-        if (t.id.startsWith('pol:') || D.byId.get(t.id)?.world) { V.pick = V.pick === t.id ? undefined : t.id; schedule(); return; }
+        // A strip or a world event is picked; clicking it again opens it into its six lanes.
+        if (t.id.startsWith('pol:') || D.byId.get(t.id)?.world) {
+          if (V.pick === t.id) openPick(t.id);
+          else { V.pick = t.id; schedule(); }
+          return;
+        }
         // An era's wash opens it into its lanes; its name there opens the era itself.
         if (eraById.has(t.id)) { setActive(t.id); openEra(t.id); return; }
       }
@@ -308,7 +317,11 @@ export function createTimeline(host: HTMLElement, cb: TimelineCallbacks, initial
       if (V.playYear !== undefined) cb.onYear?.(Math.round(yearAt(x)));
     },
     doubleTap: (x, y) => {
-      if (x < gut() || (scene && y < scene.plot.y) || targetAt(x, y)) return;
+      if (morph) return;
+      const t = targetAt(x, y);
+      // A second click on a strip or world event, however quick, opens it.
+      if (level === 0 && t && (t.id.startsWith('pol:') || D.byId.get(t.id)?.world)) { V.pick = t.id; openPick(t.id); return; }
+      if (x < gut() || (scene && y < scene.plot.y) || t) return;
       cb.onAddAt(Math.round(yearAt(x)), level === 2 ? laneAt(D, V.scrollY, y)?.id : undefined);
     },
     hover: (x, y) => {
@@ -457,8 +470,12 @@ export function createTimeline(host: HTMLElement, cb: TimelineCallbacks, initial
       V.pick = undefined;
       schedule();
       e.stopPropagation();
+    } else if (e.key === 'Escape' && level === 1 && V.era?.open && !morph) {
+      // Esc closes an open lane first, then backs out of the polity.
+      toggleLane(V.era.open);
+      e.stopPropagation();
     } else if (e.key === 'Escape' && level === 1) {
-      // Esc backs out of the era first; the open panel stays.
+      // Esc backs out of the era (or polity) first; the open panel stays, and so does the pick.
       closeEra();
       e.stopPropagation();
     } else if (e.key === 'Escape' && V.selected) cb.onSelect(undefined);
@@ -470,15 +487,33 @@ export function createTimeline(host: HTMLElement, cb: TimelineCallbacks, initial
   const onBlur = () => { if (V.ring) { V.ring = false; schedule(); } };
   host.addEventListener('blur', onBlur);
 
-  /** The window that frames an era, as "All" frames everything. */
-  const fitEra = (e: PEra): YearWindow => windowAround((e.s + e.e) / 2, Math.max(e.e - e.s, 10) * 1.08, DEEP_LIMITS);
+  /** The window that frames an era (or what's in a polity), as "All" frames everything. */
+  const fitHead = (h: Head1): YearWindow => windowAround((h.fit.s + h.fit.e) / 2, Math.max(h.fit.e - h.fit.s, 10) * 1.08, DEEP_LIMITS);
   const eraAt = (x: number, y: number) => scene?.targets.find((t) => eraById.has(t.id) && x >= t.x && x <= t.x + t.w && y >= t.y && y <= t.y + t.h)?.id;
 
   /** Level 0 → 1: the era's band opens into its lanes, framed in time. */
   const openEra = (id: string) => {
-    const era = eraById.get(id);
-    const EL = era && level === 0 && !morph ? eraLanes(D, id, dims) : undefined;
-    if (!era || !EL) return;
+    if (eraById.has(id) && level === 0 && !morph) openLanes(eraLanes(D, id, dims));
+  };
+  /** Level 0 → 1: the picked strip or world event drops its six lanes. */
+  const openPick = (pick: string) => {
+    if (level === 0 && !morph) openLanes(polityLanes(D, pick, membersOf(pick), dims));
+  };
+  /** A polity's lane opens to all its entries, or closes back to ticks; the one open before closes. */
+  const toggleLane = (id: string) => {
+    const EL = level === 1 && !morph ? V.era : undefined;
+    if (!EL?.compact) return;
+    const lane = id as NonNullable<EraLanes['open']>;
+    EL.open = EL.open === lane ? undefined : lane;
+    // The lane that opened or closed stays in view, its top under the header.
+    const top = laneTop(EL, lane, size.w < PHONE_W);
+    V.scrollY = clamp(EL.open ? top : Math.min(V.scrollY, top), 0, maxY());
+    V.hover = undefined;
+    tip.hidden = true;
+    schedule();
+  };
+  const openLanes = (EL: EraLanes | undefined) => {
+    if (!EL) return;
     before0 = tween ? tween.to : V.win;
     scrolls.set(0, V.scrollY);
     const fade = reducedMotion();
@@ -490,7 +525,7 @@ export function createTimeline(host: HTMLElement, cb: TimelineCallbacks, initial
     tip.hidden = true;
     morph = { from: 0, to: 1, t0: null, fade };
     calm = performance.now() + MOVE_MS + 250;
-    setWin(fitEra(era), true);
+    setWin(fitHead(EL.head), true);
   };
   /** Level 1 → 0: the lanes fold back into the band, and the eras come back as they were. */
   const closeEra = () => {
@@ -558,10 +593,11 @@ export function createTimeline(host: HTMLElement, cb: TimelineCallbacks, initial
       if (V.pick && !D.polById.has(V.pick.slice(4)) && !D.byId.get(V.pick)?.world) V.pick = undefined;
       eraById = new Map(D.regions.flatMap((R) => R.eras.map((e) => [e.id, e])));
       dims = d.entryLanes ?? new Map();
-      // The open era follows the data; if it's gone (deleted, or its category hidden), back to the eras.
+      membersOf = d.membersOf ?? (() => []);
+      // The open era or polity follows the data; if it's gone (deleted, or its category hidden), back to the overview.
       if (level === 1 && V.era) {
-        const EL = eraLanes(D, V.era.era.id, dims);
-        if (EL) V.era = EL;
+        const EL = V.era.era ? eraLanes(D, V.era.era.id, dims) : polityLanes(D, V.era.head.id, membersOf(V.era.head.id), dims);
+        if (EL) { EL.open = V.era.open; V.era = EL; }
         else { morph = null; closed(); }
       }
       source = new Map(d.items.map((i) => [i.id, i]));
@@ -579,7 +615,7 @@ export function createTimeline(host: HTMLElement, cb: TimelineCallbacks, initial
       // An entry that isn't an era (a landmark, say) opens among the entries, at level 2.
       if (id && level === 0 && D.byId.has(id) && !eraById.has(id)) switchLevel(2);
       // So does one outside the open era.
-      if (id && level === 1 && V.era && D.byId.has(id) && id !== V.era.era.id && !V.era.laneOf.has(id)) switchLevel(2);
+      if (id && level === 1 && V.era && D.byId.has(id) && id !== V.era.head.opens && !V.era.laneOf.has(id)) switchLevel(2);
       // An entry opened anywhere scrolls its row into view (its time is framed by `focus`).
       if (id && D.byId.has(id)) scrollTo(id, 4);
       // The arrow keys carry on from whatever was opened last.
@@ -597,7 +633,7 @@ export function createTimeline(host: HTMLElement, cb: TimelineCallbacks, initial
     zoomBy: (f) => setWin(zoomAround(tween?.to ?? V.win, f, undefined, DEEP_LIMITS), true),
     panBy: (years) => setWin(panBy(V.win, years, DEEP_LIMITS)),
     fit() {
-      if (shownLevel() === 1 && V.era) { setWin(fitEra(V.era.era), true); return; }
+      if (shownLevel() === 1 && V.era) { setWin(fitHead(V.era.head), true); return; }
       const x = (shownLevel() === 0 && D.overviewExtent) || D.extent;
       if (!x) return;
       const span = Math.max(x.end - x.start, 10);
@@ -605,7 +641,7 @@ export function createTimeline(host: HTMLElement, cb: TimelineCallbacks, initial
     },
     level: shownLevel,
     setLevel: switchLevel,
-    inEra: (id) => shownLevel() === 1 && !!V.era && (id === V.era.era.id || V.era.laneOf.has(id)),
+    inEra: (id) => shownLevel() === 1 && !!V.era && (id === V.era.head.opens || V.era.laneOf.has(id)),
     dispose() {
       live = false;
       cancelAnimationFrame(raf);
