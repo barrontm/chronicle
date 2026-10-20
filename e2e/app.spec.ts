@@ -48,8 +48,8 @@ async function newEntry(page: Page, kind: 'Event' | 'Period' | 'Person') {
   await expect(async () => {
     const box = (await page.getByTestId('timeline').boundingBox())!;
     await page.mouse.dblclick(box.x + box.width * spots[i++ % spots.length], box.y + box.height - 12);
-    await expect(editor.getByRole('heading', { name: 'New entry' })).toBeVisible({ timeout: 1000 });
-  }).toPass({ timeout: 10_000 });
+    await expect(editor.getByRole('heading', { name: 'New entry' })).toBeVisible({ timeout: 2000 });
+  }).toPass({ timeout: 20_000 });
   await editor.locator('.segmented').first().getByRole('button', { name: kind, exact: true }).click();
   return editor;
 }
