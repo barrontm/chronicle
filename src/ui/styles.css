@@ -640,6 +640,10 @@ dialog h2 { font-family: var(--font-read); margin: 0 0 12px; font-weight: 600; }
 .snapshot .field { margin-bottom: 4px; }
 .map-status { position: absolute; top: 46px; left: 10px; right: 54px; pointer-events: none; display: grid; justify-items: start; }
 .map-status .notice { pointer-events: auto; margin: 0; max-width: 420px; box-shadow: 0 2px 8px rgb(0 0 0 / 0.08); }
+.map-status { gap: 6px; }
+.map-focus { display: flex; align-items: center; gap: 6px; font-size: 13px; padding: 4px 4px 4px 10px; }
+.map-focus .grow { flex: 1 1 auto; }
+.map-follow { max-width: 420px; }
 .notice.subtle { background: color-mix(in srgb, var(--panel) 85%, transparent); color: var(--ink-2); font-size: 12px; padding: 4px 8px; }
 
 .map-legends { position: absolute; left: 10px; bottom: 10px; max-width: calc(100% - 20px); max-height: calc(100% - 60px); overflow: auto; display: flex; flex-direction: column; gap: 6px; }
@@ -658,6 +662,9 @@ dialog h2 { font-family: var(--font-read); margin: 0 0 12px; font-weight: 600; }
 .map-label { font-size: 12px; line-height: 1.2; color: var(--ink); pointer-events: none; white-space: nowrap; text-shadow: 0 0 3px var(--map-land), 0 0 3px var(--map-land), 0 0 2px var(--map-land); }
 .map-label.territory { font-family: var(--font-read); font-size: 13px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-2); transform-origin: center; }
 .map-label.pin { margin-top: 8px; font-weight: 500; }
+/* Following the overview: the picked polity in ink, the others named with how they dealt with it, in their contact's colour. */
+.map-label.territory[data-contact] { color: var(--c, var(--ink)); }
+.map-label.territory[data-contact='picked'] { color: var(--ink); font-weight: 700; }
 /* AI drafts waiting for review: a dashed ring in the category's color, and an italic name. */
 .map-label.draft-pin { display: flex; flex-direction: column; align-items: center; gap: 2px; font-style: italic; color: var(--ink-2); }
 .map-label.draft-pin { color: var(--pig-umber); }

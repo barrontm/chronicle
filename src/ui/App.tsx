@@ -18,12 +18,12 @@ import { pendingOnTimeline, pendingWithPlaces, type DraftSet } from '../ai/draft
 import { NoteEditor, NoteView } from './panels/NotePanels';
 import { SeriesEditor } from './panels/SeriesEditor';
 import { SourceEditor, SourceView } from './panels/SourcePanels';
-import { MapPane, YearBar, type FlowOptions, type MapCamera, type MapFit, type MapOptions } from './MapPane';
+import { MapPane, YearBar, type FlowOptions, type MapCamera, type MapFit, type MapOptions, type MapRegion } from './MapPane';
 import { FlowEditor, FlowView } from './panels/FlowPanels';
 import { applyUpdate, useUpdateReady } from './updates';
 import { TerritoryEditor, TerritoryImport, TerritoryView } from './panels/TerritoryPanels';
 import { TimeBar } from './TimeBar';
-import { TimelineView, type TimelineControl, type VisibleWindow } from './TimelineView';
+import { TimelineView, type OverviewFocus, type TimelineControl, type VisibleWindow } from './TimelineView';
 import { TrendStrips } from './TrendStrips';
 import { ReaderPane, type ArticleRef } from './reader/ReaderPane';
 import { HighlightDraftsContext, useHighlightDraftStore } from './reader/highlightDrafts';
@@ -71,6 +71,10 @@ function Workspace() {
   const [stack, setStack] = useState<Panel[]>([]);
   const [hidden, setHidden] = useState<Set<string>>(new Set());
   const [win, setWin] = useState<VisibleWindow | null>(null);
+  // The map and the overview follow each other: what the overview has picked or open, and the region Bob clicked on the map.
+  const [overviewFocus, setOverviewFocus] = useState<OverviewFocus>({});
+  const [region, setRegion] = useState<MapRegion | undefined>(undefined);
+  const followWindow = useMemo(() => (win ? { start: win.start, end: win.end } : undefined), [win?.start, win?.end]); // eslint-disable-line react-hooks/exhaustive-deps
   const timeline = useRef<TimelineControl>(null);
   const [canGoBackInTime, setCanGoBackInTime] = useState(false);
   const [menu, setMenu] = useState<'add' | 'file' | null>(null);
@@ -315,10 +319,11 @@ function Workspace() {
       else if (menu) setMenu(null);
       else if (stack.length) setStack([]);
       else if (picked.length) setPicked([]);
+      else if (region) setRegion(undefined);
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [menu, stack.length, drawing, picking, picked.length]);
+  }, [menu, stack.length, drawing, picking, picked.length, region]);
 
   const startNew = (p: Panel) => { setMenu(null); setStack([p]); };
 
@@ -485,6 +490,10 @@ function Workspace() {
                 onCamera={setMapCamera}
                 drawing={drawing ? { onDone: (g) => { drawing.onDone(g, Math.round(year)); setDrawing(null); }, onCancel: () => setDrawing(null) } : undefined}
                 picking={picking ? { onDone: (pt) => { picking.onDone(pt); setPicking(null); }, onCancel: () => setPicking(null) } : undefined}
+                focus={next ? overviewFocus : undefined}
+                window={followWindow}
+                region={next ? region : undefined}
+                onRegion={next ? setRegion : undefined}
               />
               <YearBar year={year} range={range} onYear={(y) => { setPlaying(false); setYear(y); }} playing={playing} onPlaying={setPlaying} speed={speed} onSpeed={setSpeed} />
               {resizable && (
@@ -539,6 +548,9 @@ function Workspace() {
             territories={doc.territories}
             groups={doc.groups}
             regionParents={doc.regionParents}
+            onFocus={setOverviewFocus}
+            region={next ? region?.name : undefined}
+            onRegion={(r) => { if (!r) setRegion(undefined); }}
           />
           {(pickedNow.length > 0 || bulkDone) && (
             // One bar under the timeline: what's selected, and what the last bulk change did, with Undo.

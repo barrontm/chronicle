@@ -354,6 +354,74 @@ test('Athens opens into its six lanes: Laurion in Economy, the war in War; a lan
   await expect(athens).not.toHaveClass(/picked/);
 });
 
+test('the map follows the overview: Athens in 431 BCE at war with Sparta and Corinth, the War lane, and Persia clicked on the map', async ({ page }) => {
+  test.slow();
+  await page.goto('/');
+  await expect(page.getByTestId('save-state')).toHaveText('Saved on this device');
+  await page.getByTestId('import-input').setInputFiles(fileURLToPath(new URL('../tests/fixtures/greece/classical-greece.json', import.meta.url)));
+  await expect(page.locator('.doc-title')).toHaveValue(/Classical Greece/);
+  await expect(page.locator('[data-testid=map][data-ready]')).toBeAttached({ timeout: 20_000 });
+  const year = page.getByTestId('yearbar').getByLabel('Year', { exact: true });
+  await year.click();
+  await year.fill('431 BCE');
+  await year.press('Enter');
+  await expect(year).toHaveValue('431 BCE');
+
+  const timeline = page.locator('[data-testid=timeline][data-ready]');
+  await page.getByTestId('time-bar').getByRole('button', { name: 'Overview' }).click();
+  await expect(timeline).toHaveAttribute('data-level', '0');
+  // Persia's strip as it is before the map focuses it.
+  const persia = timeline.locator('.tl-strip[data-id="pol:t_persia"]');
+  await scrollToMark(timeline, persia);
+  const before = (await persia.boundingBox())!.height;
+
+  // Pick Athens: on the map it's in ink, and the polities it was at war with that year are named so.
+  const group = timeline.locator('.tl-strip[data-id="grp:g_classical_greece"]');
+  await scrollToMark(timeline, group);
+  await group.click({ position: { x: 30, y: 6 }, force: true });
+  const athens = timeline.locator('.tl-strip[data-id="pol:t_athens"]');
+  await expect(athens).toBeVisible();
+  await expect(timeline).toHaveAttribute('data-level', '0');
+  const a = (await athens.boundingBox())!;
+  await page.mouse.click(a.x + a.width * 0.45, a.y + a.height / 2);
+  await expect(athens).toHaveClass(/picked/);
+  const label = (name: string) => page.locator('.map-label.territory', { hasText: name });
+  await expect(label('Athens')).toHaveAttribute('data-contact', 'picked');
+  for (const name of ['Sparta', 'Corinth']) {
+    await expect(label(name)).toHaveAttribute('data-contact', 'war');
+    await expect(label(name)).toContainText('· at war');
+  }
+  await expect(page.getByTestId('map-follow')).toContainText('Athens (Attica) in 431 BCE: at war with Corinth, Sparta (Laconia and Messenia) and Thebes (Boeotia)');
+
+  // Open Athens and its War lane: everyone it fought in the years in view, Persia too.
+  await page.mouse.click(a.x + a.width * 0.45, a.y + a.height / 2);
+  await expect(timeline).toHaveAttribute('data-level', '1');
+  const toggle = timeline.locator('text.tl-lane-toggle[data-id="__lane:war"]');
+  await scrollToMark(timeline, toggle);
+  await toggle.click({ force: true });
+  await expect(toggle).toHaveText('Show fewer ▴');
+  await expect(label('Achaemenid Persia')).toHaveAttribute('data-contact', 'war');
+  await expect(label('Achaemenid Persia')).toContainText('· fought');
+  await expect(page.getByTestId('map-follow')).toContainText(/^Athens \(Attica\) fought .*Achaemenid Persia/);
+
+  // Click Persia on the map: back to the overview with Persia's rows grown, the rest faded.
+  // Once the map's fit to the War lane has settled.
+  await page.waitForTimeout(100);
+  await expect(page.locator('[data-testid=map]:not([data-moving])')).toBeAttached();
+  const q = (await label('Achaemenid Persia').boundingBox())!;
+  await page.mouse.click(q.x + q.width / 2, q.y - 6);
+  await expect(page.getByTestId('map-region')).toContainText('Showing Persia on the timeline');
+  await expect(timeline).toHaveAttribute('data-region', 'Persia');
+  await expect(timeline).toHaveAttribute('data-level', '0');
+  await expect(persia).toBeVisible();
+  await expect.poll(async () => (await persia.boundingBox())!.height).toBeGreaterThan(before * 1.15);
+  // Esc lets go of the region first; Athens stays picked, as the map shows.
+  await timeline.press('Escape');
+  await expect(page.getByTestId('map-region')).toHaveCount(0);
+  await expect(timeline).not.toHaveAttribute('data-region', 'Persia');
+  await expect(label('Athens')).toHaveAttribute('data-contact', 'picked');
+});
+
 /** Open an entry by name from Search (`/`), which also brings it into view on the timeline. */
 async function openFromSearch(page: Page, name: string) {
   await page.locator('.brand').click();

@@ -393,6 +393,52 @@ if (any('desktop-polity')) await polityLanes(await page('desktop-polity', deskto
 if (any('dark-polity')) await polityLanes(await page('dark-polity', { ...desktop, colorScheme: 'dark' }), 'dark');
 if (any('phone-polity')) await polityLanes(await page('phone-polity', { viewport: { width: 412, height: 860 }, isMobile: true, hasTouch: true }), 'phone');
 
+// The map following the overview: Athens picked in 431 BCE (its wars named on the map), its War lane
+// opened (everyone it fought), then Persia clicked on the map (its rows grown, the rest faded).
+async function follow(p, prefix) {
+  await p.getByTestId('import-input').setInputFiles(GREECE);
+  if (prefix === 'phone') await p.getByTestId('reader').getByRole('button', { name: 'Map' }).click();
+  const timeline = p.locator('[data-testid=timeline][data-ready]');
+  await timeline.waitFor();
+  await p.locator('[data-testid=map][data-ready]').waitFor({ state: 'attached' });
+  const year = p.getByTestId('yearbar').getByLabel('Year', { exact: true });
+  await year.click();
+  await year.fill('431 BCE');
+  await year.press('Enter');
+  await p.getByTestId('time-bar').getByRole('button', { name: 'Overview' }).click();
+  await p.waitForTimeout(700);
+  const tl = await timeline.boundingBox();
+  await p.mouse.move(tl.x + tl.width / 2, tl.y + tl.height / 2);
+  await p.keyboard.down('Shift');
+  await p.mouse.wheel(0, 200);
+  await p.keyboard.up('Shift');
+  await p.waitForTimeout(200);
+  await p.locator('.tl-strip[data-id="grp:g_classical_greece"]').click({ force: true });
+  await p.waitForTimeout(600);
+  const athens = await p.locator('.tl-strip[data-id="pol:t_athens"]').boundingBox();
+  await p.mouse.click(athens.x + athens.width * 0.45, athens.y + athens.height / 2);
+  await p.waitForTimeout(1200);
+  await shot(p, `${prefix}-follow`);
+  await p.mouse.click(athens.x + athens.width * 0.45, athens.y + athens.height / 2);
+  await p.waitForTimeout(700);
+  if (prefix === 'phone') {
+    await p.keyboard.down('Shift');
+    await p.mouse.wheel(0, 170);
+    await p.keyboard.up('Shift');
+    await p.waitForTimeout(200);
+  }
+  await p.locator('text.tl-lane-toggle[data-id="__lane:war"]').click({ force: true });
+  await p.waitForTimeout(1200);
+  await shot(p, `${prefix}-follow-war`);
+  const persia = await p.locator('.map-label.territory', { hasText: 'Achaemenid Persia' }).boundingBox();
+  if (persia) await p.mouse.click(persia.x + persia.width / 2, persia.y - 6);
+  await p.waitForTimeout(1200);
+  await shot(p, `${prefix}-follow-region`);
+}
+if (any('desktop-follow')) await follow(await page('desktop-follow', desktop), 'desktop');
+if (any('dark-follow')) await follow(await page('dark-follow', { ...desktop, colorScheme: 'dark' }), 'dark');
+if (any('phone-follow')) await follow(await page('phone-follow', { viewport: { width: 412, height: 860 }, isMobile: true, hasTouch: true }), 'phone');
+
 // Tall, so every lane is in view.
 const tall = { ...desktop, viewport: { width: desktop.viewport.width, height: 1500 } };
 if (any('desktop-kinds')) await kinds(await page('desktop-kinds', tall), 'desktop');

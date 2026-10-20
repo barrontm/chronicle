@@ -9,7 +9,7 @@ import { polityMembers } from '../../model/polities';
 import { prominence as prominenceOf } from '../../model/prominence';
 import type { DatedItem, Lane, Relation } from '../../model/types';
 import {
-  AXIS_H, describeEntry, describeEra, describeLane1, eraLanes, ERAS_BACK, HEAD1_H, LANE_TOGGLE, OPEN_PICK, polityLanes, hitBox, hitTest, laneAt, layout, maxScroll, MIN_HIT, NO_LANE, prepare, ROW_H, stepActive, stepEra, stepLane1,
+  AXIS_H, describeEntry, describeEra, describeLane1, eraLanes, ERAS_BACK, HEAD1_H, LANE_TOGGLE, OPEN_PICK, polityLanes, hitBox, hitTest, laneAt, layout, maxScroll, MIN_HIT, NO_LANE, prepare, REGION_GROW, regionSpan, ROW_H, stepActive, stepEra, stepLane1,
   type Env, type View,
 } from './layout';
 import type { Measure, Prim, Scene } from './scene';
@@ -332,6 +332,21 @@ describe('level 0: the overview', () => {
   const open = new Map([['g_classical_greece', 1]]);
   const at = (win: [number, number], extra: Partial<View> = {}, e = env(1200, 1400)) => layout(D, view(win[0], win[1], extra), e, 0);
   const strip = (S: Scene, id: string) => S.z[1].find((p) => p.t === 7 && p.id === id);
+
+  it('grows the region Bob clicked on the map by 30% and fades the other bands to 40%, still drawn', () => {
+    const win: [number, number] = [-560, -320];
+    const plain = at(win), focused = at(win, { region: 'Persia' });
+    const box = (S: Scene, id: string) => { const p = strip(S, id); return p && p.t === 7 ? p.d : ''; };
+    const persia = (S: Scene) => S.targets.find((t) => t.id === 'pol:t_persia')!;
+    expect(persia(focused).h + 4).toBeCloseTo((persia(plain).h + 4) * REGION_GROW, 5);
+    expect(box(focused, 'pol:t_persia')).not.toBe(box(plain, 'pol:t_persia'));
+    // Macedon's strip is still there, faded; Persia's isn't.
+    expect(strip(focused, 'pol:t_macedon')!.a).toBeCloseTo(strip(plain, 'pol:t_macedon')!.a * 0.4, 5);
+    expect(strip(focused, 'pol:t_persia')!.a).toBe(strip(plain, 'pol:t_persia')!.a);
+    expect(textOf(focused)).toContain('Macedon');
+    // Its band can be scrolled to.
+    expect(regionSpan(D, view(win[0], win[1], { region: 'Persia' }), 'Persia', false)![0]).toBeGreaterThan(regionSpan(D, view(win[0], win[1]), 'Greece', false)![0]);
+  });
 
   it('puts the bands in the overview’s order, with a group folded into one sub-row and the Delian League in another', () => {
     expect(D.bands.map((b) => b.label)).toEqual(['Italy', 'Macedon', 'Greece', 'Persia']);

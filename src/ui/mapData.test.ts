@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { parseDoc } from '../model/doc';
 import type { Flow, Relation, Territory, TimelineItem } from '../model/types';
-import { aboutPeople, activeRoutes, arcPoints, arcsBetween, choroplethAt, draftPins, endBearing, flowDashes, flowFeatures, flowScale, mapKindOf, mixColor, parseColor, pinsAt, placesToDraw, rateAt, territoriesAt, territoryCircles, type FlowPlaces } from './mapData';
+import { aboutPeople, activeRoutes, contactsAt, contactsDuring, followAt, arcPoints, arcsBetween, choroplethAt, draftPins, endBearing, flowDashes, flowFeatures, flowScale, mapKindOf, mixColor, parseColor, pinsAt, placesToDraw, rateAt, territoriesAt, territoryCircles, type FlowPlaces } from './mapData';
 
 const fixture = () => parseDoc(readFileSync(new URL('../../tests/fixtures/sample-history.json', import.meta.url), 'utf8'));
 const colorOf = (id: string) => (id === 'hidden' ? undefined : '#123456');
@@ -211,5 +211,75 @@ describe('draftPins', () => {
   });
   it('has no bounds when nothing has a place', () => {
     expect(draftPins([item('c', [])], () => undefined)).toEqual({ pins: [], bounds: null });
+  });
+});
+
+describe('following the timeline', () => {
+  const doc = parseDoc(readFileSync(new URL('../../tests/fixtures/greece/classical-greece.json', import.meta.url), 'utf8'));
+  const how = (cs: { territoryId: string; how: string }[]) => Object.fromEntries(cs.map((c) => [c.territoryId, c.how]));
+  const t = (id: string, extra: Partial<Territory> = {}): Territory => ({ id, title: id, categoryId: 'c', snapshots: [], updatedAt: 0, ...extra });
+  const e = (id: string, y: number, end?: number, extra: Partial<TimelineItem> = {}): TimelineItem => ({ id, kind: end === undefined ? 'event' : 'span', title: id, categoryId: 'c', start: { y }, ...(end === undefined ? {} : { end: { y: end } }), updatedAt: 0, ...extra });
+  const rel = (fromId: string, toId: string, side?: 1 | 2, type: Relation['type'] = 'related'): Relation => ({ id: `${fromId}-${toId}`, fromId, toId, type, ...(side ? { side } : {}), updatedAt: 0 });
+
+  it('in 431 BCE Athens is at war with Sparta, Corinth and Thebes (the Peloponnesian War)', () => {
+    const cs = contactsAt('t_athens', -430, doc);
+    expect(how(cs)).toMatchObject({ t_sparta: 'war', t_corinth: 'war', t_thebes: 'war' });
+    expect(cs.find((c) => c.territoryId === 't_sparta')!.via).toContain('i_pelop');
+    // The Delian League is Athens' own alliance, not a polity it was at peace with; founding it made them allies that year.
+    expect(how(cs).t_delian).toBeUndefined();
+    expect(how(contactsAt('t_athens', -477, doc)).t_delian).toBe('allied');
+    // Persia isn't in it that year.
+    expect(how(cs).t_persia).toBeUndefined();
+  });
+
+  it('reads sides: the same side of a war is allied, opposite sides of a treaty at peace, no sides allied', () => {
+    const d = {
+      items: [e('war', -400, -390, { subject: 'war' }), e('peace', -380, undefined, { lanes: ['politics'] }), e('league', -370)],
+      territories: [t('a'), t('b'), t('c')],
+      relations: [rel('a', 'war', 1), rel('b', 'war', 1), rel('c', 'war', 2), rel('a', 'peace', 1), rel('c', 'peace', 2), rel('a', 'league'), rel('b', 'league')],
+    };
+    expect(how(contactsAt('a', -395, d))).toEqual({ b: 'allied', c: 'war' });
+    expect(how(contactsAt('a', -380, d))).toEqual({ c: 'peace' });
+    expect(how(contactsAt('a', -370, d))).toEqual({ b: 'allied' });
+    expect(contactsAt('a', -360, d)).toEqual([]);
+    // Over years, the strongest: at war beats allied.
+    expect(how(contactsDuring('a', -400, -360, d))).toEqual({ b: 'allied', c: 'war' });
+  });
+
+  it('a polity’s entry stands for it, trade comes from flows for work and the economy', () => {
+    const d = {
+      items: [e('athens-entry', -500, -300), e('war', -400, -390, { subject: 'war' })],
+      territories: [t('a', { itemId: 'athens-entry' }), t('b')],
+      relations: [rel('athens-entry', 'war', 1), rel('b', 'war', 2)],
+      flows: [{ id: 'f', title: 'Grain', categoryId: 'c', cause: 'economic' as const, measure: 'moved' as const, routes: [{ from: { territoryId: 'b' }, to: { territoryId: 'a' }, points: [{ x: -350, v: 1 }, { x: -340, v: 1 }] }], updatedAt: 0 }],
+    };
+    expect(how(contactsAt('a', -395, d))).toEqual({ b: 'war' });
+    expect(how(contactsAt('a', -345, d))).toEqual({ b: 'trade' });
+  });
+
+  it('a picked polity is drawn in ink with its contacts named, and the map fits those it fought', () => {
+    const f = followAt({ ...doc, focus: { pick: 'pol:t_athens' }, year: -430, window: { start: -500, end: -300 } });
+    expect(f.marks.get('t_athens')).toEqual({ how: 'picked' });
+    expect(f.marks.get('t_sparta')).toEqual({ how: 'war', text: 'at war' });
+    expect(f.pickFit?.key).toBe('pol:t_athens|');
+    // Sparta's lands are in the fit.
+    const [w, s] = f.pickFit!.bounds;
+    expect(w).toBeLessThan(22.5);
+    expect(s).toBeLessThan(37);
+  });
+
+  it('the War lane names everyone it fought in the years in view; the Economy lane pins its entries', () => {
+    const war = followAt({ ...doc, focus: { pick: 'pol:t_athens', open: true, lane: 'war' }, year: -430, window: { start: -500, end: -300 } });
+    expect(war.marks.get('t_persia')).toEqual({ how: 'war', text: 'fought' });
+    expect(war.marks.get('t_macedon')).toEqual({ how: 'war', text: 'fought' });
+    const eco = followAt({ ...doc, focus: { pick: 'pol:t_athens', open: true, lane: 'economy', laneIds: ['i_laurion'] }, year: -482, window: { start: -500, end: -300 } });
+    expect(eco.pins.features.map((p) => p.properties.id)).toEqual(['i_laurion']);
+    expect(eco.pins.features[0].properties.opacity).toBe(1);
+  });
+
+  it('a region Bob clicks is fitted', () => {
+    const f = followAt({ ...doc, focus: {}, region: 'Persia', year: -430, window: { start: -500, end: -300 } });
+    expect(f.regionFit?.key).toBe('Persia');
+    expect(f.regionFit!.bounds[2]).toBeGreaterThan(50);
   });
 });

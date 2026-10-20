@@ -3,7 +3,8 @@ import { formatYear, parseHistDate } from '../model/dates';
 import type { Category, Flow, FlowCause, Relation, Series, Territory, TimelineItem } from '../model/types';
 import type { Area } from '../data/geo';
 import { addPoint, canFinish, closePart, EMPTY_DRAFT, toGeometry, undo, type Draft } from './drawing';
-import { activeRoutes, CAUSES, choroplethAt, mapKindOf } from './mapData';
+import { worldMembers } from '../model/polities';
+import { activeRoutes, CAUSES, choroplethAt, followAt, mapKindOf, type ContactHow, type TimelineFocus } from './mapData';
 import type { BackdropStatus, MapCamera, MapFit, MapOptions } from './MapView';
 import { formatValue } from './util';
 
@@ -45,7 +46,15 @@ interface Props {
   drawing?: { onDone: (g: Area) => void; onCancel: () => void };
   /** Set while Bob is picking one point on the map (a migration route's end). */
   picking?: { onDone: (p: [number, number]) => void; onCancel: () => void };
+  /** The reader layout: the map follows what the overview has picked or open, in the years in view. */
+  focus?: TimelineFocus;
+  window?: { start: number; end: number };
+  /** The region Bob clicked (through one of its territories); clicking a territory with a region focuses it. */
+  region?: MapRegion;
+  onRegion?: (r: MapRegion | undefined) => void;
 }
+
+export interface MapRegion { name: string; territoryId: string }
 
 /** The map, its layers menu and its legend. The year bar lives outside, shared with the timeline. */
 export function MapPane(p: Props) {
@@ -65,6 +74,16 @@ export function MapPane(p: Props) {
   );
   const routesNow = useMemo(() => activeRoutes(shownFlows, p.year, () => true), [shownFlows, p.year]);
   const causesNow = CAUSES.filter((c) => routesNow.some((r) => r.flow.cause === c.id));
+  // Following the overview: what's picked, its contacts in the year, an open lane's layer, a clicked region.
+  const following = !!p.onRegion;
+  const follow = useMemo(() => (following ? followAt({
+    items: p.items, territories: p.territories, relations: p.relations, flows: p.flows,
+    focus: p.focus ?? {}, region: p.region?.name, year: p.year, window: p.window ?? { start: p.year - 50, end: p.year + 50 },
+    worldMembers: (id) => worldMembers(id, { relations: p.relations }),
+  }) : undefined), [following, p.items, p.territories, p.relations, p.flows, p.focus, p.region?.name, p.year, p.window]);
+  const picked = p.focus?.pick?.startsWith('pol:') ? p.territories.find((t) => `pol:${t.id}` === p.focus!.pick) : undefined;
+  const byHow = (how: ContactHow) => [...(follow?.marks ?? [])].filter(([, m]) => m.how === how).map(([id]) => p.territories.find((t) => t.id === id)?.title).filter(Boolean);
+  const regionTerritory = p.region && p.territories.find((t) => t.id === p.region!.territoryId);
   const toggleCause = (c: FlowCause) => p.onFlowOptions({ ...p.flowOptions, hiddenCauses: hiddenCauses.includes(c) ? hiddenCauses.filter((x) => x !== c) : [...hiddenCauses, c] });
 
   return (
@@ -83,7 +102,12 @@ export function MapPane(p: Props) {
           fadeYears={p.fadeYears}
           selectedId={p.selectedId}
           onOpenItem={p.onOpenItem}
-          onOpenTerritory={p.onOpenTerritory}
+          onOpenTerritory={(id) => {
+            const region = following ? p.territories.find((t) => t.id === id)?.region : undefined;
+            if (region) p.onRegion!({ name: region, territoryId: id });
+            else p.onOpenTerritory(id);
+          }}
+          follow={follow}
           onOpenFlow={p.onOpenFlow}
           onBackdropStatus={setBackdrop}
           camera={p.camera}
@@ -142,6 +166,23 @@ export function MapPane(p: Props) {
       )}
 
       <div className="map-status">
+        {p.region && (
+          <div className="notice map-focus" role="status" data-testid="map-region">
+            <span className="grow">Showing {p.region.name} on the timeline</span>
+            {regionTerritory && <button type="button" className="btn small quiet" onClick={() => p.onOpenTerritory(regionTerritory.id)}>Open {regionTerritory.title}</button>}
+            <button type="button" className="btn small quiet" aria-label={`Stop showing ${p.region.name}`} onClick={() => p.onRegion!(undefined)}>×</button>
+          </div>
+        )}
+        {picked && follow && (
+          <div className="notice subtle map-follow" role="status" data-testid="map-follow">
+            {p.focus?.open && p.focus.lane === 'war' ? (
+              byHow('war').length ? `${picked.title} fought ${listOf(byHow('war') as string[])} in these years.` : `${picked.title} fought no one here in these years.`
+            ) : (() => {
+              const parts = (['war', 'allied', 'trade', 'peace'] as const).flatMap((h) => (byHow(h).length ? [`${DEALT[h]} ${listOf(byHow(h) as string[])}`] : []));
+              return parts.length ? `${picked.title} in ${formatYear(Math.floor(p.year))}: ${parts.join('; ')}.` : `${picked.title} in ${formatYear(Math.floor(p.year))}: no dealings with other polities recorded.`;
+            })()}
+          </div>
+        )}
         {backdrop.state === 'loading' && <div className="notice" role="status">Loading reference borders for {formatYear(backdrop.year)}…</div>}
         {backdrop.state === 'ready' && <div className="notice subtle">Reference borders: {formatYear(backdrop.year)}</div>}
         {backdrop.state === 'error' && <div className="notice bad" role="alert">{backdrop.message}</div>}
@@ -181,6 +222,13 @@ export function MapPane(p: Props) {
 }
 
 const SPEEDS = [1, 5, 10, 25, 50, 100];
+
+const DEALT: Record<ContactHow, string> = { war: 'at war with', allied: 'allied with', trade: 'trading with', peace: 'at peace with' };
+
+/** "Sparta, Corinth and Thebes" */
+function listOf(names: string[]): string {
+  return names.length < 2 ? names.join('') : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
+}
 
 /** Current year control shared by the map and timeline: type a year, drag, or play. */
 export function YearBar({ year, range, onYear, playing, onPlaying, speed, onSpeed }: {
