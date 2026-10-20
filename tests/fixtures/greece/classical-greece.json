@@ -4248,6 +4248,9 @@
      "from": {
       "y": -699
      },
+     "to": {
+      "y": -85
+     },
      "geometry": {
       "type": "Polygon",
       "coordinates": [
@@ -4290,7 +4293,8 @@
         ]
        ]
       ]
-     }
+     },
+     "areaKm2": 2809
     }
    ],
    "source": {
@@ -4426,7 +4430,8 @@
         ]
        ]
       ]
-     }
+     },
+     "areaKm2": 133199
     },
     {
      "from": {
@@ -4493,7 +4498,8 @@
         ]
        ]
       ]
-     }
+     },
+     "areaKm2": 198026
     },
     {
      "from": {
@@ -4560,7 +4566,8 @@
         ]
        ]
       ]
-     }
+     },
+     "areaKm2": 126527
     }
    ],
    "source": {
@@ -4623,11 +4630,15 @@
         ]
        ]
       ]
-     }
+     },
+     "areaKm2": 12868
     },
     {
      "from": {
       "y": -368
+     },
+     "to": {
+      "y": -191
      },
      "geometry": {
       "type": "Polygon",
@@ -4667,7 +4678,8 @@
         ]
        ]
       ]
-     }
+     },
+     "areaKm2": 7928
     }
    ],
    "source": {
@@ -4723,6 +4735,9 @@
      "from": {
       "y": -699
      },
+     "to": {
+      "y": -145
+     },
      "geometry": {
       "type": "Polygon",
       "coordinates": [
@@ -4757,7 +4772,8 @@
         ]
        ]
       ]
-     }
+     },
+     "areaKm2": 1122
     }
    ],
    "source": {
@@ -4812,7 +4828,8 @@
         ]
        ]
       ]
-     }
+     },
+     "areaKm2": 2201
     }
    ],
    "source": {
@@ -4906,7 +4923,8 @@
         ]
        ]
       ]
-     }
+     },
+     "areaKm2": 11659
     },
     {
      "from": {
@@ -4957,7 +4975,8 @@
         ]
        ]
       ]
-     }
+     },
+     "areaKm2": 54037
     },
     {
      "from": {
@@ -5008,7 +5027,8 @@
         ]
        ]
       ]
-     }
+     },
+     "areaKm2": 187697
     }
    ],
    "source": {
@@ -5087,7 +5107,8 @@
         ]
        ]
       ]
-     }
+     },
+     "areaKm2": 1925
     },
     {
      "from": {
@@ -5122,7 +5143,8 @@
         ]
        ]
       ]
-     }
+     },
+     "areaKm2": 15354
     }
    ],
    "source": {
@@ -5130,6 +5152,162 @@
    },
    "updatedAt": 1760000000000,
    "region": "Italy"
+  },
+  {
+   "id": "t_persia",
+   "title": "Achaemenid Persia",
+   "categoryId": "politics",
+   "snapshots": [
+    {
+     "from": {
+      "y": -549
+     },
+     "to": {
+      "y": -524
+     },
+     "geometry": {
+      "type": "Polygon",
+      "coordinates": [
+       [
+        [
+         27,
+         38
+        ],
+        [
+         36,
+         41.5
+        ],
+        [
+         45,
+         41
+        ],
+        [
+         55,
+         40
+        ],
+        [
+         62,
+         37.5
+        ],
+        [
+         66,
+         30
+        ],
+        [
+         58,
+         25.5
+        ],
+        [
+         50,
+         29
+        ],
+        [
+         44,
+         30
+        ],
+        [
+         36,
+         31.5
+        ],
+        [
+         30,
+         36.5
+        ],
+        [
+         27,
+         38
+        ]
+       ]
+      ]
+     },
+     "areaKm2": 3671808
+    },
+    {
+     "from": {
+      "y": -524
+     },
+     "to": {
+      "y": -329
+     },
+     "geometry": {
+      "type": "Polygon",
+      "coordinates": [
+       [
+        [
+         26.5,
+         38.5
+        ],
+        [
+         36,
+         42
+        ],
+        [
+         45,
+         41.5
+        ],
+        [
+         55,
+         40.5
+        ],
+        [
+         64,
+         39
+        ],
+        [
+         71,
+         36
+        ],
+        [
+         72,
+         29
+        ],
+        [
+         66,
+         24.5
+        ],
+        [
+         57,
+         25.5
+        ],
+        [
+         50,
+         29
+        ],
+        [
+         44,
+         30
+        ],
+        [
+         36,
+         30
+        ],
+        [
+         32,
+         29
+        ],
+        [
+         30.5,
+         31.5
+        ],
+        [
+         30.5,
+         36.5
+        ],
+        [
+         26.5,
+         38.5
+        ]
+       ]
+      ]
+     },
+     "areaKm2": 5256090
+    }
+   ],
+   "source": {
+    "name": "Rough hand-drawn outline (test data), not a historical map"
+   },
+   "updatedAt": 1760000000000,
+   "region": "Persia"
   }
  ],
  "flows": [
@@ -7145,6 +7323,7 @@
    "fromId": "t_athens",
    "toId": "i_persian",
    "type": "related",
+   "side": 1,
    "updatedAt": 1760000000000
   },
   {
@@ -7152,6 +7331,7 @@
    "fromId": "t_sparta",
    "toId": "i_persian",
    "type": "related",
+   "side": 1,
    "updatedAt": 1760000000000
   },
   {
@@ -7159,6 +7339,15 @@
    "fromId": "t_corinth",
    "toId": "i_persian",
    "type": "related",
+   "side": 1,
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_t_persia_i_persian",
+   "fromId": "t_persia",
+   "toId": "i_persian",
+   "type": "related",
+   "side": 2,
    "updatedAt": 1760000000000
   },
   {
@@ -7354,6 +7543,38 @@
    "updatedAt": 1760000000000
   },
   {
+   "id": "r_t_macedon_i_alexander_persia",
+   "fromId": "t_macedon",
+   "toId": "i_alexander_persia",
+   "type": "related",
+   "side": 1,
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_t_persia_i_alexander_persia",
+   "fromId": "t_persia",
+   "toId": "i_alexander_persia",
+   "type": "related",
+   "side": 2,
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_t_persia_i_kings_peace",
+   "fromId": "t_persia",
+   "toId": "i_kings_peace",
+   "type": "related",
+   "side": 1,
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_t_sparta_i_kings_peace",
+   "fromId": "t_sparta",
+   "toId": "i_kings_peace",
+   "type": "related",
+   "side": 2,
+   "updatedAt": 1760000000000
+  },
+  {
    "id": "r_t_athens_i_delian_founded",
    "fromId": "t_athens",
    "toId": "i_delian_founded",
@@ -7429,6 +7650,7 @@
  "regionParents": {
   "Greece": "Mediterranean",
   "Macedon": "Mediterranean",
-  "Italy": "Mediterranean"
+  "Italy": "Mediterranean",
+  "Persia": "Near East"
  }
 }

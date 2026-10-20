@@ -1,5 +1,6 @@
 import { formatRange, jsDateToDecimalYear, moveDates, precisionOf, toDecimalYear } from '../../model/dates';
 import type { EraRegion } from '../../model/eras';
+import type { Overview } from '../../model/overview';
 import type { DatedItem, HistDate, Lane, Relation, TimelineItem } from '../../model/types';
 import { bandSummary } from '../representations/era';
 import { DEEP_LIMITS, panBy, windowAround, zoomAround, type YearWindow } from '../timeNav';
@@ -26,8 +27,10 @@ export interface TimelineData {
   drafts?: DatedItem[];
   /** Connections: a war's battles become ticks on its bar, a work is joined to its maker. */
   relations?: Relation[];
-  /** Level 0: the eras in their regions. */
+  /** Level 0's backdrop and level 1: the eras in their regions. */
   eras?: EraRegion[];
+  /** Level 0: the overview's bands, polities, world events and top row. */
+  overview?: Overview;
   /** Level 1: each entry's lanes (`entryLanes`), for its lane inside an era. */
   entryLanes?: ReadonlyMap<string, readonly Lane[]>;
 }
@@ -148,7 +151,7 @@ export function createTimeline(host: HTMLElement, cb: TimelineCallbacks, initial
 
   /** On a phone, levels 0 and 1 have no gutter: names sit above their rows. */
   const gut = () => (level !== 2 && size.w < PHONE_W ? 0 : size.gutter);
-  const maxY = () => maxScroll(D, size.h, level, size.w, V.era);
+  const maxY = () => maxScroll(D, size.h, level, size.w, V);
   /** The level Bob is on: while an era closes, already 0. */
   const shownLevel = (): Level => (morph?.to === 0 ? 0 : level);
   const env = () => ({ w: size.w, h: size.h, gutter: gut(), measure });
@@ -164,11 +167,21 @@ export function createTimeline(host: HTMLElement, cb: TimelineCallbacks, initial
     }
     if (hasData) host.dataset.ready = '';
     // The level, once nothing is moving (tests wait for it before tapping).
-    if (!morph && !tween) host.dataset.level = String(level);
+    if (!morph && !tween && !folds.size) host.dataset.level = String(level);
     else delete host.dataset.level;
   };
+  /** Groups folding or unfolding on the overview. */
+  const folds = new Map<string, { from: number; to: number; t0: number | null }>();
+  const unfolded = new Map<string, number>();
+  V.unfolded = unfolded;
   const frame = (now: number) => {
     raf = 0;
+    for (const [id, f] of folds) {
+      if (f.t0 === null) f.t0 = now;
+      const p = clamp((now - f.t0) / MOVE_MS, 0, 1);
+      unfolded.set(id, f.from + (f.to - f.from) * ease(p));
+      if (p >= 1) { folds.delete(id); if (!f.to) unfolded.delete(id); }
+    }
     if (tween) {
       if (tween.t0 === null) tween.t0 = now;
       const p = clamp((now - tween.t0) / MOVE_MS, 0, 1);
@@ -188,7 +201,7 @@ export function createTimeline(host: HTMLElement, cb: TimelineCallbacks, initial
       }
     }
     render();
-    if (tween || morph) schedule();
+    if (tween || morph || folds.size) schedule();
   };
   const schedule = () => { if (!raf) raf = requestAnimationFrame(frame); };
 
@@ -216,8 +229,13 @@ export function createTimeline(host: HTMLElement, cb: TimelineCallbacks, initial
     }
     const era = level !== 2 ? eraById.get(t.id) : undefined;
     if (era) return { title: era.title, sub: bandSummary(era) };
+    const pol = t.id.startsWith('pol:') ? D.polById.get(t.id.slice(4)) : undefined;
+    if (pol) return { title: pol.fullTitle, sub: `${pol.when} · ${pol.t.strength?.length ? 'As strong as your strength points say' : pol.unknown ? 'Size unknown: draw its borders to size it' : 'As wide as its borders'}` };
+    const group = t.id.startsWith('grp:') ? D.groupById.get(t.id.slice(4)) : undefined;
+    if (group) return { title: group.title, sub: `${group.members.map((m) => m.title).join(', ')} · ${unfolded.get(group.id) ? 'Click to fold them' : 'Click to show each'}` };
     const it = D.byId.get(t.id);
     if (!it) return null;
+    if (level === 0 && it.world) return { title: it.title, sub: `${it.when} · World event` };
     if (it.draft) return { title: it.title, sub: `${it.when} · Claude's draft, waiting for you` };
     if (t.grip === 'start' || t.grip === 'end') return { title: it.title, sub: `Drag to change when it ${t.grip === 'start' ? 'starts' : 'ends'}` };
     return { title: it.title, sub: t.grip ? `${it.when} · Drag to change its dates` : it.when };
@@ -275,10 +293,17 @@ export function createTimeline(host: HTMLElement, cb: TimelineCallbacks, initial
         return;
       }
       if (t && D.byId.get(t.id)?.draft) return;
-      // An era's band opens it into its lanes; its name there opens the era itself.
-      if (t && level === 0 && eraById.has(t.id)) { setActive(t.id); openEra(t.id); return; }
+      if (level === 0 && t) {
+        // A group unfolds into its members, and its bracket folds it back.
+        if (t.id.startsWith('grp:')) { toggleGroup(t.id.slice(4)); return; }
+        // A strip or a world event is picked (opening it is Phase 4 ticket 7).
+        if (t.id.startsWith('pol:') || D.byId.get(t.id)?.world) { V.pick = V.pick === t.id ? undefined : t.id; schedule(); return; }
+        // An era's wash opens it into its lanes; its name there opens the era itself.
+        if (eraById.has(t.id)) { setActive(t.id); openEra(t.id); return; }
+      }
       if (t) { setActive(t.id); cb.onSelect(t.id); return; }
       if (y < scene!.plot.y || x < gut()) return;
+      if (V.pick) { V.pick = undefined; schedule(); }
       cb.onSelect(undefined);
       if (V.playYear !== undefined) cb.onYear?.(Math.round(yearAt(x)));
     },
@@ -346,6 +371,14 @@ export function createTimeline(host: HTMLElement, cb: TimelineCallbacks, initial
       if (hit.length) cb.onPick([...new Set([...picked, ...hit])]);
     },
   });
+  const toggleGroup = (id: string) => {
+    const now = unfolded.get(id) ?? 0, to = folds.get(id)?.to === 1 || (!folds.has(id) && now >= 0.5) ? 0 : 1;
+    if (reducedMotion()) { folds.delete(id); if (to) unfolded.set(id, 1); else unfolded.delete(id); }
+    else folds.set(id, { from: now, to, t0: null });
+    V.hover = undefined;
+    tip.hidden = true;
+    schedule();
+  };
   /** Ctrl or ⌘ and click: an entry (or a cluster's members) goes in, or out if it was in. */
   const togglePick = (t: Target | undefined) => {
     const ids = t?.cluster ? t.cluster.members : t && D.byId.has(t.id) && !D.byId.get(t.id)!.draft ? [t.id] : [];
@@ -382,7 +415,7 @@ export function createTimeline(host: HTMLElement, cb: TimelineCallbacks, initial
   const scrollTo = (id: string, pad: number) => {
     const it = D.byId.get(id);
     const phone = size.w < PHONE_W;
-    const ys = level === 0 ? eraSpan(D, id, phone) : level === 1 && V.era ? lane1Span(V.era, id, phone) : it && rowSpan(D, it);
+    const ys = level === 0 ? eraSpan(D, V, id, phone) : level === 1 && V.era ? lane1Span(V.era, id, phone) : it && rowSpan(D, it);
     if (!ys || !size.h) return;
     const [top, bottom] = ys;
     const viewH = size.h - AXIS_H - (level === 1 ? HEAD1_H : 0);
@@ -418,6 +451,11 @@ export function createTimeline(host: HTMLElement, cb: TimelineCallbacks, initial
     } else if (e.key === 'Escape' && picked.size && cb.onPick) {
       // Esc lets go of a box-selection first.
       cb.onPick([]);
+      e.stopPropagation();
+    } else if (e.key === 'Escape' && level === 0 && V.pick) {
+      // Esc lets go of the picked strip.
+      V.pick = undefined;
+      schedule();
       e.stopPropagation();
     } else if (e.key === 'Escape' && level === 1) {
       // Esc backs out of the era first; the open panel stays.
@@ -515,7 +553,9 @@ export function createTimeline(host: HTMLElement, cb: TimelineCallbacks, initial
 
   return {
     setData(d) {
-      D = prepare(d.items, d.lanes, { now: V.now, prominence: d.prominence, thumbFor: d.thumbFor, drafts: d.drafts, relations: d.relations, eras: d.eras });
+      D = prepare(d.items, d.lanes, { now: V.now, prominence: d.prominence, thumbFor: d.thumbFor, drafts: d.drafts, relations: d.relations, eras: d.eras, overview: d.overview });
+      // A pick whose strip or world event has gone lets go.
+      if (V.pick && !D.polById.has(V.pick.slice(4)) && !D.byId.get(V.pick)?.world) V.pick = undefined;
       eraById = new Map(D.regions.flatMap((R) => R.eras.map((e) => [e.id, e])));
       dims = d.entryLanes ?? new Map();
       // The open era follows the data; if it's gone (deleted, or its category hidden), back to the eras.
@@ -558,7 +598,7 @@ export function createTimeline(host: HTMLElement, cb: TimelineCallbacks, initial
     panBy: (years) => setWin(panBy(V.win, years, DEEP_LIMITS)),
     fit() {
       if (shownLevel() === 1 && V.era) { setWin(fitEra(V.era.era), true); return; }
-      const x = (shownLevel() === 0 && D.eraExtent) || D.extent;
+      const x = (shownLevel() === 0 && D.overviewExtent) || D.extent;
       if (!x) return;
       const span = Math.max(x.end - x.start, 10);
       setWin(windowAround((x.start + x.end) / 2, span * 1.08, DEEP_LIMITS), true);

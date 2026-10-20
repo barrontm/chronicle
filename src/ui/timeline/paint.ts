@@ -71,6 +71,18 @@ export function svgPainter(): Painter {
     sym.innerHTML = markup;
     defs.append(sym);
   }
+  // World events' gold leaf: lighter at the top, with an ink edge drawn by the mark.
+  const gilt = document.createElementNS(NS, 'linearGradient');
+  gilt.id = `${id}-gilt`;
+  for (const [k, v] of Object.entries({ x1: '0', y1: '0', x2: '0', y2: '1' })) gilt.setAttribute(k, v);
+  for (const [offset, color] of [['0', 'var(--gold-2)'], ['0.55', 'var(--gold)'], ['1', 'var(--gold)']]) {
+    const stop = document.createElementNS(NS, 'stop');
+    stop.setAttribute('offset', offset);
+    stop.style.setProperty('stop-color', color);
+    gilt.append(stop);
+  }
+  defs.append(gilt);
+  const fillOf = (f: string | undefined) => (f === 'gilt' ? `url(#${id}-gilt)` : f);
   const group = (clipName: string) => {
     const g = document.createElementNS(NS, 'g');
     g.setAttribute('clip-path', `url(#${id}-${clipName})`);
@@ -121,14 +133,14 @@ export function svgPainter(): Painter {
       case 0:
         set(r, 'x', p.x); set(r, 'y', p.y); set(r, 'width', Math.max(0, p.w)); set(r, 'height', Math.max(0, p.h));
         set(r, 'rx', p.r);
-        style(r, 'fill', p.fill ?? 'none');
+        style(r, 'fill', fillOf(p.fill) ?? 'none');
         style(r, 'stroke', p.stroke ?? 'none');
         set(r, 'stroke-width', p.stroke ? p.sw ?? 1 : undefined);
         set(r, 'stroke-dasharray', p.stroke && p.dash ? '4 3' : undefined);
         break;
       case 1:
         set(r, 'cx', p.x); set(r, 'cy', p.y); set(r, 'r', p.r);
-        style(r, 'fill', p.fill ?? 'none');
+        style(r, 'fill', fillOf(p.fill) ?? 'none');
         style(r, 'stroke', p.stroke ?? 'none');
         set(r, 'stroke-width', p.stroke ? p.sw ?? 1 : undefined);
         set(r, 'stroke-dasharray', p.stroke && p.dash ? '2 2' : undefined);
@@ -171,9 +183,10 @@ export function svgPainter(): Painter {
         break;
       case 7:
         set(r, 'd', p.d);
-        style(r, 'fill', p.fill);
+        style(r, 'fill', fillOf(p.fill));
         style(r, 'stroke', p.stroke ?? 'none');
         set(r, 'stroke-width', p.stroke ? p.sw ?? 1 : undefined);
+        set(r, 'stroke-dasharray', p.stroke && p.dash ? '2 3' : undefined);
         break;
     }
   };

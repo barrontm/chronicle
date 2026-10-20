@@ -39,7 +39,7 @@ describe('search', () => {
     const hits = search(doc, 'delian league');
     expect(hits.some((h) => h.type === 'territory' && h.title === 'Delian League (Athenian empire)' && h.bounds && h.year !== undefined)).toBe(true);
     expect(search(doc, 'delian zebra')).toEqual([]);
-    expect(search(doc, 'athens (attica)')[0]).toMatchObject({ type: 'territory', when: 'From 700 BCE' });
+    expect(search(doc, 'athens (attica)')[0]).toMatchObject({ type: 'territory', when: '700–86 BCE' });
   });
 
   it('gives at most 20 results, and none for an empty query', () => {

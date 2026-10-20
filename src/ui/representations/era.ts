@@ -1,81 +1,67 @@
 import { LANES } from '../../model/types';
 import type { Era } from '../../model/eras';
 import type { Measure, Prim } from '../timeline/scene';
-import { LANE_LABEL, PIGMENT } from '../util';
+import { LANE_LABEL } from '../util';
 
 /**
- * An era at level 0: a band (docs/design.md, Overview: A · Bands). Its name in spaced small caps,
- * its dates, a row of landmarks (its most prominent entries as their glyphs), and a strip along
- * the bottom with the mix of lanes in its highlights. Approximate ends are dashed umber
- * edges. Theme chips (Phase 4) go between the dates and the landmarks, and make the band taller.
+ * An era on the overview: the backdrop behind its region's polities (docs/design.md, Overview).
+ * A wash across the region's band, two tints alternating so neighbours read apart, named in
+ * Spectral italic on the band's top line; approximate edges are dashed umber. An inner era (the
+ * Fifty Years) is a labelled rule along the band's foot when it's at least 70 px wide.
  */
 
-/** Band height, and where its parts sit from its top. */
-export const BAND_H = 68;
-const NAME_Y = 21;
-const DATES_Y = 37;
-/** The landmark row's middle. */
-export const LANDMARK_Y = 51;
-export const LANDMARK = 14;
-const MIX_H = 5;
-/** Below this many px a band shows no text. */
-const MIN_TEXT = 36;
+/** An inner era's rule needs this many px to be drawn. */
+const INNER_MIN = 70;
 
-export interface BandLook {
-  /** Left and right edges in px, and the plot's edges (text stays in view while the band runs past them). */
+export interface WashLook {
+  /** Left and right edges in px, and the plot's edges (its name stays in view while it runs past them). */
   xa: number;
   xb: number;
   x0: number;
   x1: number;
-  y: number;
-  hot: boolean;
+  /** The band's top and bottom. */
+  top: number;
+  bottom: number;
+  /** Where its name's baseline is, and where the region's name ends on that line. */
+  nameY: number;
+  after: number;
+  /** Which of the two tints. */
+  alt: boolean;
   selected: boolean;
   /** Extra classes: a connection role, or "dimmed". */
   role: string;
 }
 
-/** Text cut short with an ellipsis to fit, or '' when nothing fits. */
-function fit(M: Measure, font: 'era', s: string, avail: number): string {
-  if (M(font, s) <= avail) return s;
-  const ell = M(font, '…');
-  let n = s.length - 1;
-  while (n > 0 && M(font, s.slice(0, n)) + ell > avail) n--;
-  return n > 0 ? `${s.slice(0, n).trimEnd()}…` : '';
-}
-
-/** The band's primitives: its block and edges (`marks`) and its words (`text`). */
-export function bandPrims(e: Era, b: BandLook, M: Measure): { marks: Prim[]; text: Prim[] } {
+/** The wash and its edges (`marks`), and its name (`text`). */
+export function washPrims(e: Era, b: WashLook, M: Measure): { marks: Prim[]; text: Prim[] } {
   const marks: Prim[] = [], text: Prim[] = [];
-  const rx = Math.max(b.xa, b.x0 - 4), rr = Math.min(b.xb, b.x1 + 4), rw = Math.max(3, rr - rx);
-  const va = Math.max(b.xa, b.x0), vb = Math.min(b.xb, b.x1);
+  const rx = Math.max(b.xa, b.x0 - 4), rr = Math.min(b.xb, b.x1 + 4);
+  if (rr - rx < 1) return { marks, text };
+  const h = b.bottom - b.top;
   const cls = `tl-era${b.selected ? ' selected' : ''}${b.role}`;
-  marks.push({
-    t: 0, k: `e${e.id}`, a: 1, cls, id: e.id, x: rx + 1.5, y: b.y, w: Math.max(0, rw - 3), h: BAND_H, r: 3, fill: 'var(--panel)',
-    stroke: b.selected ? 'var(--ink)' : b.hot ? 'var(--ink-2)' : 'var(--band-edge)', sw: b.selected ? 2 : 1,
-  });
-  // The mix of lanes along the bottom, in pigment order, over the whole band so it stays put while panning.
-  const total = LANES.reduce((n, d) => n + e.mix[d], 0);
-  let at = b.xa + 1.5;
-  const full = Math.max(0, b.xb - b.xa - 3);
-  for (const d of LANES) {
-    if (!e.mix[d] || !total) continue;
-    const w = (full * e.mix[d]) / total;
-    const sa = Math.max(at, b.x0 - 4), sb = Math.min(at + w, b.x1 + 4);
-    if (sb > sa) marks.push({ t: 0, k: `em${d}${e.id}`, a: 1, cls: `tl-era-mix ${d}${b.role}`, id: e.id, x: sa, y: b.y + BAND_H - MIX_H, w: sb - sa, h: MIX_H, fill: `var(--pig-${PIGMENT[d]})` });
-    at += w;
-  }
-  // Approximate ends: dashed umber edges over the band's own.
-  if (e.approx && b.xa >= b.x0 - 3) marks.push({ t: 3, k: `ea${e.id}`, a: 1, cls: b.role.trim() || undefined, x1: b.xa + 1.5, y1: b.y, x2: b.xa + 1.5, y2: b.y + BAND_H, stroke: 'var(--pig-umber)', sw: 2, dash: true });
-  if (e.endApprox && b.xb <= b.x1 + 3) marks.push({ t: 3, k: `ez${e.id}`, a: 1, cls: b.role.trim() || undefined, x1: b.xb - 1.5, y1: b.y, x2: b.xb - 1.5, y2: b.y + BAND_H, stroke: 'var(--pig-umber)', sw: 2, dash: true });
-  const room = vb - va - 18;
-  if (vb - va < MIN_TEXT) return { marks, text };
-  const name = fit(M, 'era', e.title, room);
-  if (name) text.push({ t: 2, k: `en${e.id}`, a: 1, cls: `tl-era-name${b.role}`, id: e.id, x: va + 9, y: b.y + NAME_Y, s: name, f: 'era', fill: 'var(--ink)' });
-  if (M('eraDates', e.when) <= room) text.push({ t: 2, k: `ed${e.id}`, a: 1, cls: `tl-era-dates${b.role}`, x: va + 9, y: b.y + DATES_Y, s: e.when, f: 'eraDates', fill: 'var(--muted)' });
+  marks.push({ t: 0, k: `e${e.id}`, a: 1, cls, id: e.id, x: rx, y: b.top, w: rr - rx, h, fill: b.alt ? 'var(--band-2)' : 'var(--band)', stroke: b.selected ? 'var(--ink)' : undefined, sw: 2 });
+  const role = b.role.trim() || undefined;
+  if (b.xa >= b.x0 - 1) marks.push({ t: 3, k: `ea${e.id}`, a: 1, cls: role, x1: b.xa + 0.5, y1: b.top, x2: b.xa + 0.5, y2: b.bottom, stroke: e.approx ? 'var(--pig-umber)' : 'var(--band-edge)', sw: e.approx ? 1.5 : 1, dash: e.approx });
+  if (e.endApprox && b.xb <= b.x1 + 1) marks.push({ t: 3, k: `ez${e.id}`, a: 1, cls: role, x1: b.xb - 0.5, y1: b.top, x2: b.xb - 0.5, y2: b.bottom, stroke: 'var(--pig-umber)', sw: 1.5, dash: true });
+  // Its name, after the region's, sticking to the left edge while it scrolls past.
+  const lx = Math.max(b.xa + 6, b.after);
+  if (Math.min(b.xb, b.x1) - lx > M('wash', e.title) + 8) text.push({ t: 2, k: `en${e.id}`, a: 1, cls: `tl-era-name${b.role}`, id: e.id, x: lx, y: b.nameY, s: e.title, f: 'wash', fill: 'var(--ink-2)' });
   return { marks, text };
 }
 
-/** What the band's tooltip says under its name: its dates and highlights, the biggest lanes first. */
+/** An inner era: a rule along the band's foot, named above it when there's room. */
+export function innerPrims(e: Era, b: Pick<WashLook, 'xa' | 'xb' | 'x0' | 'x1' | 'bottom' | 'role'>, M: Measure): { marks: Prim[]; text: Prim[] } {
+  const marks: Prim[] = [], text: Prim[] = [];
+  if (b.xb - b.xa < INNER_MIN) return { marks, text };
+  const y = b.bottom - 3;
+  const role = b.role.trim() || undefined;
+  marks.push({ t: 3, k: `ei${e.id}`, a: 0.7, cls: `tl-era-inner${b.role}`, id: e.id, x1: b.xa + 2, y1: y, x2: b.xb - 2, y2: y, stroke: 'var(--muted)', sw: 1, dash: e.approx || e.endApprox });
+  const lx = Math.max(b.xa + 4, b.x0 + 4);
+  if (Math.min(b.xb, b.x1) - lx > M('washIn', e.title) + 6) text.push({ t: 2, k: `eit${e.id}`, a: 1, cls: role, id: e.id, x: lx, y: y - 3, s: e.title, f: 'washIn', fill: 'var(--muted)' });
+  return { marks, text };
+}
+
+/** What an era's tooltip says under its name: its dates and highlights, the biggest lanes first. */
 export function bandSummary(e: Era): string {
   if (!e.highlights) return `${e.when} · No highlights yet`;
   const dims = LANES.filter((d) => e.mix[d]).sort((a, b) => e.mix[b] - e.mix[a]).map((d) => `${e.mix[d]} ${LANE_LABEL[d].toLowerCase()}`);

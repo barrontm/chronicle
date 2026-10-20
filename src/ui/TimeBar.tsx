@@ -13,14 +13,14 @@ const INTERRUPTS = ['pointerdown', 'wheel', 'keydown'] as const;
 
 /**
  * Under the timeline: a thumbwheel to spin through time, and a zoom bar with
- * stops from a year to a millennium (and, on the new timeline, the eras).
+ * stops from a year to a millennium (and, on the new timeline, the overview).
  */
 export function TimeBar({ win, control }: { win: VisibleWindow; control: RefObject<TimelineControl | null> }) {
   const span = win.end - win.start;
   const center = (win.start + win.end) / 2;
   const stop = currentStop(span);
   const eras = win.level === 0;
-  /** The stops show the entries; at the eras, or inside one, they come back to them first. */
+  /** The stops show the entries; at the overview, or inside an era, they come back to them first. */
   const entries = () => { if (win.level !== undefined && win.level !== 2) control.current?.setLevel?.(2); };
   const zoomTo = (years: number) => { entries(); control.current?.setWindow(windowAround(center, years), true); };
 
@@ -40,7 +40,7 @@ export function TimeBar({ win, control }: { win: VisibleWindow; control: RefObje
         />
         <button className="btn small quiet" aria-label="Zoom the timeline in" onClick={() => control.current?.zoomBy(0.5)}>+</button>
         <div className="zoom-stops">
-          {win.level !== undefined && <button className="chip" aria-pressed={eras} onClick={() => control.current?.setLevel?.(0)}>Eras</button>}
+          {win.level !== undefined && <button className="chip" aria-pressed={eras} onClick={() => control.current?.setLevel?.(0)}>Overview</button>}
           {ZOOM_STOPS.map((s) => (
             <button key={s.label} className="chip" aria-pressed={!eras && stop === s.label} onClick={() => zoomTo(s.years)}>{s.label}</button>
           ))}

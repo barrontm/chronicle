@@ -2,7 +2,8 @@ import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef } from 'rea
 import { isDated, jsDateToDecimalYear } from '../model/dates';
 import { eraRegions } from '../model/eras';
 import { entryLanes } from '../model/lanes';
-import type { Category, DatedItem, Highlight, MediaRef, Relation, TimelineItem } from '../model/types';
+import { overview } from '../model/overview';
+import type { Category, DatedItem, Highlight, MediaRef, PolityGroup, Relation, Territory, TimelineItem } from '../model/types';
 import { draftArrows, influenceArrows, influenceClasses } from './influenceLinks';
 import { createTimeline, type MovedDates, type TimelineHandle } from './timeline/createTimeline';
 import type { Level } from './timeline/layout';
@@ -20,7 +21,7 @@ export interface VisibleWindow {
   /** Pixel geometry of the plotting area, relative to the timeline host element. */
   left: number;
   width: number;
-  /** The zoom level: 0 the eras, 1 an era's six lanes, 2 the entries. */
+  /** The zoom level: 0 the overview, 1 an era's six lanes, 2 the entries. */
   level?: Level;
 }
 
@@ -35,7 +36,7 @@ export interface TimelineControl {
   focus: (id: string) => void;
   /** Go back to the window from before the first focus. */
   back: () => void;
-  /** Show the eras (level 0, fitted to them) or the entries (level 2). */
+  /** Show the overview (level 0, fitted to it) or the entries (level 2). */
   setLevel?: (level: 0 | 2) => void;
 }
 
@@ -65,11 +66,16 @@ interface Props {
   /** Entries box-selected for bulk edit (Ctrl or ⌘ and drag or click), and the new selection when Bob changes it. */
   picked?: string[];
   onPick?: (ids: string[]) => void;
+  /** Level 0, the overview: polities (territories), their groups, and each region's parent. */
+  territories?: Territory[];
+  groups?: PolityGroup[];
+  regionParents?: Record<string, string>;
 }
 
 const NO_DRAFTS: { items: TimelineItem[]; relations: Relation[] } = { items: [], relations: [] };
 const NO_HIGHLIGHTS: Highlight[] = [];
 const NO_PICKS: string[] = [];
+const NO_TERRITORIES: Territory[] = [];
 
 /** The window that frames an entry with its connected entries, counting only the ones shown. */
 function focusTarget(id: string, items: DatedItem[], relations: Relation[], shown: (id: string) => boolean): YearWindow | undefined {
@@ -79,7 +85,7 @@ function focusTarget(id: string, items: DatedItem[], relations: Relation[], show
   return focusWindow(item, items.filter((i) => otherIds.has(i.id) && shown(i.id)));
 }
 
-export const TimelineView = forwardRef<TimelineControl, Props>(function TimelineView({ items: allItems, categories, relations, selectedId, thumbFor, onSelect, onAddAt, onWindow, onCanGoBack, year, onYear, prominence, drafts: allDrafts = NO_DRAFTS, onMove, highlights = NO_HIGHLIGHTS, picked = NO_PICKS, onPick }, ref) {
+export const TimelineView = forwardRef<TimelineControl, Props>(function TimelineView({ items: allItems, categories, relations, selectedId, thumbFor, onSelect, onAddAt, onWindow, onCanGoBack, year, onYear, prominence, drafts: allDrafts = NO_DRAFTS, onMove, highlights = NO_HIGHLIGHTS, picked = NO_PICKS, onPick, territories = NO_TERRITORIES, groups, regionParents }, ref) {
   // Only entries with a start date: a place with none is on the map only.
   const items = useMemo(() => allItems.filter(isDated), [allItems]);
   const drafts = useMemo(() => ({ ...allDrafts, items: allDrafts.items.filter(isDated) }), [allDrafts]);
@@ -104,11 +110,16 @@ export const TimelineView = forwardRef<TimelineControl, Props>(function Timeline
     return () => { t.dispose(); tl.current = null; };
   }, []);
 
-  // Level 0's eras, from the categories shown.
-  const eras = useMemo(() => {
+  // Level 0, the overview, and its eras, from the categories shown: Bob's categories are filters here, not rows.
+  const { eras, overviewData } = useMemo(() => {
     const shown = new Set(categories.map((c) => c.id));
-    return eraRegions(items.filter((i) => shown.has(i.categoryId)), highlights, relations, jsDateToDecimalYear(new Date()));
-  }, [items, categories, highlights, relations]);
+    const now = jsDateToDecimalYear(new Date());
+    const its = items.filter((i) => shown.has(i.categoryId));
+    return {
+      eras: eraRegions(its, highlights, relations, now),
+      overviewData: overview({ items: its, territories: territories.filter((t) => shown.has(t.categoryId)), relations, highlights, groups, regionParents, prominence: prominence ?? (() => 0), now }),
+    };
+  }, [items, categories, highlights, relations, territories, groups, regionParents, prominence]);
   // Level 1's lanes: each entry's lanes.
   const laneMap = useMemo(() => entryLanes(items, highlights), [items, highlights]);
 
@@ -121,9 +132,10 @@ export const TimelineView = forwardRef<TimelineControl, Props>(function Timeline
       drafts: drafts.items,
       relations,
       eras,
+      overview: overviewData,
       entryLanes: laneMap,
     });
-  }, [items, categories, thumbFor, prominence, drafts.items, relations, eras, laneMap]);
+  }, [items, categories, thumbFor, prominence, drafts.items, relations, eras, overviewData, laneMap]);
 
   // The open entry's connections light up with arrows; Claude's drafted ones show whenever their highlight is open.
   useEffect(() => {
