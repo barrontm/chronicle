@@ -794,6 +794,8 @@ test('adding a battle connects it to the war already in Chronicle, with the high
 
   await search(page, 'salamis', 'Battle of Salamis');
   await expect(page.getByTestId('reader').getByText('The battle turned the war')).toBeVisible();
+  // The line under the title wraps on a phone when it fills in, moving the text: wait for it before finding the words.
+  await expect(page.locator('.reader-sub')).toContainText('part of Second Persian invasion of Greece');
   const quote = phone ? 'The battle turned the war in 480 BC.' : 'turned the war';
   if (phone) {
     const at = await findText(page, 'turned the war');
