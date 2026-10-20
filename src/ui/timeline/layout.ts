@@ -328,6 +328,9 @@ const EMPTY_H = 22;
 const BAND_PAD = 6;
 /** The gap between bands, kept free for threads (Phase 4b). */
 const BAND_GAP = 10;
+/** A region focused from the map: its rows grow by this, and the other bands fade to `REGION_FADE`. */
+export const REGION_GROW = 1.3;
+const REGION_FADE = 0.4;
 
 /** A sub-row on screen: what's in it, how tall and how faded (a group's members while it unfolds), and the group whose members it holds. */
 interface SubGeo { slots: Slot[]; y: number; h: number; a: number; group?: PGroup; folding?: number }
@@ -338,11 +341,13 @@ const inWin = (x: { s: number; e: number }, win: YearWindow) => x.e >= win.start
 const unfoldOf = (V: Pick<View, 'unfolded'>, id: string) => V.unfolded?.get(id) ?? 0;
 
 /** Where every band and sub-row sits, in px from the top of the content (under the axis). */
-function overviewGeo(D: Prepared, V: Pick<View, 'win' | 'unfolded'>, phone: boolean): Geo {
-  const sub = phone ? SUB_H_PHONE : SUB_H;
+function overviewGeo(D: Prepared, V: Pick<View, 'win' | 'unfolded' | 'region'>, phone: boolean): Geo {
+  const base = phone ? SUB_H_PHONE : SUB_H;
   const topH = D.top.length ? TOP_PAD * 2 + Math.min(TOP_ROWS, D.top.length) * TOP_ROW_H : 0;
   let y = topH;
   const bands = D.bands.map((B): BandGeo => {
+    // The region Bob clicked on the map: its rows grow.
+    const sub = B.name === V.region ? base * REGION_GROW : base;
     if (B.parentHead) y += PARENT_H;
     const top = y;
     const headY = top + GOLD_H + 13;
@@ -375,9 +380,15 @@ function overviewGeo(D: Prepared, V: Pick<View, 'win' | 'unfolded'>, phone: bool
 }
 
 /** How far down level 0 an era's band is, in px from the top of the content. */
-export function eraSpan(D: Prepared, V: Pick<View, 'win' | 'unfolded'>, id: string, phone: boolean): [number, number] | undefined {
+export function eraSpan(D: Prepared, V: Pick<View, 'win' | 'unfolded' | 'region'>, id: string, phone: boolean): [number, number] | undefined {
   const g = overviewGeo(D, V, phone).bands.find((b) => b.B.eras.some((e) => e.id === id));
   return g && [g.top, g.bottom];
+}
+
+/** How far down level 0 a region's band is, in px from the top of the content. */
+export function regionSpan(D: Prepared, V: Pick<View, 'win' | 'unfolded' | 'region'>, name: string, phone: boolean): [number, number] | undefined {
+  const g = overviewGeo(D, V, phone).bands.find((b) => b.B.name === name);
+  return g && [g.top - (g.B.parentHead ? PARENT_H : 0), g.bottom];
 }
 
 /** The arrow keys at level 0: ←/→ the era before or after in its region, ↑/↓ the nearest in time in the region above or below. */
@@ -518,6 +529,8 @@ export interface View {
   unfolded?: ReadonlyMap<string, number>;
   /** The box Bob is drawing with ⌘ or Ctrl held, in px. */
   box?: Box;
+  /** Level 0: the region Bob clicked on the map; its rows grow and the other bands fade. */
+  region?: string;
 }
 
 export interface Env {
@@ -531,7 +544,7 @@ export interface Env {
 interface Ctx { D: Prepared; V: View; E: Env; S: Scene; X: (y: number) => number; x0: number; x1: number; top: number; bottom: number }
 
 /** How far the lanes (or, at level 0, the bands; at level 1, the open era's lanes) can scroll. `V` is the view, for level 0's and 1's. */
-export function maxScroll(D: Prepared, h: number, level: Level = 2, w = Infinity, V?: Pick<View, 'win' | 'unfolded' | 'era'>): number {
+export function maxScroll(D: Prepared, h: number, level: Level = 2, w = Infinity, V?: Pick<View, 'win' | 'unfolded' | 'era' | 'region'>): number {
   if (level === 1 && V?.era) return Math.max(0, lanesH(V.era, w < PHONE_W) - (h - AXIS_H - HEAD1_H) + 8);
   const content = level === 0 && V ? overviewGeo(D, V, w < PHONE_W).H : D.contentH;
   return Math.max(0, content - (h - AXIS_H) + 8);
@@ -648,11 +661,18 @@ function overviewRows(c: Ctx) {
   }
   const shareOf = (p: PPolity) => (p.unknown ? () => UNKNOWN_SHARE : (y: number) => stripShare(strengthAt(p.t, y), widest));
   if (G.topH) topRow(c, base, G.topH);
+  const focus = V.region && D.bands.some((B) => B.name === V.region) ? V.region : undefined;
   for (const g of G.bands) {
     const top = base + g.top, bottom = base + g.bottom;
     if (g.B.parentHead) parentRule(c, g.B, top - PARENT_H, phone);
     if (bottom < AXIS_H || top > E.h) continue;
+    // Every band but the focused region's fades, still there to read.
+    const from = [...S.z.map((z) => z.length), S.gutter.length];
     band(c, g, base, phone, shareOf);
+    if (focus && g.B.name !== focus) {
+      S.z.forEach((z, i) => { for (let k = from[i]; k < z.length; k++) z[k] = { ...z[k], a: z[k].a * REGION_FADE }; });
+      for (let k = from[4]; k < S.gutter.length; k++) S.gutter[k] = { ...S.gutter[k], a: S.gutter[k].a * REGION_FADE };
+    }
   }
 }
 

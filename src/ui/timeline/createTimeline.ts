@@ -6,7 +6,7 @@ import { bandSummary } from '../representations/era';
 import { DEEP_LIMITS, panBy, windowAround, zoomAround, type YearWindow } from '../timeNav';
 import { attachGestures } from './gestures';
 import {
-  AXIS_H, describeEntry, describeEra, describeLane1, eraLanes, eraSpan, ERAS_BACK, HEAD1_H, HEAD_ROW, LANE_TOGGLE, laneTop, OPEN_PICK, polityLanes, hitBox, hitTest, lane1Span, laneAt, layout, maxScroll, PHONE_W, prepare, rowSpan,
+  AXIS_H, describeEntry, describeEra, describeLane1, eraLanes, eraSpan, ERAS_BACK, HEAD1_H, HEAD_ROW, LANE_TOGGLE, laneTop, OPEN_PICK, polityLanes, regionSpan, hitBox, hitTest, lane1Span, laneAt, layout, maxScroll, PHONE_W, prepare, rowSpan,
   stepActive, stepEra, stepLane1, type EraLanes, type Head1, type LaneInput, type Level, type PEra, type Prepared, type StepKey, type View,
 } from './layout';
 import { svgPainter } from './paint';
@@ -51,7 +51,14 @@ export interface TimelineCallbacks {
   onMove?: (id: string, dates: MovedDates) => void;
   /** Bob box-selected entries (Ctrl or ⌘ and drag), or added or removed one (Ctrl or ⌘ and click), or cleared them (Esc): the whole selection. Without it nothing can be box-selected. */
   onPick?: (ids: string[]) => void;
+  /** What the overview has picked or open changed (the map follows it). */
+  onFocus?: (f: OverviewFocus) => void;
+  /** Bob let go of the region focused from the map (Esc). */
+  onRegion?: (region: string | undefined) => void;
 }
+
+/** What the overview has picked (`pol:<territory>` or a world event's id), whether it's open into its lanes, and its open lane with what's in it. */
+export interface OverviewFocus { pick?: string; open?: boolean; lane?: Lane; laneIds?: string[] }
 
 export interface TimelineHandle {
   setData(d: TimelineData): void;
@@ -72,6 +79,8 @@ export interface TimelineHandle {
   setLevel(level: Level): void;
   /** Whether the open era (level 1) shows this entry, so opening it needn't move the window. */
   inEra(id: string): boolean;
+  /** Focus a region of the overview (Bob clicked it on the map): back to the overview, its rows grown and in view. */
+  setRegion(region: string | undefined): void;
   dispose(): void;
 }
 
@@ -142,6 +151,17 @@ export function createTimeline(host: HTMLElement, cb: TimelineCallbacks, initial
   V.editable = !!cb.onMove;
   /** The selection for bulk edit, as App has it; while a box is drawn, `V.picked` also shows what it touches. */
   let picked: ReadonlySet<string> = new Set();
+  /** What the map was last told the overview has picked or open. */
+  let focusKey = '';
+  const reportFocus = () => {
+    const EL = shownLevel() === 1 && V.era?.compact ? V.era : undefined;
+    const lane = EL?.open && EL.open !== 'none' ? EL.open : undefined;
+    const f: OverviewFocus = { pick: shownLevel() === 2 ? undefined : V.pick ?? EL?.head.id, open: !!EL, lane, laneIds: lane ? EL!.lanes.find((l) => l.id === lane)?.order.map((x) => x.id) : undefined };
+    const key = JSON.stringify(f);
+    if (key === focusKey) return;
+    focusKey = key;
+    cb.onFocus?.(f);
+  };
 
   // Screen readers hear the entry the arrow keys are on through one option node (aria-activedescendant).
   const optionId = `tl-active-${Math.random().toString(36).slice(2, 8)}`;
@@ -169,6 +189,7 @@ export function createTimeline(host: HTMLElement, cb: TimelineCallbacks, initial
       cb.onWindow(w);
     }
     if (hasData) host.dataset.ready = '';
+    reportFocus();
     // The level, once nothing is moving (tests wait for it before tapping).
     if (!morph && !tween && !folds.size) host.dataset.level = String(level);
     else delete host.dataset.level;
@@ -465,6 +486,10 @@ export function createTimeline(host: HTMLElement, cb: TimelineCallbacks, initial
       // Esc lets go of a box-selection first.
       cb.onPick([]);
       e.stopPropagation();
+    } else if (e.key === 'Escape' && V.region && cb.onRegion) {
+      // Esc lets go of the region focused from the map, before anything else it holds.
+      cb.onRegion(undefined);
+      e.stopPropagation();
     } else if (e.key === 'Escape' && level === 0 && V.pick) {
       // Esc lets go of the picked strip.
       V.pick = undefined;
@@ -642,6 +667,26 @@ export function createTimeline(host: HTMLElement, cb: TimelineCallbacks, initial
     level: shownLevel,
     setLevel: switchLevel,
     inEra: (id) => shownLevel() === 1 && !!V.era && (id === V.era.head.opens || V.era.laneOf.has(id)),
+    setRegion(region) {
+      if (region === V.region) return;
+      V.region = region;
+      if (region) host.dataset.region = region;
+      else delete host.dataset.region;
+      if (region) {
+        // Its band in the middle of the view (or its top, if it's taller).
+        const ys = regionSpan(D, V, region, size.w < PHONE_W);
+        if (ys) {
+          const view = size.h - AXIS_H, h = ys[1] - ys[0];
+          const target = h > view ? ys[0] : ys[0] - (view - h) / 2;
+          scrolls.set(0, clamp(target, 0, maxScroll(D, size.h, 0, size.w, { ...V, era: undefined })));
+          if (level === 0 && !morph) V.scrollY = scrolls.get(0)!;
+        }
+        // The overview is where regions are: an open polity or era folds back first, keeping its pick.
+        if (level === 1) closeEra();
+        else if (level === 2) switchLevel(0);
+      }
+      schedule();
+    },
     dispose() {
       live = false;
       cancelAnimationFrame(raf);

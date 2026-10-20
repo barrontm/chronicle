@@ -2,6 +2,9 @@
 
 A log of choices that shouldn't be re-litigated every session. Newest first. To change a decision, add a new entry that supersedes the old one.
 
+## 2026-10-20 — The map follows the overview
+`contactsAt` (in `src/ui/mapData.ts`) reads only Bob's records: a war or battle (by subject, else his War lane), alliance or treaty dated in the year, connected to both polities, with the sides on those connections. Unknown sides in a war count as at war; in anything else, as allied. A polity's own entry (the Delian League's "founded") is treated as a dated event both took part in, not as the polity itself, so a founding doesn't make two polities "at peace" forever. The map fits the pick and those it fought or allied with, never a trade partner. Clicking a region on the map takes the timeline back to the overview, since regions only exist there; the pick stays. Esc clears the region first, as `docs/design.md` orders it.
+
 ## 2026-10-20 — What's in a polity (level 1)
 `src/model/polities.ts` decides it, mirroring "What's in an era" with one change: the place and connection rules are a union, not one after the other. An entry is in what it's directly `part of` (a polity's territory or its entry); else in every polity whose borders hold one of its places in its year (a birthplace at its start, a deathplace at its end, else its middle) and every polity a connection names (the territory, or the polity's entry); else in the polities of what it's part of, following part-of links up (a battle with nothing of its own goes with its war). The union is what puts the Peloponnesian War, which has no place, in Athens and Sparta, and keeps a war with a site in the polities that fought it. A polity's own entry isn't in its lanes. A world event holds what's part of it, all the way down, and what's connected to it. Members are worked out the first time something is opened (`membersOf` in `TimelineView`), not every frame.
 

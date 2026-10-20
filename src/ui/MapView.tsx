@@ -9,7 +9,7 @@ import { loadCountries } from '../data/countries';
 import { formatYear } from '../model/dates';
 import type { Category, Flow, Relation, Series, Territory, TimelineItem } from '../model/types';
 import { draftFeatures, type Draft } from './drawing';
-import { activeRoutes, arcsBetween, causeOf, choroplethAt, draftPins, flowDashes, flowFeatures, flowScale, mixColor, pinsAt, territoriesAt, territoryCircles, type FlowLineProps, type FlowPlaces } from './mapData';
+import { activeRoutes, arcsBetween, causeOf, choroplethAt, CONTACT_COLOR, draftPins, type FollowAt, flowDashes, flowFeatures, flowScale, mixColor, pinsAt, territoriesAt, territoryCircles, type FlowLineProps, type FlowPlaces } from './mapData';
 import { formatValue } from './util';
 
 /**
@@ -64,6 +64,8 @@ interface Props {
   /** While drawing a border: the shape so far, and where a click lands (and whether it's on the first point). */
   draft?: Draft;
   onDrawPoint?: (p: [number, number], nearFirst: boolean) => void;
+  /** Following the overview (`followAt`): shapes over the territories, pins, marked labels, and where to fit. */
+  follow?: FollowAt;
 }
 
 export interface MapFit { bounds: [number, number, number, number]; at: number }
@@ -118,6 +120,8 @@ function buildStyle(c: Colors): StyleSpecification {
       'flow-dashes': { type: 'geojson', data: EMPTY },
       'flow-heads': { type: 'geojson', data: EMPTY },
       pins: { type: 'geojson', data: EMPTY },
+      follow: { type: 'geojson', data: EMPTY },
+      'follow-pins': { type: 'geojson', data: EMPTY },
       draft: { type: 'geojson', data: EMPTY },
     },
     layers: [
@@ -136,6 +140,10 @@ function buildStyle(c: Colors): StyleSpecification {
       { id: 'backdrop-line', type: 'line', source: 'backdrop', paint: { 'line-color': c.backdrop, 'line-opacity': 0.55, 'line-width': 0.8, 'line-dasharray': [3, 2] } },
       { id: 'territories-fill', type: 'fill', source: 'territories', paint: { 'fill-color': ['get', 'color'], 'fill-opacity': 0.32 } },
       { id: 'territories-line', type: 'line', source: 'territories', paint: { 'line-color': ['get', 'color'], 'line-width': 1.6 } },
+      // Following the overview: the picked polity in ink, the polities it dealt with in their contact's colour, its reach and earlier borders dashed.
+      { id: 'follow-fill', type: 'fill', source: 'follow', paint: { 'fill-color': ['get', 'color'], 'fill-opacity': ['get', 'fill'] } },
+      { id: 'follow-line', type: 'line', source: 'follow', filter: ['!', ['get', 'dashed']], paint: { 'line-color': ['get', 'color'], 'line-width': ['get', 'width'] } },
+      { id: 'follow-dash', type: 'line', source: 'follow', filter: ['get', 'dashed'], paint: { 'line-color': ['get', 'color'], 'line-width': ['get', 'width'], 'line-dasharray': [3, 2] } },
       {
         id: 'circles', type: 'circle', source: 'circles',
         paint: { 'circle-color': ['get', 'color'], 'circle-opacity': 0.35, 'circle-radius': ['get', 'radius'], 'circle-stroke-color': ['get', 'color'], 'circle-stroke-width': 1.5 },
@@ -166,6 +174,10 @@ function buildStyle(c: Colors): StyleSpecification {
           'circle-stroke-opacity': ['get', 'opacity'],
         },
       },
+      {
+        id: 'follow-pins', type: 'circle', source: 'follow-pins',
+        paint: { 'circle-color': ['get', 'color'], 'circle-opacity': ['get', 'opacity'], 'circle-radius': 6, 'circle-stroke-color': c.panel, 'circle-stroke-width': 1.5, 'circle-stroke-opacity': ['get', 'opacity'] },
+      },
       { id: 'draft-fill', type: 'fill', source: 'draft', filter: ['==', ['geometry-type'], 'Polygon'], paint: { 'fill-color': c.ink, 'fill-opacity': 0.15 } },
       { id: 'draft-line', type: 'line', source: 'draft', filter: ['!=', ['geometry-type'], 'Point'], paint: { 'line-color': c.ink, 'line-width': 2 } },
       {
@@ -187,6 +199,7 @@ function applyColors(map: maplibregl.Map, c: Colors) {
   map.setPaintProperty('backdrop-fill', 'fill-color', c.backdrop);
   map.setPaintProperty('backdrop-line', 'line-color', c.backdrop);
   map.setPaintProperty('pins', 'circle-stroke-color', ['case', ['get', 'selected'], c.ink, c.panel]);
+  map.setPaintProperty('follow-pins', 'circle-stroke-color', c.panel);
   map.setPaintProperty('draft-fill', 'fill-color', c.ink);
   map.setPaintProperty('draft-line', 'line-color', c.ink);
   map.setPaintProperty('draft-points', 'circle-color', c.panel);
@@ -206,7 +219,7 @@ function useColors(): Colors {
 }
 
 /** Keep a set of HTML label markers in sync with a list of {id, lon, lat, text}. */
-function syncLabels(map: maplibregl.Map, store: Map<string, maplibregl.Marker>, labels: Array<{ id: string; lon: number; lat: number; text: string; className: string; opacity?: number }>) {
+function syncLabels(map: maplibregl.Map, store: Map<string, maplibregl.Marker>, labels: Array<{ id: string; lon: number; lat: number; text: string; className: string; opacity?: number; contact?: string; color?: string }>) {
   const seen = new Set<string>();
   for (const l of labels) {
     seen.add(l.id);
@@ -221,6 +234,11 @@ function syncLabels(map: maplibregl.Map, store: Map<string, maplibregl.Marker>, 
     const el = m.getElement();
     if (el.textContent !== l.text) el.textContent = l.text;
     el.style.opacity = String(l.opacity ?? 1);
+    // How a polity dealt with the one picked on the overview ("at war"), coloured as its shape.
+    if (l.contact) el.dataset.contact = l.contact;
+    else delete el.dataset.contact;
+    if (l.color) el.style.setProperty('--c', l.color);
+    else el.style.removeProperty('--c');
     m.setLngLat([l.lon, l.lat]);
   }
   for (const [id, m] of store) if (!seen.has(id)) { m.remove(); store.delete(id); }
@@ -293,7 +311,10 @@ export default function MapView(props: Props) {
       map.addImage('flow-arrow', arrowImage(), { sdf: true, pixelRatio: 2 });
       setReady(true);
     });
+    // While it pans or zooms (tests wait for it to settle before clicking a place).
+    map.on('movestart', () => { if (host.current) host.current.dataset.moving = ''; });
     map.on('moveend', () => {
+      if (host.current) delete host.current.dataset.moving;
       const c = map.getCenter();
       cb.current.onCamera?.({ center: [Math.round(c.lng * 1e4) / 1e4, Math.round(c.lat * 1e4) / 1e4], zoom: Math.round(map.getZoom() * 100) / 100 });
     });
@@ -304,6 +325,7 @@ export default function MapView(props: Props) {
     pointer('pins');
     pointer('territories-fill');
     pointer('flows');
+    pointer('follow-pins');
     map.on('click', (e) => {
       const draw = cb.current.onDrawPoint;
       if (draw) {
@@ -312,8 +334,8 @@ export default function MapView(props: Props) {
         const near = !!first && map.project(first as [number, number]).dist(e.point) <= 10;
         return draw([e.lngLat.lng, e.lngLat.lat], near);
       }
-      const hit = map.queryRenderedFeatures(e.point, { layers: ['pins', 'flows', 'territories-fill'] });
-      const pin = hit.find((f) => f.layer.id === 'pins');
+      const hit = map.queryRenderedFeatures(e.point, { layers: ['follow-pins', 'pins', 'flows', 'territories-fill'] });
+      const pin = hit.find((f) => f.layer.id === 'follow-pins' || f.layer.id === 'pins');
       if (pin) return cb.current.onOpenItem(String(pin.properties.id));
       const flow = hit.find((f) => f.layer.id === 'flows');
       if (flow) return cb.current.onOpenFlow(String(flow.properties.id).split('#')[0]);
@@ -322,9 +344,9 @@ export default function MapView(props: Props) {
     });
     // Hover: a pin's title, a country's value on the data layer, or a polity name from the backdrop.
     map.on('mousemove', (e: MapLayerMouseEvent) => {
-      const hits = map.queryRenderedFeatures(e.point, { layers: ['pins', 'flows', 'circles', 'territories-fill', 'land', 'backdrop-fill'] });
+      const hits = map.queryRenderedFeatures(e.point, { layers: ['follow-pins', 'pins', 'flows', 'circles', 'territories-fill', 'land', 'backdrop-fill'] });
       let text: string | undefined;
-      const pin = hits.find((f) => f.layer.id === 'pins');
+      const pin = hits.find((f) => f.layer.id === 'follow-pins' || f.layer.id === 'pins');
       const flow = hits.find((f) => f.layer.id === 'flows');
       const circle = hits.find((f) => f.layer.id === 'circles');
       const country = hits.find((f) => f.layer.id === 'land');
@@ -378,8 +400,42 @@ export default function MapView(props: Props) {
       (map.getSource('territories') as GeoJSONSource).setData(terr.shapes);
       lastTerritoryKey.current = terr.key;
     }
-    syncLabels(map, territoryLabels.current, terr.labels.map((l) => ({ id: l.id, lon: l.lon, lat: l.lat, text: l.title, className: 'territory' })));
-  }, [terr, ready]);
+    const marks = props.follow?.marks;
+    syncLabels(map, territoryLabels.current, terr.labels.map((l) => {
+      const m = marks?.get(l.id);
+      const color = m && m.how !== 'picked' ? colors.resolve(m.how === 'gold' ? 'var(--gold-text)' : CONTACT_COLOR[m.how]) : undefined;
+      return { id: l.id, lon: l.lon, lat: l.lat, text: m?.text ? `${l.title} · ${m.text}` : l.title, className: 'territory', contact: m?.how, color };
+    }));
+  }, [terr, ready, props.follow?.marks, colors]);
+
+  // Following the overview: its shapes and pins, drawn over the territories.
+  const follow = props.follow;
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !ready) return;
+    const shapes = follow?.shapes ?? (EMPTY as FollowAt['shapes']);
+    (map.getSource('follow') as GeoJSONSource).setData({ ...shapes, features: shapes.features.map((f) => ({ ...f, properties: { ...f.properties, color: colors.resolve(f.properties.color) } })) });
+    const pins = follow?.pins ?? (EMPTY as FollowAt['pins']);
+    (map.getSource('follow-pins') as GeoJSONSource).setData({ ...pins, features: pins.features.map((f) => ({ ...f, properties: { ...f.properties, color: colors.resolve(f.properties.color) } })) });
+    host.current?.setAttribute('data-follow-pins', String(pins.features.length));
+  }, [follow, colors, ready]);
+  // The map fits what's picked when the pick changes, and a region when Bob clicks one.
+  const pickFitKey = follow?.pickFit?.key;
+  useEffect(() => {
+    const map = mapRef.current;
+    const b = follow?.pickFit?.bounds;
+    if (!map || !ready || !b) return;
+    lastFit.current = b;
+    fitMap(map, b);
+  }, [pickFitKey, ready]); // eslint-disable-line react-hooks/exhaustive-deps
+  const regionFitKey = follow?.regionFit?.key;
+  useEffect(() => {
+    const map = mapRef.current;
+    const b = follow?.regionFit?.bounds;
+    if (!map || !ready || !b) return;
+    lastFit.current = b;
+    fitMap(map, b);
+  }, [regionFitKey, ready]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Entries and connections.
   useEffect(() => {

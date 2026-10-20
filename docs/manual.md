@@ -210,6 +210,13 @@ A new trend opens with **Find a trend**: one search over about 4,200 Our World i
 - **Layers → Migration** shows the migrations you've recorded as arrows, and lets you hide some causes. See [Migration](#migration).
 - The map remembers where you left it on this device.
 
+### Following the timeline
+In the reader layout the map follows what you pick at **Overview** on the timeline.
+- **Pick a polity** (click its strip) and the map shows it outlined in ink, with the polities it dealt with in the year shown, each named with how: **at war** (red), **allied** (blue), **trade** (ochre) or **at peace** (brown). A note at the top says it in words: "Athens (Attica) in 431 BCE: at war with Corinth, Sparta and Thebes." The map moves to fit it and those it fought or allied with. As the year plays, the names change with it. How comes from your connections: a war, battle, alliance or treaty in that year connected to both, and which side each was on. Opposite sides of a war are at war and the same side allied; opposite sides of a treaty are at peace. Migrations for work and the economy between them count as trade. A territory you've made **part of** a polity (an alliance it led) shows as its reach, dashed blue.
+- **Open a lane** inside the polity and the map shows that lane: **War** everyone it fought in the years you're looking at; **Politics and law** its borders before the ones it has now, dashed; the other lanes pins for their entries in those years, stronger near the year shown.
+- **Pick a world event** and the polities it touched are gold on the map, with its entries pinned.
+- **Click a territory on the map** to bring its region forward on the timeline: back at Overview, that region's rows grow and the others fade, still there to read, and the map fits the region. A note says "Showing Persia on the timeline", with **Open** to open the territory itself and **×** to stop. **Esc** stops it too, before anything else the timeline has open. A territory with no region opens as before.
+
 ## Territories
 
 A territory is a polity's borders over time: a city-state, a kingdom, an empire. Each set of borders has dates, and the map shows whichever set is in force for the year.

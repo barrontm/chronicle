@@ -1,8 +1,8 @@
 import type { Feature, FeatureCollection, LineString, Point, Position } from 'geojson';
-import { labelPoint } from '../data/geo';
+import { bbox, labelPoint } from '../data/geo';
 import { presenceAt, regionExtent, snapshotAt, valueAt } from '../model/atYear';
-import { formatYear } from '../model/dates';
-import type { Flow, FlowCause, FlowEnd, FlowRoute, Place, Relation, Series, SeriesPoint, Territory, TerritorySnapshot, TimelineItem } from '../model/types';
+import { formatYear, toDecimalYear } from '../model/dates';
+import type { Flow, FlowCause, FlowEnd, FlowRoute, Lane, Place, Relation, Series, SeriesPoint, Territory, TerritorySnapshot, TimelineItem } from '../model/types';
 
 /**
  * Turns the doc into GeoJSON for one year of the map. Pure (no MapLibre), so
@@ -370,4 +370,266 @@ export function flowDashes(lines: FeatureCollection<LineString, FlowLineProps>, 
     }
   }
   return fc(out);
+}
+
+// ---------- Following the timeline (Phase 4: the overview) ----------
+
+/** How a polity dealt with another in a year: through a war or battle, an alliance, a treaty, trade, or a plain connection. */
+export type ContactHow = 'war' | 'allied' | 'trade' | 'peace';
+export interface Contact { territoryId: string; how: ContactHow; via: string[] }
+
+export const CONTACT_LABEL: Record<ContactHow, string> = { war: 'at war', allied: 'allied', trade: 'trade', peace: 'at peace' };
+export const CONTACT_COLOR: Record<ContactHow, string> = { war: 'var(--pig-cinnabar)', allied: 'var(--pig-lapis)', trade: 'var(--pig-ochre)', peace: 'var(--pig-umber)' };
+/** Strongest first: two polities at war in a year that also traded are at war. */
+const CONTACT_RANK: Record<ContactHow, number> = { war: 3, allied: 2, trade: 1, peace: 0 };
+
+export interface ContactDoc {
+  items: readonly TimelineItem[];
+  territories: readonly Territory[];
+  relations: readonly Relation[];
+  flows?: readonly Flow[];
+}
+
+/** Whole years an entry covers, its end year included (a battle in 431 BCE covers all of it). */
+function yearsOf(it: TimelineItem): [number, number] | undefined {
+  if (!it.start) return undefined;
+  const s = toDecimalYear(it.start);
+  const e = it.end ? toDecimalYear(it.end) : s;
+  return [Math.floor(Math.min(s, e)), Math.floor(Math.max(s, e))];
+}
+
+/** A war or a battle: what it is, else Bob's War lane. */
+const isWar = (it: TimelineItem) => it.subject === 'war' || it.subject === 'battle' || (!it.subject && !!it.lanes?.includes('war'));
+
+/**
+ * The polities `polityId` (a territory) dealt with between two years, each once, strongest contact first.
+ * A war, battle, alliance or treaty in those years connected to both says how, from their sides
+ * (decision "v9 holds"): opposite sides of a war or battle are at war and the same side allied;
+ * opposite sides of anything else are at peace, otherwise allied. A polity's entry stands for it.
+ * A migration route for work and the economy between them is trade, and a connection between the
+ * two territories themselves is at peace. A polity's own entry is dated: it took part in it.
+ */
+export function contactsDuring(polityId: string, from: number, to: number, doc: ContactDoc): Contact[] {
+  const byItem = new Map<string, string>();
+  for (const t of doc.territories) if (t.itemId) byItem.set(t.itemId, t.id);
+  const terrIds = new Set(doc.territories.map((t) => t.id));
+  const polityOf = (id: string) => (terrIds.has(id) ? id : byItem.get(id));
+  const items = new Map(doc.items.map((i) => [i.id, i]));
+
+  // Each entry's polities and their sides, from its connections.
+  const sides = new Map<string, Map<string, 1 | 2 | undefined>>();
+  const direct: string[][] = [];
+  const take = (entry: string, pol: string, side?: 1 | 2) => {
+    const m = sides.get(entry) ?? sides.set(entry, new Map()).get(entry)!;
+    if (!m.has(pol) || side) m.set(pol, side);
+  };
+  for (const r of doc.relations) {
+    if (r.type === 'part-of') continue;
+    // Two territories connected directly; else a polity and an entry, which is dated even when it's
+    // another polity's own entry (the Delian League founded: Athens and the League took part in it).
+    if (terrIds.has(r.fromId) && terrIds.has(r.toId)) { if (r.fromId !== r.toId) direct.push([r.fromId, r.toId, r.id]); continue; }
+    const a = polityOf(r.fromId), b = polityOf(r.toId);
+    if (a && (!b || terrIds.has(r.fromId))) { take(r.toId, a, r.side); if (b) take(r.toId, b); }
+    else if (b) { take(r.fromId, b, r.side); if (a) take(r.fromId, a); }
+  }
+
+  const best = new Map<string, Contact>();
+  const add = (tid: string, how: ContactHow, via: string) => {
+    if (tid === polityId) return;
+    const c = best.get(tid);
+    if (!c || CONTACT_RANK[how] > CONTACT_RANK[c.how]) best.set(tid, { territoryId: tid, how, via: [via] });
+    else if (c.how === how && !c.via.includes(via)) c.via.push(via);
+  };
+  for (const [entry, m] of sides) {
+    if (!m.has(polityId)) continue;
+    const it = items.get(entry);
+    const ys = it && yearsOf(it);
+    if (!ys || ys[0] > to || ys[1] < from) continue;
+    const mine = m.get(polityId);
+    const war = isWar(it);
+    for (const [other, side] of m) {
+      if (other === polityId) continue;
+      const same = !!mine && !!side && mine === side, opposite = !!mine && !!side && mine !== side;
+      add(other, war ? (same ? 'allied' : 'war') : opposite ? 'peace' : 'allied', entry);
+    }
+  }
+  for (const f of doc.flows ?? []) {
+    if (f.cause !== 'economic') continue;
+    for (const r of f.routes) {
+      const a = 'territoryId' in r.from ? r.from.territoryId : undefined, b = 'territoryId' in r.to ? r.to.territoryId : undefined;
+      const other = a === polityId ? b : b === polityId ? a : undefined;
+      if (!other) continue;
+      const xs = r.points.map((p) => Math.floor(p.x));
+      if (xs.length && Math.min(...xs) <= to && Math.max(...xs) >= from) add(other, 'trade', f.id);
+    }
+  }
+  for (const [a, b, id] of direct) {
+    if (a === polityId) add(b, 'peace', id);
+    else if (b === polityId) add(a, 'peace', id);
+  }
+  const title = new Map(doc.territories.map((t) => [t.id, t.title]));
+  return [...best.values()].sort((x, y) => CONTACT_RANK[y.how] - CONTACT_RANK[x.how] || (title.get(x.territoryId) ?? '').localeCompare(title.get(y.territoryId) ?? ''));
+}
+
+/** The polities `polityId` dealt with in `year`, and how (`contactsDuring` for one year). */
+export function contactsAt(polityId: string, year: number, doc: ContactDoc): Contact[] {
+  const y = Math.floor(year);
+  return contactsDuring(polityId, y, y, doc);
+}
+
+/** What the timeline has picked or open, which the map follows. */
+export interface TimelineFocus {
+  /** The strip or world event picked on the overview: `pol:<territory>`, or the world event's id. */
+  pick?: string;
+  /** Opened into its six lanes (level 1). */
+  open?: boolean;
+  /** The lane opened to all its entries, and what's in it. */
+  lane?: Lane;
+  laneIds?: string[];
+}
+
+export interface FollowProps { id: string; color: string; fill: number; width: number; dashed: boolean }
+export interface FollowPinProps { id: string; title: string; color: string; opacity: number }
+export interface FollowAt {
+  shapes: FeatureCollection<NonNullable<TerritorySnapshot['geometry']>, FollowProps>;
+  pins: FeatureCollection<Point, FollowPinProps>;
+  /** Territory labels to mark: the picked one, and the others with how they dealt with it ("at war"). */
+  marks: Map<string, { how: ContactHow | 'picked' | 'gold'; text?: string }>;
+  /** Where to fit the map for the pick, and for the region; each refits only when its key changes. */
+  pickFit?: { key: string; bounds: [number, number, number, number] };
+  regionFit?: { key: string; bounds: [number, number, number, number] };
+}
+
+export interface FollowInput extends ContactDoc {
+  focus: TimelineFocus;
+  /** The region Bob clicked on the map, if any. */
+  region?: string;
+  year: number;
+  /** The years in view on the timeline. */
+  window: { start: number; end: number };
+  /** What's in a world event (`worldMembers`). */
+  worldMembers?: (id: string) => string[];
+}
+
+/** A territory's borders in a year, else its nearest snapshot's (a polity with borders only later still has a place). */
+function shapeOf(t: Territory, year: number) {
+  const now = snapshotAt(t, year)?.geometry;
+  if (now) return now;
+  const shaped = t.snapshots.filter((s) => s.geometry);
+  return shaped.sort((a, b) => Math.abs(toDecimalYear(a.from) - year) - Math.abs(toDecimalYear(b.from) - year))[0]?.geometry;
+}
+
+function union(boxes: [number, number, number, number][]): [number, number, number, number] | undefined {
+  if (!boxes.length) return undefined;
+  return [Math.min(...boxes.map((b) => b[0])), Math.min(...boxes.map((b) => b[1])), Math.max(...boxes.map((b) => b[2])), Math.max(...boxes.map((b) => b[3]))];
+}
+
+const LANE_PIGMENT: Record<Lane, string> = { politics: 'lapis', war: 'cinnabar', economy: 'ochre', ideas: 'indigo', technology: 'verdigris', nature: 'terre' };
+
+/**
+ * The map's half of the overview (docs/design.md, "The map follows"). A picked polity is drawn in
+ * ink and the polities it dealt with in the year in their contact's colour, named with how; the map
+ * fits it and those it fought or allied with (never a far trade partner). An alliance that is part of
+ * it (the Delian League) is its reach, dashed lapis. An open lane shows its layer: War everyone it
+ * fought in the years in view; Politics its borders before, dashed; the others their entries' pins
+ * in view, stronger near the year. A picked world event shows the polities it touched in gold and
+ * its entries' pins. A region Bob clicked is fitted.
+ */
+export function followAt(o: FollowInput): FollowAt {
+  const shapes: Feature<NonNullable<TerritorySnapshot['geometry']>, FollowProps>[] = [];
+  const pins: Feature<Point, FollowPinProps>[] = [];
+  const marks: FollowAt['marks'] = new Map();
+  const out: FollowAt = { shapes: fc(shapes), pins: fc(pins), marks };
+  const byId = new Map(o.territories.map((t) => [t.id, t]));
+  const items = new Map(o.items.map((i) => [i.id, i]));
+  const shape = (t: Territory, color: string, fill: number, width: number, dashed = false, geometry = shapeOf(t, o.year)) => {
+    if (geometry) shapes.push({ type: 'Feature', geometry, properties: { id: t.id, color, fill, width, dashed } });
+    return geometry;
+  };
+  const pinAll = (ids: Iterable<string>, color: string, opacityOf: (it: TimelineItem) => number) => {
+    for (const id of ids) {
+      const it = items.get(id);
+      if (!it) continue;
+      const opacity = opacityOf(it);
+      if (opacity <= 0) continue;
+      for (const p of placesToDraw(it)) pins.push({ type: 'Feature', geometry: { type: 'Point', coordinates: [p.lon, p.lat] }, properties: { id: it.id, title: it.title, color, opacity } });
+    }
+  };
+
+  if (o.region) {
+    const boxes = o.territories.filter((t) => t.region === o.region).flatMap((t) => { const g = shapeOf(t, o.year); return g ? [bbox(g)] : []; });
+    const b = union(boxes);
+    if (b) out.regionFit = { key: o.region, bounds: b };
+  }
+
+  const pick = o.focus.pick;
+  if (!pick) return out;
+  const lane = o.focus.open ? o.focus.lane : undefined;
+  const span = Math.max(1, o.window.end - o.window.start);
+  // In view, and stronger the nearer the year.
+  const nearYear = (it: TimelineItem) => {
+    const ys = yearsOf(it);
+    if (!ys || ys[1] < o.window.start || ys[0] > o.window.end) return 0;
+    const d = o.year < ys[0] ? ys[0] - o.year : o.year > ys[1] + 1 ? o.year - ys[1] - 1 : 0;
+    return 0.3 + 0.7 * Math.max(0, 1 - d / (span / 2));
+  };
+
+  if (!pick.startsWith('pol:')) {
+    // A world event: the polities it touched in gold, and its entries pinned.
+    const ids = new Set([pick, ...(o.worldMembers?.(pick) ?? [])]);
+    const touched = new Set<string>();
+    for (const t of o.territories) if (t.itemId && ids.has(t.itemId)) touched.add(t.id);
+    for (const r of o.relations) {
+      if (r.type === 'part-of') continue;
+      if (byId.has(r.fromId) && ids.has(r.toId)) touched.add(r.fromId);
+      if (byId.has(r.toId) && ids.has(r.fromId)) touched.add(r.toId);
+    }
+    const boxes: [number, number, number, number][] = [];
+    for (const id of touched) {
+      const g = shape(byId.get(id)!, 'var(--gold)', 0.3, 2);
+      if (g) boxes.push(bbox(g));
+      marks.set(id, { how: 'gold' });
+    }
+    pinAll(lane && o.focus.laneIds ? o.focus.laneIds : ids, lane ? `var(--pig-${LANE_PIGMENT[lane]})` : 'var(--gold-ink)', nearYear);
+    for (const p of pins) boxes.push([...p.geometry.coordinates, ...p.geometry.coordinates] as [number, number, number, number]);
+    const b = union(boxes);
+    if (b) out.pickFit = { key: pick, bounds: b };
+    return out;
+  }
+
+  const tid = pick.slice(4);
+  const me = byId.get(tid);
+  if (!me) return out;
+  const boxes: [number, number, number, number][] = [];
+  // Its reach: territories that are part of it (an alliance it led).
+  const reach = o.relations.filter((r) => r.type === 'part-of' && byId.has(r.fromId) && (r.toId === tid || (!!me.itemId && r.toId === me.itemId))).map((r) => byId.get(r.fromId)!);
+  for (const t of reach) if (snapshotAt(t, o.year)?.geometry) shape(t, 'var(--pig-lapis)', 0.08, 1.8, true);
+
+  const contacts = lane === 'war'
+    ? contactsDuring(tid, Math.floor(o.window.start), Math.floor(o.window.end), o).filter((c) => c.how === 'war')
+    : contactsAt(tid, o.year, o);
+  for (const c of contacts) {
+    const t = byId.get(c.territoryId);
+    if (!t || reach.includes(t)) continue;
+    const g = shape(t, CONTACT_COLOR[c.how], c.how === 'war' && lane === 'war' ? 0.32 : 0.2, 2);
+    if (g && (c.how === 'war' || c.how === 'allied')) boxes.push(bbox(g));
+    marks.set(t.id, { how: c.how, text: lane === 'war' ? 'fought' : CONTACT_LABEL[c.how] });
+  }
+  const mine = shape(me, 'var(--ink)', 0.1, 2.6);
+  if (mine) boxes.push(bbox(mine));
+  marks.set(me.id, { how: 'picked' });
+
+  if (lane === 'politics') {
+    // Its borders before the ones in effect, dashed.
+    const now = snapshotAt(me, o.year);
+    const earlier = me.snapshots.filter((s) => s !== now && s.geometry && toDecimalYear(s.from) < (now ? toDecimalYear(now.from) : o.year));
+    const prev = earlier.sort((a, b) => toDecimalYear(b.from) - toDecimalYear(a.from))[0];
+    if (prev?.geometry) shape(me, 'var(--ink-2)', 0, 1.6, true, prev.geometry);
+  } else if (lane && lane !== 'war') {
+    pinAll(o.focus.laneIds ?? [], `var(--pig-${LANE_PIGMENT[lane]})`, nearYear);
+  }
+  const b = union(boxes);
+  // Opening a lane refits: War takes in everyone it fought.
+  if (b) out.pickFit = { key: `${pick}|${lane ?? ''}`, bounds: b };
+  return out;
 }
