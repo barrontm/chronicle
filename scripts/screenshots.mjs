@@ -337,6 +337,38 @@ if (any('desktop-new-timeline')) await newTimeline(await page('desktop-new-timel
 if (any('dark-new-timeline')) await newTimeline(await page('dark-new-timeline', { ...desktop, colorScheme: 'dark' }), 'dark');
 if (any('phone-new-timeline')) await newTimeline(await page('phone-new-timeline', { viewport: { width: 412, height: 860 }, isMobile: true, hasTouch: true }), 'phone');
 
+// Box-select: the box being drawn, the selection with its bar, and Edit's panel (a mouse only, so no phone).
+async function boxSelect(p, prefix) {
+  await p.getByTestId('import-input').setInputFiles(FIXTURE);
+  await p.locator('[data-testid=timeline][data-ready]').waitFor();
+  await p.getByTestId('time-bar').getByRole('button', { name: 'All' }).click();
+  await p.waitForTimeout(600);
+  await p.locator('.tl-mark[data-id=i_socrates]').click({ force: true });
+  await p.waitForTimeout(700);
+  await p.getByRole('button', { name: 'Close panel' }).click();
+  await p.waitForTimeout(500);
+  const boxes = await Promise.all(['i_socrates', 'i_plato', 'i_aristotle'].map(async (id) => p.locator(`.tl-mark[data-id=${id}]`).boundingBox()));
+  const x0 = Math.min(...boxes.map((b) => b.x)) - 6, y0 = Math.min(...boxes.map((b) => b.y)) - 6;
+  // Aristotle runs past the right edge: the box stops inside the window.
+  const x1 = Math.min(Math.max(...boxes.map((b) => b.x + b.width)) + 6, 1430), y1 = Math.max(...boxes.map((b) => b.y + b.height)) + 6;
+  const mod = process.platform === 'darwin' ? 'Meta' : 'Control';
+  await p.mouse.move(x0, y0);
+  await p.keyboard.down(mod);
+  await p.mouse.down();
+  await p.mouse.move(x1, y1, { steps: 6 });
+  await p.waitForTimeout(100);
+  await shot(p, `${prefix}-box-drawing`);
+  await p.mouse.up();
+  await p.keyboard.up(mod);
+  await p.waitForTimeout(200);
+  await shot(p, `${prefix}-box-picked`);
+  await p.getByTestId('pick-bar').getByRole('button', { name: 'Edit' }).click();
+  await p.getByTestId('bulk-edit').getByRole('group', { name: 'Lanes' }).getByRole('button', { name: 'Economy' }).click();
+  await shot(p, `${prefix}-box-edit`);
+}
+if (any('desktop-box')) await boxSelect(await page('desktop-box', desktop), 'desktop');
+if (any('dark-box')) await boxSelect(await page('dark-box', { ...desktop, colorScheme: 'dark' }), 'dark');
+
 // The manual.
 async function help(p, prefix) {
   await p.getByRole('button', { name: 'Help' }).click();

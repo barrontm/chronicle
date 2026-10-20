@@ -62,10 +62,14 @@ interface Props {
   onMove?: (id: string, dates: MovedDates) => void;
   /** Bob's highlights, counted into the eras at level 0. */
   highlights?: Highlight[];
+  /** Entries box-selected for bulk edit (Ctrl or ⌘ and drag or click), and the new selection when Bob changes it. */
+  picked?: string[];
+  onPick?: (ids: string[]) => void;
 }
 
 const NO_DRAFTS: { items: TimelineItem[]; relations: Relation[] } = { items: [], relations: [] };
 const NO_HIGHLIGHTS: Highlight[] = [];
+const NO_PICKS: string[] = [];
 
 /** The window that frames an entry with its connected entries, counting only the ones shown. */
 function focusTarget(id: string, items: DatedItem[], relations: Relation[], shown: (id: string) => boolean): YearWindow | undefined {
@@ -75,14 +79,14 @@ function focusTarget(id: string, items: DatedItem[], relations: Relation[], show
   return focusWindow(item, items.filter((i) => otherIds.has(i.id) && shown(i.id)));
 }
 
-export const TimelineView = forwardRef<TimelineControl, Props>(function TimelineView({ items: allItems, categories, relations, selectedId, thumbFor, onSelect, onAddAt, onWindow, onCanGoBack, year, onYear, prominence, drafts: allDrafts = NO_DRAFTS, onMove, highlights = NO_HIGHLIGHTS }, ref) {
+export const TimelineView = forwardRef<TimelineControl, Props>(function TimelineView({ items: allItems, categories, relations, selectedId, thumbFor, onSelect, onAddAt, onWindow, onCanGoBack, year, onYear, prominence, drafts: allDrafts = NO_DRAFTS, onMove, highlights = NO_HIGHLIGHTS, picked = NO_PICKS, onPick }, ref) {
   // Only entries with a start date: a place with none is on the map only.
   const items = useMemo(() => allItems.filter(isDated), [allItems]);
   const drafts = useMemo(() => ({ ...allDrafts, items: allDrafts.items.filter(isDated) }), [allDrafts]);
   const host = useRef<HTMLDivElement>(null);
   const tl = useRef<TimelineHandle | null>(null);
-  const cb = useRef({ onSelect, onAddAt, onWindow, onYear, onCanGoBack, onMove });
-  cb.current = { onSelect, onAddAt, onWindow, onYear, onCanGoBack, onMove };
+  const cb = useRef({ onSelect, onAddAt, onWindow, onYear, onCanGoBack, onMove, onPick });
+  cb.current = { onSelect, onAddAt, onWindow, onYear, onCanGoBack, onMove, onPick };
   const latest = useRef({ items, relations, categories });
   latest.current = { items, relations, categories };
   const beforeFocus = useRef<YearWindow | null>(null);
@@ -94,6 +98,7 @@ export const TimelineView = forwardRef<TimelineControl, Props>(function Timeline
       onWindow: (w) => cb.current.onWindow(w),
       onYear: (y) => cb.current.onYear?.(y),
       onMove: (id, dates) => cb.current.onMove?.(id, dates),
+      onPick: (ids) => cb.current.onPick?.(ids),
     }, { window: { start: -800, end: 2030 }, level: 2 });
     tl.current = t;
     return () => { t.dispose(); tl.current = null; };
@@ -126,6 +131,7 @@ export const TimelineView = forwardRef<TimelineControl, Props>(function Timeline
   }, [relations, selectedId, drafts.relations]);
 
   useEffect(() => { tl.current?.setPlayYear(year); }, [year]);
+  useEffect(() => { tl.current?.setPicked(picked); }, [picked]);
 
   const focus = (id: string) => {
     const t = tl.current;
@@ -165,5 +171,5 @@ export const TimelineView = forwardRef<TimelineControl, Props>(function Timeline
     },
   }));
 
-  return <div ref={host} className="timeline-host tl-host" data-testid="timeline" tabIndex={0} aria-label="Timeline. Drag or scroll to move through time; Ctrl or ⌘ and scroll, or pinch, to zoom." />;
+  return <div ref={host} className="timeline-host tl-host" data-testid="timeline" tabIndex={0} aria-label="Timeline. Drag or scroll to move through time; Ctrl or ⌘ and scroll, or pinch, to zoom; Ctrl or ⌘ and drag to select several." />;
 });

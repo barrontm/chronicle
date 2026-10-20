@@ -282,3 +282,74 @@ test('an era opens into its six lanes, says when one is empty, and Esc goes back
   await expect(timeline.locator('text.tl-era-head')).toHaveCount(0);
   await expect(page.getByTestId('time-bar').getByRole('button', { name: 'Eras' })).toHaveAttribute('aria-pressed', 'true');
 });
+
+/** Open an entry by name from Search (`/`), which also brings it into view on the timeline. */
+async function openFromSearch(page: Page, name: string) {
+  await page.locator('.brand').click();
+  await page.keyboard.press('/');
+  await page.getByRole('combobox', { name: 'Search Chronicle' }).fill(name);
+  await page.getByRole('listbox', { name: 'Search results' }).getByRole('option').first().click();
+}
+
+test('⌘-drag boxes entries; Edit sets a lane on all of them, Delete removes them, and each has one Undo', async ({ page }) => {
+  test.slow();
+  // Without motion the timeline jumps straight to each window, so the marks are measured where they stay.
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await openNewLayout(page, false);
+  const timeline = page.getByTestId('timeline');
+  page.on('dialog', (d) => d.accept());
+  // Opening Socrates frames him with Plato and Aristotle.
+  await openFromSearch(page, 'Socrates');
+  await expect(page.getByTestId('item-view').getByRole('heading', { name: 'Socrates' })).toBeVisible();
+  await page.getByRole('button', { name: 'Close panel' }).click();
+  await expect(page.getByTestId('item-view')).toHaveCount(0);
+  const ids = ['i_socrates', 'i_plato', 'i_aristotle'];
+  for (const id of ids) await expect(mark(page, id)).toBeVisible();
+  // A box from just outside the three, with ⌘ held, measured and drawn in one go so the timeline can't move in between.
+  await timeline.evaluate((el, ids) => {
+    const host = el.getBoundingClientRect();
+    const rs = ids.map((id) => el.querySelector(`.tl-mark[data-id=${id}]`)!.getBoundingClientRect());
+    const x0 = Math.min(...rs.map((r) => r.left)) - 4, y0 = Math.min(...rs.map((r) => r.top)) - 4;
+    const x1 = Math.min(Math.max(...rs.map((r) => r.right)) + 4, host.right - 2), y1 = Math.min(Math.max(...rs.map((r) => r.bottom)) + 4, host.bottom - 2);
+    const send = (type: string, x: number, y: number) => el.dispatchEvent(new PointerEvent(type, { clientX: x, clientY: y, metaKey: true, button: 0, buttons: type === 'pointerup' ? 0 : 1, pointerId: 1, pointerType: 'mouse', isPrimary: true, bubbles: true }));
+    send('pointerdown', x0, y0);
+    for (let i = 1; i <= 4; i++) send('pointermove', x0 + ((x1 - x0) * i) / 4, y0 + ((y1 - y0) * i) / 4);
+    send('pointerup', x1, y1);
+  }, ids);
+  const bar = page.getByTestId('pick-bar');
+  await expect(bar).toContainText('3 selected');
+  await expect(timeline.locator('.tl-picked')).toHaveCount(3);
+
+  // Edit: Economy on all three.
+  await bar.getByRole('button', { name: 'Edit' }).click();
+  const form = page.getByTestId('bulk-edit');
+  await expect(form.getByRole('heading', { name: 'Edit 3 entries' })).toBeVisible();
+  await form.getByRole('group', { name: 'Lanes' }).getByRole('button', { name: 'Economy' }).click();
+  await form.getByRole('button', { name: 'Change 3 entries' }).click();
+  await expect(page.getByTestId('bulk-note')).toContainText('Changed 3 entries.');
+  // Opened from Search, since the bar may sit over its mark.
+  await openFromSearch(page, 'Plato');
+  await expect(page.getByTestId('item-lanes')).toHaveText(/^Economy$/);
+  await page.getByTestId('bulk-note').getByRole('button', { name: 'Undo' }).click();
+  await expect(page.getByTestId('item-lanes')).toHaveCount(0); // back to no lanes of its own
+  await page.getByRole('button', { name: 'Close panel' }).click();
+
+  // Delete asks once and takes all three; Undo brings them back.
+  await bar.getByRole('button', { name: 'Delete' }).click();
+  await expect(page.getByTestId('bulk-note')).toContainText('Deleted 3 entries.');
+  await expect(bar.getByRole('button', { name: 'Edit' })).toHaveCount(0);
+  for (const id of ids) await expect(mark(page, id)).toHaveCount(0);
+  await page.getByTestId('bulk-note').getByRole('button', { name: 'Undo' }).click();
+  for (const id of ids) await expect(mark(page, id)).toBeVisible();
+
+  // ⌘-click picks one; Esc lets go.
+  await timeline.evaluate((el) => {
+    const r = el.querySelector('.tl-mark[data-id=i_plato]')!.getBoundingClientRect();
+    const x = r.left + Math.min(8, r.width / 2), y = r.top + r.height / 2;
+    for (const type of ['pointerdown', 'pointerup']) el.dispatchEvent(new PointerEvent(type, { clientX: x, clientY: y, metaKey: true, button: 0, pointerId: 1, pointerType: 'mouse', isPrimary: true, bubbles: true }));
+  });
+  await expect(bar).toContainText('1 selected');
+  await expect(page.getByTestId('item-view')).toHaveCount(0);
+  await timeline.press('Escape');
+  await expect(bar).toHaveCount(0);
+});

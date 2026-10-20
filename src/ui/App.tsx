@@ -1,6 +1,7 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { docYearRange, presenceAt } from '../model/atYear';
 import { formatRange, toDecimalYear } from '../model/dates';
+import { applyUndo, bulkRemove, type Undo } from '../model/bulk';
 import { mergeDocs, parseDoc, serializeDoc, upsert } from '../model/doc';
 import { highlightProminence } from '../model/prominence';
 import type { HistDate, MediaRef, TimelineDoc, TimelineItem } from '../model/types';
@@ -11,6 +12,7 @@ import type { Nav, Panel } from './nav';
 import { ItemEditor, ItemView } from './panels/ItemPanels';
 import { Help } from './panels/Help';
 import { Library } from './panels/Library';
+import { BulkEdit } from './panels/BulkEdit';
 import { WikiImport } from './panels/WikiImport';
 import { pendingOnTimeline, pendingWithPlaces, type DraftSet } from '../ai/draft';
 import { NoteEditor, NoteView } from './panels/NotePanels';
@@ -109,6 +111,33 @@ function Workspace() {
     const back = moved.before;
     update((d) => upsert(d, 'items', back));
     setMoved(null);
+  };
+
+  // Entries box-selected on the timeline (Ctrl or ⌘ and drag), for editing or deleting them together.
+  const [picked, setPicked] = useState<string[]>([]);
+  const pickedNow = useMemo(() => picked.filter((id) => doc.items.some((i) => i.id === id)), [picked, doc.items]);
+  // The last bulk edit or delete, so Bob can take it back in one step.
+  const [bulkDone, setBulkDone] = useState<{ undo: Undo; msg: string } | null>(null);
+  useEffect(() => {
+    if (!bulkDone) return;
+    const t = setTimeout(() => setBulkDone(null), 10000);
+    return () => clearTimeout(t);
+  }, [bulkDone]);
+  const deletePicked = () => {
+    const n = pickedNow.length;
+    if (!n || !confirm(`Delete ${n} ${n === 1 ? 'entry' : 'entries'}? Their connections are removed; notes about them are kept.`)) return;
+    const now = Date.now();
+    const { undo } = bulkRemove(doc, pickedNow, now);
+    update((d) => bulkRemove(d, pickedNow, now).doc);
+    setStack((s) => s.filter((p) => !(p.type === 'item' && pickedNow.includes(p.id)) && p.type !== 'bulk-edit'));
+    setPicked([]);
+    setBulkDone({ undo, msg: `Deleted ${n} ${n === 1 ? 'entry' : 'entries'}.` });
+  };
+  const undoBulk = () => {
+    if (!bulkDone) return;
+    const { undo } = bulkDone;
+    update((d) => applyUndo(d, undo));
+    setBulkDone(null);
   };
 
   // ----- Map and the shared current year -----
@@ -285,10 +314,11 @@ function Workspace() {
       else if (picking) setPicking(null);
       else if (menu) setMenu(null);
       else if (stack.length) setStack([]);
+      else if (picked.length) setPicked([]);
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [menu, stack.length, drawing, picking]);
+  }, [menu, stack.length, drawing, picking, picked.length]);
 
   const startNew = (p: Panel) => { setMenu(null); setStack([p]); };
 
@@ -504,7 +534,27 @@ function Workspace() {
             drafts={timelineDrafts}
             onMove={readOnly ? undefined : moveItem}
             highlights={doc.highlights}
+            picked={pickedNow}
+            onPick={setPicked}
           />
+          {(pickedNow.length > 0 || bulkDone) && (
+            // One bar under the timeline: what's selected, and what the last bulk change did, with Undo.
+            <div className="notice moved-note pick-bar" role="region" aria-label="Selected entries" data-testid="pick-bar">
+              {pickedNow.length > 0 && (
+                <>
+                  <span className="pick-count" role="status">{pickedNow.length} selected</span>
+                  <button type="button" className="btn small" disabled={!!readOnly} onClick={() => setStack([{ type: 'bulk-edit', ids: pickedNow }])}>Edit</button>
+                  <button type="button" className="btn small danger" disabled={!!readOnly} onClick={deletePicked}>Delete</button>
+                  <button type="button" className="btn small quiet" onClick={() => setPicked([])} aria-label="Clear the selection">Clear</button>
+                </>
+              )}
+              {bulkDone && (
+                <span className="bulk-note" role="status" data-testid="bulk-note">
+                  {bulkDone.msg} <button type="button" className="btn small" onClick={undoBulk}>Undo</button>
+                </span>
+              )}
+            </div>
+          )}
           {moved && (
             <div className="notice moved-note" role="status" data-testid="moved-note">
               <span>Moved {moved.title} to {moved.when}.</span>
@@ -531,7 +581,7 @@ function Workspace() {
               <span className="spacer" />
               <button className="btn small quiet" onClick={nav.close} aria-label="Close panel">Close</button>
             </div>
-            <PanelBody panel={panel} nav={nav} aiDraft={aiDraft} onAiDraft={setAiDraft} />
+            <PanelBody panel={panel} nav={nav} aiDraft={aiDraft} onAiDraft={setAiDraft} onBulkDone={(undo, msg) => setBulkDone({ undo, msg })} />
           </aside>
         )}
       </div>
@@ -549,7 +599,7 @@ function Workspace() {
   );
 }
 
-function PanelBody({ panel, nav, aiDraft, onAiDraft }: { panel: Panel; nav: Nav; aiDraft: DraftSet | null; onAiDraft: (d: DraftSet | null) => void }) {
+function PanelBody({ panel, nav, aiDraft, onAiDraft, onBulkDone }: { panel: Panel; nav: Nav; aiDraft: DraftSet | null; onAiDraft: (d: DraftSet | null) => void; onBulkDone: (undo: Undo, msg: string) => void }) {
   // `key` resets editor state when switching between records.
   switch (panel.type) {
     case 'item': return panel.edit ? <ItemEditor key={`e-${panel.id}`} id={panel.id} nav={nav} /> : <ItemView key={panel.id} id={panel.id} nav={nav} />;
@@ -567,6 +617,7 @@ function PanelBody({ panel, nav, aiDraft, onAiDraft }: { panel: Panel; nav: Nav;
     case 'territory-import': return <TerritoryImport key={`ti-${panel.year}`} year={panel.year} nav={nav} />;
     case 'help': return <Help key={panel.section ?? 'help'} section={panel.section} />;
     case 'library': return <Library tab={panel.tab} nav={nav} />;
+    case 'bulk-edit': return <BulkEdit key={panel.ids.join()} ids={panel.ids} nav={nav} onDone={onBulkDone} />;
   }
 }
 

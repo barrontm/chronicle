@@ -18,6 +18,7 @@ export type Panel =
   | { type: 'flow'; id: string; edit?: boolean }
   | { type: 'new-flow'; itemId?: string }
   | { type: 'help'; section?: string }
+  | { type: 'bulk-edit'; ids: string[] }
   | { type: 'library'; tab: 'notes' | 'highlights' | 'sources' | 'trends' | 'territories' | 'migration' };
 
 export interface Nav {

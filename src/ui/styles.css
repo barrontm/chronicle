@@ -709,3 +709,11 @@ dialog h2 { font-family: var(--font-read); margin: 0 0 12px; font-weight: 600; }
 .drow.accepted .eff { border-style: solid; color: var(--ink-2); border-color: var(--rule); }
 .draft-dropped { margin-top: 12px; font-size: 13px; color: var(--ink-2); }
 .draft-dropped ul { margin: 6px 0 0; padding-left: 18px; }
+
+/* Box-select on the timeline: the bar over it, and the rings. */
+.pick-bar { gap: 8px; padding: 4px 6px 4px 12px; }
+.pick-count { font-weight: 600; white-space: nowrap; }
+.pick-count ~ .bulk-note { padding-left: 10px; border-left: 1px solid var(--rule); }
+.bulk-note { display: flex; align-items: center; gap: 8px; }
+.tl-picked, .tl-box { pointer-events: none; }
+.bulk-names { margin-top: -4px; }
