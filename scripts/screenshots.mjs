@@ -47,27 +47,32 @@ if (galleryMode && !process.env.SHOTS_URL) {
 const browser = await chromium.launch({ executablePath: process.env.PW_CHROMIUM_PATH || undefined, args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
 const errors = [];
 
-/** `classic`: open in the classic layout (More → Use the classic layout) unless the page has chosen since. */
-async function page(name, options, path = '', classic = false) {
+async function page(name, options, path = '') {
   const ctx = await browser.newContext(options);
   const p = await ctx.newPage();
   p.on('pageerror', (e) => errors.push(`${name}: ${e.message}`));
-  if (classic) await p.addInitScript(() => { try { if (localStorage.getItem('chronicle.classicLayout') === null) localStorage.setItem('chronicle.classicLayout', 'true'); } catch { /* fine */ } });
   await p.goto(BASE + path);
   await p.getByTestId('save-state').waitFor({ state: 'attached' });
   return p;
 }
 
+/** On a phone, open the map sheet (the map over the timeline) from the reader. */
+async function openSheet(p) {
+  const map = p.getByTestId('reader').getByRole('button', { name: 'Map', exact: true });
+  if (await map.isVisible().catch(() => false)) await map.click();
+}
+
 async function withFixture(p) {
   await p.getByTestId('import-input').setInputFiles(FIXTURE);
+  await openSheet(p);
   await p.locator('.tl-mark[data-id=i_aristotle]').waitFor({ state: 'attached' });
   await p.getByRole('button', { name: 'More' }).click();
   await p.getByRole('menuitem', { name: 'Show everything' }).click();
   await p.waitForTimeout(300);
 }
 
-async function showMap(p, view, year) {
-  await p.getByRole('button', { name: view, exact: true }).click();
+async function showMap(p, year) {
+  await openSheet(p);
   await p.locator('[data-testid=map][data-ready]').waitFor({ timeout: 20000 });
   const input = p.getByTestId('yearbar').getByLabel('Year', { exact: true });
   await input.click();
@@ -83,13 +88,13 @@ const any = (...names) => names.some(wanted);
 let p;
 
 if (any('desktop-empty')) {
-p = await page('empty', desktop, '', true);
+p = await page('empty', desktop);
 await shot(p, 'desktop-empty');
 }
 
 if (any('desktop-timeline', 'desktop-entry', 'desktop-editor', 'desktop-map', 'desktop-split')) {
 
-p = await page('desktop', desktop, '', true);
+p = await page('desktop', desktop);
 await withFixture(p);
 await shot(p, 'desktop-timeline');
 await p.locator('.tl-mark[data-id=i_plato]').click({ force: true });
@@ -98,15 +103,15 @@ await shot(p, 'desktop-entry');
 await p.getByTestId('item-view').getByRole('button', { name: 'Edit' }).click();
 await shot(p, 'desktop-editor', { fullPage: true });
 await p.getByRole('button', { name: 'Close panel' }).click();
-await showMap(p, 'Map', '300 BCE');
+await showMap(p, '300 BCE');
 await shot(p, 'desktop-map');
-await showMap(p, 'Both', '1215');
+await showMap(p, '1215');
 await shot(p, 'desktop-split');
 }
 
 if (any('desktop-dark', 'desktop-dark-split', 'desktop-dark-influences')) {
 
-p = await page('dark', { ...desktop, colorScheme: 'dark' }, '', true);
+p = await page('dark', { ...desktop, colorScheme: 'dark' });
 await withFixture(p);
 await shot(p, 'desktop-dark');
 if (wanted('desktop-dark-influences')) {
@@ -115,13 +120,13 @@ if (wanted('desktop-dark-influences')) {
   await shot(p, 'desktop-dark-influences');
   await p.getByRole('button', { name: 'Close panel' }).click();
 }
-await showMap(p, 'Both', '200 BCE');
+await showMap(p, '200 BCE');
 await shot(p, 'desktop-dark-split');
 }
 
 if (any('phone-timeline', 'phone-map', 'phone-influences')) {
 
-p = await page('phone', { viewport: { width: 412, height: 860 }, isMobile: true, hasTouch: true }, '', true);
+p = await page('phone', { viewport: { width: 412, height: 860 }, isMobile: true, hasTouch: true });
 await withFixture(p);
 await shot(p, 'phone-timeline');
 if (wanted('phone-influences')) {
@@ -130,13 +135,13 @@ if (wanted('phone-influences')) {
   await shot(p, 'phone-influences');
   await p.getByRole('button', { name: 'Close panel' }).click();
 }
-await showMap(p, 'Map', '300 BCE');
+await showMap(p, '300 BCE');
 await shot(p, 'phone-map');
 }
 
 // Drawing a border: zoom toward Greece, outline a shape, then the form after Done.
 async function drawBorder(p, prefix) {
-  await showMap(p, prefix === 'phone' ? 'Map' : 'Both', '450 BCE');
+  await showMap(p, '450 BCE');
   for (let i = 0; i < 3; i++) await p.getByRole('button', { name: 'Zoom in' }).click();
   await p.getByRole('button', { name: 'Add a territory' }).click();
   await p.getByTestId('own-borders').getByRole('button', { name: 'Draw on the map' }).click();
@@ -151,14 +156,14 @@ async function drawBorder(p, prefix) {
   await shot(p, `${prefix}-draw-form`);
 }
 
-if (any('desktop-draw')) await drawBorder(await page('desktop-draw', desktop, '', true), 'desktop');
-if (any('dark-draw')) await drawBorder(await page('dark-draw', { ...desktop, colorScheme: 'dark' }, '', true), 'dark');
-if (any('phone-draw')) await drawBorder(await page('phone-draw', { viewport: { width: 412, height: 860 }, isMobile: true, hasTouch: true }, '', true), 'phone');
+if (any('desktop-draw')) await drawBorder(await page('desktop-draw', desktop), 'desktop');
+if (any('dark-draw')) await drawBorder(await page('dark-draw', { ...desktop, colorScheme: 'dark' }), 'dark');
+if (any('phone-draw')) await drawBorder(await page('phone-draw', { viewport: { width: 412, height: 860 }, isMobile: true, hasTouch: true }), 'phone');
 
 // Migration: the fixture's famine routes in 1850, then the editor.
 async function migration(p, prefix) {
   await withFixture(p);
-  await showMap(p, prefix === 'phone' ? 'Map' : 'Both', '1850');
+  await showMap(p, '1850');
   await p.getByRole('button', { name: 'Layers' }).click();
   await p.waitForTimeout(600);
   await shot(p, `${prefix}-migration`);
@@ -171,21 +176,22 @@ async function migration(p, prefix) {
   await shot(p, `${prefix}-migration-editor`);
 }
 
-if (any('desktop-migration')) await migration(await page('desktop-migration', desktop, '', true), 'desktop');
-if (any('dark-migration')) await migration(await page('dark-migration', { ...desktop, colorScheme: 'dark' }, '', true), 'dark');
-if (any('phone-migration')) await migration(await page('phone-migration', { viewport: { width: 412, height: 860 }, isMobile: true, hasTouch: true }, '', true), 'phone');
+if (any('desktop-migration')) await migration(await page('desktop-migration', desktop), 'desktop');
+if (any('dark-migration')) await migration(await page('dark-migration', { ...desktop, colorScheme: 'dark' }), 'dark');
+if (any('phone-migration')) await migration(await page('phone-migration', { viewport: { width: 412, height: 860 }, isMobile: true, hasTouch: true }), 'phone');
 
 // Find a trend: search the bundled catalogue (no network needed).
 async function trendSearch(p, prefix) {
+  await openSheet(p);
   await p.getByRole('button', { name: 'Add a trend' }).click();
   await p.getByTestId('series-editor').getByLabel('Search trends').fill('population');
   await p.locator('.trend-results li').first().waitFor();
   await p.waitForTimeout(300);
   await shot(p, `${prefix}-trends`);
 }
-if (any('desktop-trends')) await trendSearch(await page('desktop-trends', desktop, '', true), 'desktop');
-if (any('dark-trends')) await trendSearch(await page('dark-trends', { ...desktop, colorScheme: 'dark' }, '', true), 'dark');
-if (any('phone-trends')) await trendSearch(await page('phone-trends', { viewport: { width: 412, height: 860 }, isMobile: true, hasTouch: true }, '', true), 'phone');
+if (any('desktop-trends')) await trendSearch(await page('desktop-trends', desktop), 'desktop');
+if (any('dark-trends')) await trendSearch(await page('dark-trends', { ...desktop, colorScheme: 'dark' }), 'dark');
+if (any('phone-trends')) await trendSearch(await page('phone-trends', { viewport: { width: 412, height: 860 }, isMobile: true, hasTouch: true }), 'phone');
 
 // The place picker in the entry editor, with Wikipedia's answer mocked.
 async function places(p, prefix) {
@@ -208,9 +214,9 @@ async function places(p, prefix) {
   await p.getByTestId('place-form').scrollIntoViewIfNeeded();
   await shot(p, `${prefix}-places`);
 }
-if (any('desktop-places')) await places(await page('desktop-places', desktop, '', true), 'desktop');
-if (any('dark-places')) await places(await page('dark-places', { ...desktop, colorScheme: 'dark' }, '', true), 'dark');
-if (any('phone-places')) await places(await page('phone-places', { viewport: { width: 412, height: 860 }, isMobile: true, hasTouch: true }, '', true), 'phone');
+if (any('desktop-places')) await places(await page('desktop-places', desktop), 'desktop');
+if (any('dark-places')) await places(await page('dark-places', { ...desktop, colorScheme: 'dark' }), 'dark');
+if (any('phone-places')) await places(await page('phone-places', { viewport: { width: 412, height: 860 }, isMobile: true, hasTouch: true }), 'phone');
 
 // An entry's lanes and overview mark in the editor, then on its panel.
 async function lanes(p, prefix) {
@@ -229,9 +235,9 @@ async function lanes(p, prefix) {
   await p.getByTestId('item-lanes').waitFor();
   await shot(p, `${prefix}-lanes-entry`);
 }
-if (any('desktop-lanes')) await lanes(await page('desktop-lanes', desktop, '', true), 'desktop');
-if (any('dark-lanes')) await lanes(await page('dark-lanes', { ...desktop, colorScheme: 'dark' }, '', true), 'dark');
-if (any('phone-lanes')) await lanes(await page('phone-lanes', { viewport: { width: 412, height: 860 }, isMobile: true, hasTouch: true }, '', true), 'phone');
+if (any('desktop-lanes')) await lanes(await page('desktop-lanes', desktop), 'desktop');
+if (any('dark-lanes')) await lanes(await page('dark-lanes', { ...desktop, colorScheme: 'dark' }), 'dark');
+if (any('phone-lanes')) await lanes(await page('phone-lanes', { viewport: { width: 412, height: 860 }, isMobile: true, hasTouch: true }), 'phone');
 
 // The timeline in the reader layout: everything in view, then zoomed out far enough to cluster.
 async function newTimeline(p, prefix) {
@@ -487,9 +493,9 @@ async function help(p, prefix) {
   await p.getByTestId('help').waitFor();
   await shot(p, `${prefix}-help`);
 }
-if (any('desktop-help')) await help(await page('desktop-help', desktop, '', true), 'desktop');
-if (any('dark-help')) await help(await page('dark-help', { ...desktop, colorScheme: 'dark' }, '', true), 'dark');
-if (any('phone-help')) await help(await page('phone-help', { viewport: { width: 412, height: 860 }, isMobile: true, hasTouch: true }, '', true), 'phone');
+if (any('desktop-help')) await help(await page('desktop-help', desktop), 'desktop');
+if (any('dark-help')) await help(await page('dark-help', { ...desktop, colorScheme: 'dark' }), 'dark');
+if (any('phone-help')) await help(await page('phone-help', { viewport: { width: 412, height: 860 }, isMobile: true, hasTouch: true }), 'phone');
 
 // The reader on a saved article, with the sample timeline beside it.
 async function reader(p, prefix) {
@@ -808,8 +814,8 @@ async function aiDraft(p, prefix) {
     });
   }
   await withFixture(p);
-  await showMap(p, prefix === 'phone' ? 'Map' : 'Both', '-480');
-  await p.getByRole('button', { name: 'Add', exact: true }).click();
+  await showMap(p, '-480');
+  await p.getByRole('button', { name: 'More' }).click();
   await p.getByRole('menuitem', { name: 'Draft with AI…' }).click();
   const panel = p.getByTestId('draft-review');
   await panel.getByLabel('Your Anthropic API key').fill('sk-ant-screenshot-1234');
@@ -821,9 +827,9 @@ async function aiDraft(p, prefix) {
   await p.waitForTimeout(800); // the map frames the dashed pins
   await shot(p, `${prefix}-ai-draft`);
 }
-if (any('desktop-ai-draft')) await aiDraft(await page('desktop-ai-draft', desktop, '', true), 'desktop');
-if (any('dark-ai-draft')) await aiDraft(await page('dark-ai-draft', { ...desktop, colorScheme: 'dark' }, '', true), 'dark');
-if (any('phone-ai-draft')) await aiDraft(await page('phone-ai-draft', { viewport: { width: 412, height: 860 }, isMobile: true, hasTouch: true }, '', true), 'phone');
+if (any('desktop-ai-draft')) await aiDraft(await page('desktop-ai-draft', desktop), 'desktop');
+if (any('dark-ai-draft')) await aiDraft(await page('dark-ai-draft', { ...desktop, colorScheme: 'dark' }), 'dark');
+if (any('phone-ai-draft')) await aiDraft(await page('phone-ai-draft', { viewport: { width: 412, height: 860 }, isMobile: true, hasTouch: true }), 'phone');
 
 // ---------- gallery: the app on the Classical Greece fixture ----------
 let presets = [];
@@ -839,8 +845,7 @@ if (argv.includes('--gallery')) {
   const ids = (flag('--gallery', '') ?? '').split(',').filter((x) => x && !x.startsWith('--'));
   for (const preset of presets.filter((x) => !ids.length || ids.includes(x.id))) {
     p = await galleryPage(preset);
-    if (preset.view !== 'timeline') await p.locator('[data-testid=map][data-ready]').waitFor({ timeout: 20000 });
-    else await p.locator('[data-testid=timeline][data-ready]').waitFor();
+    await p.locator('[data-testid=map][data-ready]').waitFor({ timeout: 20000 });
     await p.waitForTimeout(800);
     taken.push(`gallery-${preset.id}`);
     await p.screenshot({ path: `${OUT}gallery-${preset.id}.png` });

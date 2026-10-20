@@ -5,7 +5,7 @@ Chronicle is your own history timeline. It starts empty: you fill it in as you r
 ## Getting started
 
 - Chronicle opens with the article you're reading beside the map, and the timeline under the map (see [The reader layout](#the-reader-layout)). **Open an article** (top bar) finds one on Wikipedia, and highlighting it is how you add things. Double-click the timeline to add something at that date.
-- Prefer the older arrangement? **More → Use the classic layout** brings back **Add** (an event, a period, a person, and the rest) and the **Timeline**, **Map** and **Both** views. Choose it again to go back. Both layouts draw the same timeline, and everything you've saved is the same in either.
+- **More → Draft with AI…** lets Claude suggest entries for a topic you're studying (see [Drafting with AI](#drafting-with-ai)).
 - **Library** lists your notes, sources, trends and territories. **Help** opens this manual. **Search** finds anything you've saved (see [Finding things](#finding-things)).
 - The top bar says **Saved on this device** once your changes are stored. There is no account and no cloud copy, so export a backup now and then (see [Backups and working offline](#backups-and-working-offline)).
 
@@ -50,7 +50,7 @@ An entry's places put it on the map as a pin: where a battle was fought, or wher
 
 ## The reader layout
 
-Reading is how you add things, so Chronicle opens with the reader. (If you'd turned on "Try the new layout" before, this is it, now for everyone. **More → Use the classic layout** switches back to the older arrangement.)
+Reading is how you add things, so Chronicle opens with the reader. This is the only layout now: the older one, with its **Add** menu and its **Timeline**, **Map** and **Both** views, is gone, and if you'd chosen it before, Chronicle opens like this anyway. Everything you'd saved is still here.
 
 - On a laptop, the article you're reading sits beside the map, with the timeline under the map.
 - **Resizing**: drag the line between the article and the map to make the reader wider or narrower, and the line just under the year slider to give the map or the timeline more room. You can also click a line (or Tab to it) and use the arrow keys; hold Shift to move it further. The reader always keeps room for about a short column of text, and the map and the timeline each keep a strip you can still use. Chronicle remembers the sizes on this device. On a phone, the layout stays as it is.
@@ -99,8 +99,6 @@ Reading is how you add things, so Chronicle opens with the reader. (If you'd tur
 
 ## The timeline
 
-Both layouts draw the same timeline.
-
 - Drag it, or scroll, to move through time; hold **Shift** and scroll to move up and down the lanes; hold **Ctrl** or **⌘** and scroll, or pinch, to zoom. It zooms out as far as millions of years and in as close as days. Click an entry to open it, and double-click (or double-tap) an empty spot to add one there.
 - In each lane, events are dots along the top, with periods and then lives in rows below.
 - **Each kind of thing has its own shape**, the same one the tray shows:
@@ -125,7 +123,7 @@ Both layouts draw the same timeline.
 
 ## Adding from Wikipedia
 
-**Add → From Wikipedia…** searches Wikipedia. Pick a page and you get a new entry filled in: kind, what kind of thing it is, and dates from Wikidata, places for the map, a picture with its credit, the intro as a quotation, and the page as a source. Nothing is saved until you check it and press **Add to timeline**. If you already have that entry, Chronicle tells you.
+Open the article in the reader (**Open an article**), highlight a passage, and tick the article itself under **Becomes** (see [Highlighting](#highlighting)). **Add to map and timeline** fills in a new entry: kind, what kind of thing it is, and dates from Wikidata, places for the map, a picture with its credit, a quotation, and the page as a source. Nothing is saved until you check it and press **Add to timeline**. If you already have that entry, Chronicle tells you.
 
 The intro is kept as a **highlight**: a passage quoted from its source, shown on the entry and never mixed with your own notes. Quotes saved by earlier versions of Chronicle become highlights too when you open or import them.
 
@@ -133,7 +131,7 @@ This needs a connection.
 
 ## Drafting with AI
 
-**Add → Draft with AI…** lets Claude do the searching for you. Say what you're studying ("the main battles of the Greco-Persian Wars") and Claude picks the Wikipedia pages that belong, along with a category and a one-line reason for each. Then Chronicle reads the facts from Wikipedia and Wikidata, the same way **From Wikipedia** does: dates, places, the picture, the intro as a quotation, and the page as a source. Claude chooses and connects; it never writes the dates or places.
+**More → Draft with AI…** lets Claude do the searching for you. Say what you're studying ("the main battles of the Greco-Persian Wars") and Claude picks the Wikipedia pages that belong, along with a category and a one-line reason for each. Then Chronicle reads the facts from Wikipedia and Wikidata, the same way the reader does: dates, places, the picture, the intro as a quotation, and the page as a source. Claude chooses and connects; it never writes the dates or places.
 
 Nothing is added until you decide, one record at a time:
 
@@ -187,7 +185,7 @@ For a person added from Wikipedia, **Suggest influences** lists who Wikipedia sa
 
 A trend is a number that changes over the years (population, the price of wheat), drawn as a strip under the timeline.
 
-- **Add → Trend over time**, then paste one “year, value” per line, or bring numbers in from a dataset.
+- **Add a trend** under the timeline (or **New trend** in the Library), then paste one “year, value” per line, or bring numbers in from a dataset.
 - Choose **Linear** or **Log** scale. Log suits numbers that grow by multiples.
 
 ### Find a trend
@@ -223,7 +221,7 @@ A territory is a polity's borders over time: a city-state, a kingdom, an empire.
 
 The quickest way to get one is to add a polity from a highlight (see Highlighting): it comes with its entry on the timeline and, when the historical maps have it, its borders. A territory made that way stays tied to its entry, and takes its entry's region: that's the band its strip sits in at **Overview** on the timeline, as thick as its borders are big.
 
-**Add a territory** on the map (or **Add → Territory on the map…**) offers three ways:
+**Add a territory** on the map offers three ways:
 
 ### Draw your own
 
@@ -252,7 +250,7 @@ Open a territory and press **Edit**. Under **Borders over time**, every set of b
 
 A migration is people moving between places: the Irish leaving during the famine, Greek colonists sailing west, the Great Migration north. On the map it's a curved arrow from where they left to where they went, **thicker for more people** and **colored by cause**. Hover over an arrow to read it, for example "Ireland → United States of America · famine & disaster · about 130,000 a year (1846–1855)". Click it to open the migration.
 
-To record one, choose **Add → Migration on the map…** (or **New migration** in the Library):
+To record one, choose **Library → Migration → New migration**:
 
 1. Give it a **Name** and a **Cause**: conflict & persecution, work & economy, famine & disaster, forced (slavery, deportation), colonization & settlement, family & other, or unknown.
 2. Choose what **the numbers are**:

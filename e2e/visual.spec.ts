@@ -13,19 +13,15 @@ const FIXTURE = fileURLToPath(new URL('../tests/fixtures/sample-history.json', i
 // SwiftShader can shift a few anti-aliased map pixels between runs.
 const SHOT = { maxDiffPixelRatio: 0.01 };
 
-/** The classic layout (its Timeline, Map and Both views), with the fixture in view. */
-async function openWithFixture(page: Page) {
-  await page.addInitScript(() => localStorage.setItem('chronicle.classicLayout', 'true'));
+/** The reader layout with the fixture in view: everything on the timeline, the map at `year` (on a phone, the map sheet). */
+async function openWithFixture(page: Page, year: string) {
   await page.goto('/');
   await expect(page.getByTestId('save-state')).toHaveText('Saved on this device');
   await page.getByTestId('import-input').setInputFiles(FIXTURE);
+  if (page.viewportSize()!.width <= 860) await page.getByTestId('reader').getByRole('button', { name: 'Map', exact: true }).click();
   await expect(page.getByTestId('timeline').locator('.tl-mark[data-id=i_aristotle]')).toBeVisible();
   await page.getByRole('button', { name: 'More' }).click();
   await page.getByRole('menuitem', { name: 'Show everything' }).click();
-}
-
-async function showMap(page: Page, view: 'Map' | 'Both', year: string) {
-  await page.getByRole('button', { name: view, exact: true }).click();
   await expect(page.locator('[data-testid=map][data-ready]')).toBeAttached({ timeout: 20_000 });
   const input = page.getByTestId('yearbar').getByLabel('Year', { exact: true });
   await input.fill(year);
@@ -34,33 +30,27 @@ async function showMap(page: Page, view: 'Map' | 'Both', year: string) {
 }
 
 test.describe('looks the same', () => {
-  test('timeline', async ({ page }) => {
-    await openWithFixture(page);
-    await expect(page).toHaveScreenshot('timeline.png', SHOT);
-  });
-
-  test('map', async ({ page }) => {
+  test('map and timeline beside the reader', async ({ page }) => {
     test.slow();
-    await openWithFixture(page);
-    await showMap(page, 'Map', '300 BCE');
-    await expect(page).toHaveScreenshot('map.png', SHOT);
+    await openWithFixture(page, '300 BCE');
+    await expect(page).toHaveScreenshot('desktop.png', SHOT);
   });
 
   test.describe('dark', () => {
     test.use({ colorScheme: 'dark' });
-    test('timeline and map side by side', async ({ page }) => {
+    test('map and timeline beside the reader', async ({ page }) => {
       test.slow();
-      await openWithFixture(page);
-      await showMap(page, 'Both', '1215');
-      await expect(page).toHaveScreenshot('split-dark.png', SHOT);
+      await openWithFixture(page, '1215');
+      await expect(page).toHaveScreenshot('dark.png', SHOT);
     });
   });
 
   test.describe('phone', () => {
     test.use({ viewport: { width: 412, height: 839 }, deviceScaleFactor: 2.625, isMobile: true, hasTouch: true });
-    test('timeline', async ({ page }) => {
-      await openWithFixture(page);
-      await expect(page).toHaveScreenshot('phone-timeline.png', SHOT);
+    test('map sheet', async ({ page }) => {
+      test.slow();
+      await openWithFixture(page, '300 BCE');
+      await expect(page).toHaveScreenshot('phone.png', SHOT);
     });
   });
 });

@@ -22,19 +22,31 @@ function Seeded({ preset }: { preset: Preset }) {
   const store = useMemo(() => {
     // The app reads these once when it mounts.
     try {
-      localStorage.setItem('chronicle.view', JSON.stringify(preset.view));
       localStorage.setItem('chronicle.year', String(preset.year));
       localStorage.setItem('chronicle.mapView', JSON.stringify(preset.camera ?? { center: [20, 35], zoom: 1.6 }));
       localStorage.setItem('chronicle.mapFlows', JSON.stringify({ show: true, hiddenCauses: [] }));
       localStorage.removeItem('chronicle.mapData');
-      localStorage.setItem('chronicle.classicLayout', JSON.stringify(!!preset.classic));
     } catch { /* the app falls back to its own defaults */ }
     const s = new MemoryStore();
     void s.save(parseDoc(fixtureJson));
     return s;
   }, [preset]);
+  useEffect(() => (preset.sheet ? openSheetWhenReady() : undefined), [preset]);
   useEffect(() => (preset.fit ? fitTimelineWhenReady() : undefined), [preset]);
   return <App store={store} />;
+}
+
+/** On a phone, press the reader's Map button once it is there, so the map sheet opens. */
+function openSheetWhenReady() {
+  let stopped = false;
+  const tick = (tries: number) => {
+    if (stopped || tries > 60) return;
+    const map = [...document.querySelectorAll('[data-testid=reader] button')].find((b) => b.textContent === 'Map') as HTMLButtonElement | undefined;
+    if (!map) return void setTimeout(() => tick(tries + 1), 100);
+    map.click();
+  };
+  tick(0);
+  return () => { stopped = true; };
 }
 
 /** Press More → Show everything once the timeline has drawn its entries (the app has no other hook for this). */

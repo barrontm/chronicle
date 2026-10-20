@@ -4,13 +4,29 @@ import { fileURLToPath } from 'node:url';
 const FIXTURE = fileURLToPath(new URL('../tests/fixtures/sample-history.json', import.meta.url));
 
 /**
- * Each test gets a fresh browser context, so IndexedDB starts empty. These tests use the classic
- * layout (More → Use the classic layout: the Add menu, and the Timeline, Map and Both views).
+ * Each test gets a fresh browser context, so IndexedDB starts empty. On a phone the map and the
+ * timeline are a sheet over the reader, so `open` opens it.
  */
 async function open(page: Page) {
-  await page.addInitScript(() => { if (localStorage.getItem('chronicle.classicLayout') === null) localStorage.setItem('chronicle.classicLayout', 'true'); });
   await page.goto('/');
   await expect(page.getByTestId('save-state')).toHaveText('Saved on this device');
+  await openSheet(page);
+}
+
+const isPhone = (page: Page) => page.viewportSize()!.width <= 860;
+
+/** On a phone, open the map sheet from the reader (it starts closed after every reload). */
+async function openSheet(page: Page) {
+  if (isPhone(page)) await page.getByTestId('reader').getByRole('button', { name: 'Map', exact: true }).click();
+}
+
+/** Open an entry through Search, for one the short timeline beside the reader may have out of view. */
+async function openBySearch(page: Page, q: string, title: string) {
+  await page.locator('.brand').click();
+  await page.keyboard.press('/');
+  await page.getByRole('combobox', { name: 'Search Chronicle' }).fill(q);
+  await page.getByRole('listbox', { name: 'Search results' }).getByRole('option', { name: new RegExp(title) }).first().click();
+  await expect(page.getByTestId('item-view').getByRole('heading', { name: title })).toBeVisible();
 }
 
 /** A fixture entry's mark on the timeline. Click it with `force`: the timeline hit-tests by position. */
@@ -23,10 +39,23 @@ async function importFixture(page: Page) {
   await expect(mark(page, 'i_aristotle')).toBeVisible();
 }
 
-async function addEntry(page: Page, kind: 'Event' | 'Period, war or movement' | 'Person', title: string, start: string, end?: string) {
-  await page.getByRole('button', { name: 'Add', exact: true }).click();
-  await page.getByRole('menuitem', { name: kind }).click();
+/** Double-click an empty part of the timeline to add an entry by hand, and say what it is. */
+async function newEntry(page: Page, kind: 'Event' | 'Period' | 'Person') {
   const editor = page.getByTestId('item-editor');
+  // Spots low down and to the side, away from the entries; the timeline may still be drawing on the first try.
+  const spots = [0.6, 0.85, 0.35];
+  let i = 0;
+  await expect(async () => {
+    const box = (await page.getByTestId('timeline').boundingBox())!;
+    await page.mouse.dblclick(box.x + box.width * spots[i++ % spots.length], box.y + box.height - 12);
+    await expect(editor.getByRole('heading', { name: 'New entry' })).toBeVisible({ timeout: 1000 });
+  }).toPass({ timeout: 10_000 });
+  await editor.locator('.segmented').first().getByRole('button', { name: kind, exact: true }).click();
+  return editor;
+}
+
+async function addEntry(page: Page, kind: 'Event' | 'Period' | 'Person', title: string, start: string, end?: string) {
+  const editor = await newEntry(page, kind);
   await editor.getByLabel(/Title|Name/).fill(title);
   await editor.getByLabel(/^(Date|From|Born)$/).fill(start);
   if (end) await editor.getByLabel(/^(To|Died)$/).fill(end);
@@ -34,16 +63,15 @@ async function addEntry(page: Page, kind: 'Event' | 'Period, war or movement' | 
   await expect(page.getByTestId('item-view').getByRole('heading', { name: title })).toBeVisible();
 }
 
-test('a new timeline starts empty and invites the first entry @phone', async ({ page }) => {
+test('a new timeline starts empty and says it fills in as Bob reads @phone', async ({ page }) => {
   await open(page);
-  await expect(page.getByTestId('empty-state')).toBeVisible();
+  await expect(page.getByTestId('empty-state')).toHaveText('Your map and timeline fill in as you add what you read.');
   await expect(page.getByTestId('timeline').locator('.tl-mark')).toHaveCount(0);
 });
 
 test('add an event, reading BCE dates the way people write them', async ({ page }) => {
   await open(page);
-  await page.getByRole('button', { name: 'Add an event' }).click();
-  const editor = page.getByTestId('item-editor');
+  const editor = await newEntry(page, 'Event');
   await editor.getByLabel('Title').fill('Battle of Marathon');
   await editor.getByLabel('Date').fill('490 BCE');
   await expect(editor.getByText('Reads as 490 BCE')).toBeVisible();
@@ -60,8 +88,7 @@ test('add an event, reading BCE dates the way people write them', async ({ page 
 
 test('rejects dates it cannot read and ends before starts', async ({ page }) => {
   await open(page);
-  await page.getByRole('button', { name: 'Add a period' }).click();
-  const editor = page.getByTestId('item-editor');
+  const editor = await newEntry(page, 'Period');
   await editor.getByLabel('Title').fill('Backwards war');
   await editor.getByLabel('From', { exact: true }).fill('sometime');
   await expect(editor.getByText('Try 1914, 1914-07-28, 431 BCE or c. 1440')).toBeVisible();
@@ -159,13 +186,12 @@ test('add a picture from Wikimedia Commons with its credit', async ({ page }) =>
     route.fulfill({ contentType: 'image/svg+xml', body: '<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"/>' }),
   );
   await open(page);
-  await page.getByRole('button', { name: 'Add an event' }).click();
-  const editor = page.getByTestId('item-editor');
+  const editor = await newEntry(page, 'Event');
   await editor.getByLabel('Title').fill('Rosetta Stone carved');
   await editor.getByLabel('Date').fill('196 BCE');
   await editor.getByRole('button', { name: 'Add a picture' }).click();
   await page.getByLabel('Search Wikimedia Commons').fill('Rosetta Stone');
-  await page.getByRole('button', { name: 'Search' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Search' }).click();
   await page.getByTestId('commons-results').getByRole('button', { name: /Rosetta Stone/ }).click();
   await editor.getByRole('button', { name: 'Add to timeline' }).click();
   await expect(page.getByTestId('item-view').getByText(/Hans Hillewaert, CC BY-SA 4\.0/)).toBeVisible();
@@ -212,99 +238,6 @@ test('works offline after the first visit', async ({ page, context }) => {
   await context.setOffline(false);
 });
 
-/** Mock Wikipedia, Wikidata and Commons for "Add from Wikipedia". Every response needs CORS headers. */
-async function mockWikipedia(page: Page) {
-  const cors = { 'Access-Control-Allow-Origin': '*' };
-  const snak = (value: unknown) => ({ mainsnak: { snaktype: 'value', datavalue: { value } }, rank: 'normal' });
-  await page.route('https://en.wikipedia.org/w/rest.php/v1/search/page**', (route) =>
-    route.fulfill({ headers: cors, json: { pages: [
-      { key: 'Ada_Lovelace', title: 'Ada Lovelace', description: 'English mathematician (1815–1852)', thumbnail: null },
-      { key: 'Lovelace_(film)', title: 'Lovelace (film)', description: '2013 film', thumbnail: null },
-    ] } }),
-  );
-  await page.route('https://en.wikipedia.org/api/rest_v1/page/summary/**', (route) =>
-    route.fulfill({ headers: cors, json: {
-      title: 'Ada Lovelace', description: 'English mathematician (1815–1852)', wikibase_item: 'Q7259',
-      extract: 'Augusta Ada King, Countess of Lovelace, was an English mathematician and writer.',
-      content_urls: { desktop: { page: 'https://en.wikipedia.org/wiki/Ada_Lovelace' } },
-    } }),
-  );
-  await page.route('https://www.wikidata.org/w/api.php**', (route) => {
-    const url = new URL(route.request().url());
-    if (url.searchParams.get('action') === 'wbgetclaims') {
-      return route.fulfill({ headers: cors, json: { claims: { P625: [snak({ latitude: 51.507, longitude: -0.128 })] } } });
-    }
-    if (url.searchParams.get('props') === 'labels') {
-      return route.fulfill({ headers: cors, json: { entities: { Q84: { labels: { en: { value: 'London' } } } } } });
-    }
-    return route.fulfill({ headers: cors, json: { entities: { Q7259: { claims: {
-      P31: [snak({ id: 'Q5' })],
-      P569: [snak({ time: '+1815-12-10T00:00:00Z', precision: 11 })],
-      P570: [snak({ time: '+1852-11-27T00:00:00Z', precision: 11 })],
-      P19: [snak({ id: 'Q84' })],
-      P18: [snak('Ada Lovelace portrait.jpg')],
-    } } } } });
-  });
-  await page.route('https://commons.wikimedia.org/w/api.php**', (route) =>
-    route.fulfill({ headers: cors, json: { query: { pages: { '1': { title: 'File:Ada Lovelace portrait.jpg', imageinfo: [{
-      url: 'https://upload.wikimedia.org/ada.jpg', thumburl: 'https://upload.wikimedia.org/ada-640.jpg',
-      descriptionurl: 'https://commons.wikimedia.org/wiki/File:Ada_Lovelace_portrait.jpg', mime: 'image/jpeg',
-      extmetadata: { Artist: { value: 'Alfred Edward Chalon' }, LicenseShortName: { value: 'Public domain' } },
-    }] } } } } }),
-  );
-  await page.route('https://upload.wikimedia.org/**', (route) =>
-    route.fulfill({ contentType: 'image/svg+xml', body: '<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"/>' }),
-  );
-}
-
-async function addAdaFromWikipedia(page: Page) {
-  await page.getByRole('button', { name: 'Add', exact: true }).click();
-  await page.getByRole('menuitem', { name: 'From Wikipedia…' }).click();
-  const panel = page.getByTestId('wiki-import');
-  await panel.getByLabel('Search Wikipedia').fill('Ada Lovelace');
-  await panel.getByRole('button', { name: 'Search' }).click();
-  await panel.getByTestId('wiki-results').getByRole('button', { name: /Ada Lovelace English mathematician/ }).click();
-}
-
-test('add a person from Wikipedia with dates, place, picture, quote and source @phone', async ({ page }) => {
-  await mockWikipedia(page);
-  await open(page);
-  await addAdaFromWikipedia(page);
-
-  const editor = page.getByTestId('item-editor');
-  await expect(editor.getByRole('button', { name: 'Person' })).toHaveAttribute('aria-pressed', 'true');
-  await expect(editor.getByLabel('Name')).toHaveValue('Ada Lovelace');
-  await expect(editor.getByLabel('Born')).toHaveValue('1815-12-10');
-  await expect(editor.getByLabel('Died')).toHaveValue('1852-11-27');
-  await expect(editor.getByText('Born in London (51.51°N, 0.13°W)')).toBeVisible();
-  await expect(editor.getByTestId('excerpt')).toContainText('Countess of Lovelace');
-  await editor.getByLabel('Category').selectOption('science');
-  await editor.getByRole('button', { name: 'Add to timeline' }).click();
-
-  const view = page.getByTestId('item-view');
-  await expect(view.getByRole('heading', { name: 'Ada Lovelace' })).toBeVisible();
-  await expect(view.getByText('English mathematician (1815–1852)')).toBeVisible();
-  await expect(view.getByTestId('excerpt')).toContainText('Countess of Lovelace');
-  await expect(view.getByTestId('excerpt').getByRole('link', { name: 'Wikipedia' })).toHaveAttribute('href', 'https://en.wikipedia.org/wiki/Ada_Lovelace');
-  await expect(view.getByText(/Alfred Edward Chalon, Public domain/)).toBeVisible();
-  await expect(view.getByRole('button', { name: 'Wikipedia contributors, Ada Lovelace' })).toBeVisible(); // the cited source
-  await expect(label(page, 'Ada Lovelace')).toBeVisible();
-});
-
-test('adding the same Wikipedia page twice opens the existing entry instead', async ({ page }) => {
-  await mockWikipedia(page);
-  await open(page);
-  await addAdaFromWikipedia(page);
-  await page.getByTestId('item-editor').getByRole('button', { name: 'Add to timeline' }).click();
-  await expect(page.getByTestId('item-view')).toBeVisible();
-
-  await addAdaFromWikipedia(page);
-  const panel = page.getByTestId('wiki-import');
-  await expect(panel.getByText('“Ada Lovelace” is already on your timeline.')).toBeVisible();
-  await panel.getByRole('button', { name: 'Open it' }).click();
-  await expect(page.getByTestId('item-view').getByRole('heading', { name: 'Ada Lovelace' })).toBeVisible();
-});
-
 test('move through time with the wheel, the thumbwheel and the zoom bar; clicking a person zooms to their time @phone', async ({ page }) => {
   await open(page);
   await importFixture(page);
@@ -335,11 +268,12 @@ test('move through time with the wheel, the thumbwheel and the zoom bar; clickin
   await expect.poll(centre).toBeLessThan(afterWheel);
   // A key press also stops a flick's glide, so read the year once it has stopped changing
   // (the timeline reports its window on the next frame).
-  await wheel.focus();
-  await page.keyboard.press('ArrowLeft');
+  // Under load a frame can take longer than a poll, so wait for the step back to land as well.
+  const beforeStep = await centre();
+  await wheel.press('ArrowLeft');
   let settled = NaN;
-  await expect.poll(async () => { const was = settled; settled = await centre(); return settled === was; }, { intervals: [200] }).toBe(true);
-  await page.keyboard.press('ArrowRight');
+  await expect.poll(async () => { const was = settled; settled = await centre(); return settled === was && settled < beforeStep; }, { intervals: [200] }).toBe(true);
+  await wheel.press('ArrowRight');
   await expect.poll(centre).toBeGreaterThan(settled);
 
   // "All" shows everything; clicking Plato then frames his life with Socrates and Aristotle.
@@ -355,7 +289,8 @@ test('move through time with the wheel, the thumbwheel and the zoom bar; clickin
   await expect(bib.getByRole('button', { name: /Aristotle: A Very Short Introduction.*Cited in Socrates → Plato → Aristotle/ })).toBeVisible();
   await expect(bib.getByTestId('works-by')).toContainText('Republic');
 
-  // Back to where I was.
+  // Back to where I was (on a phone the entry's panel covers the timeline, so close it first).
+  if (isPhone(page)) await page.getByRole('button', { name: 'Close panel' }).click();
   await page.getByRole('button', { name: 'Back to where I was' }).click();
   await expect(span).toHaveText(/[0-9,]{4,} years in view/);
   await expect(page.getByRole('button', { name: 'Back to where I was' })).toHaveCount(0);
@@ -395,17 +330,6 @@ test('Wikipedia suggests influences: connect one on the timeline, add one that i
   await expect(suggestions.getByRole('listitem').filter({ hasText: 'Alexander the Great' }).getByRole('button', { name: 'Add from Wikipedia' })).toBeVisible();
 });
 
-test('adding from Wikipedia says a connection is needed when offline', async ({ page, context }) => {
-  await open(page);
-  await context.setOffline(true);
-  await page.getByRole('button', { name: 'Add', exact: true }).click();
-  await page.getByRole('menuitem', { name: 'From Wikipedia…' }).click();
-  const panel = page.getByTestId('wiki-import');
-  await panel.getByLabel('Search Wikipedia').fill('Ada Lovelace');
-  await panel.getByRole('button', { name: 'Search' }).click();
-  await expect(panel.getByRole('alert')).toHaveText(/You’re offline\. Adding from Wikipedia needs a connection/);
-});
-
 // ---------- Help ----------
 
 test('the manual opens offline, shows the version and jumps to a section @phone', async ({ page, context }) => {
@@ -421,8 +345,7 @@ test('the manual opens offline, shows the version and jumps to a section @phone'
 
 test('“How drawing works” opens the manual at territories', async ({ page }) => {
   await open(page);
-  await page.getByRole('button', { name: 'Add', exact: true }).click();
-  await page.getByRole('menuitem', { name: 'Territory on the map…' }).click();
+  await page.getByRole('button', { name: 'Add a territory' }).click();
   await page.getByTestId('own-borders').getByRole('button', { name: 'How drawing works' }).click();
   await expect(page.getByTestId('help').getByRole('heading', { name: 'Draw your own' })).toBeInViewport();
 });
@@ -483,7 +406,7 @@ test('a timeline saved before entries said what they are opens upgraded, each en
   await page.reload();
   await expect(page.getByTestId('save-state')).toHaveText('Saved on this device');
   await expect.poll(() => savedState(page)).toMatchObject({ schemaVersion: 9, backups: 1 });
-  await mark(page, 'i_indrev').click({ force: true });
+  await openBySearch(page, 'industrial', 'Industrial Revolution');
   await page.getByTestId('item-view').getByRole('button', { name: 'Edit' }).click();
   await expect(page.getByTestId('item-editor').getByLabel('Kind of thing')).toHaveValue('');
   await expect(page.getByTestId('item-editor').getByLabel('Region')).toHaveValue('');
@@ -533,8 +456,8 @@ test('a new version waits for Bob to reload', async ({ page }) => {
 
 // ---------- Map ----------
 
-async function openMap(page: Page, view: 'Map' | 'Both' = 'Map') {
-  await page.getByRole('button', { name: view, exact: true }).click();
+/** The map beside the reader (on a phone, in the sheet `open` opened), once it has loaded. */
+async function openMap(page: Page) {
   await expect(page.locator('[data-testid=map][data-ready]')).toBeAttached({ timeout: 20_000 });
 }
 
@@ -563,7 +486,7 @@ test('the map shows borders and entries for the chosen year @phone', async ({ pa
 test('the timeline playhead and the map share one year', async ({ page }) => {
   await open(page);
   await importFixture(page);
-  await openMap(page, 'Both');
+  await openMap(page);
   await goToYear(page, '1914');
   await expect(page.getByTestId('timeline').locator('.tl-year')).toHaveText('1914');
   await page.getByRole('button', { name: 'Play through time' }).click();
@@ -591,9 +514,7 @@ test('give a hand-made entry its places: look one up, type one, edit and remove 
     headers: { 'Access-Control-Allow-Origin': '*' },
   }));
   await open(page);
-  await page.getByRole('button', { name: 'Add', exact: true }).click();
-  await page.getByRole('menuitem', { name: 'Event' }).click();
-  const editor = page.getByTestId('item-editor');
+  const editor = await newEntry(page, 'Event');
   await editor.getByLabel('Title').fill('Battle of Salamis');
   await editor.getByLabel('Date').fill('480 BCE');
 
@@ -650,8 +571,9 @@ test('color the map by a trend with values per country', async ({ page }) => {
 test('record a migration and see its arrow only while people were moving', async ({ page }) => {
   await open(page);
   await openMap(page);
-  await page.getByRole('button', { name: 'Add', exact: true }).click();
-  await page.getByRole('menuitem', { name: 'Migration on the map…' }).click();
+  await page.getByRole('button', { name: 'Library' }).click();
+  await page.getByTestId('library').getByRole('tab', { name: /^Migration/ }).click();
+  await page.getByTestId('library').getByRole('button', { name: 'New migration' }).click();
   const editor = page.getByTestId('flow-editor');
   await editor.getByLabel('Name', { exact: true }).fill('Irish famine emigration');
   await editor.getByLabel('Cause').selectOption({ label: 'Famine & disaster' });
@@ -712,6 +634,7 @@ test('draw a city-state’s borders and date them @phone', async ({ page }) => {
   // What's drawn on the map is saved: it's still there after reopening the app.
   await expect(page.getByTestId('save-state')).toHaveText('Saved on this device');
   await page.reload();
+  await openSheet(page);
   await openMap(page);
   await goToYear(page, '450 BCE');
   await expect(territoryLabel(page, 'Athens')).toBeVisible();
@@ -907,8 +830,8 @@ test.describe('drafting with AI', () => {
     test.slow();
     const sent = await replayRecording(page, 'handmade-persian-wars');
     await open(page);
-    await openMap(page, 'Both');
-    await page.getByRole('button', { name: 'Add', exact: true }).click();
+    await openMap(page);
+    await page.getByRole('button', { name: 'More' }).click();
     await page.getByRole('menuitem', { name: 'Draft with AI…' }).click();
     const panel = page.getByTestId('draft-review');
     await expect(panel.getByRole('button', { name: 'Draft' })).toBeDisabled();
@@ -950,7 +873,7 @@ test.describe('drafting with AI', () => {
 
   test('says clearly when offline', async ({ page, context }) => {
     await open(page);
-    await page.getByRole('button', { name: 'Add', exact: true }).click();
+    await page.getByRole('button', { name: 'More' }).click();
     await page.getByRole('menuitem', { name: 'Draft with AI…' }).click();
     await context.setOffline(true);
     await expect(page.getByTestId('draft-review').getByRole('alert')).toContainText('You’re offline. Drafting with AI needs a connection');

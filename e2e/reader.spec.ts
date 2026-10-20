@@ -161,14 +161,10 @@ test('the reader layout reads articles, follows links, keeps a trail and rereads
   await expect(reader.getByRole('alert')).toContainText('isn’t saved on this device yet');
   await page.context().setOffline(false);
 
-  // The choice and the open article survive a reload; turning it off restores the old layout.
+  // The open article survives a reload.
   await trail.getByRole('button', { name: 'Peloponnesian War' }).click();
   await page.reload();
   await expect(reader.getByText('The war was fought between')).toBeVisible();
-  await page.getByRole('button', { name: 'More' }).click();
-  await page.getByRole('menuitemcheckbox', { name: 'Use the classic layout' }).click();
-  await expect(page.getByTestId('reader')).toHaveCount(0);
-  await expect(page.getByRole('button', { name: 'Add', exact: true })).toBeVisible();
 });
 
 /** Where `text` is on screen, and (with `select`) select it. */

@@ -13,27 +13,18 @@ async function openNewLayout(page: Page, phone: boolean) {
   await expect(page.locator('[data-testid=timeline][data-ready]')).toBeVisible();
 }
 
-test('a fresh start opens the reader layout; the classic layout is one choice away and stays chosen @phone', async ({ page }) => {
+test('the app opens in the reader layout, even for someone who had chosen the classic layout @phone', async ({ page }) => {
+  // What an older version saved for "Use the classic layout" and its Timeline, Map and Both views.
+  await page.addInitScript(() => { localStorage.setItem('chronicle.classicLayout', 'true'); localStorage.setItem('chronicle.view', '"timeline"'); });
   await page.goto('/');
   await expect(page.getByTestId('save-state')).toHaveText('Saved on this device');
   await expect(page.getByTestId('reader')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Open an article' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Add', exact: true })).toHaveCount(0);
-
+  await expect(page.getByRole('group', { name: 'View' })).toHaveCount(0);
   await page.getByRole('button', { name: 'More' }).click();
-  await expect(page.getByRole('menuitemcheckbox', { name: 'Use the classic layout' })).toHaveAttribute('aria-checked', 'false');
-  await page.getByRole('menuitemcheckbox', { name: 'Use the classic layout' }).click();
-  await expect(page.getByRole('button', { name: 'Add', exact: true })).toBeVisible();
-  await expect(page.getByTestId('reader')).toHaveCount(0);
-  // The classic layout's timeline is drawn the same new way.
-  await page.getByTestId('import-input').setInputFiles(FIXTURE);
-  await expect(page.getByTestId('timeline').locator('.tl-mark[data-id=i_aristotle]')).toBeVisible();
-
-  await page.reload();
-  await expect(page.getByRole('button', { name: 'Add', exact: true })).toBeVisible();
-  await page.getByRole('button', { name: 'More' }).click();
-  await page.getByRole('menuitemcheckbox', { name: 'Use the classic layout' }).click();
-  await expect(page.getByTestId('reader')).toBeVisible();
+  await expect(page.getByRole('menuitem', { name: 'Draft with AI…' })).toBeVisible();
+  await expect(page.getByRole('menuitemcheckbox', { name: 'Use the classic layout' })).toHaveCount(0);
 });
 
 test('the new timeline pans, zooms with the zoom bar and opens an entry @phone', async ({ page, isMobile }) => {
