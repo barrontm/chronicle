@@ -282,7 +282,7 @@ const snap = (from, to, pts) => ({ from: hd(from), ...(to ? { to: hd(to) } : {})
 const TSRC = { name: 'Rough hand-drawn outline (test data), not a historical map' };
 const territories = [
   { id: 't_athens', title: 'Athens (Attica)', categoryId: 'politics', itemId: 'i_classical',
-    snapshots: [snap(700, 86, [[23.35, 38.15], [23.6, 38.22], [23.95, 38.25], [24.05, 38.05], [24.03, 37.7], [23.9, 37.65], [23.6, 37.85], [23.35, 37.95]])] },
+    snapshots: [snap(700, 86, [[23.35, 38.15], [23.6, 38.22], [23.95, 38.25], [24.05, 38.05], [24.1, 37.7], [24.03, 37.63], [23.9, 37.65], [23.6, 37.85], [23.35, 37.95]])] },
   { id: 't_delian', title: 'Delian League (Athenian empire)', categoryId: 'politics', itemId: 'i_delian_founded',
     snapshots: [
       snap(477, 454, [[23.5, 40.6], [26.0, 40.9], [27.0, 40.3], [27.4, 38.0], [27.0, 36.9], [25.0, 36.2], [23.8, 36.6], [24.0, 37.7], [24.2, 38.3]]),

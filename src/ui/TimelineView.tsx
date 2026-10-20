@@ -3,6 +3,7 @@ import { isDated, jsDateToDecimalYear } from '../model/dates';
 import { eraRegions } from '../model/eras';
 import { entryLanes } from '../model/lanes';
 import { overview } from '../model/overview';
+import { polityMembers, worldMembers } from '../model/polities';
 import type { Category, DatedItem, Highlight, MediaRef, PolityGroup, Relation, Territory, TimelineItem } from '../model/types';
 import { draftArrows, influenceArrows, influenceClasses } from './influenceLinks';
 import { createTimeline, type MovedDates, type TimelineHandle } from './timeline/createTimeline';
@@ -21,7 +22,7 @@ export interface VisibleWindow {
   /** Pixel geometry of the plotting area, relative to the timeline host element. */
   left: number;
   width: number;
-  /** The zoom level: 0 the overview, 1 an era's six lanes, 2 the entries. */
+  /** The zoom level: 0 the overview, 1 an era's or polity's six lanes, 2 the entries. */
   level?: Level;
 }
 
@@ -122,6 +123,15 @@ export const TimelineView = forwardRef<TimelineControl, Props>(function Timeline
   }, [items, categories, highlights, relations, territories, groups, regionParents, prominence]);
   // Level 1's lanes: each entry's lanes.
   const laneMap = useMemo(() => entryLanes(items, highlights), [items, highlights]);
+  // What's in a polity or world event, worked out the first time one is opened.
+  const membersOf = useMemo(() => {
+    let byPolity: Map<string, string[]> | undefined;
+    return (pick: string): string[] => {
+      if (!pick.startsWith('pol:')) return worldMembers(pick, { relations });
+      byPolity ??= polityMembers({ items, territories, relations });
+      return byPolity.get(pick.slice(4)) ?? [];
+    };
+  }, [items, territories, relations]);
 
   useEffect(() => {
     tl.current?.setData({
@@ -134,8 +144,9 @@ export const TimelineView = forwardRef<TimelineControl, Props>(function Timeline
       eras,
       overview: overviewData,
       entryLanes: laneMap,
+      membersOf,
     });
-  }, [items, categories, thumbFor, prominence, drafts.items, relations, eras, overviewData, laneMap]);
+  }, [items, categories, thumbFor, prominence, drafts.items, relations, eras, overviewData, laneMap, membersOf]);
 
   // The open entry's connections light up with arrows; Claude's drafted ones show whenever their highlight is open.
   useEffect(() => {
