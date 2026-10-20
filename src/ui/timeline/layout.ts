@@ -396,6 +396,10 @@ export interface View {
   era?: EraLanes;
   /** While an era opens or closes: how far open it is (0 to 1), whether it only fades (reduced motion), and level 0's scroll. */
   zoom?: { t: number; fade: boolean; scroll0: number };
+  /** Entries box-selected for bulk edit, each ringed. */
+  picked?: ReadonlySet<string>;
+  /** The box Bob is drawing with ⌘ or Ctrl held, in px. */
+  box?: Box;
 }
 
 export interface Env {
@@ -459,6 +463,7 @@ export function layout(D: Prepared, V: View, E: Env, level: Level = 2): Scene {
   if (level === 0) {
     eraRows(c);
     arrows(c);
+    picks(c);
     focusRing(c);
     axis(c, level);
     return S;
@@ -466,6 +471,7 @@ export function layout(D: Prepared, V: View, E: Env, level: Level = 2): Scene {
   if (level === 1 && V.era) {
     eraLevel(c, V.era);
     if (!V.zoom) arrows(c, false);
+    if (!V.zoom) picks(c);
     focusRing(c);
     axis(c, level);
     return S;
@@ -480,6 +486,7 @@ export function layout(D: Prepared, V: View, E: Env, level: Level = 2): Scene {
   }
   ties(c);
   arrows(c);
+  picks(c);
   focusRing(c);
   dragPreview(c);
   axis(c, level);
@@ -1282,6 +1289,23 @@ function focusRing(c: Ctx) {
   S.z[3].push({ t: 0, k: 'ring', a: 1, cls: 'tl-ring', x: b.x - 4, y: b.y - 4, w: b.w + 8, h: b.h + 8, r: 6, stroke: 'var(--focus)', sw: 2 });
 }
 
+/** A ring round each picked entry (a cluster's members share one), and the box being drawn. */
+function picks(c: Ctx) {
+  const { V, S } = c;
+  const seen = new Set<Box>();
+  for (const id of V.picked ?? []) {
+    const b = S.boxes.get(id);
+    if (!b || seen.has(b)) continue;
+    seen.add(b);
+    S.z[3].push({ t: 0, k: `pk${id}`, a: 1, cls: 'tl-picked', id, x: b.x - 3, y: b.y - 3, w: b.w + 6, h: b.h + 6, r: 5, fill: 'color-mix(in srgb, var(--focus) 12%, transparent)', stroke: 'var(--focus)', sw: 1.5 });
+  }
+  const r = V.box && norm(V.box);
+  if (r) S.z[3].push({ t: 0, k: 'box', a: 1, cls: 'tl-box', x: r.x, y: r.y, w: r.w, h: r.h, fill: 'color-mix(in srgb, var(--focus) 8%, transparent)', stroke: 'var(--focus)', sw: 1, dash: true });
+}
+
+/** A box drawn in any direction, with a positive width and height. */
+const norm = (b: Box): Box => ({ x: Math.min(b.x, b.x + b.w), y: Math.min(b.y, b.y + b.h), w: Math.abs(b.w), h: Math.abs(b.h) });
+
 /** While the open entry is dragged it stays where it was, faded, and a copy shows where it's going, its new dates on the axis. */
 function dragPreview(c: Ctx) {
   const { V, D, E, S, X } = c;
@@ -1361,6 +1385,21 @@ export function hitTest(S: Scene, x: number, y: number): Target | undefined {
     if (x >= t.x && x <= t.x + t.w && y >= t.y && y <= t.y + t.h) return t;
   }
   return undefined;
+}
+
+/** The entries a box touches (drawn in any direction), inside the plot: not Claude's drafts, and a cluster's members all together. */
+export function hitBox(S: Scene, D: Prepared, box: Box): string[] {
+  const r = norm(box);
+  const x0 = Math.max(r.x, S.plot.x), y0 = Math.max(r.y, S.plot.y);
+  const x1 = Math.min(r.x + r.w, S.plot.x + S.plot.w), y1 = Math.min(r.y + r.h, S.plot.y + S.plot.h);
+  if (x1 < x0 || y1 < y0) return [];
+  const ids: string[] = [];
+  for (const [id, b] of S.boxes) {
+    const it = D.byId.get(id);
+    if (!it || it.draft) continue;
+    if (b.x <= x1 && b.x + b.w >= x0 && b.y <= y1 && b.y + b.h >= y0) ids.push(id);
+  }
+  return ids;
 }
 
 /** The lane at a height on screen, for adding an entry where Bob double-clicked. */

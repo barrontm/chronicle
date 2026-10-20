@@ -5,7 +5,7 @@ import { bandSummary } from '../representations/era';
 import { DEEP_LIMITS, panBy, windowAround, zoomAround, type YearWindow } from '../timeNav';
 import { attachGestures } from './gestures';
 import {
-  AXIS_H, describeEntry, describeEra, describeLane1, eraLanes, eraSpan, ERAS_BACK, HEAD1_H, HEAD_ROW, hitTest, lane1Span, laneAt, layout, maxScroll, PHONE_W, prepare, rowSpan,
+  AXIS_H, describeEntry, describeEra, describeLane1, eraLanes, eraSpan, ERAS_BACK, HEAD1_H, HEAD_ROW, hitBox, hitTest, lane1Span, laneAt, layout, maxScroll, PHONE_W, prepare, rowSpan,
   stepActive, stepEra, stepLane1, type LaneInput, type Level, type PEra, type Prepared, type StepKey, type View,
 } from './layout';
 import { svgPainter } from './paint';
@@ -44,11 +44,15 @@ export interface TimelineCallbacks {
   onYear?: (year: number) => void;
   /** Bob dragged the open entry, or one of its ends, to new dates. Without it entries can't be dragged. */
   onMove?: (id: string, dates: MovedDates) => void;
+  /** Bob box-selected entries (Ctrl or ⌘ and drag), or added or removed one (Ctrl or ⌘ and click), or cleared them (Esc): the whole selection. Without it nothing can be box-selected. */
+  onPick?: (ids: string[]) => void;
 }
 
 export interface TimelineHandle {
   setData(d: TimelineData): void;
   setSelected(id: string | undefined): void;
+  /** The entries box-selected for bulk edit, ringed. */
+  setPicked(ids: readonly string[]): void;
   /** The open entry's lit connections (role per id; the rest fade) and every arrow to draw. */
   setLinks(roles: Map<string, string> | undefined, links: Link[]): void;
   /** The map's year, or undefined to hide the playhead. */
@@ -130,6 +134,8 @@ export function createTimeline(host: HTMLElement, cb: TimelineCallbacks, initial
   /** Zoom gestures wait until this time after an era opens or closes, so one pinch doesn't do both. */
   let calm = 0;
   V.editable = !!cb.onMove;
+  /** The selection for bulk edit, as App has it; while a box is drawn, `V.picked` also shows what it touches. */
+  let picked: ReadonlySet<string> = new Set();
 
   // Screen readers hear the entry the arrow keys are on through one option node (aria-activedescendant).
   const optionId = `tl-active-${Math.random().toString(36).slice(2, 8)}`;
@@ -256,9 +262,10 @@ export function createTimeline(host: HTMLElement, cb: TimelineCallbacks, initial
       tween = null;
       setWin(zoomAround(V.win, factor, x > gut() ? yearAt(x) : undefined, DEEP_LIMITS));
     },
-    tap: (x, y) => {
+    tap: (x, y, mod) => {
       if (morph) return;
       const t = targetAt(x, y);
+      if (mod) { if (cb.onPick) togglePick(t); return; }
       if (t?.id === 'playhead' || t?.id === HEAD_ROW) return;
       if (t?.id === ERAS_BACK) { closeEra(); return; }
       if (t?.cluster) {
@@ -321,7 +328,33 @@ export function createTimeline(host: HTMLElement, cb: TimelineCallbacks, initial
       const it = source.get(d.id);
       if (it && d.moved && !unchanged(d.moved, it)) cb.onMove?.(d.id, d.moved);
     },
+    box: (x0, y0, x1, y1) => {
+      if (!cb.onPick || morph) return;
+      V.box = { x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
+      tip.hidden = true;
+      // What the box touches lights up as it grows.
+      V.picked = scene ? new Set([...picked, ...hitBox(scene, D, V.box)]) : picked;
+      schedule();
+    },
+    boxEnd: (cancel) => {
+      const b = V.box;
+      V.box = undefined;
+      V.picked = picked;
+      schedule();
+      if (!b || cancel || !scene || !cb.onPick) return;
+      const hit = hitBox(scene, D, b);
+      if (hit.length) cb.onPick([...new Set([...picked, ...hit])]);
+    },
   });
+  /** Ctrl or ⌘ and click: an entry (or a cluster's members) goes in, or out if it was in. */
+  const togglePick = (t: Target | undefined) => {
+    const ids = t?.cluster ? t.cluster.members : t && D.byId.has(t.id) && !D.byId.get(t.id)!.draft ? [t.id] : [];
+    if (!ids.length) return;
+    const next = new Set(picked);
+    const out = ids.every((id) => next.has(id));
+    for (const id of ids) if (out) next.delete(id); else next.add(id);
+    cb.onPick?.([...next]);
+  };
 
   /* ---------- keys: arrows through entries and lanes, Enter opens, Shift pans, Alt moves the open entry ---------- */
   const setActive = (id: string | undefined) => {
@@ -382,6 +415,10 @@ export function createTimeline(host: HTMLElement, cb: TimelineCallbacks, initial
     } else if ((e.key === 'Enter' || e.key === ' ') && V.active && D.byId.has(V.active)) {
       if (level === 0 && eraById.has(V.active)) openEra(V.active);
       else cb.onSelect(V.active);
+    } else if (e.key === 'Escape' && picked.size && cb.onPick) {
+      // Esc lets go of a box-selection first.
+      cb.onPick([]);
+      e.stopPropagation();
     } else if (e.key === 'Escape' && level === 1) {
       // Esc backs out of the era first; the open panel stays.
       closeEra();
@@ -507,6 +544,11 @@ export function createTimeline(host: HTMLElement, cb: TimelineCallbacks, initial
       if (id && D.byId.has(id)) scrollTo(id, 4);
       // The arrow keys carry on from whatever was opened last.
       setActive(id ?? V.active);
+    },
+    setPicked(ids) {
+      picked = new Set(ids);
+      if (!V.box) V.picked = picked;
+      schedule();
     },
     setLinks(roles, links) { V.roles = roles; V.links = links; schedule(); },
     setPlayYear(year) { V.playYear = year; schedule(); },

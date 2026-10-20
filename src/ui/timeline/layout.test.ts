@@ -7,7 +7,7 @@ import { entryLanes } from '../../model/lanes';
 import { highlightProminence } from '../../model/prominence';
 import type { DatedItem, Lane, Relation } from '../../model/types';
 import {
-  AXIS_H, describeEntry, describeEra, describeLane1, eraLanes, ERAS_BACK, HEAD1_H, hitTest, laneAt, layout, maxScroll, MIN_HIT, NO_LANE, prepare, ROW_H, stepActive, stepEra, stepLane1,
+  AXIS_H, describeEntry, describeEra, describeLane1, eraLanes, ERAS_BACK, HEAD1_H, hitBox, hitTest, laneAt, layout, maxScroll, MIN_HIT, NO_LANE, prepare, ROW_H, stepActive, stepEra, stepLane1,
   type Env, type View,
 } from './layout';
 import type { Measure, Prim, Scene } from './scene';
@@ -487,5 +487,53 @@ describe('level 1: an era’s six lanes', () => {
     expect(stepLane1(EL, eco[0].id, 'Home', win)).toBe(eco[0].id);
     expect(EL.laneOf.get(stepLane1(EL, eco[0].id, 'ArrowDown', win)!)).toBe(3);
     expect(describeLane1(EL, 'i_owls')).toMatch(/^Athenian silver “owls”, c\. 510 BCE – 322 BCE, Economy, \d+ of \d+$/);
+  });
+});
+
+describe('box-select', () => {
+  const doc = parseDoc(readFileSync(new URL('../../../tests/fixtures/greece/classical-greece.json', import.meta.url), 'utf8'));
+  const items = doc.items.filter(isDated);
+  const lanes = doc.categories.map((c) => ({ id: c.id, label: c.label, color: c.color }));
+  const D = prepare(items, lanes, { now: 2026, relations: doc.relations });
+  const E = env(1600, 3000);
+  const S = layout(D, view(-500, -470), E);
+  const around = (ids: string[]) => {
+    const bs = ids.map((id) => S.boxes.get(id)!);
+    const x = Math.min(...bs.map((b) => b.x)), y = Math.min(...bs.map((b) => b.y));
+    return { x: x - 1, y: y - 1, w: Math.max(...bs.map((b) => b.x + b.w)) - x + 2, h: Math.max(...bs.map((b) => b.y + b.h)) - y + 2 };
+  };
+
+  it('selects what a box touches, drawn in any direction', () => {
+    const b = around(['i_marathon']);
+    expect(hitBox(S, D, b)).toContain('i_marathon');
+    const flipped = { x: b.x + b.w, y: b.y + b.h, w: -b.w, h: -b.h };
+    expect(hitBox(S, D, flipped).sort()).toEqual(hitBox(S, D, b).sort());
+    // Every entry the box touches is in, and nothing drawn wholly outside it.
+    const big = around(['i_marathon', 'i_salamis', 'i_thermopylae']);
+    const got = hitBox(S, D, big);
+    expect(got).toEqual(expect.arrayContaining(['i_marathon', 'i_salamis', 'i_thermopylae']));
+    for (const id of got) {
+      const r = S.boxes.get(id)!;
+      expect(r.x <= big.x + big.w && r.x + r.w >= big.x && r.y <= big.y + big.h && r.y + r.h >= big.y).toBe(true);
+    }
+  });
+  it('finds nothing in the gutter, over the axis, or in empty space', () => {
+    expect(hitBox(S, D, { x: 0, y: AXIS_H, w: E.gutter - 2, h: 2000 })).toEqual([]);
+    expect(hitBox(S, D, { x: E.gutter, y: 0, w: 400, h: AXIS_H - 2 })).toEqual([]);
+    expect(hitBox(S, D, { x: E.gutter + 10, y: S.contentH + AXIS_H + 50, w: 50, h: 50 })).toEqual([]);
+  });
+  it('leaves out Claude’s drafts', () => {
+    const draft = { id: 'd1', kind: 'event', title: 'Drafted', start: { y: -485 }, categoryId: 'war', updatedAt: 0 } as DatedItem;
+    const D2 = prepare(items, lanes, { now: 2026, relations: doc.relations, drafts: [draft] });
+    const S2 = layout(D2, view(-500, -470), E);
+    expect(S2.boxes.has('d1')).toBe(true);
+    expect(hitBox(S2, D2, S2.plot)).not.toContain('d1');
+  });
+  it('rings each picked entry, and draws the box being drawn', () => {
+    const S2 = layout(D, view(-500, -470, { picked: new Set(['i_marathon', 'i_salamis']), box: { x: 300, y: 100, w: -50, h: 40 } }), E);
+    const rings = S2.z[3].filter((p) => p.cls === 'tl-picked');
+    expect(rings.map((p) => p.id).sort()).toEqual(['i_marathon', 'i_salamis']);
+    const box = S2.z[3].find((p) => p.cls === 'tl-box');
+    expect(box).toMatchObject({ x: 250, y: 100, w: 50, h: 40 });
   });
 });

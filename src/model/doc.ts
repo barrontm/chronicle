@@ -419,7 +419,7 @@ export function serializeDoc(doc: TimelineDoc): string {
 
 /** The collections of id'd, timestamped records inside a doc. */
 export type Collection = 'items' | 'series' | 'territories' | 'flows' | 'notes' | 'sources' | 'relations' | 'highlights' | 'groups';
-type RecordOf<C extends Collection> = {
+export type RecordOf<C extends Collection> = {
   items: TimelineItem;
   series: Series;
   territories: Territory;

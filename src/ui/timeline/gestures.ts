@@ -5,6 +5,7 @@
  *   Ctrl/⌘ + wheel, pinch     zoom around the pointer (a trackpad pinch arrives as Ctrl + wheel)
  *   drag                      move through time and scroll the lanes
  *   tap, double-tap           pick, add
+ *   Ctrl/⌘ + drag, + tap      draw a box to select what it touches, add or remove one (mouse and pen)
  * A drag that starts on something draggable (the playhead) goes to `drag` instead of panning.
  */
 export interface GestureApi {
@@ -12,7 +13,8 @@ export interface GestureApi {
   scrollBy(dy: number): void;
   /** factor 2 = twice as many years in view; x and y in px from the host's top left (over an era, zooming in opens it). */
   zoomAt(factor: number, x: number, y: number): void;
-  tap(x: number, y: number): void;
+  /** `mod`: Ctrl or ⌘ was held, so it adds or removes one from the selection. */
+  tap(x: number, y: number, mod?: boolean): void;
   doubleTap(x: number, y: number): void;
   hover(x: number, y: number): void;
   leave(): void;
@@ -20,6 +22,10 @@ export interface GestureApi {
   grab(x: number, y: number): boolean;
   drag(x: number): void;
   release(): void;
+  /** The box from where the press began to the pointer, while Ctrl or ⌘ is held. */
+  box(x0: number, y0: number, x1: number, y1: number): void;
+  /** The box is let go (or dropped, when a second finger lands). */
+  boxEnd(cancel: boolean): void;
 }
 
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
@@ -36,7 +42,7 @@ const DOUBLE_PX = 24;
 
 export function attachGestures(el: HTMLElement, api: GestureApi): () => void {
   const ptrs = new Map<number, { x: number; y: number }>();
-  let press: { x: number; y: number; t: number; moved: number; grabbed: boolean } | null = null;
+  let press: { x: number; y: number; t: number; moved: number; grabbed: boolean; boxing: boolean } | null = null;
   let pinchD = 0;
   let lastTap: { x: number; y: number; t: number } | null = null;
   const local = (e: PointerEvent | WheelEvent) => {
@@ -58,12 +64,16 @@ export function attachGestures(el: HTMLElement, api: GestureApi): () => void {
     el.setPointerCapture?.(e.pointerId);
     const p = local(e);
     ptrs.set(e.pointerId, p);
-    if (ptrs.size === 1) press = { ...p, t: performance.now(), moved: 0, grabbed: api.grab(p.x, p.y) };
+    if (ptrs.size === 1) {
+      const boxing = (e.ctrlKey || e.metaKey) && e.pointerType !== 'touch';
+      press = { ...p, t: performance.now(), moved: 0, boxing, grabbed: !boxing && api.grab(p.x, p.y) };
+    }
     if (ptrs.size === 2) {
       const [a, b] = [...ptrs.values()];
       pinchD = Math.hypot(a.x - b.x, a.y - b.y);
       if (press?.grabbed) api.release();
-      if (press) { press.moved = Infinity; press.grabbed = false; }
+      if (press?.boxing) api.boxEnd(true);
+      if (press) { press.moved = Infinity; press.grabbed = false; press.boxing = false; }
     }
   };
   const onMove = (e: PointerEvent) => {
@@ -73,7 +83,8 @@ export function attachGestures(el: HTMLElement, api: GestureApi): () => void {
     if (ptrs.size === 1 && press) {
       const dx = p.x - prev.x, dy = p.y - prev.y;
       press.moved += Math.abs(dx) + Math.abs(dy);
-      if (press.grabbed) api.drag(p.x);
+      if (press.boxing) { if (press.moved > TAP_SLOP) api.box(press.x, press.y, p.x, p.y); }
+      else if (press.grabbed) api.drag(p.x);
       else if (press.moved > TAP_SLOP) { api.panPx(dx); api.scrollBy(-dy); }
     } else if (ptrs.size === 2) {
       const other = [...ptrs.entries()].find(([id]) => id !== e.pointerId)![1];
@@ -89,9 +100,12 @@ export function attachGestures(el: HTMLElement, api: GestureApi): () => void {
     const p = local(e);
     const wasTap = ptrs.size === 1 && press && press.moved <= TAP_SLOP && performance.now() - press.t < TAP_MS;
     if (press?.grabbed && ptrs.size === 1) api.release();
+    const boxed = press?.boxing && ptrs.size === 1;
+    if (boxed && !wasTap) api.boxEnd(e.type === 'pointercancel');
     ptrs.delete(e.pointerId);
     if (ptrs.size === 0) press = null;
     if (!wasTap || e.type === 'pointercancel') return;
+    if (boxed) { lastTap = null; api.tap(p.x, p.y, true); return; }
     const now = performance.now();
     if (lastTap && now - lastTap.t < DOUBLE_MS && Math.hypot(p.x - lastTap.x, p.y - lastTap.y) < DOUBLE_PX) {
       lastTap = null;
