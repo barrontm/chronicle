@@ -10,6 +10,7 @@ import type { DocStore } from '../store/store';
 import { DocProvider, useDoc } from './DocContext';
 import type { Nav, Panel } from './nav';
 import { ItemEditor, ItemView } from './panels/ItemPanels';
+import { RelationEditor, RelationView } from './panels/RelationPanels';
 import { Help } from './panels/Help';
 import { Library } from './panels/Library';
 import { BulkEdit } from './panels/BulkEdit';
@@ -261,7 +262,11 @@ function Workspace() {
       setPicking({ onDone });
       revealMap();
     },
-  }), [stack.length, narrow]);
+    read: (a) => {
+      setMapSheet(false);
+      openArticle(a);
+    },
+  }), [stack.length, narrow, trail]);
 
   // A search result: open it, and bring the timeline, the year and the map to it.
   const [mapFit, setMapFit] = useState<MapFit | undefined>();
@@ -483,6 +488,7 @@ function Workspace() {
             onSelect={selectFromTimeline}
             onAddAt={(year, categoryId) => setStack([{ type: 'new-item', year, categoryId }])}
             onAddIn={(lane, year, partOf) => setStack([{ type: 'new-item', year, lane, partOf }])}
+            onOpenRelation={(id) => setStack([{ type: 'relation', id }])}
             onWindow={setWin}
             onCanGoBack={setCanGoBackInTime}
             year={year}
@@ -565,6 +571,7 @@ function Workspace() {
 function PanelBody({ panel, nav, aiDraft, onAiDraft, onBulkDone }: { panel: Panel; nav: Nav; aiDraft: DraftSet | null; onAiDraft: (d: DraftSet | null) => void; onBulkDone: (undo: Undo, msg: string) => void }) {
   // `key` resets editor state when switching between records.
   switch (panel.type) {
+    case 'relation': return panel.edit ? <RelationEditor key={`e-${panel.id}`} id={panel.id} nav={nav} /> : <RelationView key={panel.id} id={panel.id} nav={nav} />;
     case 'item': return panel.edit ? <ItemEditor key={`e-${panel.id}`} id={panel.id} nav={nav} /> : <ItemView key={panel.id} id={panel.id} nav={nav} />;
     case 'new-item': return <ItemEditor key={`new-${panel.draft?.item.id ?? `${panel.year}-${panel.kind}-${panel.categoryId}-${panel.lane}-${panel.partOf}`}`} id={null} init={panel} draft={panel.draft} nav={nav} />;
     case 'ai-draft': return <Suspense fallback={<div className="notice" role="status">Opening…</div>}><DraftReview nav={nav} draft={aiDraft} onDraft={onAiDraft} /></Suspense>;

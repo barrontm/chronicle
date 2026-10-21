@@ -33,7 +33,8 @@ describe('eraRegions', () => {
     const classical = by['Classical Greece'];
     // Its own, its themes', and the highlights of everything in it, counting its inner eras.
     expect(classical.highlights).toBeGreaterThan(by['The Fifty Years'].highlights + by['Macedon rises'].highlights);
-    expect(classical.mix.politics).toBeGreaterThan(classical.mix.economy);
+    expect(classical.mix.politics).toBeGreaterThan(classical.mix.technology);
+    expect(classical.mix.economy).toBeGreaterThan(0);
     expect(classical.mix.ideas).toBeGreaterThan(0);
     // Every highlight is in a lane or counted as in none; one in two lanes counts in both.
     expect(Object.values(classical.mix).reduce((a, b) => a + b, 0) + classical.noLane).toBeGreaterThanOrEqual(classical.highlights);

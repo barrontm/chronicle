@@ -2,10 +2,12 @@ import { axisTicks, formatRange, formatYear, toDecimalYear } from '../../model/d
 import { ELSEWHERE, type Era, type EraRegion } from '../../model/eras';
 import type { OGroup, OPolity, Overview } from '../../model/overview';
 import { areaWeight, strengthAt, strengthKnown, stripShare, UNKNOWN_SHARE } from '../../model/strength';
+import { describeEffect, laneInfluences, type LaneInfluence } from '../../model/doc';
 import { LANES, type DatedItem, type Lane, type Relation, type TimelineItem } from '../../model/types';
 import { anchors, arcCurve, loopCurve, type Box as Edges } from '../influenceLinks';
 import { makerOf, markOf, representationOf, warOf, type Representation } from '../representations';
 import { innerPrims, washPrims } from '../representations/era';
+import { ARROW, arrowPrims, type ArrowIn } from '../representations/influence';
 import { stripPrims, type StripLook } from '../representations/polity';
 import type { YearWindow } from '../timeNav';
 import { LANE_LABEL, PIGMENT } from '../util';
@@ -149,6 +151,8 @@ export interface Prepared {
   polById: Map<string, PPolity>;
   groupById: Map<string, PGroup>;
   overviewExtent?: YearWindow;
+  /** Every connection, for level 1's influences between lanes. */
+  relations: readonly Relation[];
 }
 
 export interface PrepareOptions {
@@ -238,7 +242,7 @@ export function prepare(items: DatedItem[], lanes: LaneInput[], o: PrepareOption
   });
   const prominence = o.prominence ?? (() => 0);
   const eras = prepareEras(o.eras ?? [], byId);
-  return { lanes: out, byId, contentH: top, prominence, extent: lo <= hi ? { start: lo, end: hi } : undefined, ...eras, ...prepareOverview(o.overview, eras.regions, byId) };
+  return { lanes: out, byId, contentH: top, prominence, extent: lo <= hi ? { start: lo, end: hi } : undefined, relations: rels, ...eras, ...prepareOverview(o.overview, eras.regions, byId) };
 }
 
 /** The eras in each region. Inside one, eras pack into rows by time only, outer eras above the eras inside them. */
@@ -581,7 +585,7 @@ const ROLE_STROKE: Record<string, string> = { 'infl-by': 'var(--glow-by)', 'infl
 export function layout(D: Prepared, V: View, E: Env, level: Level = 2): Scene {
   const x0 = E.gutter, x1 = E.w;
   const S: Scene = {
-    z: [[], [], [], []], gutter: [], axis: [], targets: [], clusters: [], boxes: new Map(),
+    z: [[], [], [], []], gutter: [], axis: [], targets: [], clusters: [], boxes: new Map(), laneBoxes: new Map(),
     plot: { x: x0, y: AXIS_H, w: Math.max(0, x1 - x0), h: Math.max(0, E.h - AXIS_H) },
     gutterBox: { x: 0, y: AXIS_H, w: x0, h: Math.max(0, E.h - AXIS_H) },
     contentH: level === 0 ? overviewGeo(D, V, E.w < PHONE_W).H : level === 1 && V.era ? lanesH(V.era, E.w < PHONE_W) : D.contentH,
@@ -602,7 +606,8 @@ export function layout(D: Prepared, V: View, E: Env, level: Level = 2): Scene {
   }
   if (level === 1 && V.era) {
     eraLevel(c, V.era);
-    if (!V.zoom) arrows(c, false);
+    // An influence between lanes is drawn as its own arrow, not again as the open entry's connection.
+    if (!V.zoom) arrows(c, false, new Set(V.era.influences.map((x) => `${x.r.fromId}>${x.r.toId}`)));
     if (!V.zoom) picks(c);
     focusRing(c);
     axis(c, level);
@@ -918,10 +923,14 @@ export interface EraLanes {
   laneOf: Map<string, number>;
   rowOf: Map<string, number>;
   nextOf: Map<string, number>;
+  /** Connections between entries here in different lanes, drawn as arrows. */
+  influences: LaneInfluence[];
+  /** On a phone: the effect lines under an entry in a lane (`<lane>:<id>`), each an influence it's at an end of there. */
+  effLines: Map<string, LaneInfluence[]>;
 }
 
 /** Entries by start into the six lanes, in pigment order, then "No lane yet" when anything has none. An entry is in each of its lanes. */
-function buildLanes(D: Prepared, ids: Iterable<string>, lanesOf: ReadonlyMap<string, readonly Lane[]>, count: (l: Lane1['id'], n: number) => [number, string]): Pick<EraLanes, 'lanes' | 'laneOf' | 'rowOf' | 'nextOf'> {
+function buildLanes(D: Prepared, ids: Iterable<string>, lanesOf: ReadonlyMap<string, readonly Lane[]>, count: (l: Lane1['id'], n: number) => [number, string]): Pick<EraLanes, 'lanes' | 'laneOf' | 'rowOf' | 'nextOf' | 'influences' | 'effLines'> {
   const items = [...new Set(ids)].map((id) => D.byId.get(id)).filter((p): p is PItem => !!p && !p.draft)
     .sort((a, b) => a.s - b.s || b.e - a.e || a.id.localeCompare(b.id));
   const defs = [
@@ -947,8 +956,12 @@ function buildLanes(D: Prepared, ids: Iterable<string>, lanesOf: ReadonlyMap<str
     const ranked = [...mine].sort((a, b) => D.prominence(b.id) - D.prominence(a.id) || a.s - b.s);
     return { ...l, count: n, countLabel, spans, moments: mine.filter((it) => it.kind === 'event'), order: mine, ranked, rows: rowEnd.length };
   });
+  const influences = laneInfluences(D.relations, lanesOf, new Set(items.map((it) => it.id)));
+  const effLines = new Map<string, LaneInfluence[]>();
+  const line = (k: string, x: LaneInfluence) => (effLines.get(k) ?? effLines.set(k, []).get(k)!).push(x);
+  for (const x of influences) { line(`${x.from}:${x.r.fromId}`, x); line(`${x.to}:${x.r.toId}`, x); }
   // "No lane yet" is last, so leaving it out moves no other lane.
-  return { lanes: lanes.filter((l) => l.id !== NO_LANE || l.order.length), laneOf, rowOf, nextOf };
+  return { lanes: lanes.filter((l) => l.id !== NO_LANE || l.order.length), laneOf, rowOf, nextOf, influences, effLines };
 }
 
 /**
@@ -1006,18 +1019,33 @@ export function polityLanes(D: Prepared, pick: string, members: readonly string[
 const isOpen = (EL: EraLanes, L: Lane1) => !EL.compact || EL.open === L.id;
 /** On a phone a closed lane lists this many, most prominent first. */
 const P_CLOSED_LIST = 3;
-const LANE_CLOSED = 46;
 const P_TICKS = 14;
+/** On a phone, each effect line under an entry. */
+const P_EFF = 22;
+
+/** An entry's effect lines in a lane. */
+const effOf = (EL: EraLanes, L: Lane1, id: string) => EL.effLines.get(`${L.id}:${id}`) ?? [];
+/** A closed lane names its entries at an end of an arrow, then its `n` most prominent others, most prominent first. */
+function namedOf(EL: EraLanes, L: Lane1, n: number): PItem[] {
+  const ends = L.ranked.filter((it) => effOf(EL, L, it.id).length);
+  return [...ends, ...L.ranked.filter((it) => !effOf(EL, L, it.id).length).slice(0, n)];
+}
+/** What a phone's lane lists: all of it, or (closed) its named entries in time order. */
+const phoneList = (EL: EraLanes, L: Lane1) => (isOpen(EL, L) ? L.order : namedOf(EL, L, P_CLOSED_LIST).sort((a, b) => a.s - b.s));
+/** A line in a phone's list, with its effect lines under it. */
+const itemH = (EL: EraLanes, L: Lane1, id: string) => P_ITEM + effOf(EL, L, id).length * P_EFF;
+const listH = (EL: EraLanes, L: Lane1, list: readonly PItem[]) => list.reduce((h, it) => h + itemH(EL, L, it.id), 0);
 
 function laneH(EL: EraLanes, L: Lane1, phone: boolean): number {
-  const open = isOpen(EL, L), more = EL.compact && L.order.length > P_CLOSED_LIST;
+  const open = isOpen(EL, L);
   if (phone) {
     if (!L.order.length) return P_HEAD + 34;
-    if (!open) return P_HEAD + P_TICKS + 6 + Math.min(P_CLOSED_LIST, L.order.length) * P_ITEM + (more ? P_ITEM : 0) + 10;
-    return P_HEAD + (L.moments.length ? P_MOMENT : 0) + L.rows * P_ROW + 6 + L.order.length * P_ITEM + (more ? P_ITEM : 0) + 10;
+    const list = phoneList(EL, L), more = EL.compact && L.order.length > P_CLOSED_LIST;
+    if (!open) return P_HEAD + P_TICKS + 6 + listH(EL, L, list) + (more && list.length < L.order.length ? P_ITEM : 0) + 10;
+    return P_HEAD + (L.moments.length ? P_MOMENT : 0) + L.rows * P_ROW + 6 + listH(EL, L, list) + (more ? P_ITEM : 0) + 10;
   }
   if (!L.order.length) return LANE1_EMPTY;
-  if (!open) return LANE_CLOSED;
+  if (!open) return closedH(EL, L);
   return Math.max(LANE_MIN, PAD1 + (L.moments.length ? MOMENT_ROW : 0) + L.rows * ROW_H + PAD_BOTTOM);
 }
 const lanesH = (EL: EraLanes, phone: boolean) => EL.lanes.reduce((h, L) => h + laneH(EL, L, phone), 0);
@@ -1037,8 +1065,8 @@ export function lane1Span(EL: EraLanes, id: string, phone: boolean): [number, nu
   const top = laneTop(EL, L.id, phone);
   if (!isOpen(EL, L)) return [top, top + laneH(EL, L, phone)];
   if (phone) {
-    const y = top + P_HEAD + (L.moments.length ? P_MOMENT : 0) + L.rows * P_ROW + 6 + L.order.findIndex((x) => x.id === id) * P_ITEM;
-    return [y, y + P_ITEM];
+    const y = top + P_HEAD + (L.moments.length ? P_MOMENT : 0) + L.rows * P_ROW + 6 + listH(EL, L, L.order.slice(0, L.order.findIndex((x) => x.id === id)));
+    return [y, y + itemH(EL, L, id)];
   }
   const rows = top + PAD1 + (L.moments.length ? MOMENT_ROW : 0);
   const row = EL.rowOf.get(`${L.id}:${id}`);
@@ -1063,7 +1091,7 @@ const entriesN = (n: number) => `${n} ${n === 1 ? 'entry' : 'entries'}`;
 
 const highlightsN = (n: number) => `${n} ${n === 1 ? 'highlight' : 'highlights'}`;
 const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
-const blank = (S: Scene): Scene => ({ ...S, z: [[], [], [], []], gutter: [], axis: [], targets: [], clusters: [], boxes: new Map(), adds: [] });
+const blank = (S: Scene): Scene => ({ ...S, z: [[], [], [], []], gutter: [], axis: [], targets: [], clusters: [], boxes: new Map(), laneBoxes: new Map(), adds: [] });
 
 /** A primitive moved by `Y` and faded: marks by `ma`, words and glyphs by `ta`. Arrows and shapes wait until it's open. */
 function squash(p: Prim, Y: (y: number) => number, ma: number, ta: number): Prim | undefined {
@@ -1126,9 +1154,60 @@ function lanes1(c: Ctx, EL: EraLanes, phone: boolean) {
   for (const L of EL.lanes) {
     const h = laneH(EL, L, phone);
     if (top + h >= lanesTop && top <= E.h) (phone ? phoneLane : lane1)(cl, EL, L, top, h);
+    else if (!phone && EL.influences.length) {
+      // Scrolled out of view: only where its entries would be, so an arrow to one runs off the edge toward it.
+      const ghost: Ctx = { ...cl, top: -Infinity, bottom: Infinity, S: blank(c.S) };
+      lane1(ghost, EL, L, top, h);
+      for (const [k, b] of ghost.S.laneBoxes) c.S.laneBoxes.set(k, b);
+    }
     top += h;
   }
+  if (phone) marginArcs(cl, EL, lanesTop - V.scrollY);
+  else influences1(cl, EL);
   head1(c, EL, phone);
+}
+
+/** An entry's name in the scene, as a box, so an effect's pill can keep off it. */
+function textBox(M: Measure, p: Prim): Box | undefined {
+  if (p.t !== 2 || !p.s) return undefined;
+  const w = M(p.f, p.s), x = p.anchor === 'middle' ? p.x - w / 2 : p.anchor === 'end' ? p.x - w : p.x;
+  return { x: x - 2, y: p.y - 12, w: w + 4, h: 16 };
+}
+
+/**
+ * The arrows between lanes (`representations/influence.ts`). Hovering or focusing an arrow or an
+ * entry at an end of one (or opening it) puts it in focus: the other arrows fade, and so do the
+ * named entries it doesn't touch.
+ */
+function influences1(c: Ctx, EL: EraLanes) {
+  const { D, V, E, S, X } = c;
+  if (!EL.influences.length) return;
+  const hover = V.hover?.startsWith(ARROW) ? V.hover.slice(ARROW.length) : V.hover;
+  const touches = (x: LaneInfluence, id: string | undefined) => !!id && (x.r.id === id || x.r.fromId === id || x.r.toId === id);
+  const focus = [hover, V.active, V.selected].find((id) => EL.influences.some((x) => touches(x, id)));
+  const arrows: ArrowIn[] = [];
+  for (const x of EL.influences) {
+    const a = S.laneBoxes.get(`${x.from}:${x.r.fromId}`), b = S.laneBoxes.get(`${x.to}:${x.r.toId}`);
+    const fa = D.byId.get(x.r.fromId), fb = D.byId.get(x.r.toId);
+    if (!a || !b || !fa || !fb) continue;
+    const on = touches(x, focus);
+    arrows.push({
+      key: x.r.id, from: { id: fa.id, box: a, s: fa.s, e: fa.e }, to: { id: fb.id, box: b, s: fb.s, e: fb.e },
+      label: describeEffect(x.r, 'out').toLowerCase(), color: `var(--pig-${PIGMENT[x.from]})`, focus: on, faded: !!focus && !on,
+    });
+  }
+  const taken = [...S.z[2].flatMap((p) => textBox(E.measure, p) ?? []), ...[...S.laneBoxes.values()].filter((b) => b.w <= 16)];
+  const drawn = arrowPrims(arrows, X, E.measure, taken, { top: c.top, bottom: c.bottom });
+  S.z[3].push(...drawn.marks, ...drawn.labels);
+  S.targets.push(...drawn.targets);
+  // In focus, the named entries it doesn't touch fade (while an entry is open its connections already light up).
+  if (focus && !V.roles) {
+    const near = new Set(EL.influences.filter((x) => touches(x, focus)).flatMap((x) => [x.r.fromId, x.r.toId]));
+    for (const z of [S.z[1], S.z[2]]) for (let i = 0; i < z.length; i++) {
+      const p = z[i];
+      if (p.id && D.byId.has(p.id) && !near.has(p.id)) z[i] = { ...p, a: p.a * 0.38 };
+    }
+  }
 }
 
 /** What an empty lane says, in Bob's words. */
@@ -1166,53 +1245,69 @@ function lane1(c: Ctx, EL: EraLanes, L: Lane1, top: number, h: number) {
     S.z[2].push({ t: 2, k: `qe${L.id}`, a: 1, cls: 'tl-lane-empty', x: Math.max(x0, wa) + 16, y: top + h / 2 + 5, s: emptyNote(L), f: 'note', fill: 'var(--muted)' });
     return;
   }
-  if (!isOpen(EL, L)) { closedLane(c, L, top, h); return; }
+  if (!isOpen(EL, L)) { closedLane(c, EL, L, top, h); return; }
   let rowsTop = top + PAD1;
   if (L.moments.length) { moments1(c, L, rowsTop); rowsTop += MOMENT_ROW; }
   for (const it of L.spans) phase(c, EL, L, it, rowsTop + EL.rowOf.get(`${L.id}:${it.id}`)! * ROW_H);
 }
 
-/** How many a closed lane names. */
-const CLOSED_NAMES = 5;
+/** How many a closed lane names besides the entries at an end of an arrow. */
+const CLOSED_NAMES = 3;
+/** A closed lane: a band of ticks, then its named entries on up to three rows. */
+const CLOSED_TICKS = 16, CLOSED_ROW = 20;
+/** How many rows a closed lane's names take: neighbours in time go on different rows, so their names don't collide. */
+const closedRows = (n: number) => (n <= 1 ? 1 : n <= 4 ? 2 : 3);
+const closedH = (EL: EraLanes, L: Lane1) => CLOSED_TICKS + closedRows(namedOf(EL, L, CLOSED_NAMES).length) * CLOSED_ROW + 8;
 
-/** A closed lane: every entry a faint tick, and up to five of the most prominent named, never overlapping. Clicking it opens it. */
-function closedLane(c: Ctx, L: Lane1, top: number, h: number) {
+/**
+ * A closed lane: every entry a faint tick; each entry at an end of an arrow is named, then the three
+ * most prominent, in time order on up to three rows: a diamond at its start, its years as a thin
+ * bar (so an arrow lands at the year it acted), and its name. Clicking the lane opens it.
+ */
+function closedLane(c: Ctx, EL: EraLanes, L: Lane1, top: number, h: number) {
   const { V, E, S, X, x0, x1 } = c;
   const M = E.measure;
   if (top + h < c.top || top > c.bottom) return;
   S.targets.push({ id: LANE_TOGGLE + L.id, x: x0, y: top, w: x1 - x0, h });
+  const named = namedOf(EL, L, CLOSED_NAMES).sort((a, b) => a.s - b.s || a.id.localeCompare(b.id));
+  const isNamed = new Set(named.map((it) => it.id));
   for (const it of L.order) {
     const xa = X(it.s), xb = X(it.e);
     if (xb < x0 - 2 || xa > x1 + 2) continue;
-    if (it.kind !== 'event' && xb - xa > 2) {
+    if (!isNamed.has(it.id) && it.kind !== 'event' && xb - xa > 2) {
       const ra = Math.max(xa, x0 - 2);
-      S.z[0].push({ t: 0, k: `qk${L.id}${it.id}`, a: 1, x: ra, y: top + h - 9, w: Math.min(xb, x1 + 2) - ra, h: 3, r: 1.5, fill: tint(L.color, 28) });
+      S.z[0].push({ t: 0, k: `qk${L.id}${it.id}`, a: 1, x: ra, y: top + 11, w: Math.min(xb, x1 + 2) - ra, h: 2, r: 1, fill: tint(L.color, 28) });
     }
-    if (xa >= x0) S.z[0].push({ t: 3, k: `qt${L.id}${it.id}`, a: 1, cls: 'tl-tick1', x1: xa, y1: top + 5, x2: xa, y2: top + 13, stroke: tint(L.color, 55) });
+    if (xa >= x0) S.z[0].push({ t: 3, k: `qt${L.id}${it.id}`, a: 1, cls: 'tl-tick1', x1: xa, y1: top + 4, x2: xa, y2: top + 11, stroke: tint(L.color, 55) });
   }
-  // Names sit under the ticks, above the faint spans.
-  const cy = top + 25;
-  const taken: [number, number][] = [];
-  for (const it of L.ranked) {
-    if (taken.length >= CLOSED_NAMES) break;
-    if (it.e < V.win.start || it.s > V.win.end) continue;
+  const R = closedRows(named.length);
+  const D1 = 10;
+  named.forEach((it, i) => {
+    if (it.e < V.win.start || it.s > V.win.end) return;
+    const row = i % R;
+    const cy = top + CLOSED_TICKS + row * CLOSED_ROW + CLOSED_ROW / 2;
     // A span already under way sticks to the left edge.
-    const x = Math.max(X(it.s), x0 + DIAMOND / 2 + 4);
-    const lx = x + DIAMOND / 2 + 5;
-    const label = fit(M, 'ui', titleOf(it), x1 - 6 - lx);
-    if (!label) continue;
-    const span: [number, number] = [x - DIAMOND / 2 - 4, lx + M('ui', label) + 10];
-    if (taken.some(([a, b]) => span[0] < b && span[1] > a)) continue;
-    taken.push(span);
+    const x = Math.max(X(it.s), x0 + D1 / 2 + 2);
+    const lx = x + D1 / 2 + 5;
+    // Its name runs until the next one on its row.
+    const next = named.slice(i + 1).find((_, j) => (i + 1 + j) % R === row);
+    const room = Math.min(x1 - 6, next ? X(next.s) - D1 - 4 : Infinity) - lx;
+    const label = fit(M, 'ui', titleOf(it), room);
     const sel = V.selected === it.id, hot = sel || V.hover === it.id;
     const role = roleOf(V, it);
     const lit = ROLE_STROKE[role.trim()];
-    if (hot || lit) S.z[1].push({ t: 1, k: `qnh${L.id}${it.id}`, a: 1, cls: role.trim() || undefined, x, y: cy, r: DIAMOND / 2 + 3, fill: 'var(--panel)', stroke: lit ?? 'var(--ink)', sw: lit ? 2.5 : 1.5 });
-    S.z[1].push({ t: 6, k: `qn${L.id}${it.id}`, a: 1, cls: `tl-mark tl-named${sel ? ' selected' : ''}${role}`, id: it.id, x: x - DIAMOND / 2, y: cy - DIAMOND / 2, w: DIAMOND, g: it.approx ? 'diamond-approx' : 'diamond', color: L.color });
-    S.z[2].push({ t: 2, k: `qnt${L.id}${it.id}`, a: 1, cls: `tl-label${role}`, id: it.id, x: lx, y: cy + 4, s: label, f: 'ui', fill: hot ? 'var(--ink)' : 'var(--ink-2)' });
-    S.boxes.set(it.id, { x: x - DIAMOND / 2, y: cy - DIAMOND / 2, w: DIAMOND, h: DIAMOND });
-    S.targets.push({ id: it.id, lane: L.id, x: span[0], y: top + 4, w: Math.max(MIN_HIT, span[1] - span[0]), h: Math.max(MIN_HIT, h - 8) });
-  }
+    const xb = Math.min(X(it.e), x1 + 2);
+    const span = it.kind !== 'event' && xb - x > 2;
+    if (span) S.z[1].push({ t: 0, k: `qnb${L.id}${it.id}`, a: 1, cls: `tl-named-bar${role}`, id: it.id, x, y: cy + 6, w: xb - x, h: 3, r: 1.5, fill: tint(L.color, hot ? 75 : 50) });
+    if (hot || lit) S.z[1].push({ t: 1, k: `qnh${L.id}${it.id}`, a: 1, cls: role.trim() || undefined, x, y: cy, r: D1 / 2 + 3, fill: 'var(--panel)', stroke: lit ?? 'var(--ink)', sw: lit ? 2.5 : 1.5 });
+    S.z[1].push({ t: 6, k: `qn${L.id}${it.id}`, a: 1, cls: `tl-mark tl-named${sel ? ' selected' : ''}${role}`, id: it.id, x: x - D1 / 2, y: cy - D1 / 2, w: D1, g: it.approx ? 'diamond-approx' : 'diamond', color: L.color });
+    if (label) S.z[2].push({ t: 2, k: `qnt${L.id}${it.id}`, a: 1, cls: `tl-label${role}`, id: it.id, x: lx, y: cy + 4, s: label, f: 'ui', fill: hot ? 'var(--ink)' : 'var(--ink-2)' });
+    const box = span ? { x: x - D1 / 2, y: cy - D1 / 2, w: xb - x + D1 / 2, h: D1 + 4 } : { x: x - D1 / 2, y: cy - D1 / 2, w: D1, h: D1 };
+    S.boxes.set(it.id, box);
+    S.laneBoxes.set(`${L.id}:${it.id}`, box);
+    const right = label ? lx + M('ui', label) + 4 : x + D1 / 2 + 4;
+    S.targets.push({ id: it.id, lane: L.id, x: x - D1 / 2 - 4, y: cy - CLOSED_ROW / 2, w: Math.max(MIN_HIT, right - x + D1 / 2 + 4), h: CLOSED_ROW });
+  });
 }
 
 /** Key moments: diamonds on a row above the spans, each named unless its name would run into the one before. */
@@ -1233,6 +1328,7 @@ function moments1(c: Ctx, L: Lane1, rowTop: number) {
     if (hot || lit) S.z[1].push({ t: 1, k: `qmh${L.id}${it.id}`, a: 1, cls: role.trim() || undefined, x, y: cy, r: w / 2 + 3, fill: 'var(--panel)', stroke: lit ?? 'var(--ink)', sw: lit ? 2.5 : 1.5 });
     S.z[1].push({ t: 6, k: `qm${L.id}${it.id}`, a: 1, cls: `tl-mark tl-moment${sel ? ' selected' : ''}${role}`, id: it.id, x: x - w / 2, y: cy - w / 2, w, g: it.approx ? 'diamond-approx' : 'diamond', color: L.color });
     S.boxes.set(it.id, { x: x - w / 2, y: cy - w / 2, w, h: w });
+    S.laneBoxes.set(`${L.id}:${it.id}`, S.boxes.get(it.id)!);
     const hx = x - MIN_HIT / 2;
     let hw = MIN_HIT;
     if (x - DIAMOND / 2 - 4 > right) {
@@ -1267,6 +1363,7 @@ function phase(c: Ctx, EL: EraLanes, L: Lane1, it: PItem, rowTop: number) {
     stroke: lit ?? (sel ? 'var(--ink)' : `color-mix(in srgb, ${L.color} 60%, transparent)`), sw: lit ? 2.5 : sel ? 2 : 1, dash: !lit && !sel && (it.approx || it.endApprox),
   });
   S.boxes.set(it.id, { x: rx, y: by, w: rw, h: bh });
+  S.laneBoxes.set(`${L.id}:${it.id}`, S.boxes.get(it.id)!);
   let hx = rx, hw = rw;
   if (hw < MIN_HIT) { hx = rx + rw / 2 - MIN_HIT / 2; hw = MIN_HIT; }
   // Its name: inside, else just after it when there's room before the next in its row, else cut short, else hidden.
@@ -1318,7 +1415,7 @@ function phoneLane(c: Ctx, EL: EraLanes, L: Lane1, top: number, h: number) {
       S.z[1].push({ t: 3, k: `qt${L.id}${it.id}`, a: 1, cls: 'tl-tick1', x1: x, y1: y + 2, x2: x, y2: y + P_TICKS - 2, stroke: tint(L.color, 55) });
     }
     y += P_TICKS + 6;
-    list = L.ranked.slice(0, P_CLOSED_LIST).sort((a, b) => a.s - b.s);
+    list = phoneList(EL, L);
   } else {
     if (L.moments.length) {
       for (const m of L.moments) {
@@ -1336,8 +1433,11 @@ function phoneLane(c: Ctx, EL: EraLanes, L: Lane1, top: number, h: number) {
     }
     y += L.rows * P_ROW + 6;
   }
-  list.forEach((it, i) => {
-    const ry = y + i * P_ITEM;
+  let next = y;
+  list.forEach((it) => {
+    const ry = next;
+    next += itemH(EL, L, it.id);
+    effectLines(c, EL, L, it, ry + P_ITEM);
     if (ry + P_ITEM < c.top || ry > c.bottom) return;
     const sel = V.selected === it.id, hot = sel || V.hover === it.id;
     const role = roleOf(V, it);
@@ -1357,11 +1457,78 @@ function phoneLane(c: Ctx, EL: EraLanes, L: Lane1, top: number, h: number) {
     S.targets.push({ id: it.id, lane: L.id, x: x0, y: ry, w: x1 - x0, h: P_ITEM });
   });
   // "Show all 12" under a closed lane's list, "Show fewer" under an open one's.
-  if (EL.compact && L.order.length > P_CLOSED_LIST) {
-    const ry = y + list.length * P_ITEM;
+  if (EL.compact && L.order.length > P_CLOSED_LIST && (open || list.length < L.order.length)) {
+    const ry = y + listH(EL, L, list);
     const hot = V.hover === LANE_TOGGLE + L.id;
     S.z[2].push({ t: 2, k: `qls${L.id}`, a: 1, cls: 'tl-lane-toggle', id: LANE_TOGGLE + L.id, x: x0 + 12 + P_YEAR, y: ry + 19.5, s: `${toggleNote(EL, L)} ${open ? '▴' : '▾'}`, f: 'ui', fill: hot ? 'var(--ink)' : 'var(--ink-2)' });
     S.targets.push({ id: LANE_TOGGLE + L.id, x: x0, y: ry, w: x1 - x0, h: P_ITEM });
+  }
+}
+
+/**
+ * On a phone, under an entry at an end of an arrow: a line per effect, the other lane's square, the
+ * effect in bold, then the other entry ("weakened by Plague of Athens"). Tapping it opens the connection.
+ */
+function effectLines(c: Ctx, EL: EraLanes, L: Lane1, it: PItem, top: number) {
+  const { D, V, E, S, x0, x1 } = c;
+  const M = E.measure;
+  effOf(EL, L, it.id).forEach((x, i) => {
+    const y = top + i * P_EFF;
+    const cause = x.r.fromId === it.id;
+    if (y + P_EFF < c.top || y > c.bottom) return;
+    const otherLane = cause ? x.to : x.from;
+    const other = D.byId.get(cause ? x.r.toId : x.r.fromId);
+    const id = ARROW + x.r.id, hot = V.hover === id;
+    const k = `qe${L.id}${it.id}${x.r.id}`;
+    if (hot) S.z[1].push({ t: 0, k: `${k}b`, a: 1, x: x0 + 4, y: y + 1, w: x1 - x0 - 8, h: P_EFF - 2, r: 4, fill: tint(L.color, 10) });
+    let tx = x0 + 12 + P_YEAR;
+    S.z[2].push({ t: 0, k: `${k}s`, a: 1, x: tx, y: y + 7, w: 8, h: 8, r: 1, fill: `var(--pig-${PIGMENT[otherLane]})` });
+    tx += 14;
+    const word = describeEffect(x.r, cause ? 'out' : 'in').toLowerCase();
+    S.z[2].push({ t: 2, k: `${k}w`, a: 1, cls: 'tl-effect-line', id, x: tx, y: y + 15, s: word, f: 'effLineB', fill: 'var(--ink)' });
+    tx += M('effLineB', word) + 5;
+    const name = fit(M, 'effLine', other?.title ?? 'Missing entry', x1 - 12 - tx);
+    if (name) S.z[2].push({ t: 2, k: `${k}n`, a: 1, cls: 'tl-effect-line', id, x: tx, y: y + 15, s: name, f: 'effLine', fill: 'var(--ink-2)' });
+    S.targets.push({ id, x: x0, y, w: x1 - x0, h: P_EFF });
+  });
+}
+
+/** On a phone: the middle of each effect line (`<connection>:from` or `:to`), lanes starting at `top`, in view or not. */
+function effectLineYs(EL: EraLanes, top: number): Map<string, number> {
+  const ys = new Map<string, number>();
+  for (const L of EL.lanes) {
+    if (L.order.length) {
+      let y = top + P_HEAD + (isOpen(EL, L) ? (L.moments.length ? P_MOMENT : 0) + L.rows * P_ROW + 6 : P_TICKS + 6);
+      for (const it of phoneList(EL, L)) {
+        effOf(EL, L, it.id).forEach((x, i) => ys.set(`${x.r.id}:${x.r.fromId === it.id ? 'from' : 'to'}`, y + P_ITEM + i * P_EFF + P_EFF / 2));
+        y += itemH(EL, L, it.id);
+      }
+    }
+    top += laneH(EL, L, true);
+  }
+  return ys;
+}
+
+/** On a phone: arcs in the left margin join each arrow's two effect lines, in the cause's pigment, nested on their own tracks. */
+function marginArcs(c: Ctx, EL: EraLanes, top: number) {
+  const { S, x0 } = c;
+  const ys = effectLineYs(EL, top);
+  const spans = EL.influences.flatMap((x) => {
+    const ya = ys.get(`${x.r.id}:from`), yb = ys.get(`${x.r.id}:to`);
+    return ya !== undefined && yb !== undefined ? [{ x, ya, yb }] : [];
+  }).sort((p, q) => Math.abs(p.yb - p.ya) - Math.abs(q.yb - q.ya));
+  // The shortest go innermost; each takes the first track free over its whole height.
+  const tracks: Array<Array<[number, number]>> = [];
+  for (const sp of spans) {
+    const lo = Math.min(sp.ya, sp.yb), hi = Math.max(sp.ya, sp.yb);
+    let t = tracks.findIndex((tr) => !tr.some(([a, b]) => lo < b + 3 && hi > a - 3));
+    if (t < 0) t = tracks.push([]) - 1;
+    tracks[t].push([lo, hi]);
+    const xt = Math.max(x0 + 1.5, x0 + 9 - (t + 1) * 2.5), xe = x0 + 10;
+    const id = ARROW + sp.x.r.id;
+    const hot = c.V.hover === id;
+    if (hi < c.top || lo > c.bottom) continue;
+    S.z[3].push({ t: 5, k: `qma${sp.x.r.id}`, a: 1, cls: 'tl-margin-arc', d: `M${xe} ${sp.ya} C${xt} ${sp.ya} ${xt} ${sp.yb} ${xe} ${sp.yb}`, stroke: `var(--pig-${PIGMENT[sp.x.from]})`, sw: hot ? 2.2 : 1.4 });
   }
 }
 
@@ -1726,10 +1893,11 @@ function offscreen(c: Ctx, id: string): Box | undefined {
   return { x: X(it.s), y: y0 + 3, w: Math.max(3, X(it.e) - X(it.s)), h: 22 };
 }
 
-function arrows(c: Ctx, offscreenToo = true) {
+function arrows(c: Ctx, offscreenToo = true, skip?: ReadonlySet<string>) {
   const { V, S } = c;
   const off = (id: string) => (offscreenToo ? offscreen(c, id) : undefined);
   for (const l of V.links ?? []) {
+    if (skip?.has(`${l.fromId}>${l.toId}`)) continue;
     const from = S.boxes.get(l.fromId) ?? off(l.fromId), to = S.boxes.get(l.toId) ?? off(l.toId);
     // Both ends must be in the window's time (one may be scrolled out of view), and not in the same cluster.
     if (!from || !to || from === to) continue;

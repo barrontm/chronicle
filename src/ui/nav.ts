@@ -5,6 +5,7 @@ import type { ItemKind, Lane } from '../model/types';
 /** What the side drawer is showing. The drawer keeps a stack so "Back" works across links. */
 export type Panel =
   | { type: 'item'; id: string; edit?: boolean }
+  | { type: 'relation'; id: string; edit?: boolean }
   /** `lane` and `partOf` come from a lane's "+ Add" in an era or polity. */
   | { type: 'new-item'; year?: number; categoryId?: string; kind?: ItemKind; lane?: Lane; partOf?: string; draft?: ItemDraft }
   | { type: 'ai-draft' }
@@ -38,4 +39,6 @@ export interface Nav {
   draw: (onDone: (g: Area, year: number) => void) => void;
   /** Pick one point on the map; `onDone` gets [lon, lat]. */
   pick: (onDone: (p: [number, number]) => void) => void;
+  /** Open a Wikipedia article in the reader (on a phone, the map sheet gets out of the way). */
+  read: (a: { key: string; title: string }) => void;
 }

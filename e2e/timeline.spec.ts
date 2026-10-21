@@ -195,7 +195,8 @@ test('drag an open entry to change its dates, undo it, drag again, and it stays 
  */
 async function scrollToMark(timeline: Locator, target: Locator) {
   const host = (await timeline.boundingBox())!;
-  const lo = host.y + 60, hi = host.y + host.height - 20;
+  // Below the axis and level 1's header row, which a click there would hit instead.
+  const lo = host.y + 90, hi = host.y + host.height - 20;
   for (let i = 0; i < 150; i++) {
     // Any one of its marks in view will do (a world event has one in each band it touched).
     const mids = (await target.evaluateAll((els) => els.map((e) => { const r = e.getBoundingClientRect(); return r.y + Math.min(r.height, 30) / 2; })));
@@ -337,6 +338,7 @@ test('Athens opens into its six lanes: Laurion in Economy, the war in War; a lan
   // Opening War shows all of it; Esc closes it again, then folds Athens back into the overview, then lets go of it.
   const toggle = timeline.locator('text.tl-lane-toggle[data-id="__lane:war"]');
   await expect(toggle).toHaveText(/^Show all \d+ ▾$/);
+  await scrollToMark(timeline, toggle);
   await toggle.click({ force: true });
   await expect(toggle).toHaveText('Show fewer ▴');
   if (!isMobile) await scrollToMark(timeline, timeline.locator('.tl-phase[data-id=i_pelop]'));
@@ -380,6 +382,63 @@ test('Add under a lane in Athens opens a new entry in that lane, part of Athens,
   const mark = isMobile ? timeline.locator('text.tl-list-item', { hasText: 'Laurion silver strike' }) : timeline.locator('text.tl-list-item.selected, .tl-moment.selected');
   await scrollToMark(timeline, mark);
   if (!isMobile) await expect(timeline.locator('text.tl-list-item.selected, text.tl-label', { hasText: 'Laurion silver strike' }).first()).toBeVisible();
+});
+
+test('linking the war to the economy as “weakened” with a highlight draws an arrow across Athens’ lanes and a line in both panels @phone', async ({ page, isMobile }) => {
+  test.slow();
+  const { timeline } = await openAthens(page, isMobile);
+  const named = (id: string) => timeline.locator(isMobile ? `text.tl-list-item[data-id=${id}]` : `.tl-named[data-id=${id}]`);
+  const close = () => page.getByRole('button', { name: 'Close' }).first().click();
+
+  // The Archidamian War led to… the Athenian owls, added in its editor.
+  await scrollToMark(timeline, named('i_archidamian'));
+  await named('i_archidamian').first().click({ force: true });
+  const view = page.getByTestId('item-view');
+  await expect(view.getByRole('heading', { name: 'Archidamian War' })).toBeVisible();
+  await view.getByRole('button', { name: 'Edit' }).click();
+  const editor = page.getByTestId('item-editor');
+  await editor.getByLabel('Kind of connection').selectOption({ label: 'Led to' });
+  await editor.getByPlaceholder('…which entry?').fill('owls');
+  await editor.getByRole('option', { name: /Athenian silver/ }).click();
+  await editor.getByRole('button', { name: 'Save changes' }).click();
+
+  // Its effects on other lanes list it; opening the line opens the connection, where Bob says what it did and why.
+  await view.getByTestId('effects').getByRole('button', { name: /^Led to: Athenian silver “owls”/ }).click();
+  const rel = page.getByTestId('relation-view');
+  await expect(rel.getByText('No highlights yet. Pick the passages that show this.')).toBeVisible();
+  await rel.getByRole('button', { name: 'Edit' }).click();
+  const relEdit = page.getByTestId('relation-editor');
+  await relEdit.getByRole('button', { name: 'weakened', exact: true }).click();
+  await relEdit.getByLabel('Find a highlight').fill('silver mines');
+  await relEdit.getByRole('checkbox', { name: /lost its revenue from the silver mines/ }).check();
+  await relEdit.getByRole('button', { name: 'Save changes' }).click();
+  await expect(rel.getByRole('heading', { level: 2 })).toHaveText('Archidamian War weakened Athenian silver “owls”');
+  await expect(rel.getByTestId('evidence')).toHaveCount(1);
+  await expect(rel.getByText('War', { exact: true })).toBeVisible();
+  await close();
+
+  if (isMobile) {
+    // On the phone: a line under the war, the effect in bold, and the owls.
+    await scrollToMark(timeline, timeline.locator('text.tl-effect-line', { hasText: /^weakened$/ }));
+    await expect(timeline.locator('path.tl-margin-arc').first()).toBeAttached();
+  } else {
+    // On the laptop: an arrow in War's cinnabar from the war, across to the owls in Economy, its pill opening the connection.
+    const arc = timeline.locator('path.tl-influence[data-from=i_archidamian][data-to=i_owls]');
+    await expect(arc).toBeAttached();
+    const rid = (await arc.getAttribute('data-id'))!;
+    await named('i_archidamian').first().hover({ force: true });
+    await expect(arc).toHaveClass(/focus/);
+    const pill = timeline.locator(`text.tl-effect-label[data-id="${rid}"]`);
+    await expect(pill).toHaveText('weakened');
+    await pill.click({ force: true });
+    await expect(rel.getByRole('heading', { level: 2 })).toHaveText('Archidamian War weakened Athenian silver “owls”');
+    await close();
+  }
+
+  // The owls' panel reads it the other way.
+  await scrollToMark(timeline, named('i_owls'));
+  await named('i_owls').first().click({ force: true });
+  await expect(view.getByTestId('effects').getByRole('button', { name: /^Weakened by: Archidamian War/ })).toBeVisible();
 });
 
 test('the map follows the overview: Athens in 431 BCE at war with Sparta and Corinth, the War lane, and Persia clicked on the map', async ({ page }) => {

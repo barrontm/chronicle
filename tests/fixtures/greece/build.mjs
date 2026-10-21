@@ -410,6 +410,24 @@ for (const p of ov.participants) {
   });
 }
 
+// Phase 4b ticket 2: influences between lanes (docs/prototypes/influences.html). A connection the doc has keeps its id and gains the effect.
+{
+  const inf = influenceShapes();
+  items.push(...inf.items);
+  highlights.push(...inf.highlights);
+  for (const c of inf.connections) {
+    const i = relations.findIndex((r) => r.id === c.id);
+    if (i >= 0) relations[i] = c; else relations.push(c);
+  }
+  // Their ends are Athens': placed there, so they're in its lanes.
+  const ATHENS = { name: 'Athens', lat: 37.972, lon: 23.727 };
+  const at = { pericles: 'born', owls: 'site', juror_pay: 'site', megarian_decree: 'site', eisphora: 'site', emergency_coins: 'site' };
+  for (const [id, role] of Object.entries(at)) {
+    const it = items.find((x) => x.id === `i_${id}`);
+    if (!it.places) it.places = [{ ...ATHENS, role }];
+  }
+}
+
 const usedWp = [...wpIds.values()].map((s) => ({ ...s }));
 const doc = {
   schemaVersion: 9, id: 'doc_classical_greece', title: 'Classical Greece (test fixture)', updatedAt: NOW,
@@ -461,16 +479,14 @@ const next = {
   },
   // Phase 4: the overview. Lanes, marks, strength, regions, groups and participants are in the doc (v9); what's left is ticket 8's.
   overview: { alliances: ov.alliances },
-  // Phase 4b: influences between lanes (docs/prototypes/influences.html). Ticket 2 moves these into the doc.
-  influences: influenceShapes(),
 };
 
 // Connections across Athens' lanes, with an effect and the highlights that are their evidence, plus two economy entries and the
 // highlights the doc lacks. A connection the doc already has keeps its id, so moving these in adds the effect to it.
 function influenceShapes() {
   const items = [
-    { id: 'i_eisphora', kind: 'event', title: 'First war tax on property', start: { y: bce(428) }, categoryId: 'politics', description: 'A levy on the rich for the siege of Mytilene.', lanes: ['economy'], region: 'Greece', updatedAt: NOW },
-    { id: 'i_emergency_coins', kind: 'span', title: 'Gold and plated emergency coins', start: { y: bce(407) }, end: { y: bce(404) }, categoryId: 'politics', description: 'Gold from the Victories on the Acropolis, then silver-plated bronze.', lanes: ['economy'], region: 'Greece', updatedAt: NOW },
+    { id: 'i_eisphora', kind: 'event', title: 'First war tax on property', start: { y: bce(428) }, categoryId: 'politics', description: 'A levy on the rich for the siege of Mytilene.', lanes: ['economy'], updatedAt: NOW },
+    { id: 'i_emergency_coins', kind: 'span', title: 'Gold and plated emergency coins', start: { y: bce(407) }, end: { y: bce(404) }, categoryId: 'politics', description: 'Gold from the Victories on the Acropolis, then silver-plated bronze.', lanes: ['economy'], updatedAt: NOW },
   ];
   const H = (id, sourceId, text, on, lanes) => ({ id: `h_${id}`, sourceId, text, usedBy: [on], lanes, updatedAt: NOW });
   const highlights = [

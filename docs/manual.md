@@ -178,6 +178,18 @@ When you **Link** a highlight in the reader to an entry you already have, the tr
 
 Click a person on the timeline and the people connected to them by *influenced* light up: amber for who influenced them, blue for whom they influenced, with arrows showing which way it went. Entries connected in other ways (*caused*, *part of*, *responded to*, *related*) get a grey outline and a dashed line. Everything else fades back. The timeline zooms so they're all in view. Click empty space or close the panel to clear it. Lines only show while both entries are in view.
 
+### Effects on other lanes
+
+A connection between things in different lanes says how one lane acted on another: the Decelean War *weakened* the Athenian owls, the plague *prompted* the cult of Asclepius, the League's treasury *funded* the Parthenon.
+
+- **Say what it did.** Open the connection (from an entry's **Effects on other lanes**, or by clicking its arrow on the timeline) and press **Edit**. Under **What it did**, pick a word: caused, enabled, prompted, funded, strengthened, weakened, legitimised, ended. **+ your own** takes a word of yours ("starved"), and it joins the list for next time.
+- **Evidence.** In the same editor, tick the highlights that show it. The ones on either entry are listed first; **Find a highlight** searches all of them. The connection then quotes each one, with its source, and **Open in the reader** for a Wikipedia article. With none, it says "No highlights yet."
+- **On the timeline**, inside an open polity or era, each one is an arrow from the cause to what it acted on, in the cause's lane colour, landing at the year it acted, with the effect in a small label. Entries at either end of an arrow are always named in their lane, even while it's closed. Hover over an arrow or an entry (or tap one) to see only its arrows; the rest fade. A label that would cover a name shows only then. Click an arrow's label to open the connection.
+- **On a phone**, an entry at either end has a line under it for each effect ("weakened by Plague of Athens"), with the other lane's square; a thin line in the left margin joins the two ends. Tap the line to open the connection.
+- **An entry's panel** lists its **Effects on other lanes** both ways ("Weakened: Pericles", "Weakened by: Plague of Athens"). Each line opens the connection.
+
+*Part of* connections, and connections inside one lane, aren't drawn as effects.
+
 For a person added from Wikipedia, **Suggest influences** lists who Wikipedia says influenced them and whom they influenced. People already on your timeline get **Connect**; the rest get **Add from Wikipedia**. When you add a person from Wikipedia, their influences who are already on your timeline are suggested as connections (see Connections from Wikipedia). Suggestions need a connection.
 
 ## Pictures

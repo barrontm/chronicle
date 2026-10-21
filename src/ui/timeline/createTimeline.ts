@@ -1,8 +1,10 @@
 import { formatRange, jsDateToDecimalYear, moveDates, precisionOf, toDecimalYear } from '../../model/dates';
+import { describeEffect } from '../../model/doc';
 import type { EraRegion } from '../../model/eras';
 import type { Overview } from '../../model/overview';
 import type { DatedItem, HistDate, Lane, Relation, TimelineItem } from '../../model/types';
 import { bandSummary } from '../representations/era';
+import { ARROW } from '../representations/influence';
 import { DEEP_LIMITS, panBy, windowAround, zoomAround, type YearWindow } from '../timeNav';
 import { attachGestures } from './gestures';
 import {
@@ -57,6 +59,8 @@ export interface TimelineCallbacks {
   onFocus?: (f: OverviewFocus) => void;
   /** Bob let go of the region focused from the map (Esc). */
   onRegion?: (region: string | undefined) => void;
+  /** Level 1: Bob clicked an arrow between lanes (or its line on the phone): open that connection. */
+  onOpenRelation?: (id: string) => void;
 }
 
 /** What the overview has picked (`pol:<territory>` or a world event's id), whether it's open into its lanes, and its open lane with what's in it. */
@@ -297,6 +301,11 @@ export function createTimeline(host: HTMLElement, cb: TimelineCallbacks, initial
       const noun = t.cluster.kind === 'event' ? 'events' : t.cluster.kind === 'person' ? 'people' : 'periods';
       return { title: `${t.cluster.count} ${noun}${lead ? `, among them ${lead.title}` : ''}`, sub: 'Click to zoom in on them' };
     }
+    if (t.id.startsWith(ARROW)) {
+      const x = V.era?.influences.find((i) => i.r.id === t.id.slice(ARROW.length));
+      const a = x && D.byId.get(x.r.fromId), b = x && D.byId.get(x.r.toId);
+      return x && a && b ? { title: `${a.title} ${describeEffect(x.r, 'out').toLowerCase()} ${b.title}`, sub: 'Click to see the evidence' } : null;
+    }
     const era = level !== 2 ? eraById.get(t.id) : undefined;
     if (era) return { title: era.title, sub: bandSummary(era) };
     const pol = t.id.startsWith('pol:') ? D.polById.get(t.id.slice(4)) : undefined;
@@ -358,6 +367,7 @@ export function createTimeline(host: HTMLElement, cb: TimelineCallbacks, initial
       if (t?.id === ERAS_BACK) { closeEra(); return; }
       if (t?.id === OPEN_PICK) { if (V.pick) openPick(V.pick); return; }
       if (t?.id.startsWith(LANE_TOGGLE)) { toggleLane(t.id.slice(LANE_TOGGLE.length)); return; }
+      if (t?.id.startsWith(ARROW)) { cb.onOpenRelation?.(t.id.slice(ARROW.length)); return; }
       if (t?.cluster) {
         // Zoom to fit the cluster, so its members have room to split.
         const { s, e } = t.cluster;

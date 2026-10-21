@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { bibliographyFor, describeRelation, highlightsFor, newId, notesFor, relationsFor, remove, upsert, RELATION_TYPES } from '../../model/doc';
+import { bibliographyFor, describeEffect, describeRelation, effectsOf, highlightsFor, newId, notesFor, relationsFor, remove, upsert, RELATION_TYPES } from '../../model/doc';
 import { compareHistDate, formatItemDates, toDecimalYear } from '../../model/dates';
 import type { ItemDraft } from '../../media/wikipedia';
 import { KIND_LABEL as SUBJECT_LABEL, regionsIn } from '../../model/subjects';
@@ -8,9 +8,9 @@ import { useDoc } from '../DocContext';
 import { CitationsEditor, DateField, Field, RecordPicker } from '../fields';
 import { ImagePicker } from '../ImagePicker';
 import type { Nav } from '../nav';
-import { formatCitation, lanesInWords, titleOf } from '../util';
+import { formatCitation, LANE_LABEL, lanesInWords, PIGMENT, titleOf } from '../util';
 import { LaneChips } from '../LaneChips';
-import { lanesOf, sortLanes } from '../../model/lanes';
+import { entryLanes, lanesOf, sortLanes } from '../../model/lanes';
 import { placeLabel } from '../../model/places';
 import { placeYear } from '../../model/polities';
 import { PlacePolity, usePlacePolity } from '../PlacePolity';
@@ -21,7 +21,7 @@ import { QuickSource } from './SourcePanels';
 const KIND_LABEL: Record<ItemKind, string> = { event: 'Event', span: 'Period', person: 'Person' };
 
 /** Quoted reference text, kept visibly apart from Bob's own writing. */
-function Excerpt({ excerpt, source }: { excerpt: Pick<Highlight, 'text' | 'lanes'>; source?: Source }) {
+export function Excerpt({ excerpt, source }: { excerpt: Pick<Highlight, 'text' | 'lanes'>; source?: Source }) {
   return (
     <blockquote className="excerpt" data-testid="excerpt">
       <p>{excerpt.text}</p>
@@ -105,6 +105,8 @@ export function ItemView({ id, nav }: { id: string; nav: Nav }) {
       </ul>
       <button className="btn small" onClick={() => nav.open({ type: 'new-note', linkedIds: [id] })}>Write a note</button>
 
+      {lanes.length > 0 && <Effects id={id} nav={nav} />}
+
       {(outgoing.length > 0 || incoming.length > 0) && (
         <>
           <h3>Connections</h3>
@@ -180,6 +182,32 @@ export function ItemView({ id, nav }: { id: string; nav: Nav }) {
         >Delete</button>
       </div>
     </article>
+  );
+}
+
+/** "Effects on other lanes", both ways: "Weakened: Pericles", "Weakened by: Plague of Athens", each opening its connection. */
+function Effects({ id, nav }: { id: string; nav: Nav }) {
+  const { doc } = useDoc();
+  const { on, by } = effectsOf(doc.relations, entryLanes(doc.items, doc.highlights), id);
+  const rows = [...on.map((x) => ({ x, dir: 'out' as const, other: x.r.toId })), ...by.map((x) => ({ x, dir: 'in' as const, other: x.r.fromId }))];
+  return (
+    <section data-testid="effects">
+      <h3>Effects on other lanes</h3>
+      {rows.length === 0 && <p className="hint" style={{ color: 'var(--muted)' }}>None yet. Link it to something in another lane and say what it did.</p>}
+      <ul className="linklist">
+        {rows.map(({ x, dir, other }) => {
+          const lane = dir === 'out' ? x.to : x.from;
+          return (
+            <li key={x.r.id}>
+              <button onClick={() => nav.open({ type: 'relation', id: x.r.id })}>
+                <strong><span className="effect-word">{describeEffect(x.r, dir)}:</span> {titleOf(doc, other) ?? 'Missing entry'}</strong>
+                <small><span className="lane-square" style={{ background: `var(--pig-${PIGMENT[lane]})` }} />{LANE_LABEL[lane]}{x.r.highlightIds?.length ? ` · ${x.r.highlightIds.length === 1 ? '1 highlight' : `${x.r.highlightIds.length} highlights`}` : ''}</small>
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
   );
 }
 
@@ -362,7 +390,7 @@ export function ItemEditor({ id, init, draft: prefill, nav }: {
           const other = dir === 'out' ? r.toId : r.fromId;
           return (
             <div className="editor-row" key={r.id}>
-              <span className="grow"><small style={{ color: 'var(--muted)' }}>{describeRelation(r.type, dir)}</small> {titleOf(doc, other) ?? 'Missing entry'}</span>
+              <span className="grow"><small style={{ color: 'var(--muted)' }}>{describeEffect(r, dir)}</small> {titleOf(doc, other) ?? 'Missing entry'}</span>
               <button type="button" className="btn small quiet" onClick={() => setRelations(relations.filter((x) => x.id !== r.id))}>Remove</button>
             </div>
           );
