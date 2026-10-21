@@ -20,7 +20,9 @@ Triaged 2026-10-17 (later): kinds of border, war technology, disasters, discover
 
 Triaged 2026-10-18 (Phase 3 checkpoint): the overview of polities and world events (thickness by power, related polities together, gold world events, a polity's lanes dropping down, the map following a polity, a lane or a click on an area, marking what shows at the top) → Phase 4, written up in `docs/vision.md` (The overview); a "law" option → the Politics lane (Phase 4 ticket 2); better highlight reading (Laurion, ticking and filling in "Becomes") → Phase 4 ticket 3; box-select with bulk edit and delete → Phase 4 ticket 5; resizable panes → small ticket S1; search → small ticket S2. "Clicking an era zooms the map" was dropped by Bob: Phase 4 ticket 8 covers it.
 
+For the categories (politics, wars, technology, etc.) have an add entry button on each category under the categoriy name
 
+want to revise the source of where the app gets its maps from. Use the maps on this websites: https://seshat-db.com/ Or use other map sources you can find. I want to be able to browse wikipedia about a kingdom, state, and gets its borders over time. I want it to be from as accurate historical data as possible. I want to be able to automatically add the polities’ geographic change over time automatically when adding places on the timeline/map
 
 ## Small tickets (any time)
 Independent of the redesign. Each is its own branch and session, like any ticket; do them before Phase 4 starts.
