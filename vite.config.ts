@@ -61,6 +61,17 @@ export default defineConfig({
             },
           },
           {
+            // Seshat's borders (public/data/borders/, not precached: tens of MB in all). The last copy
+            // answers at once and offline; a rebuild reaches Bob on the next fetch.
+            urlPattern: ({ url, sameOrigin }) => sameOrigin && url.pathname.includes('/data/borders/'),
+            handler: 'StaleWhileRevalidate',
+            options: {
+              cacheName: 'seshat-borders',
+              expiration: { maxEntries: 200, maxAgeSeconds: 60 * 60 * 24 * 365 },
+              cacheableResponse: { statuses: [200] },
+            },
+          },
+          {
             // A trend's numbers: fresh when online, the last copy when offline.
             urlPattern: ({ url }) => (url.hostname === 'ourworldindata.org' && url.pathname.startsWith('/grapher/') && url.pathname.endsWith('.csv'))
               || (url.hostname === 'api.worldbank.org' && url.pathname.startsWith('/v2/country/')),

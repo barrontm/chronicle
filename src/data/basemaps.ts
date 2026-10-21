@@ -1,6 +1,7 @@
 import type { Feature, FeatureCollection } from 'geojson';
 import { formatYear, toAstronomical, toDecimalYear } from '../model/dates';
 import type { HistDate, TerritorySnapshot } from '../model/types';
+import { CLIOPATRIA_CREDIT, fetchCliopatria, fetchCliopatriaIndex, matchCliopatria, plainName, type WantedPolity } from './cliopatria';
 import { areaKm2, isArea, simplifyArea, type Area } from './geo';
 
 /**
@@ -80,14 +81,10 @@ export function snapshotsFor(name: string, loaded: Array<{ year: BasemapYear; fc
     });
 }
 
-/** A name as the maps and Wikipedia might both spell it: no accents, case, "the" or "(ancient city)". */
-const plain = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/_/g, ' ').replace(/\s*\([^)]*\)\s*/g, ' ')
-  .toLowerCase().replace(/^the\s+/, '').replace(/\s+/g, ' ').trim();
-
 /** The polity in a snapshot that one of these names (Wikidata's label, Wikipedia's title) means, if any. */
 export function matchPolity(names: string[], wanted: string[]): string | undefined {
-  const want = new Set(wanted.map(plain).filter(Boolean));
-  return names.find((n) => want.has(plain(n)));
+  const want = new Set(wanted.map(plainName).filter(Boolean));
+  return names.find((n) => want.has(plainName(n)));
 }
 
 /** Most maps read for one polity, so a long-lived empire doesn't fetch the whole dataset. */
@@ -138,11 +135,27 @@ export function fetchBasemap(b: BasemapYear): Promise<FeatureCollection> {
   return p;
 }
 
+/** Where a polity's borders were found, and what they're called there. */
+export interface FoundBorders {
+  name?: string;
+  snapshots: TerritorySnapshot[];
+  source?: { name: string; url?: string };
+}
+
 /**
- * A polity's borders from the maps of its lifetime, found by name: the snapshots, and the name the
- * maps use. Nothing found is an empty list; a map that won't load is an error in Bob's words.
+ * A polity's borders from Seshat's Cliopatria, matched in these years and cut to them unless `cut` is
+ * false; nothing found is an empty list.
  */
-export async function bordersFor(wanted: string[], start: HistDate, end?: HistDate, signal?: AbortSignal): Promise<{ name?: string; snapshots: TerritorySnapshot[] }> {
+export async function seshatBordersFor(wanted: WantedPolity, start?: HistDate, end?: HistDate, signal?: AbortSignal, cut = true): Promise<FoundBorders> {
+  const hit = matchCliopatria(await fetchCliopatriaIndex(), wanted, start, end);
+  signal?.throwIfAborted();
+  if (!hit) return { snapshots: [] };
+  const { snapshots } = await fetchCliopatria(hit.id);
+  return { name: hit.name, snapshots: cut && start ? withinLife(snapshots, start, end) : snapshots, source: CLIOPATRIA_CREDIT };
+}
+
+/** A polity's borders from historical-basemaps, by name, across the maps of its lifetime. */
+async function basemapBordersFor(wanted: string[], start: HistDate, end?: HistDate, signal?: AbortSignal): Promise<FoundBorders> {
   const loaded: Array<{ year: BasemapYear; fc: FeatureCollection }> = [];
   let name: string | undefined;
   for (const b of mapsDuring(start, end)) {
@@ -151,5 +164,26 @@ export async function bordersFor(wanted: string[], start: HistDate, end?: HistDa
     name ??= matchPolity(polityNames(fc), wanted);
     loaded.push({ year: b, fc });
   }
-  return name ? { name, snapshots: withinLife(snapshotsFor(name, loaded), start, end) } : { snapshots: [] };
+  return name ? { name, snapshots: withinLife(snapshotsFor(name, loaded), start, end), source: BASEMAPS_CREDIT } : { snapshots: [] };
+}
+
+/**
+ * A polity's borders over its lifetime: Seshat's first (by Wikidata id, then Wikipedia title, then
+ * name), else the historical maps by name. Nothing found is an empty list; when neither can be
+ * loaded, the error is in Bob's words.
+ */
+export async function bordersFor(wanted: WantedPolity, start: HistDate, end?: HistDate, signal?: AbortSignal): Promise<FoundBorders> {
+  let seshatFailed: unknown;
+  try {
+    const found = await seshatBordersFor(wanted, start, end, signal);
+    if (found.snapshots.length) return found;
+  } catch (e) {
+    if (signal?.aborted) throw e;
+    seshatFailed = e;
+  }
+  try {
+    return await basemapBordersFor([...(wanted.titles ?? []), ...wanted.names], start, end, signal);
+  } catch (e) {
+    throw seshatFailed ?? e;
+  }
 }

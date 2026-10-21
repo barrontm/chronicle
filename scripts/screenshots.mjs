@@ -218,6 +218,28 @@ if (any('desktop-places')) await places(await page('desktop-places', desktop), '
 if (any('dark-places')) await places(await page('dark-places', { ...desktop, colorScheme: 'dark' }), 'dark');
 if (any('phone-places')) await places(await page('phone-places', { viewport: { width: 412, height: 860 }, isMobile: true, hasTouch: true }), 'phone');
 
+// A territory's offer of Seshat's borders. The fixture's hand-made territory is pointed at the
+// real Achaemenid Empire file, so the list is real data.
+async function seshat(p, prefix) {
+  await p.route('**/data/borders/index.json', (route) => route.fulfill({ json: { release: 'shots', polities: [
+    { id: 'achaemenid-empire', name: 'Fixture Republic', wikidata: [], wikipedia: [], rows: [[-549, -325, 20, 20, 70, 45]] },
+  ] } }));
+  await withFixture(p);
+  await showMap(p, '300 BCE');
+  const open = p.getByRole('button', { name: 'Search Chronicle' });
+  if (await open.isVisible().catch(() => false)) await open.click();
+  await p.getByRole('combobox', { name: 'Search Chronicle' }).fill('fixture republic');
+  await p.getByRole('option', { name: /Fixture Republic/ }).first().click();
+  await p.getByRole('button', { name: 'Update borders from Seshat' }).click();
+  await p.getByTestId('seshat-update').waitFor();
+  await p.getByTestId('seshat-update').scrollIntoViewIfNeeded();
+  await shot(p, `${prefix}-seshat`);
+}
+const noSw = { serviceWorkers: 'block' };
+if (any('desktop-seshat')) await seshat(await page('desktop-seshat', { ...desktop, ...noSw }), 'desktop');
+if (any('dark-seshat')) await seshat(await page('dark-seshat', { ...desktop, ...noSw, colorScheme: 'dark' }), 'dark');
+if (any('phone-seshat')) await seshat(await page('phone-seshat', { viewport: { width: 412, height: 860 }, isMobile: true, hasTouch: true, ...noSw }), 'phone');
+
 // An entry's lanes and overview mark in the editor, then on its panel.
 async function lanes(p, prefix) {
   await withFixture(p);
