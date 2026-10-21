@@ -2,7 +2,8 @@ import { readFileSync } from 'node:fs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { formatYear, toAstronomical } from '../model/dates';
 import { bordersFor, seshatBordersFor } from './basemaps';
-import { matchCliopatria, type CliopatriaIndex } from './cliopatria';
+import { matchCliopatria, politiesAt, polityCandidatesAt, type CliopatriaFile, type CliopatriaIndex } from './cliopatria';
+import { havePolity, seshatPolity } from '../model/passage';
 
 // A slice of the real build (Cliopatria v0.2.1): the polities around Classical Greece, two with their files.
 const fixture = (name: string) => readFileSync(new URL(`../../tests/fixtures/cliopatria/${name}`, import.meta.url), 'utf8');
@@ -34,6 +35,38 @@ describe('matching a polity in Cliopatria', () => {
     expect(matchCliopatria(index, { wikidataId: 'Q389688', names: [] }, { y: 100 })).toBeUndefined();
     // Two Antigonid rows share an id; the one with more years in common wins.
     expect(matchCliopatria(index, { wikidataId: 'Q237325', names: [] }, bce(306), bce(168))?.name).toBe('Antigonid Macedonia');
+  });
+});
+
+describe('who held a place in a year', () => {
+  const sardis: [number, number] = [28.04, 38.49];
+  const shapes: Record<string, CliopatriaFile> = Object.fromEntries(['achaemenid-empire', 'macedonian-empire'].map((id) => [id, JSON.parse(fixture(`${id}.json`))]));
+
+  it('finds Persia at Sardis in 499 BCE, from only the polities whose boxes hold it then', () => {
+    // Greek City-States' box holds Sardis too, but its file isn't in the slice: those without one are skipped.
+    expect(polityCandidatesAt(sardis, bce(499).y, index).map((p) => p.id)).toEqual(['greek-city-states', 'achaemenid-empire']);
+    const found = politiesAt(sardis, bce(499).y, index, shapes);
+    expect(found.map((p) => p.polity.name)).toEqual(['Achaemenid Empire']);
+    expect(found[0].snapshot.geometry).toBeDefined();
+  });
+
+  it('finds nobody there in 2000 BCE, or at sea', () => {
+    expect(politiesAt(sardis, bce(2000).y, index, shapes)).toEqual([]);
+    expect(politiesAt([18, 35], bce(499).y, index, shapes)).toEqual([]);
+  });
+
+  // Its entry runs over the years Seshat has its borders for: to 326 BCE, the last row's end.
+  it('makes the polity an entry with its territory, all its borders credited to Seshat, unless Bob has it', () => {
+    const persia = index.polities.find((p) => p.id === 'achaemenid-empire')!;
+    const { item, territory } = seshatPolity(persia, shapes['achaemenid-empire'], 'c');
+    expect(item).toMatchObject({ kind: 'span', subject: 'polity', title: 'Achaemenid Empire', start: bce(550), end: bce(326), wikidataId: 'Q389688' });
+    expect(territory.next).toMatchObject({ itemId: item.id, wikidataId: 'Q389688', source: { name: expect.stringContaining('Cliopatria') } });
+    expect(territory.next.snapshots).toHaveLength(shapes['achaemenid-empire'].snapshots.length);
+    const mine = { id: 't1', title: 'Persia', categoryId: 'c', snapshots: [], updatedAt: 0 };
+    expect(havePolity(persia, [], [mine])).toBeUndefined();
+    expect(havePolity(persia, [], [{ ...mine, wikidataId: 'Q389688' }])?.id).toBe('t1');
+    expect(havePolity(persia, [{ ...item, id: 'i1' }], [{ ...mine, itemId: 'i1' }])?.id).toBe('t1');
+    expect(havePolity(persia, [], [{ ...mine, title: 'The Achaemenid empire' }])?.id).toBe('t1');
   });
 });
 

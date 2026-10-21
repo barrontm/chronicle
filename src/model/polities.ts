@@ -38,7 +38,7 @@ export function holds(g: Polygon | MultiPolygon, lon: number, lat: number): bool
 }
 
 /** The year a place is looked up in: a birthplace at the start, a deathplace at the end, else the middle (an event's year). */
-function yearOf(it: TimelineItem, p: Place): number | undefined {
+export function placeYear(it: Pick<TimelineItem, 'kind' | 'start' | 'end'>, p: Pick<Place, 'role'>): number | undefined {
   if (!it.start) return undefined;
   const s = toDecimalYear(it.start);
   const e = it.kind === 'event' || !it.end ? s : toDecimalYear(it.end);
@@ -67,7 +67,7 @@ export function polityMembers(o: PolityInput): Map<string, string[]> {
   const own = (it: TimelineItem): Set<string> => {
     const out = new Set(named.get(it.id) ?? []);
     for (const p of it.places ?? []) {
-      const y = yearOf(it, p);
+      const y = placeYear(it, p);
       if (y === undefined) continue;
       for (const t of shaped) {
         const g = snapshotAt(t, y)?.geometry;

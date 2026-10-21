@@ -595,6 +595,58 @@ test.describe('a polity from the tray', () => {
     await expect(page.locator('.maplibregl-ctrl-attrib a', { hasText: 'Cliopatria' })).toBeAttached();
     await expect(page.locator('.map-label.territory', { hasText: 'Sparta' })).toBeVisible();
   });
+
+  test('an event at Sardis brings the polity that held it, Achaemenid Persia, with Seshat’s borders, and Undo takes both back', async ({ page }) => {
+    test.slow();
+    await mockArticles(page);
+    // Seshat's index and files, from the recorded slice (those not in it are missing).
+    const slice = (f: string) => readFileSync(new URL(`../tests/fixtures/cliopatria/${f}`, import.meta.url), 'utf8');
+    await page.route('**/data/borders/**', (route) => {
+      try { return route.fulfill({ contentType: 'application/json', body: slice(route.request().url().split('/').pop()!) }); } catch { return route.fulfill({ status: 404, body: 'missing' }); }
+    });
+    await page.route('https://en.wikipedia.org/w/api.php**', (route) => route.fulfill({ headers: cors, json: { query: { pages: [
+      { title: 'Sardis', index: 1, description: 'Ancient city in Lydia', coordinates: [{ lat: 38.488, lon: 28.04 }] },
+    ] } } }));
+    await open(page);
+    await search(page, 'pericles', 'Pericles');
+    await expect(page.getByTestId('reader').getByText('led Athens')).toBeVisible();
+    await page.evaluate(() => {
+      const p = [...document.querySelectorAll('.reader-text p')].find((x) => x.textContent!.includes('led Athens'))!;
+      const r = document.createRange();
+      r.selectNodeContents(p);
+      getSelection()!.removeAllRanges();
+      getSelection()!.addRange(r);
+    });
+    await expect(page.getByRole('button', { name: 'Highlight' })).toBeVisible();
+    await page.keyboard.press('h');
+    const tray = page.getByTestId('capture-tray');
+    await tray.getByRole('button', { name: /Something else/ }).click();
+    const own = tray.getByRole('form', { name: 'Something else' });
+    await own.getByLabel('Title').fill('Ionian Revolt begins');
+    await own.getByLabel('When').fill('499 BCE');
+    await own.getByLabel('Place').fill('Sardis');
+    const held = own.getByTestId('place-polity');
+    await expect(held).toContainText('In Achaemenid Empire in 499 BCE');
+    const also = held.getByRole('checkbox', { name: 'Also add Achaemenid Empire, with its borders over time' });
+    await expect(also).toBeChecked();
+    await own.getByRole('button', { name: 'Add to map and timeline' }).click();
+    const done = tray.locator('.tray-done');
+    await expect(done).toContainText('Added Ionian Revolt begins and Achaemenid Empire to your map and timeline. Pinned at Sardis.');
+
+    // Persia is an entry and a territory with all its borders, credited to Seshat, on the map in 499 BCE.
+    await expect.poll(() => savedItem(page, 'Achaemenid Empire')).toMatchObject({ kind: 'span', subject: 'polity', wikidataId: 'Q389688' });
+    await expect.poll(() => savedTerritory(page, 'Achaemenid Empire')).toMatchObject({ source: { name: expect.stringContaining('Cliopatria') } });
+    const territory = (await savedTerritory(page, 'Achaemenid Empire')) as { snapshots: unknown[] };
+    expect(territory.snapshots.length).toBeGreaterThan(5);
+    await expect(page.locator('[data-testid=map][data-ready]')).toBeVisible();
+    await expect(page.locator('.map-label.territory', { hasText: 'Achaemenid Empire' })).toBeVisible();
+
+    // One Undo takes back the polity with the entry.
+    await done.getByRole('button', { name: 'Undo' }).click();
+    await expect.poll(() => savedItem(page, 'Ionian Revolt begins')).toBeUndefined();
+    await expect.poll(() => savedItem(page, 'Achaemenid Empire')).toBeUndefined();
+    await expect.poll(() => savedTerritory(page, 'Achaemenid Empire')).toBeUndefined();
+  });
 });
 
 test('Bob’s Laurion passage becomes several records: two candidates ticked, one filled in by hand, and Claude’s event pinned at the mines', async ({ page }) => {

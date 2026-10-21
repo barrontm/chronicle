@@ -12,6 +12,8 @@ import { formatCitation, lanesInWords, titleOf } from '../util';
 import { LaneChips } from '../LaneChips';
 import { lanesOf, sortLanes } from '../../model/lanes';
 import { placeLabel } from '../../model/places';
+import { placeYear } from '../../model/polities';
+import { PlacePolity, usePlacePolity } from '../PlacePolity';
 import { InfluenceSuggestions } from './Influences';
 import { PlacesEditor } from './PlacesEditor';
 import { QuickSource } from './SourcePanels';
@@ -233,13 +235,19 @@ export function ItemEditor({ id, init, draft: prefill, nav }: {
   const endBeforeStart = draft.start && draft.end && compareHistDate(draft.end, draft.start) < 0;
   const startOk = place ? valid.start || !draft.start : valid.start && !!draft.start;
   const canSave = draft.title.trim() && startOk && valid.end && (!needsEnd || draft.end) && !endBeforeStart;
+  // Who held its place then, for a new entry or a new place (a polity is its own borders).
+  const first = draft.places?.[0];
+  const year = first && draft.start && valid.start && draft.subject !== 'polity' && (!existing || first !== existing.places?.[0]) ? placeYear(draft, first) : undefined;
+  const heldBy = usePlacePolity(first && year !== undefined ? { name: first.name, lat: first.lat, lon: first.lon, year } : undefined);
 
   const save = () => {
     const item: TimelineItem = { ...draft, title: draft.title.trim(), end: draft.kind === 'event' ? undefined : draft.end, region: isPeriod ? draft.region?.trim() || undefined : undefined };
     const keep = new Set(relations.map((r) => r.id));
     const cited = new Set([...(item.citations ?? []).map((c) => c.sourceId), quote?.sourceId]);
+    const polity = heldBy.toAdd(item.categoryId);
     update((d) => {
       let next = d;
+      if (polity) next = upsert(upsert(next, 'items', polity.item), 'territories', polity.territory.next);
       for (const s of newSources) if (cited.has(s.id) && !next.sources.some((x) => x.id === s.id)) next = upsert(next, 'sources', s);
       next = upsert(next, 'items', item);
       // A highlight from the reader is already saved, and may be evidence for other records too.
@@ -338,6 +346,7 @@ export function ItemEditor({ id, init, draft: prefill, nav }: {
       )}
 
       <PlacesEditor places={draft.places ?? []} kind={draft.kind} onChange={(p) => set('places', p)} nav={nav} />
+      <PlacePolity state={heldBy} />
 
       <h3>Pictures</h3>
       <div className="thumbs">

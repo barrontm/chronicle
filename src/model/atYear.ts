@@ -7,7 +7,7 @@ import type { SeriesPoint, Territory, TerritorySnapshot, TimelineDoc, TimelineIt
  */
 
 /** The snapshot in effect: from ≤ year < to. If several overlap, the latest-starting wins. */
-export function snapshotAt(t: Territory, year: number): TerritorySnapshot | undefined {
+export function snapshotAt(t: Pick<Territory, 'snapshots'>, year: number): TerritorySnapshot | undefined {
   let best: TerritorySnapshot | undefined;
   for (const s of t.snapshots) {
     const from = toDecimalYear(s.from);
