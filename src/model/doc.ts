@@ -625,6 +625,63 @@ export function describeRelation(type: RelationType, direction: 'out' | 'in'): s
   return (direction === 'out' ? out : inn)[type];
 }
 
+// ---------- Influences between lanes ----------
+
+/** The effects the connection editor offers first, in this order (`docs/design.md`). */
+export const EFFECTS = ['caused', 'enabled', 'prompted', 'funded', 'strengthened', 'weakened', 'legitimised', 'ended'] as const;
+
+/** The effect vocabulary: the usual words, then Bob's own words from his connections, each once. */
+export function effectWords(relations: readonly Relation[]): string[] {
+  const words: string[] = [...EFFECTS];
+  for (const r of relations) {
+    const w = r.effect?.trim().toLowerCase();
+    if (w && !words.includes(w)) words.push(w);
+  }
+  return words;
+}
+
+/** How one acted on the other, read from the cause ("Weakened") or from the effect ("Weakened by"). */
+export function describeEffect(r: Pick<Relation, 'type' | 'effect'>, direction: 'out' | 'in'): string {
+  const w = r.effect?.trim();
+  if (!w) return describeRelation(r.type, direction);
+  const cap = w[0].toUpperCase() + w.slice(1);
+  return direction === 'out' ? cap : `${cap} by`;
+}
+
+/** A connection between entries in different lanes: from the cause's lane to the effect's (see `laneInfluence`). */
+export interface LaneInfluence { r: Relation; from: Lane; to: Lane }
+
+/**
+ * Whether a connection is an influence between lanes, and which lanes its arrow joins. `lanesOf`
+ * is each entry's lanes (`entryLanes`). "Part of" links and links inside one lane aren't.
+ */
+export function laneInfluence(r: Relation, lanesOf: ReadonlyMap<string, readonly Lane[]>): LaneInfluence | undefined {
+  if (r.type === 'part-of' || r.fromId === r.toId) return undefined;
+  const a = lanesOf.get(r.fromId) ?? [], b = lanesOf.get(r.toId) ?? [];
+  // It leaves the cause's first lane and lands in the effect's first lane the cause isn't in (else the first that's
+  // different): League treasury (Politics, Economy) funded the Parthenon (Economy, Philosophy and religion) lands in the latter.
+  const from = a[0];
+  const to = b.find((l) => !a.includes(l)) ?? b.find((l) => l !== from);
+  return from && to ? { r, from, to } : undefined;
+}
+
+/** Every influence between lanes, optionally only those with both ends in `ids`. */
+export function laneInfluences(relations: readonly Relation[], lanesOf: ReadonlyMap<string, readonly Lane[]>, ids?: ReadonlySet<string>): LaneInfluence[] {
+  const out: LaneInfluence[] = [];
+  for (const r of relations) {
+    if (ids && !(ids.has(r.fromId) && ids.has(r.toId))) continue;
+    const inf = laneInfluence(r, lanesOf);
+    if (inf) out.push(inf);
+  }
+  return out;
+}
+
+/** An entry's effects on other lanes, both ways: what it acted on (`on`) and what acted on it (`by`). */
+export function effectsOf(relations: readonly Relation[], lanesOf: ReadonlyMap<string, readonly Lane[]>, id: string): { on: LaneInfluence[]; by: LaneInfluence[] } {
+  const mine = laneInfluences(relations.filter((r) => r.fromId === id || r.toId === id), lanesOf);
+  return { on: mine.filter((x) => x.r.fromId === id), by: mine.filter((x) => x.r.toId === id) };
+}
+
 // ---------- Merge (for syncing one person's devices) ----------
 
 type Stamped = { id: string; updatedAt: number };

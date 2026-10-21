@@ -977,6 +977,14 @@
    "lanes": [
     "politics",
     "economy"
+   ],
+   "places": [
+    {
+     "name": "Athens",
+     "lat": 37.972,
+     "lon": 23.727,
+     "role": "site"
+    }
    ]
   },
   {
@@ -1197,6 +1205,14 @@
    "lanes": [
     "economy",
     "politics"
+   ],
+   "places": [
+    {
+     "name": "Athens",
+     "lat": 37.972,
+     "lon": 23.727,
+     "role": "site"
+    }
    ]
   },
   {
@@ -2938,6 +2954,14 @@
    ],
    "lanes": [
     "economy"
+   ],
+   "places": [
+    {
+     "name": "Athens",
+     "lat": 37.972,
+     "lon": 23.727,
+     "role": "site"
+    }
    ]
   },
   {
@@ -3343,6 +3367,14 @@
    "lanes": [
     "politics",
     "war"
+   ],
+   "places": [
+    {
+     "name": "Athens",
+     "lat": 37.972,
+     "lon": 23.727,
+     "role": "born"
+    }
    ]
   },
   {
@@ -4168,6 +4200,53 @@
    "lanes": [
     "war",
     "politics"
+   ]
+  },
+  {
+   "id": "i_eisphora",
+   "kind": "event",
+   "title": "First war tax on property",
+   "start": {
+    "y": -427
+   },
+   "categoryId": "politics",
+   "description": "A levy on the rich for the siege of Mytilene.",
+   "lanes": [
+    "economy"
+   ],
+   "updatedAt": 1760000000000,
+   "places": [
+    {
+     "name": "Athens",
+     "lat": 37.972,
+     "lon": 23.727,
+     "role": "site"
+    }
+   ]
+  },
+  {
+   "id": "i_emergency_coins",
+   "kind": "span",
+   "title": "Gold and plated emergency coins",
+   "start": {
+    "y": -406
+   },
+   "end": {
+    "y": -403
+   },
+   "categoryId": "politics",
+   "description": "Gold from the Victories on the Acropolis, then silver-plated bronze.",
+   "lanes": [
+    "economy"
+   ],
+   "updatedAt": 1760000000000,
+   "places": [
+    {
+     "name": "Athens",
+     "lat": 37.972,
+     "lon": 23.727,
+     "role": "site"
+    }
    ]
   }
  ],
@@ -6160,6 +6239,109 @@
    "lanes": [
     "war"
    ]
+  },
+  {
+   "id": "h_mines_lost",
+   "sourceId": "s_thuc",
+   "text": "Once the Spartans held Decelea, Athens lost its revenue from the silver mines, and more than twenty thousand slaves deserted.",
+   "usedBy": [
+    "i_decelean"
+   ],
+   "lanes": [
+    "war",
+    "economy"
+   ],
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "h_eisphora",
+   "sourceId": "s_thuc",
+   "text": "For the siege of Mytilene the Athenians raised among themselves, for the first time, a property tax of two hundred talents.",
+   "usedBy": [
+    "i_eisphora"
+   ],
+   "lanes": [
+    "economy",
+    "war"
+   ],
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "h_nike_gold",
+   "sourceId": "s_wp_economy_of_ancient_greece",
+   "text": "Late in the war Athens melted down gold statues of Victory to strike coins, then issued silver-plated bronze.",
+   "usedBy": [
+    "i_emergency_coins"
+   ],
+   "lanes": [
+    "economy"
+   ],
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "h_asclepius_after",
+   "sourceId": "s_wp_plague_of_athens",
+   "text": "The cult of Asclepius was brought to Athens in 420 BC, in the years after the plague.",
+   "usedBy": [
+    "i_asclepius"
+   ],
+   "lanes": [
+    "ideas",
+    "nature"
+   ],
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "h_plague_law",
+   "sourceId": "s_thuc",
+   "text": "Fear of the gods or the law of men held no one back.",
+   "usedBy": [
+    "i_plague"
+   ],
+   "lanes": [
+    "nature",
+    "ideas"
+   ],
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "h_tribute_pay",
+   "sourceId": "s_wp_delian_league",
+   "text": "Tribute from the allies paid for the fleet’s rowers, for jurors and for the building on the Acropolis.",
+   "usedBy": [
+    "i_treasury_moved"
+   ],
+   "lanes": [
+    "economy",
+    "politics"
+   ],
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "h_sicily_coup",
+   "sourceId": "s_wp_sicilian_expedition",
+   "text": "After the disaster in Sicily, an oligarchy of Four Hundred took power in Athens in 411 BC.",
+   "usedBy": [
+    "i_four_hundred"
+   ],
+   "lanes": [
+    "politics",
+    "war"
+   ],
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "h_walls_strategy",
+   "sourceId": "s_thuc",
+   "text": "Pericles told the Athenians to bring in their property from the country and guard the city behind its walls.",
+   "usedBy": [
+    "i_long_walls"
+   ],
+   "lanes": [
+    "technology",
+    "war"
+   ],
+   "updatedAt": 1760000000000
   }
  ],
  "sources": [
@@ -7206,7 +7388,11 @@
    "fromId": "i_laurion",
    "toId": "i_trireme",
    "type": "related",
-   "updatedAt": 1760000000000
+   "updatedAt": 1760000000000,
+   "effect": "funded",
+   "highlightIds": [
+    "h_silver"
+   ]
   },
   {
    "id": "r_45",
@@ -7228,14 +7414,22 @@
    "toId": "i_parthenon_built",
    "type": "caused",
    "note": "paid for from the tribute",
-   "updatedAt": 1760000000000
+   "updatedAt": 1760000000000,
+   "effect": "funded",
+   "highlightIds": [
+    "h_delian",
+    "h_parthenon",
+    "h_tribute_pay"
+   ]
   },
   {
    "id": "r_48",
    "fromId": "i_megarian_decree",
    "toId": "i_pelop",
    "type": "caused",
-   "updatedAt": 1760000000000
+   "updatedAt": 1760000000000,
+   "effect": "caused",
+   "highlightIds": []
   },
   {
    "id": "r_49",
@@ -7243,14 +7437,22 @@
    "toId": "i_pericles",
    "type": "caused",
    "note": "he died of it in 429",
-   "updatedAt": 1760000000000
+   "updatedAt": 1760000000000,
+   "effect": "weakened",
+   "highlightIds": [
+    "h_plague"
+   ]
   },
   {
    "id": "r_50",
    "fromId": "i_herms",
    "toId": "i_alcibiades_defects",
    "type": "caused",
-   "updatedAt": 1760000000000
+   "updatedAt": 1760000000000,
+   "effect": "caused",
+   "highlightIds": [
+    "h_herms"
+   ]
   },
   {
    "id": "r_51",
@@ -7634,6 +7836,134 @@
    "toId": "i_thirty_years_peace",
    "type": "related",
    "side": 2,
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_inf_1",
+   "fromId": "i_archidamian",
+   "toId": "i_eisphora",
+   "type": "caused",
+   "effect": "prompted",
+   "highlightIds": [
+    "h_eisphora"
+   ],
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_inf_2",
+   "fromId": "i_decelean",
+   "toId": "i_owls",
+   "type": "caused",
+   "effect": "weakened",
+   "highlightIds": [
+    "h_decelea",
+    "h_mines_lost"
+   ],
+   "note": "the mines at Laurion stopped",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_inf_3",
+   "fromId": "i_decelean",
+   "toId": "i_emergency_coins",
+   "type": "caused",
+   "effect": "prompted",
+   "highlightIds": [
+    "h_mines_lost",
+    "h_nike_gold"
+   ],
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_inf_4",
+   "fromId": "i_sicilian",
+   "toId": "i_four_hundred",
+   "type": "caused",
+   "effect": "enabled",
+   "highlightIds": [
+    "h_sicily_coup"
+   ],
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_inf_5",
+   "fromId": "i_long_walls",
+   "toId": "i_archidamian",
+   "type": "caused",
+   "effect": "enabled",
+   "highlightIds": [
+    "h_longwalls",
+    "h_walls_strategy"
+   ],
+   "note": "Pericles’ strategy of staying inside",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_inf_6",
+   "fromId": "i_plague",
+   "toId": "i_asclepius",
+   "type": "caused",
+   "effect": "prompted",
+   "highlightIds": [
+    "h_asclepius_after"
+   ],
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_inf_7",
+   "fromId": "i_plague",
+   "toId": "i_archidamian",
+   "type": "caused",
+   "effect": "weakened",
+   "highlightIds": [
+    "h_plague"
+   ],
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_inf_8",
+   "fromId": "i_plague",
+   "toId": "i_funeral_oration",
+   "type": "caused",
+   "effect": "weakened",
+   "highlightIds": [
+    "h_plague_law"
+   ],
+   "note": "the city Pericles praised fell apart a year later",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_inf_9",
+   "fromId": "i_trireme",
+   "toId": "i_salamis",
+   "type": "caused",
+   "effect": "enabled",
+   "highlightIds": [
+    "h_triremes",
+    "h_salamis"
+   ],
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_inf_10",
+   "fromId": "i_treasury_moved",
+   "toId": "i_propylaea",
+   "type": "caused",
+   "effect": "funded",
+   "highlightIds": [
+    "h_tribute_pay"
+   ],
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_inf_11",
+   "fromId": "i_treasury_moved",
+   "toId": "i_juror_pay",
+   "type": "caused",
+   "effect": "funded",
+   "highlightIds": [
+    "h_tribute_pay"
+   ],
    "updatedAt": 1760000000000
   }
  ],

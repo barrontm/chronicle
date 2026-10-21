@@ -112,6 +112,8 @@ export function svgPainter(): Painter {
     r.last.set(key, v as string);
   };
   const tagOf = (p: Prim): Tag => TAGS[p.t];
+  /** The element painted just before in the current layer: each layer keeps the scene's order. */
+  let prev: Element | null = null;
 
   const paint = (p: Prim, parent: SVGGElement, layer: string) => {
     const key = `${layer}${p.t}${p.k}`;
@@ -122,9 +124,11 @@ export function svgPainter(): Painter {
       r = { el, tag, gen, last: new Map() };
       live.set(key, r);
     }
-    // New elements go on top. Within a layer marks don't overlap, and what must sit above something
-    // (an edge above its bar, text above a badge) is created with it or lives in a later layer.
-    if (r.el.parentNode !== parent) parent.append(r.el);
+    // Each layer is drawn in the scene's order (arrows under the header row that scrolls over them,
+    // for one); an element only moves when it's out of place.
+    const want = prev ? prev.nextSibling : parent.firstChild;
+    if (r.el !== want) parent.insertBefore(r.el, want);
+    prev = r.el;
     r.gen = gen;
     set(r, 'opacity', p.a === 1 ? undefined : p.a);
     set(r, 'class', p.cls);
@@ -208,8 +212,10 @@ export function svgPainter(): Painter {
       fitClip(plotClip, scene.plot);
       fitClip(gutterClip, scene.gutterBox);
       fitClip(rightClip, { x: scene.plot.x, y: 0, w: scene.plot.w, h: scene.plot.y + scene.plot.h });
-      for (let i = 0; i < z.length; i++) for (const p of scene.z[i]) paint(p, z[i], `z${i}`);
+      for (let i = 0; i < z.length; i++) { prev = null; for (const p of scene.z[i]) paint(p, z[i], `z${i}`); }
+      prev = null;
       for (const p of scene.gutter) paint(p, gutter, 'g');
+      prev = null;
       for (const p of scene.axis) paint(p, axis, 'a');
       // What wasn't drawn this frame goes back to the pool, stripped, for reuse.
       for (const [k, r] of live) {

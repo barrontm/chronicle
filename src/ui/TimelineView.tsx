@@ -52,6 +52,8 @@ interface Props {
   onAddAt: (year: number, categoryId?: string) => void;
   /** A lane's "+ Add" in an era or polity: a new entry in that lane, part of what's open. */
   onAddIn: (lane: Lane, year: number, partOf?: string) => void;
+  /** An arrow between lanes was clicked: open that connection. */
+  onOpenRelation?: (id: string) => void;
   onWindow: (w: VisibleWindow) => void;
   /** Whether there's a window from before the first focus to go back to. */
   onCanGoBack: (can: boolean) => void;
@@ -95,14 +97,14 @@ function focusTarget(id: string, items: DatedItem[], relations: Relation[], show
   return focusWindow(item, items.filter((i) => otherIds.has(i.id) && shown(i.id)));
 }
 
-export const TimelineView = forwardRef<TimelineControl, Props>(function TimelineView({ items: allItems, categories, relations, selectedId, thumbFor, onSelect, onAddAt, onAddIn, onWindow, onCanGoBack, year, onYear, prominence, drafts: allDrafts = NO_DRAFTS, onMove, highlights = NO_HIGHLIGHTS, picked = NO_PICKS, onPick, territories = NO_TERRITORIES, groups, regionParents, onFocus, region, onRegion }, ref) {
+export const TimelineView = forwardRef<TimelineControl, Props>(function TimelineView({ items: allItems, categories, relations, selectedId, thumbFor, onSelect, onAddAt, onAddIn, onWindow, onCanGoBack, year, onYear, prominence, drafts: allDrafts = NO_DRAFTS, onMove, highlights = NO_HIGHLIGHTS, picked = NO_PICKS, onPick, territories = NO_TERRITORIES, groups, regionParents, onFocus, region, onRegion, onOpenRelation }, ref) {
   // Only entries with a start date: a place with none is on the map only.
   const items = useMemo(() => allItems.filter(isDated), [allItems]);
   const drafts = useMemo(() => ({ ...allDrafts, items: allDrafts.items.filter(isDated) }), [allDrafts]);
   const host = useRef<HTMLDivElement>(null);
   const tl = useRef<TimelineHandle | null>(null);
-  const cb = useRef({ onSelect, onAddAt, onAddIn, onWindow, onYear, onCanGoBack, onMove, onPick, onFocus, onRegion });
-  cb.current = { onSelect, onAddAt, onAddIn, onWindow, onYear, onCanGoBack, onMove, onPick, onFocus, onRegion };
+  const cb = useRef({ onSelect, onAddAt, onAddIn, onWindow, onYear, onCanGoBack, onMove, onPick, onFocus, onRegion, onOpenRelation });
+  cb.current = { onSelect, onAddAt, onAddIn, onWindow, onYear, onCanGoBack, onMove, onPick, onFocus, onRegion, onOpenRelation };
   const latest = useRef({ items, relations, categories });
   latest.current = { items, relations, categories };
   const beforeFocus = useRef<YearWindow | null>(null);
@@ -118,6 +120,7 @@ export const TimelineView = forwardRef<TimelineControl, Props>(function Timeline
       onPick: (ids) => cb.current.onPick?.(ids),
       onFocus: (f) => cb.current.onFocus?.(f),
       onRegion: (r) => cb.current.onRegion?.(r),
+      onOpenRelation: (id) => cb.current.onOpenRelation?.(id),
     }, { window: { start: -800, end: 2030 }, level: 2 });
     tl.current = t;
     return () => { t.dispose(); tl.current = null; };

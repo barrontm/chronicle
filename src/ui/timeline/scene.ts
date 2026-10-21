@@ -37,6 +37,10 @@ export const FONTS = {
   dimCount: '11px "Public Sans", system-ui, sans-serif',
   note: 'italic 14px Spectral, Georgia, serif',
   item: '14px Spectral, Georgia, serif',
+  // An influence's effect in its pill; on the phone, the effect in a line under its entry.
+  eff: '600 10.5px "Public Sans", system-ui, sans-serif',
+  effLine: '12.5px "Public Sans", system-ui, sans-serif',
+  effLineB: '600 12.5px "Public Sans", system-ui, sans-serif',
 } as const;
 export type FontKey = keyof typeof FONTS;
 /** Letter spacing in px, which the font shorthand can't carry: the painter sets it and the layout measures with it. */
@@ -119,6 +123,8 @@ export interface Scene {
   clusters: Cluster[];
   /** Where each entry in view is drawn (a cluster's members share its box), for arrows and keyboard focus. */
   boxes: Map<string, Box>;
+  /** Level 1: where each entry is drawn in each of its lanes (`<lane>:<id>`), for the arrows between lanes. */
+  laneBoxes: Map<string, Box>;
   plot: Box;
   gutterBox: Box;
   /** Height of all lanes, for vertical scroll limits. */

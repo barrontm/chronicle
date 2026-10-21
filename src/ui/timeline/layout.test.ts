@@ -12,6 +12,7 @@ import {
   AXIS_H, describeEntry, describeEra, describeLane1, eraLanes, ERAS_BACK, HEAD1_H, LANE_TOGGLE, OPEN_PICK, polityLanes, hitBox, hitTest, laneAt, layout, maxScroll, MIN_HIT, NO_LANE, prepare, REGION_GROW, regionSpan, ROW_H, stepActive, stepEra, stepLane1,
   type Env, type View,
 } from './layout';
+import { ARROW } from '../representations/influence';
 import type { Measure, Prim, Scene } from './scene';
 
 const measure: Measure = (_font, s) => s.length * 7;
@@ -599,14 +600,18 @@ describe('level 1: a polity’s six lanes', () => {
     expect(EL.lanes.find((l) => l.id === 'war')!.ranked.slice(0, 3).map((x) => x.id)).toContain('i_pelop');
   });
 
-  it('starts with every lane closed: ticks, and up to five of the most prominent named without overlapping', () => {
+  it('starts with every lane closed: ticks, the ends of arrows and three of the most prominent named on rows without overlapping', () => {
     const EL = athens();
     const S = at(EL);
     for (const L of EL.lanes) {
       const named = S.z[2].filter((p) => p.t === 2 && p.k.startsWith(`qnt${L.id}`));
-      expect(named.length).toBeLessThanOrEqual(5);
-      const xs = named.map((p) => (p.t === 2 ? [p.x, p.x + measure('ui', p.s)] : [0, 0])).sort((a, b) => a[0] - b[0]);
-      for (let i = 1; i < xs.length; i++) expect(xs[i][0]).toBeGreaterThan(xs[i - 1][1]);
+      const ends = new Set(EL.influences.flatMap((x) => [x.from === L.id ? x.r.fromId : '', x.to === L.id ? x.r.toId : '']).filter(Boolean));
+      expect(named.length).toBeLessThanOrEqual(ends.size + 3);
+      // On each of its rows, no name runs into the next.
+      for (const y of new Set(named.map((p) => (p.t === 2 ? p.y : 0)))) {
+        const xs = named.filter((p) => p.t === 2 && p.y === y).map((p) => (p.t === 2 ? [p.x, p.x + measure('ui', p.s)] : [0, 0])).sort((a, b) => a[0] - b[0]);
+        for (let i = 1; i < xs.length; i++) expect(xs[i][0]).toBeGreaterThan(xs[i - 1][1]);
+      }
     }
     const war = EL.lanes.find((l) => l.id === 'war')!;
     expect(S.z[0].filter((p) => p.k.startsWith('qtwar')).length).toBeGreaterThan(5);
@@ -630,11 +635,12 @@ describe('level 1: a polity’s six lanes', () => {
     expect(textOf(at(none))).toContain('No technology here yet.');
   });
 
-  it('is a vertical list on a phone: three most prominent per closed lane, then "Show all"', () => {
+  it('is a vertical list on a phone: the ends of arrows and three most prominent per closed lane, then "Show all"', () => {
     const EL = athens();
     const S = at(EL, { ...env(412, 6000), gutter: 0 });
     const war = EL.lanes.find((l) => l.id === 'war')!;
-    expect(S.z[2].filter((p) => p.t === 2 && p.k.startsWith('qltwar')).length).toBe(3);
+    const ends = new Set(EL.influences.flatMap((x) => [x.from === 'war' ? x.r.fromId : '', x.to === 'war' ? x.r.toId : '']).filter(Boolean));
+    expect(S.z[2].filter((p) => p.t === 2 && p.k.startsWith('qltwar')).length).toBe(ends.size + 3);
     expect(textOf(S)).toContain(`Show all ${war.order.length} ▾`);
   });
 
@@ -672,6 +678,46 @@ describe('level 1: a polity’s six lanes', () => {
     expect(pill).toBeDefined();
     expect(hitTest(S, pill.x + pill.w / 2, pill.y + pill.h / 2)?.id).toBe(OPEN_PICK);
   });
+
+  it('draws an arrow across lanes for each influence, in the cause’s pigment, labelled with its effect', () => {
+    const EL = athens();
+    const S = at(EL);
+    const decelea = EL.influences.find((x) => x.r.fromId === 'i_decelean' && x.r.toId === 'i_owls')!;
+    expect(decelea).toMatchObject({ from: 'war', to: 'economy' });
+    const arc = S.z[3].find((p) => p.t === 5 && p.k === `inf${decelea.r.id}`);
+    expect(arc).toMatchObject({ stroke: 'var(--pig-cinnabar)', from: 'i_decelean', to: 'i_owls' });
+    // Both ends are named in their closed lanes, so the arrow has somewhere to go.
+    expect(S.laneBoxes.has('war:i_decelean') && S.laneBoxes.has('economy:i_owls')).toBe(true);
+    // Its pill, if it found room, opens the connection; else the curve's middle does.
+    const target = S.targets.find((t) => t.id === `${ARROW}${decelea.r.id}`)!;
+    expect(hitTest(S, target.x + target.w / 2, target.y + target.h / 2)?.id).toBe(`${ARROW}${decelea.r.id}`);
+    // A "part of" link and a link inside one lane are not influences.
+    expect(EL.influences.every((x) => x.r.type !== 'part-of' && x.from !== x.to)).toBe(true);
+  });
+
+  it('puts an arrow in focus on hover: the rest fade, and its label shows', () => {
+    const EL = athens();
+    const r = EL.influences.find((x) => x.r.fromId === 'i_decelean' && x.r.toId === 'i_owls')!.r;
+    const S = at(EL, env(1200, 2400), { hover: `${ARROW}${r.id}` });
+    const arcs = S.z[3].filter((p) => p.t === 5 && p.cls?.startsWith('tl-influence') && p.cls !== 'tl-influence-halo');
+    expect(arcs.find((p) => p.k === `inf${r.id}`)).toMatchObject({ a: 1, sw: 2.2 });
+    expect(arcs.filter((p) => p.k !== `inf${r.id}`).every((p) => p.a < 0.2)).toBe(true);
+    expect(S.z[3].some((p) => p.t === 2 && p.id === `${ARROW}${r.id}` && p.s === 'weakened')).toBe(true);
+    // Entries it doesn't touch fade too.
+    expect(S.z[2].find((p) => p.id === 'i_pelop')?.a).toBeLessThan(0.5);
+  });
+
+  it('on a phone lists each end’s effects under it and joins them in the margin', () => {
+    const EL = athens();
+    EL.open = 'economy';
+    const S = at(EL, { ...env(412, 9000), gutter: 0 });
+    const lines = S.z[2].filter((p) => p.t === 2 && p.cls === 'tl-effect-line').map((p) => (p.t === 2 ? p.s : ''));
+    expect(lines).toContain('weakened by');
+    expect(lines).toContain('Decelean War');
+    expect(S.z[3].some((p) => p.t === 5 && p.cls === 'tl-margin-arc')).toBe(true);
+    expect(S.targets.some((t) => t.id.startsWith(ARROW))).toBe(true);
+  });
+
 });
 
 describe('box-select', () => {
