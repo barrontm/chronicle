@@ -122,4 +122,19 @@ describe('what a highlight becomes, ticked or filled in by hand', () => {
     expect(back.territories[0].itemId).toBeUndefined();
     expect(back.territories[0].wikidataId).toBeUndefined();
   });
+
+  it('adds the polity an entry’s place was in alongside it, uncited, and Undo takes both back', () => {
+    const { doc } = setup();
+    const revolt = item('i_revolt', {});
+    const persia = item('i_persia', { kind: 'span', subject: 'polity' });
+    const borders = { id: 't_persia', title: 'Achaemenid Empire', categoryId: 'c', snapshots: [{ from: { y: -549 } }], itemId: 'i_persia', updatedAt: 0 };
+    const { doc: d, became } = addBecoming(doc, 'h1', { link: [], add: [{ item: revolt }], alongside: [{ item: persia, territory: { next: borders } }] }, 5);
+    expect(d.highlights[0].usedBy).toEqual(['i_old', 'i_revolt']);
+    expect(d.items.find((i) => i.id === 'i_persia')?.citations).toBeUndefined();
+    expect(d.territories.map((t) => t.id)).toEqual(['t_persia']);
+    const back = undoBecoming(d, became, 6);
+    expect(back.items.map((i) => i.id)).not.toContain('i_persia');
+    expect(back.items.map((i) => i.id)).not.toContain('i_revolt');
+    expect(back.territories).toEqual([]);
+  });
 });

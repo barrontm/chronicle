@@ -218,6 +218,30 @@ if (any('desktop-places')) await places(await page('desktop-places', desktop), '
 if (any('dark-places')) await places(await page('dark-places', { ...desktop, colorScheme: 'dark' }), 'dark');
 if (any('phone-places')) await places(await page('phone-places', { viewport: { width: 412, height: 860 }, isMobile: true, hasTouch: true }), 'phone');
 
+// A new entry at Sardis in 499 BCE: who held the place then, from Seshat's real borders, under its places.
+async function placePolity(p, prefix) {
+  await withFixture(p);
+  if (prefix === 'phone') await openSheet(p);
+  const editor = p.getByTestId('item-editor');
+  for (let n = 0; n < 4; n++) {
+    const box = await p.getByTestId('timeline').boundingBox();
+    await p.mouse.dblclick(box.x + box.width * 0.6, box.y + box.height * 0.6);
+    if (await editor.waitFor({ timeout: 2000 }).then(() => true, () => false)) break;
+  }
+  await editor.getByLabel('Title').fill('Ionian Revolt begins');
+  await editor.getByLabel('Date').fill('499 BCE');
+  await editor.getByRole('button', { name: 'Add a place' }).click();
+  await editor.getByLabel('Place name').fill('Sardis');
+  await editor.getByLabel('Coordinates').fill('38.488, 28.04');
+  await editor.getByRole('button', { name: 'Add place' }).click();
+  await editor.getByText('In Achaemenid Empire in 499 BCE').waitFor();
+  await editor.getByTestId('place-polity').scrollIntoViewIfNeeded();
+  await shot(p, `${prefix}-place-polity`);
+}
+if (any('desktop-place-polity')) await placePolity(await page('desktop-place-polity', desktop), 'desktop');
+if (any('dark-place-polity')) await placePolity(await page('dark-place-polity', { ...desktop, colorScheme: 'dark' }), 'dark');
+if (any('phone-place-polity')) await placePolity(await page('phone-place-polity', { viewport: { width: 412, height: 860 }, isMobile: true, hasTouch: true }), 'phone');
+
 // A territory's offer of Seshat's borders. The fixture's hand-made territory is pointed at the
 // real Achaemenid Empire file, so the list is real data.
 async function seshat(p, prefix) {

@@ -1,4 +1,6 @@
 import { toDecimalYear } from '../model/dates';
+import { snapshotAt } from '../model/atYear';
+import { holds } from '../model/polities';
 import type { HistDate, TerritorySnapshot } from '../model/types';
 
 /**
@@ -82,6 +84,32 @@ export function matchCliopatria(index: CliopatriaIndex, wanted: WantedPolity, st
   return undefined;
 }
 
+/** The polities whose borders might hold a point in a year: a row in force then, with the point in its box. */
+export function polityCandidatesAt([lon, lat]: [number, number], year: number, index: CliopatriaIndex): CliopatriaPolity[] {
+  return index.polities.filter((p) => p.rows.some(([from, to, w, s, e, n]) => from <= year && year < to && w <= lon && lon <= e && s <= lat && lat <= n));
+}
+
+/** A polity that held a point in a year, with the borders it had then. */
+export interface PolityAt {
+  polity: CliopatriaPolity;
+  snapshot: TerritorySnapshot;
+}
+
+/**
+ * Who held a point in a year, from the polities' files Bob's side has fetched (`shapes`, by id; the
+ * candidates without one are skipped). A single polity comes before a group of them, then the
+ * smallest first: the one most nearly "where it happened".
+ */
+export function politiesAt(lonLat: [number, number], year: number, index: CliopatriaIndex, shapes: Record<string, CliopatriaFile | undefined>): PolityAt[] {
+  const out: PolityAt[] = [];
+  for (const polity of polityCandidatesAt(lonLat, year, index)) {
+    const file = shapes[polity.id];
+    const snapshot = file && snapshotAt(file, year);
+    if (snapshot?.geometry && holds(snapshot.geometry, lonLat[0], lonLat[1])) out.push({ polity, snapshot });
+  }
+  return out.sort((a, b) => Number(!!a.polity.group) - Number(!!b.polity.group) || (a.snapshot.areaKm2 ?? Infinity) - (b.snapshot.areaKm2 ?? Infinity));
+}
+
 // ---------- Network ----------
 
 const BORDERS = () => `${import.meta.env.BASE_URL}data/borders/`;
@@ -105,4 +133,19 @@ export function fetchCliopatriaIndex(): Promise<CliopatriaIndex> {
 
 export function fetchCliopatria(id: string): Promise<CliopatriaFile> {
   return getJson<CliopatriaFile>(`${BORDERS()}${id}.json`);
+}
+
+/**
+ * Who held a point in a year, with their files: only the polities whose boxes hold it are fetched.
+ * A file that won't load is skipped, unless none will.
+ */
+export async function findPolitiesAt(lonLat: [number, number], year: number, signal?: AbortSignal): Promise<Array<PolityAt & { file: CliopatriaFile }>> {
+  const idx = await fetchCliopatriaIndex();
+  const ids = polityCandidatesAt(lonLat, year, idx).map((p) => p.id);
+  const got = await Promise.allSettled(ids.map((id) => fetchCliopatria(id)));
+  signal?.throwIfAborted();
+  const failed = got.find((g) => g.status === 'rejected');
+  if (failed && got.every((g) => g.status === 'rejected')) throw failed.reason;
+  const shapes = Object.fromEntries(got.flatMap((g, i) => (g.status === 'fulfilled' ? [[ids[i], g.value]] : [])));
+  return politiesAt(lonLat, year, idx, shapes).map((p) => ({ ...p, file: shapes[p.polity.id] }));
 }

@@ -78,6 +78,8 @@ function untie(doc: TimelineDoc, t: Tied, now: number): TimelineDoc {
 export interface Becoming {
   link: { id: string; relations?: Relation[] }[];
   add: { item: TimelineItem; newSources?: Source[]; relations?: Relation[]; territory?: Tied }[];
+  /** Polities added because an entry's place was in them: not cited by the highlight, only added with it. */
+  alongside?: { item: TimelineItem; territory: Tied }[];
 }
 
 /** What `addBecoming` changed, so one Undo can take it all back. */
@@ -100,6 +102,11 @@ export function addBecoming(doc: TimelineDoc, highlightId: string, b: Becoming, 
     d = acceptEntry(d, { item: a.item, newSources: a.newSources ?? [], territory: a.territory, why: '', problems: [], status: 'pending' }, now, highlightId);
     became.added.push(a.item.id);
     if (a.territory) (became.territories ??= []).push(a.territory);
+  }
+  for (const a of b.alongside ?? []) {
+    d = upsert(upsert(d, 'items', a.item, now), 'territories', a.territory.next, now);
+    became.added.push(a.item.id);
+    (became.territories ??= []).push(a.territory);
   }
   const ids = new Set(d.items.map((i) => i.id));
   for (const r of [...b.link, ...b.add].flatMap((x) => x.relations ?? [])) {

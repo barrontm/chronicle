@@ -6,7 +6,8 @@ import {
 import { bordersFor } from '../../data/basemaps';
 import { areaKm2, type Area } from '../../data/geo';
 import { lookUpPlace, type ItemDraft } from '../../media/wikipedia';
-import { formatItemDates, toDecimalYear } from '../../model/dates';
+import { formatItemDates, parseHistDate, toDecimalYear } from '../../model/dates';
+import { placeYear } from '../../model/polities';
 import { CANT_ADD, defaultChoices, ownEntry, polityTerritory, territoryOf } from '../../model/passage';
 import { upsert } from '../../model/doc';
 import { describeRelation } from '../../model/doc';
@@ -17,6 +18,7 @@ import { DraftConnectionRow, DraftEntryRow, DroppedList } from '../panels/DraftR
 import { useApiKey, useOnline } from '../useAi';
 import { lanesInWords, PIGMENT } from '../util';
 import { LaneChips } from '../LaneChips';
+import { PlacePolity, usePlacePolity } from '../PlacePolity';
 import { Glyph } from './Glyph';
 import { useHighlightDrafts, type Ghost } from './highlightDrafts';
 import type { RecordRef } from './ReaderPane';
@@ -105,6 +107,26 @@ export function CaptureTray({ marks, candidates, articleTitle, onAdd, onDraftPag
   const [askError, setAskError] = useState<Record<string, string>>({});
   const open = marks.open;
   const openId = open?.highlight.id;
+
+  // "Something else…": its place, looked up as Bob types it, and who held it in its year.
+  const [ownPlace, setOwnPlace] = useState<{ query: string; place?: Place; failed?: true } | null>(null);
+  const ownQuery = own?.place.trim() ?? '';
+  useEffect(() => {
+    if (!ownQuery || !online || ownPlace?.query === ownQuery) return;
+    const c = new AbortController();
+    const t = setTimeout(() => {
+      lookUpPlace(ownQuery, c.signal).then(
+        ([hit]) => setOwnPlace({ query: ownQuery, ...(hit ? { place: { name: hit.name, lat: hit.lat, lon: hit.lon, role: 'site' } } : {}) }),
+        () => { if (!c.signal.aborted) setOwnPlace({ query: ownQuery, failed: true }); },
+      );
+    }, 500);
+    return () => { clearTimeout(t); c.abort(); };
+  }, [ownQuery, online, ownPlace?.query]);
+  const ownStart = own?.start.trim() ? parseHistDate(own.start) : undefined;
+  const ownEnd = own && own.kind !== 'event' && own.end.trim() ? parseHistDate(own.end) : undefined;
+  const ownAt = ownPlace?.query === ownQuery ? ownPlace.place : undefined;
+  const ownYear = ownAt && ownStart ? placeYear({ kind: own!.kind, start: ownStart, end: ownEnd ?? undefined }, ownAt) : undefined;
+  const ownPolity = usePlacePolity(ownAt && ownYear !== undefined ? { name: ownAt.name, lat: ownAt.lat, lon: ownAt.lon, year: ownYear } : undefined);
 
   // The map shows the open highlight's drafts, and a ghost of what it could become (set below, once the candidate is known).
   const { show, setGhosts } = drafts;
@@ -339,9 +361,13 @@ export function CaptureTray({ marks, candidates, articleTitle, onAdd, onDraftPag
     if ('problem' in check) { setOwnError(check.problem); return; }
     setBusy(true);
     setOwnError(null);
-    let place: Place | undefined;
+    // Found already as Bob typed it, or looked up now.
+    const known = ownPlace?.query === name ? ownPlace : undefined;
+    let place: Place | undefined = known?.place;
     let note = '';
-    if (name && !navigator.onLine) note = ` You’re offline, so it has no pin yet; add ${name} in the editor later.`;
+    if (place) note = ` Pinned at ${place.name}.`;
+    else if (known && !known.failed) note = ` Couldn’t find ${name} on the map, so it has no pin yet.`;
+    else if (name && !navigator.onLine) note = ` You’re offline, so it has no pin yet; add ${name} in the editor later.`;
     else if (name) {
       try {
         const hit = (await lookUpPlace(name))[0];
@@ -354,11 +380,13 @@ export function CaptureTray({ marks, candidates, articleTitle, onAdd, onDraftPag
     setBusy(false);
     const made = ownEntry({ ...own, lanes, place }, h, doc.categories[0]?.id ?? '');
     if ('problem' in made) return;
-    const b: Becoming = { link: [], add: [{ item: made.item }] };
+    // The polity its place was in comes too, when ticked (only for the place it was looked up for).
+    const polity = place && place === ownAt ? ownPolity.toAdd(doc.categories[0]?.id ?? '') : undefined;
+    const b: Becoming = { link: [], add: [{ item: made.item }], ...(polity ? { alongside: [polity] } : {}) };
     const { became } = addBecoming(doc, h.id, b);
     update((d) => addBecoming(d, h.id, b).doc);
     setOwn(null);
-    setLast({ became, msg: `Added ${made.item.title} to your map and timeline.${note}` });
+    setLast({ became, msg: `Added ${inWords([made.item.title, ...(polity ? [polity.item.title] : [])])} to your map and timeline.${note}` });
     if (made.item.start) onShowYear?.(Math.round(toDecimalYear(made.item.start)));
   };
 
@@ -613,6 +641,7 @@ export function CaptureTray({ marks, candidates, articleTitle, onAdd, onDraftPag
             {own.kind !== 'event' && <label>{own.kind === 'person' ? 'Died' : 'Ends'}<input value={own.end} onChange={(e) => setOwn({ ...own, end: e.target.value })} placeholder={own.kind === 'person' ? 'Blank if living' : '404 BCE'} /></label>}
           </div>
           <label className="own-place">Place<input value={own.place} onChange={(e) => setOwn({ ...own, place: e.target.value })} placeholder="Where it happened, if anywhere" /></label>
+          <PlacePolity state={ownPolity} />
           <LaneChips label="Its lanes" value={own.lanes ?? h.lanes} onToggle={(l) => {
             const cur = own.lanes ?? h.lanes ?? [];
             setOwn({ ...own, lanes: cur.includes(l) ? cur.filter((x) => x !== l) : [...cur, l] });

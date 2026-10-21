@@ -1,3 +1,4 @@
+import { CLIOPATRIA_CREDIT, plainName, type CliopatriaFile, type CliopatriaPolity } from '../data/cliopatria';
 import { compareHistDate, parseHistDate } from './dates';
 import { newId } from './doc';
 import type { SubjectKind } from './subjects';
@@ -151,4 +152,33 @@ export function polityTerritory(
     ...(snapshots.length && source ? { source } : {}),
     updatedAt: 0,
   } };
+}
+
+/**
+ * The territory Bob already has for a polity in Seshat's maps: one with one of its Wikidata ids (its
+ * own, or its entry's), else one with its name.
+ */
+export function havePolity(p: Pick<CliopatriaPolity, 'name' | 'wikidata'>, items: TimelineItem[], territories: Territory[]): Territory | undefined {
+  const qids = new Set(p.wikidata);
+  const qidOf = (t: Territory) => t.wikidataId ?? items.find((i) => i.id === t.itemId)?.wikidataId;
+  return territories.find((t) => { const q = qidOf(t); return !!q && qids.has(q); })
+    ?? territories.find((t) => plainName(t.title) === plainName(p.name));
+}
+
+/**
+ * A polity from Seshat's maps, added alongside an entry in it: its entry (a lifespan bar over the
+ * years Seshat has borders for) and its territory with all those borders, credited to Seshat.
+ */
+export function seshatPolity(p: CliopatriaPolity, file: CliopatriaFile, categoryId: string): { item: TimelineItem; territory: { next: Territory } } {
+  const snaps = [...file.snapshots].sort((a, b) => compareHistDate(a.from, b.from));
+  // With no end to its last borders, Seshat has it to today: it's still there.
+  const ends = snaps.map((s) => s.to);
+  const end = ends.length && ends.every(Boolean) ? ends.reduce((a, b) => (compareHistDate(a!, b!) >= 0 ? a : b)) : undefined;
+  const item: TimelineItem = {
+    id: newId('i'), kind: 'span', subject: 'polity', title: p.name, start: snaps[0]?.from ?? { y: p.rows[0][0] },
+    ...(end ? { end } : {}), categoryId,
+    ...(p.wikidata[0] ? { wikidataId: p.wikidata[0] } : {}),
+    updatedAt: 0,
+  };
+  return { item, territory: polityTerritory(item, [], snaps, CLIOPATRIA_CREDIT) };
 }
