@@ -118,7 +118,8 @@ Each phase ships something usable, behind a "Try the new layout" setting (`ui.ne
 2. Highlight → record: code path, AI `highlight` feature, review
 3. New timeline: `subject` and `region` (v7), renderer at parity, every kind drawn as itself, then the zoom levels; vis-timeline removed
 4. The overview: lanes (v9), polities from the tray, polity strips and world events, a polity's six lanes, the map following; the classic layout dropped
-   - 4b. Themes, influences between lanes, threads; eras on the map
+   - Small tickets after it: add from a lane; borders from Seshat (Cliopatria); the polity a place was in
+   - 4b. Themes, influences between lanes, threads; eras on the map; lenses, regions and groups in the app
 5. Polities and wars: regimes (v10), border morph, alliances, campaigns, battles
    - 5b. Economy, with distribution (v11)
    - 5c. Ideas, schools and spread (v12)
