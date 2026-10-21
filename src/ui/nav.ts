@@ -1,11 +1,12 @@
 import type { Area } from '../data/geo';
 import type { ItemDraft } from '../media/wikipedia';
-import type { ItemKind } from '../model/types';
+import type { ItemKind, Lane } from '../model/types';
 
 /** What the side drawer is showing. The drawer keeps a stack so "Back" works across links. */
 export type Panel =
   | { type: 'item'; id: string; edit?: boolean }
-  | { type: 'new-item'; year?: number; categoryId?: string; kind?: ItemKind; draft?: ItemDraft }
+  /** `lane` and `partOf` come from a lane's "+ Add" in an era or polity. */
+  | { type: 'new-item'; year?: number; categoryId?: string; kind?: ItemKind; lane?: Lane; partOf?: string; draft?: ItemDraft }
   | { type: 'ai-draft' }
   | { type: 'note'; id: string; edit?: boolean }
   | { type: 'new-note'; linkedIds: string[] }

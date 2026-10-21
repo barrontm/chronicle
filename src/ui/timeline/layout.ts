@@ -585,6 +585,7 @@ export function layout(D: Prepared, V: View, E: Env, level: Level = 2): Scene {
     plot: { x: x0, y: AXIS_H, w: Math.max(0, x1 - x0), h: Math.max(0, E.h - AXIS_H) },
     gutterBox: { x: 0, y: AXIS_H, w: x0, h: Math.max(0, E.h - AXIS_H) },
     contentH: level === 0 ? overviewGeo(D, V, E.w < PHONE_W).H : level === 1 && V.era ? lanesH(V.era, E.w < PHONE_W) : D.contentH,
+    adds: [],
   };
   const span = V.win.end - V.win.start;
   const ppy = (x1 - x0) / span;
@@ -863,6 +864,8 @@ const PAD1 = 6;
 const MOMENT_ROW = 26;
 const DIAMOND = 12;
 const LANE1_EMPTY = 52;
+/** A lane's "+ Add" button. */
+const ADD_W = 50, ADD_H = 22;
 // On a phone each lane is its name, its bars without labels, then a dated list.
 const P_HEAD = 30, P_MOMENT = 14, P_ROW = 12, P_ITEM = 30, P_YEAR = 92;
 
@@ -1060,7 +1063,7 @@ const entriesN = (n: number) => `${n} ${n === 1 ? 'entry' : 'entries'}`;
 
 const highlightsN = (n: number) => `${n} ${n === 1 ? 'highlight' : 'highlights'}`;
 const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
-const blank = (S: Scene): Scene => ({ ...S, z: [[], [], [], []], gutter: [], axis: [], targets: [], clusters: [], boxes: new Map() });
+const blank = (S: Scene): Scene => ({ ...S, z: [[], [], [], []], gutter: [], axis: [], targets: [], clusters: [], boxes: new Map(), adds: [] });
 
 /** A primitive moved by `Y` and faded: marks by `ma`, words and glyphs by `ta`. Arrows and shapes wait until it's open. */
 function squash(p: Prim, Y: (y: number) => number, ma: number, ta: number): Prim | undefined {
@@ -1154,7 +1157,10 @@ function lane1(c: Ctx, EL: EraLanes, L: Lane1, top: number, h: number) {
   S.gutter.push({ t: 2, k: `qgn${L.id}`, a: 1, cls: `tl-lane-name${toggle ? ' tl-lane-toggle' : ''}`, x: 30, y: ny + 11, s: fit(M, 'dim', L.label.toUpperCase(), E.gutter - 38), f: 'dim', fill: 'var(--ink)' });
   // In a polity the line under the name says how many and opens the lane: "Show all 12 ▾".
   const count = toggle ? `${toggleNote(EL, L)} ${isOpen(EL, L) ? '▴' : '▾'}` : L.countLabel;
-  if (count) S.gutter.push({ t: 2, k: `qgc${L.id}`, a: 1, cls: toggle ? 'tl-lane-toggle' : undefined, id: toggle ? LANE_TOGGLE + L.id : undefined, x: 30, y: ny + 27, s: fit(M, 'dimCount', count, E.gutter - 38), f: 'dimCount', fill: hot ? 'var(--ink)' : 'var(--muted)' });
+  // "+ Add" at the end of that line, while the lane's name is in view.
+  const add = L.id !== NO_LANE && ny + 14 >= c.top && ny + 14 + ADD_H <= c.bottom;
+  if (add) S.adds.push({ lane: L.id as Lane, label: L.label, x: E.gutter - 10 - ADD_W, y: ny + 14, w: ADD_W, h: ADD_H });
+  if (count) S.gutter.push({ t: 2, k: `qgc${L.id}`, a: 1, cls: toggle ? 'tl-lane-toggle' : undefined, id: toggle ? LANE_TOGGLE + L.id : undefined, x: 30, y: ny + 27, s: fit(M, 'dimCount', count, E.gutter - 38 - (L.id !== NO_LANE ? ADD_W + 6 : 0)), f: 'dimCount', fill: hot ? 'var(--ink)' : 'var(--muted)' });
   if (toggle) S.targets.push({ id: LANE_TOGGLE + L.id, gutter: true, x: 0, y: Math.max(top, c.top), w: E.gutter, h: Math.max(0, Math.min(bot, c.bottom) - Math.max(top, c.top)) });
   if (!L.order.length) {
     S.z[2].push({ t: 2, k: `qe${L.id}`, a: 1, cls: 'tl-lane-empty', x: Math.max(x0, wa) + 16, y: top + h / 2 + 5, s: emptyNote(L), f: 'note', fill: 'var(--muted)' });
@@ -1296,6 +1302,8 @@ function phoneLane(c: Ctx, EL: EraLanes, L: Lane1, top: number, h: number) {
   const name = L.label.toUpperCase();
   S.z[2].push({ t: 2, k: `qgn${L.id}`, a: 1, cls: 'tl-lane-name', x: x0 + 28, y: top + 21, s: name, f: 'dim', fill: 'var(--ink)' });
   if (L.countLabel) S.z[2].push({ t: 2, k: `qgc${L.id}`, a: 1, x: x0 + 28 + M('dim', name) + 10, y: top + 21, s: L.countLabel, f: 'dimCount', fill: 'var(--muted)' });
+  // "+ Add" at the end of the lane's heading.
+  if (L.id !== NO_LANE && top + 4 >= c.top && top + 4 + ADD_H <= c.bottom) S.adds.push({ lane: L.id as Lane, label: L.label, x: x1 - 8 - ADD_W, y: top + 4, w: ADD_W, h: ADD_H });
   if (EL.compact && L.order.length) S.targets.push({ id: LANE_TOGGLE + L.id, x: x0, y: top, w: x1 - x0, h: P_HEAD });
   if (!L.order.length) {
     S.z[2].push({ t: 2, k: `qe${L.id}`, a: 1, cls: 'tl-lane-empty', x: x0 + 12, y: top + P_HEAD + 18, s: emptyNote(L), f: 'note', fill: 'var(--muted)' });

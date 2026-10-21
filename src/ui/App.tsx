@@ -482,6 +482,7 @@ function Workspace() {
             thumbFor={thumbFor}
             onSelect={selectFromTimeline}
             onAddAt={(year, categoryId) => setStack([{ type: 'new-item', year, categoryId }])}
+            onAddIn={(lane, year, partOf) => setStack([{ type: 'new-item', year, lane, partOf }])}
             onWindow={setWin}
             onCanGoBack={setCanGoBackInTime}
             year={year}
@@ -565,7 +566,7 @@ function PanelBody({ panel, nav, aiDraft, onAiDraft, onBulkDone }: { panel: Pane
   // `key` resets editor state when switching between records.
   switch (panel.type) {
     case 'item': return panel.edit ? <ItemEditor key={`e-${panel.id}`} id={panel.id} nav={nav} /> : <ItemView key={panel.id} id={panel.id} nav={nav} />;
-    case 'new-item': return <ItemEditor key={`new-${panel.draft?.item.id ?? `${panel.year}-${panel.kind}-${panel.categoryId}`}`} id={null} init={panel} draft={panel.draft} nav={nav} />;
+    case 'new-item': return <ItemEditor key={`new-${panel.draft?.item.id ?? `${panel.year}-${panel.kind}-${panel.categoryId}-${panel.lane}-${panel.partOf}`}`} id={null} init={panel} draft={panel.draft} nav={nav} />;
     case 'ai-draft': return <Suspense fallback={<div className="notice" role="status">Opening…</div>}><DraftReview nav={nav} draft={aiDraft} onDraft={onAiDraft} /></Suspense>;
     case 'note': return panel.edit ? <NoteEditor key={`e-${panel.id}`} id={panel.id} nav={nav} /> : <NoteView key={panel.id} id={panel.id} nav={nav} />;
     case 'new-note': return <NoteEditor key="new-note" id={null} linkedIds={panel.linkedIds} nav={nav} />;

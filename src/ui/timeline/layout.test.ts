@@ -638,6 +638,18 @@ describe('level 1: a polity’s six lanes', () => {
     expect(textOf(S)).toContain(`Show all ${war.order.length} ▾`);
   });
 
+  it('puts "+ Add" under each lane’s name in the gutter, and at the end of each heading on a phone, only while in view', () => {
+    const EL = athens();
+    const S = at(EL);
+    expect(S.adds.map((a) => a.lane)).toEqual(EL.lanes.filter((l) => l.id !== NO_LANE).map((l) => l.id));
+    for (const a of S.adds) expect(a.x + a.w).toBeLessThanOrEqual(env().gutter);
+    const phone = at(EL, { ...env(412, 6000), gutter: 0 });
+    for (const a of phone.adds) expect(a.x + a.w).toBeLessThanOrEqual(412);
+    // A short timeline only has room for the first lanes' buttons; level 2 has none.
+    expect(at(EL, env(1200, 200)).adds.length).toBeLessThan(S.adds.length);
+    expect(layout(D, view(win.start, win.end), env(1200, 2400), 2).adds).toEqual([]);
+  });
+
   it('grows out of Athens’ strip while it opens', () => {
     const unfolded = new Map([['g_classical_greece', 1]]);
     const S = at(athens(), env(1200, 700), { zoom: { t: 0.2, fade: false, scroll0: 0 }, unfolded });

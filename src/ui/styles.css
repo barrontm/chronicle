@@ -435,6 +435,15 @@ button, input, select, textarea { font: inherit; color: inherit; }
   box-shadow: 0 2px 8px rgb(0 0 0 / 0.12); font-size: 12.5px; line-height: 1.35;
 }
 .tl-tip[hidden] { display: none; }
+/* Level 1: "+ Add" under each lane's name, real buttons placed over the drawing. */
+.tl-adds { position: absolute; left: 0; top: 0; width: 0; height: 0; z-index: 2; }
+.tl-add {
+  position: absolute; left: 0; top: 0; padding: 0; display: grid; place-items: center;
+  font: 500 12px/1 var(--font-ui); color: var(--ink-2); background: var(--panel);
+  border: 1px solid var(--rule); border-radius: var(--radius-s); cursor: pointer;
+}
+.tl-add:hover { color: var(--ink); border-color: var(--ink-2); }
+.tl-add:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
 /* An open entry with connections: the rest fade; arrowheads take their arrow's color. */
 .tl-svg .dimmed { opacity: 0.3; }
 .tl-svg .tl-era { transition: stroke var(--motion-quick); }

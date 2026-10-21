@@ -295,8 +295,8 @@ test('an era opens into its six lanes, says when one is empty, and Esc goes back
   await expect(page.getByTestId('time-bar').getByRole('button', { name: 'Overview' })).toHaveAttribute('aria-pressed', 'true');
 });
 
-test('Athens opens into its six lanes: Laurion in Economy, the war in War; a lane opens to all of it, and Esc steps back @phone', async ({ page, isMobile }) => {
-  test.slow();
+/** The Classical Greece fixture with Athens opened into its six lanes from the overview; returns the timeline and Athens' strip. */
+async function openAthens(page: Page, isMobile: boolean) {
   await page.goto('/');
   await expect(page.getByTestId('save-state')).toHaveText('Saved on this device');
   await page.getByTestId('import-input').setInputFiles(fileURLToPath(new URL('../tests/fixtures/greece/classical-greece.json', import.meta.url)));
@@ -322,6 +322,12 @@ test('Athens opens into its six lanes: Laurion in Economy, the war in War; a lan
   await expect(timeline).toHaveAttribute('data-level', '1');
   await expect(timeline.locator('text.tl-era-head', { hasText: 'Athens (Attica)' })).toBeVisible();
   await expect(timeline.locator('text.tl-back', { hasText: '‹ Overview' })).toBeVisible();
+  return { timeline, athens };
+}
+
+test('Athens opens into its six lanes: Laurion in Economy, the war in War; a lane opens to all of it, and Esc steps back @phone', async ({ page, isMobile }) => {
+  test.slow();
+  const { timeline, athens } = await openAthens(page, isMobile);
 
   // Closed lanes name their most prominent: the Peloponnesian War in War, the silver strike at Laurion in Economy (further down).
   const named = (id: string) => timeline.locator(isMobile ? `text.tl-list-item[data-id=${id}]` : `.tl-named[data-id=${id}]`);
@@ -343,6 +349,37 @@ test('Athens opens into its six lanes: Laurion in Economy, the war in War; a lan
   await expect(athens).toHaveClass(/picked/);
   await timeline.press('Escape');
   await expect(athens).not.toHaveClass(/picked/);
+});
+
+test('Add under a lane in Athens opens a new entry in that lane, part of Athens, and it lands there @phone', async ({ page, isMobile }) => {
+  test.slow();
+  const { timeline } = await openAthens(page, isMobile);
+  // "+ Add" under Economy: a real button, so it's reached with Tab and pressed with Enter.
+  const add = timeline.getByRole('button', { name: 'Add to Economy' });
+  await scrollToMark(timeline, add);
+  const toggle = timeline.locator('text.tl-lane-toggle[data-id="__lane:economy"]');
+  const before = Number((await toggle.first().textContent())?.match(/\d+/)?.[0]);
+  await add.focus();
+  await page.keyboard.press('Enter');
+  const editor = page.getByTestId('item-editor');
+  await expect(editor).toBeVisible();
+  await expect(editor.getByRole('button', { name: 'Economy' })).toHaveAttribute('aria-pressed', 'true');
+  const partOf = editor.getByTestId('suggested-connections').getByRole('checkbox');
+  await expect(partOf).toHaveAccessibleName('Part of Athens (Attica)');
+  await expect(partOf).toBeChecked();
+  await editor.getByLabel('Title').fill('Laurion silver strike');
+  await editor.getByRole('button', { name: 'Add to timeline' }).click();
+  await expect(page.getByRole('heading', { name: 'Laurion silver strike' })).toBeVisible();
+
+  // It's one more in Athens' Economy lane, and opening the lane shows it (on the phone, under its panel).
+  if (isMobile) await page.getByRole('button', { name: 'Close' }).click();
+  await expect(timeline).toHaveAttribute('data-level', '1');
+  await expect(toggle.first()).toContainText(`Show all ${before + 1}`);
+  await toggle.first().click({ force: true });
+  // On the laptop it's the open entry, drawn selected (with the drawer open the timeline is narrow enough to be a list); on the phone it's in the list.
+  const mark = isMobile ? timeline.locator('text.tl-list-item', { hasText: 'Laurion silver strike' }) : timeline.locator('text.tl-list-item.selected, .tl-moment.selected');
+  await scrollToMark(timeline, mark);
+  if (!isMobile) await expect(timeline.locator('text.tl-list-item.selected, text.tl-label', { hasText: 'Laurion silver strike' }).first()).toBeVisible();
 });
 
 test('the map follows the overview: Athens in 431 BCE at war with Sparta and Corinth, the War lane, and Persia clicked on the map', async ({ page }) => {
