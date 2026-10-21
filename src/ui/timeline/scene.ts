@@ -1,4 +1,4 @@
-import type { SubjectKind } from '../../model/types';
+import type { Lane, SubjectKind } from '../../model/types';
 
 /**
  * The scene is the contract between the layout (pure) and the painter. Every frame the layout
@@ -123,6 +123,11 @@ export interface Scene {
   gutterBox: Box;
   /** Height of all lanes, for vertical scroll limits. */
   contentH: number;
+  /** Level 1: each lane's "Add" under its name, drawn as real buttons so the keyboard reaches them. */
+  adds: AddSpot[];
 }
+
+/** Where a lane's "Add" button sits, in px from the plot's top left like everything else. */
+export interface AddSpot { lane: Lane; label: string; x: number; y: number; w: number; h: number }
 
 export const tint = (color: string, pct: number) => `color-mix(in srgb, ${color} ${pct}%, var(--panel))`;

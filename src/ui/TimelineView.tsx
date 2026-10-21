@@ -4,7 +4,7 @@ import { eraRegions } from '../model/eras';
 import { entryLanes } from '../model/lanes';
 import { overview } from '../model/overview';
 import { polityMembers, worldMembers } from '../model/polities';
-import type { Category, DatedItem, Highlight, MediaRef, PolityGroup, Relation, Territory, TimelineItem } from '../model/types';
+import type { Category, DatedItem, Highlight, Lane, MediaRef, PolityGroup, Relation, Territory, TimelineItem } from '../model/types';
 import { draftArrows, influenceArrows, influenceClasses } from './influenceLinks';
 import { createTimeline, type MovedDates, type OverviewFocus, type TimelineHandle } from './timeline/createTimeline';
 import type { Level } from './timeline/layout';
@@ -50,6 +50,8 @@ interface Props {
   thumbFor: (m: MediaRef) => string | undefined;
   onSelect: (id: string | undefined) => void;
   onAddAt: (year: number, categoryId?: string) => void;
+  /** A lane's "+ Add" in an era or polity: a new entry in that lane, part of what's open. */
+  onAddIn: (lane: Lane, year: number, partOf?: string) => void;
   onWindow: (w: VisibleWindow) => void;
   /** Whether there's a window from before the first focus to go back to. */
   onCanGoBack: (can: boolean) => void;
@@ -93,14 +95,14 @@ function focusTarget(id: string, items: DatedItem[], relations: Relation[], show
   return focusWindow(item, items.filter((i) => otherIds.has(i.id) && shown(i.id)));
 }
 
-export const TimelineView = forwardRef<TimelineControl, Props>(function TimelineView({ items: allItems, categories, relations, selectedId, thumbFor, onSelect, onAddAt, onWindow, onCanGoBack, year, onYear, prominence, drafts: allDrafts = NO_DRAFTS, onMove, highlights = NO_HIGHLIGHTS, picked = NO_PICKS, onPick, territories = NO_TERRITORIES, groups, regionParents, onFocus, region, onRegion }, ref) {
+export const TimelineView = forwardRef<TimelineControl, Props>(function TimelineView({ items: allItems, categories, relations, selectedId, thumbFor, onSelect, onAddAt, onAddIn, onWindow, onCanGoBack, year, onYear, prominence, drafts: allDrafts = NO_DRAFTS, onMove, highlights = NO_HIGHLIGHTS, picked = NO_PICKS, onPick, territories = NO_TERRITORIES, groups, regionParents, onFocus, region, onRegion }, ref) {
   // Only entries with a start date: a place with none is on the map only.
   const items = useMemo(() => allItems.filter(isDated), [allItems]);
   const drafts = useMemo(() => ({ ...allDrafts, items: allDrafts.items.filter(isDated) }), [allDrafts]);
   const host = useRef<HTMLDivElement>(null);
   const tl = useRef<TimelineHandle | null>(null);
-  const cb = useRef({ onSelect, onAddAt, onWindow, onYear, onCanGoBack, onMove, onPick, onFocus, onRegion });
-  cb.current = { onSelect, onAddAt, onWindow, onYear, onCanGoBack, onMove, onPick, onFocus, onRegion };
+  const cb = useRef({ onSelect, onAddAt, onAddIn, onWindow, onYear, onCanGoBack, onMove, onPick, onFocus, onRegion });
+  cb.current = { onSelect, onAddAt, onAddIn, onWindow, onYear, onCanGoBack, onMove, onPick, onFocus, onRegion };
   const latest = useRef({ items, relations, categories });
   latest.current = { items, relations, categories };
   const beforeFocus = useRef<YearWindow | null>(null);
@@ -109,6 +111,7 @@ export const TimelineView = forwardRef<TimelineControl, Props>(function Timeline
     const t = createTimeline(host.current!, {
       onSelect: (id) => cb.current.onSelect(id),
       onAddAt: (y, lane) => cb.current.onAddAt(y, lane),
+      onAddIn: (lane, y, partOf) => cb.current.onAddIn(lane, y, partOf),
       onWindow: (w) => cb.current.onWindow(w),
       onYear: (y) => cb.current.onYear?.(y),
       onMove: (id, dates) => cb.current.onMove?.(id, dates),

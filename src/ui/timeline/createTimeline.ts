@@ -43,6 +43,8 @@ export interface MovedDates { start: HistDate; end?: HistDate }
 export interface TimelineCallbacks {
   onSelect: (id: string | undefined) => void;
   onAddAt: (year: number, laneId?: string) => void;
+  /** Level 1: Bob pressed a lane's "Add": a new entry in that lane, dated the middle of the years in view, part of the open era or polity (`partOf`). */
+  onAddIn?: (lane: Lane, year: number, partOf?: string) => void;
   /** The window in view, where the plot sits in the host, and the level, as `VisibleWindow`. */
   onWindow: (w: { start: number; end: number; left: number; width: number; level: Level }) => void;
   /** Bob dragged the playhead, or clicked empty space while it shows. */
@@ -172,6 +174,49 @@ export function createTimeline(host: HTMLElement, cb: TimelineCallbacks, initial
   host.setAttribute('role', 'listbox');
   host.append(option);
 
+  // Level 1's "+ Add" under each lane's name: real buttons over the drawing, so Tab and Enter reach them.
+  const adds = document.createElement('div');
+  adds.className = 'tl-adds';
+  host.append(adds);
+  const addButtons = new Map<Lane, HTMLButtonElement>();
+  // Presses on a button are its own, not the timeline's taps, drags or keys.
+  for (const type of ['pointerdown', 'pointerup', 'click', 'dblclick', 'keydown'] as const) adds.addEventListener(type, (e) => e.stopPropagation());
+  const addIn = (lane: Lane) => {
+    const EL = level === 1 ? V.era : undefined;
+    if (!EL || morph) return;
+    const win = tween ? tween.to : V.win;
+    const pol = EL.head.id.startsWith('pol:') ? EL.head.id.slice(4) : undefined;
+    // In a polity, part of the polity itself (its territory), so it reads "Part of Athens".
+    cb.onAddIn?.(lane, Math.round((win.start + win.end) / 2), pol ?? EL.head.opens);
+  };
+  const placeAdds = (S: Scene) => {
+    const show = level === 1 && !morph && !!cb.onAddIn;
+    for (const a of show ? S.adds : []) {
+      let b = addButtons.get(a.lane);
+      if (!b) {
+        b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'tl-add';
+        b.textContent = '+ Add';
+        b.dataset.lane = a.lane;
+        b.addEventListener('click', () => addIn(a.lane));
+        addButtons.set(a.lane, b);
+      }
+      b.setAttribute('aria-label', `Add to ${a.label}`);
+      b.title = `Add an entry to ${a.label}`;
+      b.style.transform = `translate(${size.left + a.x}px, ${a.y}px)`;
+      b.style.width = `${a.w}px`;
+      b.style.height = `${a.h}px`;
+    }
+    // In lane order, so Tab goes down the lanes; those scrolled out of view leave.
+    const order = show ? S.adds.map((a) => addButtons.get(a.lane)!) : [];
+    if (order.length !== adds.children.length || order.some((b, i) => adds.children[i] !== b)) {
+      const focused = order.find((b) => b === document.activeElement);
+      adds.replaceChildren(...order);
+      focused?.focus({ preventScroll: true });
+    }
+  };
+
   /** On a phone, levels 0 and 1 have no gutter: names sit above their rows. */
   const gut = () => (level !== 2 && size.w < PHONE_W ? 0 : size.gutter);
   const maxY = () => maxScroll(D, size.h, level, size.w, V);
@@ -183,6 +228,7 @@ export function createTimeline(host: HTMLElement, cb: TimelineCallbacks, initial
     V.scrollY = clamp(V.scrollY, 0, maxY());
     scene = layout(D, V, env(), level);
     painter.draw(scene);
+    placeAdds(scene);
     const w = { start: V.win.start, end: V.win.end, left: size.left + gut(), width: size.w - gut(), level: shownLevel() };
     if (!reported || !sameWin(reported, w) || reported.left !== w.left || reported.width !== w.width || reported.level !== w.level) {
       reported = w;
@@ -697,6 +743,7 @@ export function createTimeline(host: HTMLElement, cb: TimelineCallbacks, initial
       painter.dispose();
       tip.remove();
       option.remove();
+      adds.remove();
       host.removeAttribute('role');
       host.removeAttribute('aria-activedescendant');
       delete host.dataset.ready;

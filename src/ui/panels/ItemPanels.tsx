@@ -3,7 +3,7 @@ import { bibliographyFor, describeRelation, highlightsFor, newId, notesFor, rela
 import { compareHistDate, formatItemDates, toDecimalYear } from '../../model/dates';
 import type { ItemDraft } from '../../media/wikipedia';
 import { KIND_LABEL as SUBJECT_LABEL, regionsIn } from '../../model/subjects';
-import { SUBJECT_KINDS, type Citation, type Highlight, type HistDate, type ItemKind, type MediaRef, type Relation, type RelationType, type Source, type SubjectKind, type TimelineItem } from '../../model/types';
+import { SUBJECT_KINDS, type Citation, type Highlight, type HistDate, type ItemKind, type MediaRef, type Relation, type RelationType, type Source, type SubjectKind, type TimelineItem, type Lane } from '../../model/types';
 import { useDoc } from '../DocContext';
 import { CitationsEditor, DateField, Field, RecordPicker } from '../fields';
 import { ImagePicker } from '../ImagePicker';
@@ -191,7 +191,8 @@ const CONNECTION_CHOICES: ConnectionChoice[] = RELATION_TYPES.flatMap((type): Co
 
 export function ItemEditor({ id, init, draft: prefill, nav }: {
   id: string | null;
-  init?: { year?: number; categoryId?: string; kind?: ItemKind };
+  /** `lane` and `partOf` come from a lane's "+ Add": the entry starts in that lane, part of the open era or polity. */
+  init?: { year?: number; categoryId?: string; kind?: ItemKind; lane?: Lane; partOf?: string };
   /** A prefilled, unsaved entry (e.g. from Wikipedia) and the new sources it cites. */
   draft?: ItemDraft;
   nav: Nav;
@@ -207,13 +208,16 @@ export function ItemEditor({ id, init, draft: prefill, nav }: {
     title: '',
     start: init?.year !== undefined ? { y: init.year } : (undefined as unknown as HistDate),
     categoryId: init?.categoryId ?? doc.categories[0]?.id ?? '',
+    lanes: init?.lane ? [init.lane] : undefined,
     updatedAt: 0,
   });
   const [valid, setValid] = useState({ start: !!draft.start, end: true });
   const initialRelations = existing ? doc.relations.filter((r) => r.fromId === draft.id || r.toId === draft.id) : [];
   const [relations, setRelations] = useState<Relation[]>(initialRelations);
-  // A Wikipedia draft arrives with connections to entries already on the timeline, from Wikidata's facts. Ticked ones are saved.
-  const suggested = existing ? [] : prefill?.relations ?? [];
+  // A Wikipedia draft arrives with connections to entries already on the timeline, from Wikidata's facts; one added from
+  // a lane is part of the era or polity it was in. Ticked ones are saved.
+  const [partOf] = useState<Relation[]>(() => (init?.partOf && !prefill ? [{ id: newId('r'), fromId: draft.id, toId: init.partOf, type: 'part-of', updatedAt: 0 }] : []));
+  const suggested = existing ? [] : prefill?.relations ?? partOf;
   const [unticked, setUnticked] = useState<Set<string>>(new Set());
   const [choice, setChoice] = useState(0);
   const [picking, setPicking] = useState(false);
@@ -357,7 +361,7 @@ export function ItemEditor({ id, init, draft: prefill, nav }: {
       </div>
       {suggested.length > 0 && (
         <div className="suggested" data-testid="suggested-connections">
-          <h4>Wikipedia also says</h4>
+          <h4>{prefill ? 'Wikipedia also says' : 'Suggested'}</h4>
           {suggested.map((r) => {
             const dir = r.fromId === draft.id ? 'out' : 'in';
             const other = dir === 'out' ? r.toId : r.fromId;
