@@ -1,0 +1,598 @@
+<title>Influences across lanes</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600&family=Spectral:ital,wght@0,400;0,500;0,600;1,400&family=Spectral+SC:wght@500;600&display=swap">
+<style>
+/* Layout: a quiet desk holding one device (laptop or phone); inside it, Athens open at level 1 with its six lanes, and the
+   connections between lanes drawn as arrows (A) or counted in a grid that opens into arrows (B). Tokens are Chronicle's. */
+:root {
+  --desk: #dfe3dc; --desk-ink: #35424d; --frame: #1d2b3a;
+  --bg: #eef0ec; --panel: #fbfbf8; --ink: #1d2b3a; --ink-2: #4d5b66; --muted: #74808a;
+  --rule: #cfd4cc; --rule-soft: #e1e4dd; --focus: #2f5da8;
+  --band: #e6e9e2; --band-edge: #c3c9c0; --sea: #dfe6e6;
+  --politics: #2f5da8; --war: #c23b22; --economy: #b8860b; --ideas: #4b3f8c; --technology: #2e8b74; --nature: #6b7a32; --umber: #7a5a3a;
+  --mark: #f3e3a3;
+  --halo: #eef0ec;
+  --font-read: 'Spectral', Georgia, serif;
+  --font-sc: 'Spectral SC', 'Spectral', Georgia, serif;
+  --font-ui: 'Public Sans', system-ui, sans-serif;
+  --motion-quick: 150ms; --motion-move: 400ms; --ease: cubic-bezier(.2,.7,.2,1);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --desk: #0b1116; --desk-ink: #b7bfbf; --frame: #2a3540;
+    --bg: #131b23; --panel: #1a242e; --ink: #e3e6e0; --ink-2: #b7bfbf; --muted: #8a959b;
+    --rule: #33414d; --rule-soft: #26323d; --focus: #7fa3e0;
+    --band: #18212a; --band-edge: #36444f; --sea: #0f171e;
+    --politics: #6f93d6; --war: #e0664c; --economy: #dcae45; --ideas: #9184d6; --technology: #58b89d; --nature: #a3b25e; --umber: #b9936b;
+    --mark: #5a4a17;
+    --halo: #131b23;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --desk: #0b1116; --desk-ink: #b7bfbf; --frame: #2a3540;
+  --bg: #131b23; --panel: #1a242e; --ink: #e3e6e0; --ink-2: #b7bfbf; --muted: #8a959b;
+  --rule: #33414d; --rule-soft: #26323d; --focus: #7fa3e0;
+  --band: #18212a; --band-edge: #36444f; --sea: #0f171e;
+  --politics: #6f93d6; --war: #e0664c; --economy: #dcae45; --ideas: #9184d6; --technology: #58b89d; --nature: #a3b25e; --umber: #b9936b;
+  --mark: #5a4a17;
+  --halo: #131b23;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--desk); color: var(--ink); font-family: var(--font-ui); }
+button { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+
+/* ---------- prototype chrome (outside the device) ---------- */
+.proto { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 14px 28px; display: grid; gap: 12px; }
+.pbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; color: var(--desk-ink); }
+.pbar h1 { font: 600 15px/1.2 var(--font-ui); margin: 0; letter-spacing: .01em; }
+.pbar h1 span { font-weight: 400; color: var(--muted); margin-left: 6px; }
+.controls { display: flex; flex-wrap: wrap; gap: 8px 14px; }
+.seg { display: inline-flex; align-items: center; gap: 6px; border: 0; padding: 0; margin: 0; }
+.seg legend { float: left; font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin-right: 4px; padding: 0; }
+.seg .opts { display: inline-flex; border: 1px solid var(--band-edge); border-radius: 6px; overflow: hidden; background: var(--panel); }
+.seg button { border: 0; background: none; padding: 5px 10px; font-size: 12.5px; cursor: pointer; color: var(--ink-2); }
+.seg button + button { border-left: 1px solid var(--band-edge); }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--panel); }
+.steps { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.steps .lbl { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin-right: 4px; }
+.steps button { border: 1px solid var(--band-edge); background: var(--panel); border-radius: 999px; padding: 4px 11px; font-size: 12.5px; cursor: pointer; color: var(--ink-2); }
+.steps button:hover { color: var(--ink); border-color: var(--ink-2); }
+.steps button[aria-current="step"] { border-color: var(--ink); color: var(--ink); font-weight: 600; }
+.pnote { margin: 0; font: 14px/1.5 var(--font-read); color: var(--desk-ink); max-width: 86ch; min-height: 3em; }
+.pnote b { font-weight: 600; }
+.pnote .how { display: block; font: 12.5px/1.5 var(--font-ui); color: var(--muted); margin-top: 2px; }
+.stage { display: flex; justify-content: center; min-width: 0; }
+
+.device { position: relative; width: min(1240px, 100%); height: 760px; border: 1px solid var(--band-edge); border-radius: 10px; overflow: hidden; background: var(--bg); box-shadow: 0 18px 50px -24px rgb(0 0 0 / .35); }
+.device.phone { width: 412px; max-width: 100%; height: 860px; border: 9px solid var(--frame); border-radius: 34px; }
+@media (max-width: 720px) {
+  .seg.device-seg { display: none; }
+  .device, .device.phone { width: 100%; height: 86vh; min-height: 640px; border: 1px solid var(--band-edge); border-radius: 12px; }
+}
+
+/* ---------- the app inside ---------- */
+.app { position: absolute; inset: 0; display: flex; flex-direction: column; background: var(--bg); color: var(--ink); }
+.topbar { display: flex; align-items: center; gap: 10px; height: 46px; padding: 0 12px; border-bottom: 1px solid var(--rule); background: var(--panel); flex: none; }
+.crumbs { display: flex; align-items: baseline; gap: 6px; min-width: 0; flex: 1; font: 15px/1 var(--font-read); white-space: nowrap; overflow: hidden; }
+.crumbs .up { color: var(--ink-2); }
+.crumbs .here { font: 600 15px/1 var(--font-sc); letter-spacing: .05em; color: var(--ink); }
+.crumbs .sep { color: var(--muted); }
+.crumbs .yrs { font-size: 13px; color: var(--muted); font-variant-numeric: oldstyle-nums; margin-left: 6px; }
+.iconbtn { border: 1px solid var(--rule); background: none; border-radius: 6px; height: 28px; padding: 0 9px; cursor: pointer; color: var(--ink-2); font-size: 12px; display: inline-flex; align-items: center; gap: 6px; flex: none; }
+.iconbtn:hover { color: var(--ink); border-color: var(--ink-2); }
+.iconbtn[aria-pressed="true"] { background: var(--ink); color: var(--panel); border-color: var(--ink); }
+.iconbtn svg { width: 14px; height: 14px; }
+
+.mapwrap { position: relative; flex: none; height: 96px; border-bottom: 1px solid var(--rule); background: var(--sea); overflow: hidden; }
+.phone .mapwrap { height: 120px; }
+.mapwrap svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.mapwrap .say { position: absolute; left: 10px; bottom: 8px; background: color-mix(in srgb, var(--panel) 88%, transparent); border: 1px solid var(--rule); border-radius: 6px; padding: 3px 8px; font: 12.5px/1.35 var(--font-read); color: var(--ink-2); }
+
+.tl { position: relative; flex: 1; min-height: 0; display: flex; }
+.tlmain { position: relative; flex: 1; min-width: 0; overflow: auto; }
+.tlmain svg { display: block; }
+.side { flex: none; width: 420px; border-left: 1px solid var(--rule); background: var(--panel); overflow: auto; }
+
+/* SVG text */
+.t-axis { font: 400 10.5px var(--font-ui); fill: var(--muted); font-variant-numeric: tabular-nums; }
+.t-lane { font: 500 11.5px var(--font-ui); fill: var(--ink); }
+.t-lane-n { font: 400 11px var(--font-ui); fill: var(--muted); }
+.t-mom { font: 400 11px var(--font-ui); fill: var(--ink); }
+.t-span { font: 400 12px var(--font-read); fill: var(--ink); }
+.t-eff { font: 600 10.5px var(--font-ui); fill: var(--ink); letter-spacing: .01em; }
+.halo { paint-order: stroke; stroke: var(--halo); stroke-width: 3.5px; stroke-linejoin: round; }
+.fadeable { transition: opacity var(--motion-quick) var(--ease); }
+.faded { opacity: .16; }
+.dim { opacity: .38; }
+[data-conn], [data-entry], [data-cell] { cursor: pointer; }
+.pairchip { position: sticky; left: 0; top: 0; z-index: 2; display: flex; gap: 8px; align-items: center; padding: 6px 10px; font-size: 12px; color: var(--ink-2); background: color-mix(in srgb, var(--bg) 92%, transparent); border-bottom: 1px solid var(--rule-soft); }
+.pairchip button { border: 1px solid var(--rule); background: var(--panel); border-radius: 999px; padding: 2px 9px; cursor: pointer; font-size: 12px; }
+.sq { display: inline-block; width: 9px; height: 9px; border-radius: 2px; vertical-align: 0; }
+
+/* ---------- the card: a connection or an entry ---------- */
+.card { position: absolute; z-index: 5; right: 12px; top: 12px; width: 344px; max-height: calc(100% - 24px); overflow: auto; background: var(--panel); border: 1px solid var(--rule); border-radius: 10px; box-shadow: 0 14px 40px -18px rgb(0 0 0 / .45); padding: 14px 16px 16px; display: grid; gap: 12px; }
+.phone .card { left: 0; right: 0; top: auto; bottom: 0; width: auto; max-height: 72%; border-radius: 14px 14px 0 0; border-bottom: 0; }
+.card .close { position: absolute; right: 8px; top: 8px; border: 0; background: var(--rule-soft); border-radius: 999px; width: 24px; height: 24px; cursor: pointer; line-height: 1; color: var(--ink-2); }
+.card .lanes { font-size: 11.5px; color: var(--ink-2); display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.card h2 { margin: 0; padding-right: 26px; font: 500 18px/1.3 var(--font-read); text-wrap: balance; }
+.card h2 em { font-style: italic; color: var(--ink-2); }
+.card .dates { font: 13px var(--font-read); color: var(--muted); font-variant-numeric: oldstyle-nums; }
+.card .note { margin: 0; font: italic 14px/1.45 var(--font-read); color: var(--ink-2); }
+.card h3 { margin: 0; font: 600 10.5px/1 var(--font-ui); text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+.ev { display: grid; gap: 10px; }
+.ev blockquote { margin: 0; padding: 2px 0 2px 10px; border-left: 2px solid var(--rule); font: 14.5px/1.5 var(--font-read); }
+.ev blockquote mark { background: var(--mark); color: inherit; padding: 0 1px; border-radius: 2px; }
+.ev .src { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; margin-top: 4px; font: 11.5px var(--font-ui); color: var(--muted); }
+.ev .src button { border: 0; background: none; padding: 0; color: var(--focus); cursor: pointer; font-size: 12px; white-space: nowrap; }
+.none { font: italic 13.5px var(--font-read); color: var(--muted); margin: 0; }
+.vocab { display: flex; flex-wrap: wrap; gap: 5px; }
+.vocab span { border: 1px solid var(--rule); border-radius: 999px; padding: 2px 9px; font-size: 12px; color: var(--ink-2); }
+.vocab span.on { border-color: var(--ink); color: var(--ink); font-weight: 600; }
+.vocab span.add { border-style: dashed; color: var(--muted); }
+.acts { display: flex; gap: 8px; flex-wrap: wrap; }
+.acts button { border: 1px solid var(--rule); background: none; border-radius: 6px; padding: 5px 10px; cursor: pointer; font-size: 12.5px; color: var(--ink-2); }
+.acts button:hover { border-color: var(--ink-2); color: var(--ink); }
+.effs { display: grid; gap: 4px; }
+.effs button { display: flex; gap: 8px; align-items: baseline; text-align: left; border: 0; background: none; padding: 4px 6px; margin: 0 -6px; border-radius: 6px; cursor: pointer; font: 14px/1.35 var(--font-read); }
+.effs button:hover { background: var(--rule-soft); }
+.effs .k { font: 600 12px var(--font-ui); color: var(--ink-2); flex: none; min-width: 9.5ch; }
+
+/* ---------- B: the grid ---------- */
+.grid { padding: 14px 16px 18px; display: grid; gap: 10px; }
+.grid h2 { margin: 0; font: 500 16px/1.3 var(--font-read); }
+.grid .lede { margin: 0; font: 13.5px/1.45 var(--font-read); color: var(--ink-2); }
+.grid table { border-collapse: separate; border-spacing: 3px; width: 100%; table-layout: fixed; }
+.grid th { font: 500 10.5px/1.15 var(--font-ui); color: var(--ink-2); padding: 0 0 2px; vertical-align: bottom; }
+.grid th.row { text-align: right; padding-right: 6px; width: 92px; vertical-align: middle; font-size: 11px; }
+.grid thead th .sq { display: block; margin: 0 auto 3px; }
+.grid td { height: 46px; border-radius: 5px; text-align: center; padding: 0; }
+.grid td button { width: 100%; height: 100%; border: 1px solid transparent; border-radius: 5px; background: none; cursor: pointer; display: grid; place-content: center; gap: 1px; }
+.grid td button:hover { border-color: var(--ink-2); }
+.grid td button[aria-pressed="true"] { border: 2px solid var(--ink); }
+.grid td .n { font: 600 15px/1 var(--font-ui); font-variant-numeric: tabular-nums; }
+.grid thead th { font-size: 10px; overflow-wrap: anywhere; }
+.grid td.zero { color: var(--muted); }
+.grid td.same { background: repeating-linear-gradient(135deg, var(--rule-soft) 0 3px, transparent 3px 7px); }
+.grid .axislbl { font: 11px var(--font-ui); color: var(--muted); }
+.grid .sum { margin: 0; font: 13.5px/1.45 var(--font-read); }
+
+/* ---------- phone: level 1 as a list, with arcs in the gutter ---------- */
+.plist { position: relative; padding: 6px 12px 40px 44px; }
+.plist .arcs { position: absolute; left: 0; top: 0; width: 46px; pointer-events: none; overflow: visible; }
+.plane { margin-top: 10px; }
+.plane > header { display: flex; align-items: center; gap: 7px; padding: 6px 0 4px; border-bottom: 1px solid var(--rule-soft); font: 500 12.5px var(--font-ui); }
+.plane > header .n { color: var(--muted); font-weight: 400; }
+.prow { padding: 6px 0 4px; border-bottom: 1px solid var(--rule-soft); }
+.prow .ttl { display: flex; gap: 8px; align-items: baseline; border: 0; background: none; padding: 0; cursor: pointer; text-align: left; width: 100%; }
+.prow .yr { font: 12.5px var(--font-read); color: var(--muted); font-variant-numeric: oldstyle-nums tabular-nums; min-width: 4.4ch; flex: none; }
+.prow .t { font: 14px/1.3 var(--font-read); }
+.prow .more { font: 12px var(--font-ui); color: var(--muted); }
+.peff { display: flex; gap: 6px; align-items: baseline; margin: 3px 0 0 calc(4.4ch + 8px); border: 0; background: none; padding: 2px 0; cursor: pointer; text-align: left; font: 13px/1.3 var(--font-read); color: var(--ink-2); }
+.peff .k { font: 600 11.5px var(--font-ui); color: var(--ink); }
+.peff .sq { flex: none; align-self: center; }
+.phone .grid { padding: 12px 12px 6px; }
+.phone .grid th.row { width: 70px; }
+.phone .grid td { height: 40px; }
+</style>
+
+<div class="proto">
+  <div class="pbar">
+    <h1>Influences across lanes <span>Phase 4b · Athens, 500–400 BCE · test data</span></h1>
+    <div class="controls">
+      <fieldset class="seg"><legend>Option</legend><span class="opts"><button id="vA" data-view="A">A · Arrows</button><button id="vB" data-view="B">B · What drove what</button></span></fieldset>
+      <fieldset class="seg device-seg"><legend>Device</legend><span class="opts"><button id="dL" data-device="laptop">Laptop</button><button id="dP" data-device="phone">Phone</button></span></fieldset>
+      <fieldset class="seg"><legend>Theme</legend><span class="opts"><button id="tA" data-theme-btn="auto">Auto</button><button id="tL" data-theme-btn="light">Light</button><button id="tD" data-theme-btn="dark">Dark</button></span></fieldset>
+    </div>
+  </div>
+  <div class="steps" id="steps">
+    <span class="lbl">Walk through</span>
+    <button data-step="1">1 · Arrows across lanes</button>
+    <button data-step="2">2 · Tap an arrow</button>
+    <button data-step="3">3 · An entry’s effects</button>
+    <button data-step="4">4 · What drove what</button>
+    <button data-step="5">5 · Open a square</button>
+  </div>
+  <div class="steps" id="cases">
+    <span class="lbl">Cases</span>
+    <button data-case="all">All</button>
+    <button data-case="war">The war and the economy</button>
+    <button data-case="plague">The plague and religion</button>
+    <button data-case="tribute">Silver and tribute paying for building</button>
+  </div>
+  <p class="pnote" id="pnote"></p>
+  <div class="stage"><div class="device" id="device"><div class="app" id="app"></div></div></div>
+</div>
+
+<script id="data" type="application/json">{"range":[-500,-399],"entries":[{"id":"i_persian","t":"Greco-Persian Wars","k":"span","a":-498,"b":-448,"lanes":["war"],"p":16},{"id":"i_ionian","t":"Ionian Revolt","k":"span","a":-498,"b":-492,"lanes":["war"],"p":4},{"id":"i_lade","t":"Battle of Lade","k":"event","a":-493,"b":null,"lanes":["war"],"p":2},{"id":"i_marathon","t":"Battle of Marathon","k":"event","a":-489,"b":null,"lanes":["war"],"p":2},{"id":"i_xerxes_invasion","t":"Xerxes’ invasion","k":"span","a":-479,"b":-478,"lanes":["war"],"p":12},{"id":"i_thermopylae","t":"Battle of Thermopylae","k":"event","a":-479,"b":null,"lanes":["war"],"p":2},{"id":"i_artemisium","t":"Battle of Artemisium","k":"event","a":-479,"b":null,"lanes":["war"],"p":2},{"id":"i_salamis","t":"Battle of Salamis","k":"event","a":-479,"b":null,"lanes":["war"],"p":13},{"id":"i_plataea","t":"Battle of Plataea","k":"event","a":-478,"b":null,"lanes":["war"],"p":2},{"id":"i_mycale","t":"Battle of Mycale","k":"event","a":-478,"b":null,"lanes":["war"],"p":2},{"id":"i_delian_founded","t":"Delian League founded","k":"event","a":-477,"b":null,"lanes":["politics"],"p":8},{"id":"i_themistocles_ostracised","t":"Themistocles ostracised","k":"event","a":-470,"b":null,"lanes":["politics"],"p":0},{"id":"i_eurymedon","t":"Battle of the Eurymedon","k":"event","a":-465,"b":null,"lanes":["war"],"p":2},{"id":"i_ephialtes","t":"Ephialtes’ reforms","k":"event","a":-461,"b":null,"lanes":["politics"],"p":5},{"id":"i_cimon_ostracised","t":"Cimon ostracised","k":"event","a":-460,"b":null,"lanes":["politics"],"p":0},{"id":"i_long_walls","t":"Long Walls built","k":"span","a":-460,"b":-455,"lanes":["technology","war"],"p":8},{"id":"i_egypt_expedition","t":"Athenian expedition to Egypt","k":"span","a":-459,"b":-453,"lanes":["war"],"p":0},{"id":"i_tanagra","t":"Battle of Tanagra","k":"event","a":-456,"b":null,"lanes":["war"],"p":0},{"id":"i_treasury_moved","t":"League treasury moves to Athens","k":"event","a":-453,"b":null,"lanes":["economy","politics"],"p":16},{"id":"i_citizenship_law","t":"Pericles’ citizenship law","k":"event","a":-450,"b":null,"lanes":["politics"],"p":3},{"id":"i_callias","t":"Peace of Callias","k":"event","a":-448,"b":null,"lanes":["politics"],"p":0},{"id":"i_juror_pay","t":"Pay for jurors begins","k":"span","a":-449,"b":-448,"lanes":["politics","economy"],"p":4},{"id":"i_parthenon_built","t":"Parthenon built","k":"span","a":-446,"b":-431,"lanes":["ideas","economy"],"p":7},{"id":"i_propylaea","t":"Propylaea built","k":"span","a":-436,"b":-431,"lanes":["ideas"],"p":2},{"id":"i_thirty_years_peace","t":"Thirty Years’ Peace","k":"event","a":-445,"b":null,"lanes":["politics"],"p":4},{"id":"i_thurii","t":"Thurii founded","k":"event","a":-443,"b":null,"lanes":["economy","politics"],"p":0},{"id":"i_samian_war","t":"Samian War","k":"span","a":-439,"b":-438,"lanes":["war"],"p":0},{"id":"i_corcyra","t":"Dispute over Epidamnus and Corcyra","k":"event","a":-434,"b":null,"lanes":["politics"],"p":0},{"id":"i_sybota","t":"Battle of Sybota","k":"event","a":-432,"b":null,"lanes":["war"],"p":4},{"id":"i_potidaea_revolt","t":"Potidaea revolts","k":"event","a":-431,"b":null,"lanes":["war"],"p":0},{"id":"i_megarian_decree","t":"Megarian decree","k":"event","a":-431,"b":null,"lanes":["economy","politics"],"p":2},{"id":"i_pelop","t":"Peloponnesian War","k":"span","a":-430,"b":-403,"lanes":["war"],"p":29},{"id":"i_archidamian","t":"Archidamian War","k":"span","a":-430,"b":-420,"lanes":["war"],"p":26},{"id":"i_peace_nicias","t":"Peace of Nicias","k":"event","a":-420,"b":null,"lanes":["politics"],"p":2},{"id":"i_sicilian","t":"Sicilian Expedition","k":"span","a":-414,"b":-412,"lanes":["war"],"p":22},{"id":"i_decelean","t":"Decelean War","k":"span","a":-412,"b":-403,"lanes":["war"],"p":28},{"id":"i_funeral_oration","t":"Pericles’ funeral oration","k":"event","a":-430,"b":null,"lanes":["politics"],"p":2},{"id":"i_plague","t":"Plague of Athens","k":"span","a":-429,"b":-425,"lanes":["nature","ideas"],"p":16},{"id":"i_herms","t":"Herms mutilated","k":"event","a":-414,"b":null,"lanes":["ideas","politics"],"p":5},{"id":"i_alcibiades_defects","t":"Alcibiades defects to Sparta","k":"event","a":-414,"b":null,"lanes":["politics"],"p":4},{"id":"i_four_hundred","t":"Rule of the Four Hundred","k":"event","a":-410,"b":null,"lanes":["politics"],"p":5},{"id":"i_arginusae_trial","t":"Trial of the generals","k":"event","a":-405,"b":null,"lanes":["politics"],"p":0},{"id":"i_thirty","t":"The Thirty take power","k":"event","a":-403,"b":null,"lanes":["politics"],"p":7},{"id":"i_democracy_restored","t":"Democracy restored","k":"event","a":-402,"b":null,"lanes":["politics"],"p":2},{"id":"i_b_plataea431","t":"Theban attack on Plataea","k":"event","a":-430,"b":null,"lanes":["war"],"p":5},{"id":"i_b_potidaea","t":"Potidaea surrenders","k":"event","a":-429,"b":null,"lanes":["war"],"p":2},{"id":"i_b_naupactus","t":"Phormio's victories","k":"event","a":-428,"b":null,"lanes":["war"],"p":5},{"id":"i_b_mytilene","t":"Mytilene surrenders","k":"event","a":-426,"b":null,"lanes":["war"],"p":5},{"id":"i_b_plataea427","t":"Plataea falls","k":"event","a":-426,"b":null,"lanes":["war"],"p":2},{"id":"i_b_sphacteria","t":"Pylos and Sphacteria","k":"event","a":-424,"b":null,"lanes":["war"],"p":5},{"id":"i_b_delium","t":"Delium","k":"event","a":-423,"b":null,"lanes":["war"],"p":5},{"id":"i_b_amph424","t":"Amphipolis taken","k":"event","a":-423,"b":null,"lanes":["war"],"p":5},{"id":"i_b_amph422","t":"Battle of Amphipolis","k":"event","a":-421,"b":null,"lanes":["war"],"p":5},{"id":"i_b_mantinea","t":"Mantinea","k":"event","a":-417,"b":null,"lanes":["war"],"p":5},{"id":"i_b_melos","t":"Siege of Melos","k":"event","a":-415,"b":null,"lanes":["war"],"p":5},{"id":"i_b_syr415","t":"First battle at Syracuse","k":"event","a":-414,"b":null,"lanes":["war"],"p":2},{"id":"i_b_harbour","t":"Battle in the Great Harbour","k":"event","a":-412,"b":null,"lanes":["war"],"p":5},{"id":"i_b_assinarus","t":"Assinarus","k":"event","a":-412,"b":null,"lanes":["war"],"p":5},{"id":"i_b_cynossema","t":"Cynossema","k":"event","a":-410,"b":null,"lanes":["war"],"p":2},{"id":"i_b_cyzicus","t":"Cyzicus","k":"event","a":-409,"b":null,"lanes":["war"],"p":5},{"id":"i_b_notium","t":"Notium","k":"event","a":-405,"b":null,"lanes":["war"],"p":2},{"id":"i_b_arginusae","t":"Arginusae","k":"event","a":-405,"b":null,"lanes":["war"],"p":5},{"id":"i_b_aegospotami","t":"Aegospotami","k":"event","a":-404,"b":null,"lanes":["war"],"p":9},{"id":"i_b_surrender","t":"Athens surrenders","k":"event","a":-403,"b":null,"lanes":["war"],"p":5},{"id":"i_laurion","t":"Silver strike at Laurion","k":"event","a":-482,"b":null,"lanes":["economy","nature"],"p":9},{"id":"i_owls","t":"Athenian silver “owls”","k":"span","a":-509,"b":-321,"lanes":["economy"],"p":2},{"id":"i_trireme","t":"Trireme fleets","k":"span","a":-599,"b":-321,"lanes":["technology","war"],"p":7},{"id":"i_hoplite","t":"Hoplite phalanx","k":"span","a":-699,"b":-337,"lanes":["technology","war"],"p":0},{"id":"i_piraeus_plan","t":"Piraeus laid out on a grid","k":"event","a":-469,"b":null,"lanes":["technology","economy"],"p":0},{"id":"i_asclepius","t":"Cult of Asclepius comes to Athens","k":"event","a":-419,"b":null,"lanes":["ideas"],"p":5},{"id":"i_oresteia","t":"Aeschylus’ Oresteia staged","k":"event","a":-457,"b":null,"lanes":["ideas"],"p":3},{"id":"i_medea","t":"Euripides’ Medea staged","k":"event","a":-430,"b":null,"lanes":["ideas"],"p":0},{"id":"i_oedipus","t":"Sophocles’ Oedipus the King","k":"event","a":-428,"b":null,"lanes":["ideas"],"p":0},{"id":"i_clouds","t":"Aristophanes’ Clouds","k":"event","a":-422,"b":null,"lanes":["ideas"],"p":0},{"id":"i_histories","t":"Herodotus’ Histories","k":"event","a":-429,"b":null,"lanes":["ideas"],"p":2},{"id":"i_thucydides_history","t":"Thucydides begins his History","k":"event","a":-430,"b":null,"lanes":["ideas"],"p":5},{"id":"i_city_dionysia","t":"City Dionysia","k":"event","a":-499,"b":null,"lanes":["ideas"],"p":3},{"id":"i_pericles","t":"Pericles","k":"person","a":-494,"b":-428,"lanes":["politics","war"],"p":4},{"id":"i_eisphora","t":"First war tax on property","k":"event","a":-427,"b":null,"lanes":["economy"],"p":5},{"id":"i_emergency_coins","t":"Gold and plated emergency coins","k":"span","a":-406,"b":-403,"lanes":["economy"],"p":5}],"connections":[{"id":"r_48","from":"i_megarian_decree","to":"i_pelop","effect":"caused","hs":[]},{"id":"r_inf_1","from":"i_archidamian","to":"i_eisphora","effect":"prompted","hs":["h_eisphora"]},{"id":"r_inf_2","from":"i_decelean","to":"i_owls","effect":"weakened","hs":["h_decelea","h_mines_lost"],"note":"the mines at Laurion stopped"},{"id":"r_inf_3","from":"i_decelean","to":"i_emergency_coins","effect":"prompted","hs":["h_mines_lost","h_nike_gold"]},{"id":"r_inf_4","from":"i_sicilian","to":"i_four_hundred","effect":"enabled","hs":["h_sicily_coup"]},{"id":"r_inf_5","from":"i_long_walls","to":"i_archidamian","effect":"enabled","hs":["h_longwalls","h_walls_strategy"],"note":"Pericles’ strategy of staying inside"},{"id":"r_inf_6","from":"i_plague","to":"i_asclepius","effect":"prompted","hs":["h_asclepius_after"]},{"id":"r_49","from":"i_plague","to":"i_pericles","effect":"weakened","hs":["h_plague"],"note":"he died of it in 429"},{"id":"r_inf_7","from":"i_plague","to":"i_archidamian","effect":"weakened","hs":["h_plague"]},{"id":"r_inf_8","from":"i_plague","to":"i_funeral_oration","effect":"weakened","hs":["h_plague_law"],"note":"the city Pericles praised fell apart a year later"},{"id":"r_50","from":"i_herms","to":"i_alcibiades_defects","effect":"caused","hs":["h_herms"]},{"id":"r_44","from":"i_laurion","to":"i_trireme","effect":"funded","hs":["h_silver"]},{"id":"r_inf_9","from":"i_trireme","to":"i_salamis","effect":"enabled","hs":["h_triremes","h_salamis"]},{"id":"r_47","from":"i_treasury_moved","to":"i_parthenon_built","effect":"funded","hs":["h_delian","h_parthenon","h_tribute_pay"],"note":"paid for from the tribute"},{"id":"r_inf_10","from":"i_treasury_moved","to":"i_propylaea","effect":"funded","hs":["h_tribute_pay"]},{"id":"r_inf_11","from":"i_treasury_moved","to":"i_juror_pay","effect":"funded","hs":["h_tribute_pay"]}],"highlights":[{"id":"h_delian","text":"Founded in 478 BC, the league moved its treasury from Delos to Athens in 454 BC.","src":"Wikipedia · Delian League","section":"Treasury"},{"id":"h_salamis","text":"The Greek fleet defeated the Persians in the straits of Salamis in 480 BC.","src":"Wikipedia · Battle of Salamis"},{"id":"h_silver","text":"A rich vein of silver found at Laurion in 483 BC paid for the fleet that fought at Salamis.","src":"Wikipedia · Laurion","section":"History"},{"id":"h_decelea","text":"Thucydides says more than 20,000 slaves deserted to the Spartans at Decelea.","src":"Wikipedia · Decelea"},{"id":"h_plague","text":"The plague killed perhaps a quarter of Athens' people. Pericles died of it in 429 BC.","src":"Wikipedia · Plague of Athens"},{"id":"h_triremes","text":"A trireme was rowed by about 170 oarsmen sitting in three banks.","src":"Wikipedia · Trireme"},{"id":"h_longwalls","text":"The Long Walls, built around 461–456 BC, joined Athens to its harbour at Piraeus.","src":"Wikipedia · Long Walls"},{"id":"h_parthenon","text":"The Parthenon was built between 447 and 432 BC as a temple of Athena.","src":"Wikipedia · Parthenon"},{"id":"h_herms","text":"In 415 BC, just before the Sicilian Expedition sailed, the herms of Athens were mutilated in one night.","src":"Wikipedia · Hermai"},{"id":"h_mines_lost","text":"Once the Spartans held Decelea, Athens lost its revenue from the silver mines, and more than twenty thousand slaves deserted.","src":"Thucydides, History of the Peloponnesian War"},{"id":"h_eisphora","text":"For the siege of Mytilene the Athenians raised among themselves, for the first time, a property tax of two hundred talents.","src":"Thucydides, History of the Peloponnesian War"},{"id":"h_nike_gold","text":"Late in the war Athens melted down gold statues of Victory to strike coins, then issued silver-plated bronze.","src":"Wikipedia · Economy of ancient Greece"},{"id":"h_asclepius_after","text":"The cult of Asclepius was brought to Athens in 420 BC, in the years after the plague.","src":"Wikipedia · Plague of Athens"},{"id":"h_plague_law","text":"Fear of the gods or the law of men held no one back.","src":"Thucydides, History of the Peloponnesian War"},{"id":"h_tribute_pay","text":"Tribute from the allies paid for the fleet’s rowers, for jurors and for the building on the Acropolis.","src":"Wikipedia · Delian League"},{"id":"h_sicily_coup","text":"After the disaster in Sicily, an oligarchy of Four Hundred took power in Athens in 411 BC.","src":"Wikipedia · Sicilian Expedition"},{"id":"h_walls_strategy","text":"Pericles told the Athenians to bring in their property from the country and guard the city behind its walls.","src":"Thucydides, History of the Peloponnesian War"}]}</script>
+<script>
+// Data: Athens' entries from the Classical Greece fixture (tests/fixtures/greece), with the influence cases from next.json → influences.
+const D = JSON.parse(document.getElementById('data').textContent);
+const LANES = [
+  { id: 'politics', name: 'Politics and law', short: 'Politics', empty: 'No politics here yet.' },
+  { id: 'war', name: 'War', short: 'War', empty: 'No wars here yet.' },
+  { id: 'economy', name: 'Economy', short: 'Economy', empty: 'No economy here yet.' },
+  { id: 'ideas', name: 'Philosophy and religion', short: 'Ideas', empty: 'No ideas here yet.' },
+  { id: 'technology', name: 'Technology', short: 'Tech', empty: 'No technology here yet.' },
+  { id: 'nature', name: 'Nature', short: 'Nature', empty: 'No nature here yet.' },
+];
+const laneOf = Object.fromEntries(LANES.map((l) => [l.id, l]));
+const VOCAB = ['caused', 'enabled', 'prompted', 'funded', 'strengthened', 'weakened', 'legitimised', 'ended'];
+const BY = { caused: 'Caused by', enabled: 'Enabled by', prompted: 'Prompted by', funded: 'Funded by', strengthened: 'Strengthened by', weakened: 'Weakened by', legitimised: 'Legitimised by', ended: 'Ended by' };
+const E = Object.fromEntries(D.entries.map((e) => [e.id, e]));
+const HL = Object.fromEntries(D.highlights.map((h) => [h.id, h]));
+const C = D.connections;
+// An arrow leaves the cause's first lane and lands in the effect's first lane that is different.
+for (const c of C) { c.fl = E[c.from].lanes[0]; c.tl = E[c.to].lanes.find((l) => l !== c.fl) ?? E[c.to].lanes[0]; }
+const CASES = {
+  war: ['i_megarian_decree', 'i_archidamian', 'i_decelean', 'i_sicilian', 'i_long_walls'],
+  plague: ['i_plague', 'i_herms'],
+  tribute: ['i_laurion', 'i_trireme', 'i_treasury_moved'],
+};
+const inCase = (c) => st.case === 'all' || CASES[st.case].includes(c.from);
+const yearLabel = (y) => (y <= 0 ? `${1 - y}` : `${y}`);
+const dates = (e) => (e.b != null && e.b !== e.a ? `${yearLabel(e.a)}–${yearLabel(e.b)} BCE` : `${yearLabel(e.a)} BCE`);
+const esc = (s) => String(s).replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[ch]);
+
+const st = { view: 'A', device: 'laptop', theme: 'auto', sel: null, hover: null, case: 'all', pair: null, step: 1 };
+let stored = {};
+try { stored = JSON.parse(localStorage.getItem('influences-proto') || '{}'); } catch {}
+if (stored.theme) st.theme = stored.theme;
+
+const NOTES = {
+  1: '<b>A · Arrows across lanes.</b> Athens is open at level 1. Each connection between entries in different lanes is an arrow from the cause to what it acted on, in the cause’s pigment, labelled with its effect. An entry at either end of an arrow is always named; the rest of each lane shows its three most prominent entries and a tick for everything else.<span class="how">Hover or focus an arrow or an entry to see only its links. Click one for its evidence. The case chips fade everything else.</span>',
+  2: '<b>The highlight one tap away.</b> Clicking an arrow opens the connection: its effect, Bob’s note, and the highlights that are its evidence, each a tap from the passage in the reader. The effect row shows the starting vocabulary; Bob can add his own words.<span class="how">Esc or × closes it.</span>',
+  3: '<b>An entry’s effects.</b> Clicking an entry lists its effects on other lanes both ways, the line ticket 2 adds to its panel: “Weakened: Pericles”, and on Pericles “Weakened by: Plague of Athens”.<span class="how">Each line opens that connection.</span>',
+  4: '<b>B · What drove what.</b> The open polity gets a six-by-six grid: rows are causes, columns what they acted on, each square counting Bob’s links between the two lanes in the years in view, with its most common effect. The lanes show no arrows until a square is opened.<span class="how">The diagonal is hatched: links inside one lane aren’t influences between lanes.</span>',
+  5: '<b>B opens into A.</b> Opening a square draws only its arrows in the lanes, as in A. War → Economy holds three: the war tax, the lost mines and the emergency coins.<span class="how">Pick A, B, or B opening into A. The vocabulary and the arrow style become rules in docs/design.md.</span>',
+};
+
+function setStep(n) {
+  st.step = n; st.sel = null; st.hover = null; st.pair = null; st.case = 'all';
+  if (n === 1) st.view = 'A';
+  if (n === 2) { st.view = 'A'; st.sel = { type: 'conn', id: C.find((c) => c.from === 'i_decelean' && c.to === 'i_owls').id }; }
+  if (n === 3) { st.view = 'A'; st.sel = { type: 'entry', id: 'i_plague' }; }
+  if (n === 4) st.view = 'B';
+  if (n === 5) { st.view = 'B'; st.pair = ['war', 'economy']; }
+  render();
+}
+
+// ---------- which arrows are drawn, and which are in focus ----------
+function drawnConns() {
+  if (st.view === 'B') return st.pair ? C.filter((c) => c.fl === st.pair[0] && c.tl === st.pair[1]) : [];
+  return C;
+}
+function focusSet() {
+  const f = st.hover ?? st.sel;
+  if (f?.type === 'conn') return new Set([f.id]);
+  if (f?.type === 'entry') return new Set(C.filter((c) => c.from === f.id || c.to === f.id).map((c) => c.id));
+  if (st.case !== 'all') return new Set(C.filter(inCase).map((c) => c.id));
+  return null;
+}
+
+// ---------- text measuring ----------
+const ctx = document.createElement('canvas').getContext('2d');
+const FONT = { mom: "400 11px 'Public Sans', system-ui, sans-serif", span: "400 12px Spectral, Georgia, serif", eff: "600 10.5px 'Public Sans', system-ui, sans-serif", lane: "500 11.5px 'Public Sans', system-ui, sans-serif" };
+const measure = (s, f) => { ctx.font = f; return ctx.measureText(s).width; };
+
+// ---------- laptop: the lanes as an SVG ----------
+function layout(W) {
+  const G = 168, x0 = G + 8, x1 = W - 24;
+  const X = (y) => x0 + ((y - D.range[0]) / (D.range[1] - D.range[0])) * (x1 - x0);
+  const ends = new Set(drawnConns().flatMap((c) => [`${c.from}@${c.fl}`, `${c.to}@${c.tl}`]));
+  const lanes = [], pos = {};
+  let y = 30;
+  for (const L of LANES) {
+    const es = D.entries.filter((e) => e.lanes.includes(L.id));
+    const order = es.map((e) => ({ e, end: ends.has(`${e.id}@${L.id}`) })).sort((a, b) => b.end - a.end || b.e.p - a.e.p);
+    const rows = [], named = [];
+    let others = 0;
+    for (const o of order) {
+      if (!o.end && others >= 3) continue;
+      const g = geom(o.e, X, x0, x1);
+      let r = rows.findIndex((row) => row.every(([a, b]) => g.r0 > b + 8 || g.r1 < a - 8));
+      if (r < 0 && rows.length < (o.end ? 6 : 3)) { rows.push([]); r = rows.length - 1; }
+      if (r < 0) continue;
+      rows[r].push([g.r0, g.r1]); named.push({ ...o, g, r });
+      if (!o.end) others++;
+    }
+    const nr = Math.max(2, rows.length), h = 12 + nr * 20 + 16;
+    for (const n of named) { n.cy = y + 12 + n.r * 20 + 9; pos[`${n.e.id}@${L.id}`] = n; }
+    lanes.push({ L, y, h, es, named });
+    y += h;
+  }
+  // Arrows sharing an end spread out along it, ordered by where their other end is.
+  const fan = {};
+  for (const c of drawnConns()) for (const [key, other] of [[`${c.from}@${c.fl}`, c.to], [`${c.to}@${c.tl}`, c.from]]) (fan[key] ??= []).push([c.id, E[other].a]);
+  for (const k in fan) fan[k] = fan[k].sort((a, b) => a[1] - b[1]).map((x) => x[0]);
+  return { lanes, pos, X, x0, x1, fan, H: y + 12 };
+}
+function geom(e, X, x0, x1) {
+  const clamp = (v) => Math.max(x0, Math.min(x1, v));
+  if (e.b == null || e.b === e.a) {
+    const x = X(e.a), tw = measure(e.t, FONT.mom);
+    if (x + 7 + tw > x1 + 20) return { kind: 'm', x, lx: x - 7, end: true, tw, r0: x - 7 - tw, r1: x + 5 };
+    return { kind: 'm', x, lx: x + 7, tw, r0: x - 5, r1: x + 7 + tw };
+  }
+  const a = clamp(X(e.a)), b = clamp(X(e.b)), tw = measure(e.t, FONT.span);
+  const after = b + 6 + tw <= x1;
+  if (!after && a + 6 + tw > x1 + 20) return { kind: 's', a, b, lx: a - 6, end: true, tw, r0: a - 6 - tw, r1: b };
+  const lx = after && b - a < tw + 12 ? b + 6 : a + 6;
+  return { kind: 's', a, b, lx, tw, r0: a, r1: Math.max(b, lx + tw) };
+}
+// Where on its two ends an arrow attaches: the year the effect landed, clamped into each entry.
+function anchors(c, P) {
+  const f = E[c.from], t = E[c.to];
+  const tY = Math.max(t.a, Math.min(t.b ?? t.a, f.a));
+  const fY = Math.max(f.a, Math.min(f.b ?? f.a, tY));
+  const nf = P.pos[`${c.from}@${c.fl}`], nt = P.pos[`${c.to}@${c.tl}`];
+  if (!nf || !nt) return null;
+  const ax = (n, yr, key) => {
+    if (n.g.kind === 'm') return n.g.x;
+    const sib = P.fan[key] ?? [c.id], k = sib.length, i = sib.indexOf(c.id);
+    return Math.max(n.g.a + 3, Math.min(n.g.b - 3, P.X(yr) + (i - (k - 1) / 2) * 9));
+  };
+  return { x1: ax(nf, fY, `${c.from}@${c.fl}`), y1: nf.cy, x2: ax(nt, tY, `${c.to}@${c.tl}`), y2: nt.cy };
+}
+const bez = (p, t) => { const u = 1 - t; return [u*u*u*p[0] + 3*u*u*t*p[2] + 3*u*t*t*p[4] + t*t*t*p[6], u*u*u*p[1] + 3*u*u*t*p[3] + 3*u*t*t*p[5] + t*t*t*p[7]]; };
+
+function drawLaptop(W) {
+  const P = layout(W), fs = focusSet(), drawn = drawnConns();
+  const focusEnds = fs ? new Set(C.filter((c) => fs.has(c.id)).flatMap((c) => [c.from, c.to])) : null;
+  const out = [`<svg width="${W}" height="${P.H}" viewBox="0 0 ${W} ${P.H}" role="img" aria-label="Athens' six lanes, 500 to 400 BCE, with arrows for connections between lanes">`];
+  // axis
+  for (let yr = -500; yr <= -400; yr += 10) {
+    const x = P.X(yr + 1);
+    out.push(`<line x1="${x}" x2="${x}" y1="22" y2="${P.H - 12}" stroke="var(--rule-soft)"/><text class="t-axis" x="${x}" y="15" text-anchor="middle">${yearLabel(yr + 1)}${yr === -500 ? ' BCE' : ''}</text>`);
+  }
+  // lanes
+  for (const ln of P.lanes) {
+    const col = `var(--${ln.L.id})`;
+    out.push(`<rect x="0" y="${ln.y}" width="${W}" height="${ln.h}" fill="color-mix(in srgb, ${col} 6%, transparent)"/><line x1="0" x2="${W}" y1="${ln.y + ln.h}" y2="${ln.y + ln.h}" stroke="var(--rule-soft)"/>`);
+    const nw = measure(ln.L.name, FONT.lane);
+    out.push(`<rect x="8" y="${ln.y + 8}" width="${nw + 30}" height="20" rx="4" fill="var(--panel)" stroke="var(--rule)"/><rect x="14" y="${ln.y + 14}" width="8" height="8" rx="1.5" fill="${col}"/><text class="t-lane" x="28" y="${ln.y + 22}">${esc(ln.L.name)}</text>`);
+    out.push(`<text class="t-lane-n" x="12" y="${ln.y + 44}">${ln.es.length} ${ln.es.length === 1 ? 'entry' : 'entries'}</text>`);
+    // ticks for everything, at the foot of the lane
+    for (const e of ln.es) {
+      const g = geom(e, P.X, P.x0, P.x1);
+      out.push(g.kind === 'm' ? `<line x1="${g.x}" x2="${g.x}" y1="${ln.y + ln.h - 11}" y2="${ln.y + ln.h - 4}" stroke="${col}" stroke-opacity=".45"/>` : `<rect x="${g.a}" y="${ln.y + ln.h - 9}" width="${Math.max(1, g.b - g.a)}" height="3" fill="${col}" fill-opacity=".3"/>`);
+    }
+    if (!ln.es.length) out.push(`<text class="t-span" x="${P.x0}" y="${ln.y + 26}" fill="var(--muted)" font-style="italic">${ln.L.empty}</text>`);
+    for (const n of ln.named) {
+      const e = n.e, g = n.g, cls = focusEnds && !focusEnds.has(e.id) ? 'fadeable dim' : 'fadeable';
+      const sel = (st.sel?.type === 'entry' && st.sel.id === e.id) || (st.hover?.type === 'entry' && st.hover.id === e.id);
+      out.push(`<g class="${cls}" data-entry="${e.id}" tabindex="0" role="button" aria-label="${esc(e.t)}, ${dates(e)}">`);
+      out.push(`<rect x="${g.r0 - 4}" y="${n.cy - 9}" width="${g.r1 - g.r0 + 8}" height="18" fill="transparent"/>`);
+      if (g.kind === 'm') out.push(`<circle cx="${g.x}" cy="${n.cy}" r="3.6" fill="${col}" stroke="var(--panel)" stroke-width="1"/>`);
+      else out.push(`<rect x="${g.a}" y="${n.cy - 2.5}" width="${Math.max(3, g.b - g.a)}" height="5" rx="2.5" fill="${col}" fill-opacity="${n.end ? .75 : .45}"/>`);
+      out.push(`<text class="${g.kind === 'm' ? 't-mom' : 't-span'} halo" x="${g.lx}" y="${n.cy + 4}"${g.end ? ' text-anchor="end"' : ''}${n.end ? '' : ' fill="var(--ink-2)"'}>${esc(e.t)}</text>`);
+      if (sel) out.push(`<rect x="${g.r0 - 5}" y="${n.cy - 10}" width="${g.r1 - g.r0 + 10}" height="20" rx="4" fill="none" stroke="var(--ink)" stroke-width="1.4"/>`);
+      out.push('</g>');
+    }
+  }
+  // arrows, then their effect labels on top
+  const boxes = P.lanes.flatMap((ln) => ln.named.map((n) => [n.g.r0, n.cy - 8, n.g.r1, n.cy + 8]));
+  const pills = [], arrows = [], labels = [];
+  const hit = (a, b) => a[0] < b[2] && a[2] > b[0] && a[1] < b[3] && a[3] > b[1];
+  const order = [...drawn].sort((a, b) => (fs?.has(b.id) ?? 0) - (fs?.has(a.id) ?? 0));
+  for (const c of order) {
+    const A = anchors(c, P); if (!A) continue;
+    const down = A.y2 > A.y1, y1 = A.y1 + (down ? 6 : -6), y2 = A.y2 + (down ? -7 : 7);
+    const near = Math.abs(A.x2 - A.x1) < 36, bow = near ? 30 : 0, my = (y2 - y1) * .5;
+    const p = [A.x1, y1, A.x1 + bow, y1 + my, A.x2 + bow, y2 - my, A.x2, y2];
+    const d = `M${p[0]},${p[1]} C${p[2]},${p[3]} ${p[4]},${p[5]} ${p[6]},${p[7]}`;
+    const tx = p[6] - p[4], ty = p[7] - p[5], tl = Math.hypot(tx, ty) || 1, ux = tx / tl, uy = ty / tl;
+    const head = `M${p[6] + ux * 2},${p[7] + uy * 2} L${p[6] - ux * 7 - uy * 4},${p[7] - uy * 7 + ux * 4} L${p[6] - ux * 7 + uy * 4},${p[7] - uy * 7 - ux * 4} Z`;
+    const col = `var(--${c.fl})`, on = !fs || fs.has(c.id), cls = on ? 'fadeable' : 'fadeable faded';
+    const strong = fs?.has(c.id) || (st.sel?.type === 'conn' && st.sel.id === c.id);
+    const label = `${E[c.from].t} ${c.effect} ${E[c.to].t}`;
+    arrows.push(`<g class="${cls}" data-conn="${c.id}" tabindex="0" role="button" aria-label="${esc(label)}"><path d="${d}" fill="none" stroke="var(--halo)" stroke-width="4.5" stroke-linecap="round"/><path d="${d}" fill="none" stroke="${col}" stroke-width="${strong ? 2.2 : 1.6}" stroke-linecap="round"/><path d="${head}" fill="${col}"/><path d="${d}" fill="none" stroke="transparent" stroke-width="12"/></g>`);
+    // the label: try the middle first, then along the curve; hide it (hover shows it) when nothing fits
+    const w = measure(c.effect, FONT.eff) + 14;
+    let spot = null;
+    for (const t of [.5, .4, .6, .3, .7, .22, .78]) {
+      const [cx, cy] = bez(p, t), b = [cx - w / 2, cy - 8, cx + w / 2, cy + 8];
+      if (!pills.some((q) => hit(q, b)) && !boxes.some((q) => hit(q, b))) { spot = [cx, cy, b]; break; }
+    }
+    if (!spot && strong) {
+      for (const t of [.5, .4, .6]) { const [cx, cy] = bez(p, t), b = [cx - w / 2, cy - 8, cx + w / 2, cy + 8]; if (!pills.some((q) => hit(q, b))) { spot = [cx, cy, b]; break; } }
+    }
+    if (spot && (on || !fs)) {
+      pills.push(spot[2]);
+      labels.push(`<g class="${cls}" data-conn="${c.id}"><rect x="${spot[0] - w / 2}" y="${spot[1] - 8}" width="${w}" height="16" rx="8" fill="var(--panel)" stroke="${col}" stroke-width="${strong ? 1.6 : 1}"/><text class="t-eff" x="${spot[0]}" y="${spot[1] + 3.6}" text-anchor="middle">${esc(c.effect)}</text></g>`);
+    }
+  }
+  out.push(...arrows.reverse(), ...labels.reverse(), '</svg>');
+  return out.join('');
+}
+
+// ---------- the card ----------
+function quote(h) {
+  const text = esc(h.text);
+  return `<div><blockquote><mark>${text}</mark></blockquote><div class="src"><span>${esc(h.src)}${h.section ? ` · ${esc(h.section)}` : ''}</span><button type="button">Open in the reader ↗</button></div></div>`;
+}
+function cardHtml() {
+  if (!st.sel) return '';
+  if (st.sel.type === 'conn') {
+    const c = C.find((x) => x.id === st.sel.id), f = E[c.from], t = E[c.to];
+    const hs = c.hs.map((h) => HL[h]).filter(Boolean);
+    return `<aside class="card" role="dialog" aria-label="Connection"><button class="close" data-close aria-label="Close">×</button>
+      <div class="lanes"><span class="sq" style="background:var(--${c.fl})"></span>${laneOf[c.fl].name} <span aria-hidden="true">→</span> <span class="sq" style="background:var(--${c.tl})"></span>${laneOf[c.tl].name}</div>
+      <h2>${esc(f.t)} <em>${esc(c.effect)}</em> ${esc(t.t)}</h2>
+      ${c.note ? `<p class="note">${esc(c.note)}</p>` : ''}
+      <h3>Evidence</h3>
+      <div class="ev">${hs.length ? hs.map((h) => quote(h)).join('') : '<p class="none">No highlights yet. Pick the passages that show this.</p>'}</div>
+      <h3>Effect</h3>
+      <div class="vocab">${VOCAB.map((v) => `<span class="${v === c.effect ? 'on' : ''}">${v}</span>`).join('')}<span class="add">+ your own</span></div>
+      <div class="acts"><button type="button" data-open="${f.id}">Open ${esc(f.t)}</button><button type="button" data-open="${t.id}">Open ${esc(t.t)}</button></div>
+    </aside>`;
+  }
+  const e = E[st.sel.id];
+  const outs = C.filter((c) => c.from === e.id), ins = C.filter((c) => c.to === e.id);
+  const line = (c, k, other) => `<button type="button" data-pick="${c.id}"><span class="k">${k}:</span><span><span class="sq" style="background:var(--${other === c.to ? c.tl : c.fl})"></span> ${esc(E[other].t)}</span></button>`;
+  return `<aside class="card" role="dialog" aria-label="${esc(e.t)}"><button class="close" data-close aria-label="Close">×</button>
+    <div class="lanes">${e.lanes.map((l) => `<span class="sq" style="background:var(--${l})"></span>${laneOf[l].name}`).join(' · ')}</div>
+    <h2>${esc(e.t)}</h2><div class="dates">${dates(e)}</div>
+    <h3>Effects on other lanes</h3>
+    ${outs.length + ins.length ? `<div class="effs">${outs.map((c) => line(c, c.effect[0].toUpperCase() + c.effect.slice(1), c.to)).join('')}${ins.map((c) => line(c, BY[c.effect] ?? c.effect, c.from)).join('')}</div>` : '<p class="none">None yet. Link it to something in another lane and say what it did.</p>'}
+  </aside>`;
+}
+
+// ---------- B: the grid ----------
+function gridHtml(phone) {
+  const cell = {};
+  for (const c of C) { const k = `${c.fl}>${c.tl}`; (cell[k] ??= []).push(c); }
+  const rowTotals = LANES.map((L) => [L, C.filter((c) => c.fl === L.id)]).sort((a, b) => b[1].length - a[1].length);
+  const top = rowTotals[0], topEff = mostCommon(top[1].map((c) => c.effect));
+  let h = `<div class="grid"><h2>What drove what</h2><p class="sum">${top[0].name} drove the most here: ${top[1].length} links, most often “${topEff}”.</p>
+    <table><thead><tr><th class="row axislbl">Cause ↓ on →</th>${LANES.map((L) => `<th scope="col"><span class="sq" style="background:var(--${L.id})"></span>${L.short}</th>`).join('')}</tr></thead><tbody>`;
+  for (const R of LANES) {
+    h += `<tr><th class="row" scope="row">${phone ? R.short : R.name}</th>`;
+    for (const Q of LANES) {
+      if (R.id === Q.id) { h += '<td class="same" title="Same lane"></td>'; continue; }
+      const cs = cell[`${R.id}>${Q.id}`] ?? [];
+      if (!cs.length) { h += '<td class="zero"><span aria-label="none">·</span></td>'; continue; }
+      const pressed = st.pair && st.pair[0] === R.id && st.pair[1] === Q.id;
+      const mix = Math.min(55, 10 + cs.length * 14);
+      h += `<td style="background:color-mix(in srgb, var(--${R.id}) ${mix}%, var(--panel))"><button type="button" data-cell="${R.id}>${Q.id}" aria-pressed="${pressed}" aria-label="${R.name} on ${Q.name}: ${cs.length}, most often ${mostCommon(cs.map((c) => c.effect))}" title="Most often “${mostCommon(cs.map((c) => c.effect))}”"><span class="n">${cs.length}</span></button></td>`;
+    }
+    h += '</tr>';
+  }
+  h += `</tbody></table><p class="lede">Rows are causes, columns what they acted on. Each number counts your links between two lanes in Athens, 500–400 BCE. Open a square to see its arrows.</p></div>`;
+  return h;
+}
+function mostCommon(xs) { const n = {}; for (const x of xs) n[x] = (n[x] ?? 0) + 1; return Object.entries(n).sort((a, b) => b[1] - a[1])[0]?.[0] ?? ''; }
+
+// ---------- phone: level 1 as a list, arcs in the gutter ----------
+function phoneList() {
+  const drawn = st.view === 'B' ? drawnConns() : C;
+  const ends = new Set(drawn.flatMap((c) => [`${c.from}@${c.fl}`, `${c.to}@${c.tl}`]));
+  const fs = focusSet();
+  let h = '<div class="plist" id="plist"><svg class="arcs" id="arcs"></svg>';
+  for (const L of LANES) {
+    const es = D.entries.filter((e) => e.lanes.includes(L.id));
+    const ord = es.map((e) => ({ e, end: ends.has(`${e.id}@${L.id}`) })).sort((a, b) => b.end - a.end || b.e.p - a.e.p);
+    const shown = [...ord.filter((o) => o.end), ...ord.filter((o) => !o.end).slice(0, st.view === 'B' && st.pair ? 0 : 3)].sort((a, b) => a.e.a - b.e.a);
+    h += `<section class="plane"><header><span class="sq" style="background:var(--${L.id})"></span>${L.name} <span class="n">${es.length}</span></header>`;
+    if (!es.length) h += `<p class="none" style="margin:6px 0">${L.empty}</p>`;
+    for (const { e, end } of shown) {
+      const outs = drawn.filter((c) => c.from === e.id && c.fl === L.id), ins = drawn.filter((c) => c.to === e.id && c.tl === L.id);
+      const dim = fs && !C.some((c) => fs.has(c.id) && (c.from === e.id || c.to === e.id)) ? ' dim' : '';
+      h += `<div class="prow fadeable${dim}" data-row="${e.id}@${L.id}"><button class="ttl" type="button" data-entry="${e.id}"><span class="yr">${yearLabel(e.a)}</span><span class="t">${esc(e.t)}</span></button>`;
+      for (const c of outs) h += `<button class="peff" type="button" data-pick="${c.id}"><span class="sq" style="background:var(--${c.tl})"></span><span><span class="k">${esc(c.effect)}</span> ${esc(E[c.to].t)}</span></button>`;
+      for (const c of ins) h += `<button class="peff" type="button" data-pick="${c.id}"><span class="sq" style="background:var(--${c.fl})"></span><span><span class="k">${esc((BY[c.effect] ?? c.effect).toLowerCase())}</span> ${esc(E[c.from].t)}</span></button>`;
+      h += '</div>';
+    }
+    const rest = es.length - shown.length;
+    if (rest > 0) h += `<div class="prow"><span class="more">${rest} more</span></div>`;
+    h += '</section>';
+  }
+  return h + '</div>';
+}
+function drawArcs() {
+  const list = document.getElementById('plist'), svg = document.getElementById('arcs');
+  if (!list || !svg) return;
+  const drawn = st.view === 'B' ? drawnConns() : C, fs = focusSet();
+  const rowY = (key) => { const el = list.querySelector(`[data-row="${CSS.escape(key)}"]`); return el ? el.offsetTop + 13 : null; };
+  svg.setAttribute('height', list.scrollHeight);
+  const items = drawn.map((c) => ({ c, a: rowY(`${c.from}@${c.fl}`), b: rowY(`${c.to}@${c.tl}`) })).filter((o) => o.a != null && o.b != null).sort((p, q) => Math.abs(q.b - q.a) - Math.abs(p.b - p.a));
+  const out = [], placed = [];
+  items.reverse();
+  for (const o of items) {
+    const lo = Math.min(o.a, o.b), hi = Math.max(o.a, o.b);
+    o.level = 1 + Math.max(0, ...placed.filter((q) => q.lo < hi && q.hi > lo).map((q) => q.level));
+    placed.push({ lo, hi, level: o.level });
+  }
+  const step = Math.min(5, 30 / Math.max(1, ...items.map((o) => o.level)));
+  for (const { c, a, b, level } of items) {
+    const w = 4 + level * step, x = 40;
+    const on = !fs || fs.has(c.id), col = `var(--${c.fl})`;
+    out.push(`<g class="fadeable${on ? '' : ' faded'}"><path d="M${x},${a} C${x - w},${a} ${x - w},${b} ${x},${b}" fill="none" stroke="${col}" stroke-width="${fs?.has(c.id) ? 2.2 : 1.5}"/><path d="M${x + 1},${b} l-6,-3.5 l0,7 Z" fill="${col}"/><circle cx="${x}" cy="${a}" r="2.4" fill="${col}"/></g>`);
+  }
+  svg.innerHTML = out.join('');
+}
+
+// ---------- render ----------
+function render() {
+  const narrow = matchMedia('(max-width: 720px)').matches;
+  const phone = st.device === 'phone' || narrow;
+  document.documentElement.toggleAttribute('data-theme', st.theme !== 'auto');
+  if (st.theme !== 'auto') document.documentElement.setAttribute('data-theme', st.theme);
+  for (const b of document.querySelectorAll('[data-view]')) b.setAttribute('aria-pressed', b.dataset.view === st.view);
+  for (const b of document.querySelectorAll('[data-device]')) b.setAttribute('aria-pressed', b.dataset.device === st.device);
+  for (const b of document.querySelectorAll('[data-theme-btn]')) b.setAttribute('aria-pressed', b.dataset.themeBtn === st.theme);
+  for (const b of document.querySelectorAll('[data-step]')) b.toggleAttribute('aria-current', +b.dataset.step === st.step), b.getAttribute('aria-current') === '' && b.setAttribute('aria-current', 'step');
+  for (const b of document.querySelectorAll('[data-case]')) { if (b.dataset.case === st.case) b.setAttribute('aria-current', 'step'); else b.removeAttribute('aria-current'); }
+  document.getElementById('pnote').innerHTML = NOTES[st.step] ?? '';
+  const dev = document.getElementById('device');
+  dev.classList.toggle('phone', phone);
+  const app = document.getElementById('app');
+  const keep = app.querySelector('.tlmain')?.scrollTop ?? 0;
+  const pairChip = st.pair ? `<div class="pairchip"><span class="sq" style="background:var(--${st.pair[0]})"></span>${laneOf[st.pair[0]].name} → <span class="sq" style="background:var(--${st.pair[1]})"></span>${laneOf[st.pair[1]].name} <button type="button" data-clearpair aria-label="Show no arrows">×</button></div>` : '';
+  const gridBtn = `<button class="iconbtn" type="button" data-view="${st.view === 'B' ? 'A' : 'B'}" aria-pressed="${st.view === 'B'}"><svg viewBox="0 0 14 14" aria-hidden="true"><g fill="currentColor">${[0, 5, 10].flatMap((x) => [0, 5, 10].map((y) => `<rect x="${x}" y="${y}" width="4" height="4" rx="1"/>`)).join('')}</g></svg>What drove what</button>`;
+  app.innerHTML = `
+    <div class="topbar"><div class="crumbs"><span class="up">Overview</span><span class="sep">›</span><span class="here">Athens</span>${phone ? '' : '<span class="yrs">500–400 BCE</span>'}</div>${gridBtn}</div>
+    <div class="mapwrap"><span class="say">The map, unchanged: influences between lanes add nothing to it.</span></div>
+    <div class="tl">${phone ? `<div class="tlmain">${st.view === 'B' ? gridHtml(true) : ''}${phoneList()}</div>` : `<div class="tlmain">${pairChip}<div id="svgwrap"></div></div>${st.view === 'B' ? `<div class="side">${gridHtml(false)}</div>` : ''}`}${cardHtml()}</div>`;
+  if (!phone) {
+    const main = app.querySelector('.tlmain');
+    document.getElementById('svgwrap').innerHTML = drawLaptop(Math.max(720, main.clientWidth));
+  } else drawArcs();
+  const m = app.querySelector('.tlmain'); if (m) m.scrollTop = keep;
+}
+
+// ---------- events ----------
+document.addEventListener('click', (ev) => {
+  const t = ev.target.closest('button, [data-conn], [data-entry], [data-cell]');
+  if (!t) return;
+  const d = t.dataset;
+  if (d.view) { st.view = d.view; st.sel = null; if (st.view === 'A') st.pair = null; st.step = st.view === 'A' ? 1 : 4; }
+  else if (d.device) st.device = d.device;
+  else if (d.themeBtn) { st.theme = d.themeBtn; try { localStorage.setItem('influences-proto', JSON.stringify({ theme: st.theme })); } catch {} }
+  else if (d.step) return setStep(+d.step);
+  else if (d.case) { st.case = d.case; st.sel = null; st.hover = null; if (st.view === 'B') st.view = 'A'; }
+  else if (d.close !== undefined) st.sel = null;
+  else if (d.clearpair !== undefined) st.pair = null;
+  else if (d.cell) { const [a, b] = d.cell.split('>'); st.pair = st.pair && st.pair[0] === a && st.pair[1] === b ? null : [a, b]; st.sel = null; }
+  else if (d.pick) st.sel = { type: 'conn', id: d.pick };
+  else if (d.open) st.sel = { type: 'entry', id: d.open };
+  else if (d.conn) st.sel = { type: 'conn', id: d.conn };
+  else if (d.entry) st.sel = { type: 'entry', id: d.entry };
+  else return;
+  st.hover = null;
+  render();
+});
+document.addEventListener('keydown', (ev) => {
+  if (ev.key === 'Escape') { if (st.sel) st.sel = null; else if (st.pair) st.pair = null; else if (st.case !== 'all') st.case = 'all'; else return; render(); }
+  if ((ev.key === 'Enter' || ev.key === ' ') && ev.target.matches('[data-conn], [data-entry]') && ev.target.tagName !== 'BUTTON') { ev.preventDefault(); ev.target.click(); }
+});
+let hoverT = null;
+function setHover(h) {
+  const same = (a, b) => (a?.type === b?.type && a?.id === b?.id);
+  if (same(st.hover, h)) return;
+  st.hover = h; clearTimeout(hoverT); hoverT = setTimeout(render, 0);
+}
+document.addEventListener('pointerover', (ev) => {
+  if (ev.pointerType !== 'mouse') return;
+  const t = ev.target.closest('#svgwrap [data-conn], #svgwrap [data-entry]');
+  setHover(t ? (t.dataset.conn ? { type: 'conn', id: t.dataset.conn } : { type: 'entry', id: t.dataset.entry }) : null);
+});
+document.addEventListener('focusin', (ev) => {
+  const t = ev.target.closest('#svgwrap [data-conn], #svgwrap [data-entry]');
+  if (t) { st.hover = t.dataset.conn ? { type: 'conn', id: t.dataset.conn } : { type: 'entry', id: t.dataset.entry }; restyle(); }
+});
+// Focus moves within the SVG without re-rendering (which would drop focus): restyle in place.
+function restyle() {
+  const fs = focusSet();
+  const ends = fs ? new Set(C.filter((c) => fs.has(c.id)).flatMap((c) => [c.from, c.to])) : null;
+  for (const g of document.querySelectorAll('#svgwrap [data-conn]')) g.classList.toggle('faded', !!fs && !fs.has(g.dataset.conn));
+  for (const g of document.querySelectorAll('#svgwrap [data-entry]')) g.classList.toggle('dim', !!ends && !ends.has(g.dataset.entry));
+}
+addEventListener('resize', () => render());
+document.fonts?.ready.then(render);
+render();
+</script>
