@@ -551,6 +551,50 @@ test.describe('a polity from the tray', () => {
     await expect(svg.locator(`rect[data-id="${item.id}"]`)).toBeVisible();
     await expect(svg.locator(`use[data-id="${item.id}"]`)).toHaveAttribute('href', /-g-polity$/);
   });
+
+  test('Sparta comes with Seshat’s borders, which change over its life, and the map credits them', async ({ page }) => {
+    test.slow();
+    await mockArticles(page);
+    await mockSummaries(page);
+    // Test data, not Cliopatria's: Seshat has Sparta in Laconia, then over most of the Peloponnese after 400 BCE.
+    const laconia = [[[22.2, 36.7], [22.9, 36.7], [22.9, 37.4], [22.2, 37.4], [22.2, 36.7]]];
+    const peloponnese = [[[21.5, 36.5], [23.2, 36.5], [23.2, 38], [21.5, 38], [21.5, 36.5]]];
+    const sparta = { id: 'sparta', name: 'Sparta', snapshots: [
+      { from: { y: -899 }, to: { y: -399 }, geometry: { type: 'Polygon', coordinates: laconia }, areaKm2: 6000 },
+      { from: { y: -399 }, to: { y: -191 }, geometry: { type: 'Polygon', coordinates: peloponnese }, areaKm2: 21000 },
+    ] };
+    const index = { release: 'test', polities: [{ id: 'sparta', name: 'Sparta', wikidata: ['Q5690'], wikipedia: ['Sparta'], rows: [[-899, -399, 22, 36, 23, 38], [-399, -191, 21, 36, 24, 38]] }] };
+    await page.route('**/data/borders/**', (route) => route.fulfill({ json: route.request().url().endsWith('index.json') ? index : sparta }));
+    // The historical maps aren't needed, and would fail.
+    await page.route('https://raw.githubusercontent.com/aourednik/historical-basemaps/**', (route) => route.fulfill({ status: 503, headers: cors, body: 'down' }));
+    await open(page);
+    await search(page, 'pericles', 'Pericles');
+    await expect(page.getByTestId('reader').getByRole('link', { name: 'Sparta' })).toBeVisible();
+    await page.evaluate(() => {
+      const p = [...document.querySelectorAll('.reader-text p')].find((x) => x.textContent!.includes('took Athens'))!;
+      const r = document.createRange();
+      r.selectNodeContents(p);
+      getSelection()!.removeAllRanges();
+      getSelection()!.addRange(r);
+    });
+    await expect(page.getByRole('button', { name: 'Highlight' })).toBeVisible();
+    await page.keyboard.press('h');
+    const tray = page.getByTestId('capture-tray');
+    await expect(tray.getByRole('checkbox', { name: /Sparta/ })).toContainText('Polity');
+    await tray.getByRole('checkbox', { name: /Sparta/ }).click();
+    await tray.getByRole('checkbox', { name: /Peloponnesian War/ }).click();
+    await tray.getByRole('button', { name: 'Add to map and timeline' }).click();
+    await expect(tray.locator('.tray-done')).toContainText('Added Sparta to your map and timeline.');
+
+    // Matched by its Wikidata id: both sets of borders, cut to its life, credited to Seshat.
+    await expect.poll(() => savedTerritory(page, 'Sparta')).toMatchObject({ source: { name: expect.stringContaining('Cliopatria, Seshat Global History Databank (CC BY 4.0)') } });
+    const territory = (await savedTerritory(page, 'Sparta')) as { snapshots: { from: { y: number }; geometry: unknown }[] };
+    expect(territory.snapshots.map((x) => x.from.y)).toEqual([-899, -399]);
+    expect(territory.snapshots[0].geometry).not.toEqual(territory.snapshots[1].geometry);
+    await expect(page.locator('[data-testid=map][data-ready]')).toBeVisible();
+    await expect(page.locator('.maplibregl-ctrl-attrib a', { hasText: 'Cliopatria' })).toBeAttached();
+    await expect(page.locator('.map-label.territory', { hasText: 'Sparta' })).toBeVisible();
+  });
 });
 
 test('Bob’s Laurion passage becomes several records: two candidates ticked, one filled in by hand, and Claude’s event pinned at the mines', async ({ page }) => {

@@ -5,6 +5,7 @@ import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
 import type { FeatureCollection, LineString } from 'geojson';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { basemapFor, BASEMAPS_CREDIT, fetchBasemap } from '../data/basemaps';
+import { CLIOPATRIA_CREDIT, isCliopatria } from '../data/cliopatria';
 import { loadCountries } from '../data/countries';
 import { formatYear } from '../model/dates';
 import type { Category, Flow, Relation, Series, Territory, TimelineItem } from '../model/types';
@@ -390,6 +391,22 @@ export default function MapView(props: Props) {
     const map = mapRef.current;
     if (map && ready) applyColors(map, colors);
   }, [colors, ready]);
+
+  // Seshat's borders are credited in the map's credits while any territory uses them.
+  const seshat = territories.some((t) => isCliopatria(t.source));
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !ready) return;
+    const has = !!map.getSource('seshat-credit');
+    // MapLibre credits only sources a layer uses, so it gets an empty, invisible one.
+    if (seshat && !has) {
+      map.addSource('seshat-credit', { type: 'geojson', data: EMPTY, attribution: `<a href="${CLIOPATRIA_CREDIT.url}" target="_blank" rel="noreferrer">Cliopatria (Seshat), CC BY 4.0</a>` });
+      map.addLayer({ id: 'seshat-credit', type: 'fill', source: 'seshat-credit', paint: { 'fill-opacity': 0 } });
+    } else if (!seshat && has) {
+      map.removeLayer('seshat-credit');
+      map.removeSource('seshat-credit');
+    }
+  }, [seshat, ready]);
 
   // Territories (only redrawn when a different snapshot becomes current).
   const terr = useMemo(() => territoriesAt(territories, year, colorOf), [territories, year, colorOf]);

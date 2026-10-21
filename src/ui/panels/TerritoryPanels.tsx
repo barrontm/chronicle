@@ -1,6 +1,7 @@
 import type { FeatureCollection } from 'geojson';
 import { useMemo, useRef, useState } from 'react';
-import { BASEMAP_YEARS, basemapFor, BASEMAPS_CREDIT, fetchBasemap, polityNames, snapshotsFor, type BasemapYear } from '../../data/basemaps';
+import { BASEMAP_YEARS, basemapFor, BASEMAPS_CREDIT, fetchBasemap, polityNames, seshatBordersFor, snapshotsFor, type BasemapYear, type FoundBorders } from '../../data/basemaps';
+import { isCliopatria } from '../../data/cliopatria';
 import { areaKm2, FINE, parseGeoJsonAreas, simplifyArea, type Area } from '../../data/geo';
 import { compareHistDate, formatRange, formatYear, toDecimalYear } from '../../model/dates';
 import { newId, notesFor, remove, upsert } from '../../model/doc';
@@ -8,6 +9,7 @@ import type { HistDate, Territory, TerritorySnapshot } from '../../model/types';
 import { useDoc } from '../DocContext';
 import { DateField, Field, RecordPicker } from '../fields';
 import type { Nav } from '../nav';
+import { useOnline } from '../useAi';
 import { titleOf } from '../util';
 
 const km2 = new Intl.NumberFormat('en', { maximumFractionDigits: 0 });
@@ -73,6 +75,7 @@ export function TerritoryView({ id, nav }: { id: string; nav: Nav }) {
           Borders from {t.source.url ? <a href={t.source.url} target="_blank" rel="noreferrer">{t.source.name}</a> : t.source.name}.
         </p>
       )}
+      {!isCliopatria(t.source) && <SeshatUpdate key={id} t={t} />}
 
       <div className="actions">
         <button className="btn primary" onClick={() => nav.replace({ type: 'territory', id, edit: true })}>Edit</button>
@@ -85,6 +88,64 @@ export function TerritoryView({ id, nav }: { id: string; nav: Nav }) {
         }}>Delete</button>
       </div>
     </article>
+  );
+}
+
+/**
+ * Replace a territory's borders with Seshat's, matched by its Wikidata id, else its name, in its
+ * entry's years (else the years its borders cover). Shows what would change; nothing is replaced
+ * until Bob confirms.
+ */
+function SeshatUpdate({ t }: { t: Territory }) {
+  const { doc, update } = useDoc();
+  const online = useOnline();
+  const [state, setState] = useState<{ busy?: true; found?: FoundBorders; msg?: string }>({});
+  const item = t.itemId ? doc.items.find((i) => i.id === t.itemId) : undefined;
+
+  const look = async () => {
+    if (!online) { setState({ msg: 'You’re offline. Seshat’s borders need a connection (ones you’ve already looked at still work).' }); return; }
+    setState({ busy: true });
+    try {
+      const wanted = { wikidataId: t.wikidataId ?? item?.wikidataId, names: [t.title, item?.title ?? ''] };
+      // Cut to the entry's own lifetime, as when adding from the tray; with no entry, take all Seshat has.
+      const found = item?.start
+        ? await seshatBordersFor(wanted, item.start, item.end)
+        : await seshatBordersFor(wanted, t.snapshots[0]?.from, t.snapshots.at(-1)?.to, undefined, false);
+      setState(found.snapshots.length ? { found } : { msg: `Seshat’s maps don’t have ${t.title}${item?.start || t.snapshots.length ? ' in its years' : ''}.` });
+    } catch (e) {
+      setState({ msg: (e as Error).message });
+    }
+  };
+
+  const { found } = state;
+  if (found) {
+    const snaps = found.snapshots;
+    return (
+      <div className="seshat-update offer" data-testid="seshat-update">
+        <p>
+          Seshat has {snaps.length === 1 ? 'one set' : `${snaps.length} sets`} of borders for {found.name}, {spanOf({ ...t, snapshots: snaps })}.
+          {' '}{t.snapshots.length ? `They replace your ${t.snapshots.length === 1 ? 'one set' : `${t.snapshots.length} sets`} (${spanOf(t)}).` : 'You have none yet.'}
+        </p>
+        <ul className="seshat-sets">
+          {snaps.map((s, i) => (
+            <li key={i}>{s.to ? formatRange(s.from, s.to) : `From ${formatYear(s.from.y)}`}{s.areaKm2 !== undefined && <small> · about {km2.format(s.areaKm2)} km²</small>}</li>
+          ))}
+        </ul>
+        <div className="actions">
+          <button className="btn primary" onClick={() => {
+            // The panel then credits Seshat, and this offer goes away.
+            update((d) => upsert(d, 'territories', { ...t, snapshots: snaps, source: found.source }));
+          }}>Replace borders</button>
+          <button className="btn" onClick={() => setState({})}>Keep mine</button>
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className="seshat-update">
+      <button className="btn small" disabled={state.busy} onClick={look}>{state.busy ? 'Looking at Seshat’s maps…' : 'Update borders from Seshat'}</button>
+      {state.msg && <p className="hint" role="status">{state.msg}</p>}
+    </div>
   );
 }
 

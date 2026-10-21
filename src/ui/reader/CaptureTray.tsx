@@ -3,7 +3,7 @@ import {
   acceptConnection, acceptEntry, addBecoming, statusIn, undoBecoming, undoConnection, undoEntry, waiting,
   type Became, type Becoming, type DraftConnection, type DraftEntry, type DraftSet, type DraftStatus,
 } from '../../ai/draft';
-import { BASEMAPS_CREDIT, bordersFor } from '../../data/basemaps';
+import { bordersFor } from '../../data/basemaps';
 import { areaKm2, type Area } from '../../data/geo';
 import { lookUpPlace, type ItemDraft } from '../../media/wikipedia';
 import { formatItemDates, toDecimalYear } from '../../model/dates';
@@ -11,7 +11,7 @@ import { CANT_ADD, defaultChoices, ownEntry, polityTerritory, territoryOf } from
 import { upsert } from '../../model/doc';
 import { describeRelation } from '../../model/doc';
 import { KIND_LABEL, factRelations, findInChronicle, subjectFacts, type Subject } from '../../model/subjects';
-import type { Highlight, ItemKind, Lane, Place, Relation, TerritorySnapshot } from '../../model/types';
+import type { Highlight, ItemKind, Lane, Place, Relation, Territory, TerritorySnapshot } from '../../model/types';
 import { useDoc } from '../DocContext';
 import { DraftConnectionRow, DraftEntryRow, DroppedList } from '../panels/DraftRows';
 import { useApiKey, useOnline } from '../useAi';
@@ -257,8 +257,8 @@ export function CaptureTray({ marks, candidates, articleTitle, onAdd, onDraftPag
 
   /**
    * Link what Bob has and add the rest straight away, through the same path as Claude's drafts;
-   * one Undo takes it all back. A polity comes with its territory, its borders found on the
-   * historical maps by name; when they aren't there, Bob draws them or adds it without.
+   * one Undo takes it all back. A polity comes with its territory, its borders found in Seshat's
+   * maps (else the historical maps); when neither has them, Bob draws them or adds it without.
    */
   const addTicked = async () => {
     setBusy(true);
@@ -274,15 +274,17 @@ export function CaptureTray({ marks, candidates, articleTitle, onAdd, onDraftPag
         else if (d.item.subject === 'polity') {
           const { item } = d;
           let snaps: TerritorySnapshot[] = [];
+          let source: Territory['source'];
           if (!territoryOf(item, doc.territories)?.snapshots.length && item.start) {
             setProgress(`Looking for ${item.title}’s borders on the historical maps…`);
             try {
-              snaps = (await bordersFor([r.subject!.label ?? '', r.key, item.title], item.start, item.end)).snapshots;
+              const wanted = { wikidataId: item.wikidataId ?? r.subject!.qid, titles: [r.key], names: [r.subject!.label ?? '', item.title] };
+              ({ snapshots: snaps, source } = await bordersFor(wanted, item.start, item.end));
             } catch (e) {
               note = navigator.onLine ? (e as Error).message : 'You’re offline, so the historical maps can’t be searched.';
             }
           }
-          const territory = polityTerritory(item, doc.territories, snaps, BASEMAPS_CREDIT);
+          const territory = polityTerritory(item, doc.territories, snaps, source);
           const bordered = territory.next.snapshots.length > 0;
           if (!bordered) missing.push({ id: territory.next.id, title: item.title });
           // With borders, the territory is where it is on the map; without, its pin stands in for now.

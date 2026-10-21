@@ -708,6 +708,43 @@ test.describe('historical maps', () => {
     await expect(territoryLabel(page, 'Roman Republic')).toHaveCount(0);
   });
 
+  test('a territory takes Seshat’s borders only when Bob confirms', async ({ page }) => {
+    await mockBasemaps(page);
+    // Test data, not Cliopatria's: Seshat has the Roman Republic in two sets, from 300 BCE.
+    const sets = [
+      { from: { y: -299 }, to: { y: -199 }, geometry: square(11, 40, 2), areaKm2: 40000 },
+      { from: { y: -199 }, to: { y: -26 }, geometry: square(8, 36, 10), areaKm2: 900000 },
+    ];
+    const index = { release: 'test', polities: [{ id: 'roman-republic', name: 'Roman Republic', wikidata: ['Q17167'], wikipedia: ['Roman Republic'], rows: [[-299, -199, 11, 40, 13, 42], [-199, -26, 8, 36, 18, 46]] }] };
+    await page.route('**/data/borders/**', (route) => route.fulfill({ json: route.request().url().endsWith('index.json') ? index : { id: 'roman-republic', name: 'Roman Republic', snapshots: sets } }));
+    await open(page);
+    await openMap(page);
+    await goToYear(page, '200 BCE');
+    await page.getByRole('button', { name: 'Add a territory' }).click();
+    const panel = page.getByTestId('territory-import');
+    await panel.getByRole('button', { name: 'Show its polities' }).click();
+    await panel.getByTestId('polities').getByRole('button', { name: 'Rome' }).click();
+    await panel.getByRole('button', { name: /Look through 9 maps/ }).click();
+    await panel.getByLabel('Name').fill('Roman Republic');
+    await panel.getByRole('button', { name: 'Add to map' }).click();
+
+    // Seshat's borders are shown first; keeping his own changes nothing.
+    const view = page.getByTestId('territory-view');
+    await view.getByRole('button', { name: 'Update borders from Seshat' }).click();
+    const offer = view.getByTestId('seshat-update');
+    await expect(offer).toContainText('Seshat has 2 sets of borders for Roman Republic, 300–27 BCE. They replace your 3 sets');
+    await expect(offer.getByRole('listitem')).toHaveCount(2);
+    await offer.getByRole('button', { name: 'Keep mine' }).click();
+    await expect(view.getByRole('link', { name: /historical-basemaps/ })).toBeVisible();
+
+    await view.getByRole('button', { name: 'Update borders from Seshat' }).click();
+    await offer.getByRole('button', { name: 'Replace borders' }).click();
+    await expect(view.getByRole('link', { name: /Cliopatria, Seshat Global History Databank/ })).toBeVisible();
+    await expect(view.getByRole('button', { name: 'Update borders from Seshat' })).toHaveCount(0);
+    await expect(view.getByRole('listitem')).toHaveCount(2);
+    await expect(page.locator('.maplibregl-ctrl-attrib a', { hasText: 'Cliopatria' })).toBeAttached();
+  });
+
   test('reference borders say when they need a connection', async ({ page, context }) => {
     await open(page);
     await openMap(page);
