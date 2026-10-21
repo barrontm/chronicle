@@ -2,6 +2,14 @@
 
 A log of choices that shouldn't be re-litigated every session. Newest first. To change a decision, add a new entry that supersedes the old one.
 
+## 2026-10-21 — Influences between lanes: arrows, with an open vocabulary
+Phase 4b's prototype (`docs/prototypes/influences.html`) showed Athens, 500–400 BCE, on the Greece fixture plus the cases in `next.json` → `influences` (the war and the economy, the plague and religion, silver and tribute paying for building). Bob chose:
+- **A · arrows** between level-1 lanes, coloured by the cause's lane, labelled with the effect, the evidence one tap away. Not chosen: B · a six-by-six "what drove what" grid that opened into the arrows.
+- **The effect vocabulary**: caused, enabled, prompted, funded, strengthened, weakened, legitimised, ended, plus words Bob types himself. No schema change: `Relation.effect` is already a free string (v6). His own words are offered again next time.
+- **The arrow style** as drawn (rules in `docs/design.md`, "Influences between lanes").
+
+Settled on the way: an arrow goes from the cause's first lane to the effect's first different lane, so an entry in several lanes doesn't sprout several arrows; ends of arrows are always named; crowded labels hide until their arrow is in focus. The fixture doc is unchanged until ticket 2, so the visual snapshots stay put.
+
 ## 2026-10-20 — Borders from Seshat (Cliopatria v0.2.1)
 `scripts/build-cliopatria.ts` turns Cliopatria's 13,797 rows into `public/data/borders/`: 1,587 polity files (one per name; accent-only twins like "Han"/"Hàn" are numbered) with 12,372 snapshots, simplified at 0.01° (about 1 km) with 3 decimals. Tolerance barely changes the size (52.7 MB at 0.01, 52.3 MB at 0.02, 49.5 MB at 0.05), because the bulk is consecutive snapshots of modern empires repeating the same coastlines: the largest file is the British Empire group (5.4 MB). They compress well: about 7 MB as a tar.gz, and an ancient polity is small (Achaemenid Empire 62 KB, 5 KB gzipped). `index.json` is 468 KB (105 KB gzipped): ids, names, Wikidata ids, Wikipedia titles and per-snapshot years and whole-degree boxes, ready for S5's `politiesAt`. Nothing is precached; a `StaleWhileRevalidate` runtime cache keeps what Bob has looked at.
 
