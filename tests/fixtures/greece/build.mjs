@@ -461,7 +461,60 @@ const next = {
   },
   // Phase 4: the overview. Lanes, marks, strength, regions, groups and participants are in the doc (v9); what's left is ticket 8's.
   overview: { alliances: ov.alliances },
+  // Phase 4b: influences between lanes (docs/prototypes/influences.html). Ticket 2 moves these into the doc.
+  influences: influenceShapes(),
 };
+
+// Connections across Athens' lanes, with an effect and the highlights that are their evidence, plus two economy entries and the
+// highlights the doc lacks. A connection the doc already has keeps its id, so moving these in adds the effect to it.
+function influenceShapes() {
+  const items = [
+    { id: 'i_eisphora', kind: 'event', title: 'First war tax on property', start: { y: bce(428) }, categoryId: 'politics', description: 'A levy on the rich for the siege of Mytilene.', lanes: ['economy'], region: 'Greece', updatedAt: NOW },
+    { id: 'i_emergency_coins', kind: 'span', title: 'Gold and plated emergency coins', start: { y: bce(407) }, end: { y: bce(404) }, categoryId: 'politics', description: 'Gold from the Victories on the Acropolis, then silver-plated bronze.', lanes: ['economy'], region: 'Greece', updatedAt: NOW },
+  ];
+  const H = (id, sourceId, text, on, lanes) => ({ id: `h_${id}`, sourceId, text, usedBy: [on], lanes, updatedAt: NOW });
+  const highlights = [
+    H('mines_lost', 's_thuc', 'Once the Spartans held Decelea, Athens lost its revenue from the silver mines, and more than twenty thousand slaves deserted.', 'i_decelean', ['war', 'economy']),
+    H('eisphora', 's_thuc', 'For the siege of Mytilene the Athenians raised among themselves, for the first time, a property tax of two hundred talents.', 'i_eisphora', ['economy', 'war']),
+    H('nike_gold', 's_wp_economy_of_ancient_greece', 'Late in the war Athens melted down gold statues of Victory to strike coins, then issued silver-plated bronze.', 'i_emergency_coins', ['economy']),
+    H('asclepius_after', 's_wp_plague_of_athens', 'The cult of Asclepius was brought to Athens in 420 BC, in the years after the plague.', 'i_asclepius', ['ideas', 'nature']),
+    H('plague_law', 's_thuc', 'Fear of the gods or the law of men held no one back.', 'i_plague', ['nature', 'ideas']),
+    H('tribute_pay', 's_wp_delian_league', 'Tribute from the allies paid for the fleet’s rowers, for jurors and for the building on the Acropolis.', 'i_treasury_moved', ['economy', 'politics']),
+    H('sicily_coup', 's_wp_sicilian_expedition', 'After the disaster in Sicily, an oligarchy of Four Hundred took power in Athens in 411 BC.', 'i_four_hundred', ['politics', 'war']),
+    H('walls_strategy', 's_thuc', 'Pericles told the Athenians to bring in their property from the country and guard the city behind its walls.', 'i_long_walls', ['technology', 'war']),
+  ];
+  const existing = new Map(relations.map((r) => [`${r.fromId}>${r.toId}`, r]));
+  let n = 0;
+  const known = new Set([...byId, ...items.map((i) => i.id)]);
+  const link = (from, to, effect, hs, note) => {
+    const fromId = `i_${from}`, toId = `i_${to}`;
+    if (!known.has(fromId) || !known.has(toId)) throw new Error(`influence ${from} → ${to}`);
+    const had = existing.get(`${fromId}>${toId}`);
+    return { ...(had ?? { id: `r_inf_${++n}`, fromId, toId, type: 'caused' }), effect, highlightIds: hs.map((h) => `h_${h}`), ...(note ? { note } : {}), updatedAt: NOW };
+  };
+  const connections = [
+    // The war and Athens' economy.
+    link('megarian_decree', 'pelop', 'caused', []),
+    link('archidamian', 'eisphora', 'prompted', ['eisphora']),
+    link('decelean', 'owls', 'weakened', ['decelea', 'mines_lost'], 'the mines at Laurion stopped'),
+    link('decelean', 'emergency_coins', 'prompted', ['mines_lost', 'nike_gold']),
+    link('sicilian', 'four_hundred', 'enabled', ['sicily_coup']),
+    link('long_walls', 'archidamian', 'enabled', ['longwalls', 'walls_strategy'], 'Pericles’ strategy of staying inside'),
+    // The plague and religion.
+    link('plague', 'asclepius', 'prompted', ['asclepius_after']),
+    link('plague', 'pericles', 'weakened', ['plague']),
+    link('plague', 'archidamian', 'weakened', ['plague']),
+    link('plague', 'funeral_oration', 'weakened', ['plague_law'], 'the city Pericles praised fell apart a year later'),
+    link('herms', 'alcibiades_defects', 'caused', ['herms']),
+    // Silver and tribute paying for the fleet and the building program.
+    link('laurion', 'trireme', 'funded', ['silver']),
+    link('trireme', 'salamis', 'enabled', ['triremes', 'salamis']),
+    link('treasury_moved', 'parthenon_built', 'funded', ['delian', 'parthenon', 'tribute_pay']),
+    link('treasury_moved', 'propylaea', 'funded', ['tribute_pay']),
+    link('treasury_moved', 'juror_pay', 'funded', ['tribute_pay']),
+  ];
+  return { items, highlights, connections };
+}
 
 // Lanes, the overview mark, strength points, regions and their parents, a group of city-states, and the polities
 // that took part in wars and alliances (territories as connection ends, with a side).
