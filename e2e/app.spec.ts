@@ -3,6 +3,9 @@ import { fileURLToPath } from 'node:url';
 
 const FIXTURE = fileURLToPath(new URL('../tests/fixtures/sample-history.json', import.meta.url));
 
+// The map (WebGL under SwiftShader) loads beside the reader in every test here, which is slow with parallel workers.
+test.describe.configure({ timeout: 60_000 });
+
 /**
  * Each test gets a fresh browser context, so IndexedDB starts empty. On a phone the map and the
  * timeline are a sheet over the reader, so `open` opens it.
@@ -42,12 +45,13 @@ async function importFixture(page: Page) {
 /** Double-click an empty part of the timeline to add an entry by hand, and say what it is. */
 async function newEntry(page: Page, kind: 'Event' | 'Period' | 'Person') {
   const editor = page.getByTestId('item-editor');
-  // Spots low down and to the side, away from the entries; the timeline may still be drawing on the first try.
-  const spots = [0.6, 0.85, 0.35];
-  let i = 0;
+  // The timeline frames the last entry added, so first step a few screens later in time, past anything on it.
+  const wheel = page.getByTestId('thumbwheel');
+  for (let n = 0; n < 3; n++) await wheel.press('PageDown');
+  // The timeline may still be drawing on the first try.
   await expect(async () => {
     const box = (await page.getByTestId('timeline').boundingBox())!;
-    await page.mouse.dblclick(box.x + box.width * spots[i++ % spots.length], box.y + box.height - 12);
+    await page.mouse.dblclick(box.x + box.width * 0.6, box.y + box.height * 0.6);
     await expect(editor.getByRole('heading', { name: 'New entry' })).toBeVisible({ timeout: 2000 });
   }).toPass({ timeout: 20_000 });
   await editor.locator('.segmented').first().getByRole('button', { name: kind, exact: true }).click();
