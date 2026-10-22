@@ -10,7 +10,7 @@ import type { DocStore } from '../store/store';
 import { DocProvider, useDoc } from './DocContext';
 import type { Nav, Panel } from './nav';
 import { ItemEditor, ItemView } from './panels/ItemPanels';
-import { RelationEditor, RelationView } from './panels/RelationPanels';
+import { RelationEditor, RelationView, ThreadView } from './panels/RelationPanels';
 import { Help } from './panels/Help';
 import { Library } from './panels/Library';
 import { BulkEdit } from './panels/BulkEdit';
@@ -191,6 +191,7 @@ function Workspace() {
   });
   const [playing, setPlaying] = useState(false);
   const [speed, setSpeed] = useStored<number>('chronicle.speed', () => 25);
+  const [allThreads, setAllThreads] = useStored<boolean>('chronicle.allThreads', () => false);
   const [mapOptions, setMapOptions] = useStored<MapOptions>('chronicle.mapOptions', () => ({ backdrop: false, keepPast: false, connections: false }));
   const [mapCamera, setMapCamera] = useStored<MapCamera>('chronicle.mapView', () => ({ center: [20, 35], zoom: 1.6 }));
   const [dataSeriesId, setDataSeriesId] = useStored<string | null>('chronicle.mapData', () => null);
@@ -460,6 +461,7 @@ function Workspace() {
             window={followWindow}
             region={region}
             onRegion={setRegion}
+            allThreads={allThreads}
           />
           <YearBar year={year} range={range} onYear={(y) => { setPlaying(false); setYear(y); }} playing={playing} onPlaying={setPlaying} speed={speed} onSpeed={setSpeed} />
           {resizable && (
@@ -489,6 +491,8 @@ function Workspace() {
             onAddAt={(year, categoryId) => setStack([{ type: 'new-item', year, categoryId }])}
             onAddIn={(lane, year, partOf) => setStack([{ type: 'new-item', year, lane, partOf }])}
             onOpenRelation={(id) => setStack([{ type: 'relation', id }])}
+            onOpenThread={(t) => setStack([{ type: 'thread', ...t }])}
+            allThreads={allThreads}
             onWindow={setWin}
             onCanGoBack={setCanGoBackInTime}
             year={year}
@@ -530,7 +534,7 @@ function Workspace() {
               <button type="button" className="btn small" onClick={undoMove}>Undo</button>
             </div>
           )}
-          {win && <TimeBar win={win} control={timeline} />}
+          {win && <TimeBar win={win} control={timeline} allThreads={allThreads} onAllThreads={setAllThreads} />}
           <TrendStrips
             series={doc.series}
             categories={categories}
@@ -571,6 +575,7 @@ function Workspace() {
 function PanelBody({ panel, nav, aiDraft, onAiDraft, onBulkDone }: { panel: Panel; nav: Nav; aiDraft: DraftSet | null; onAiDraft: (d: DraftSet | null) => void; onBulkDone: (undo: Undo, msg: string) => void }) {
   // `key` resets editor state when switching between records.
   switch (panel.type) {
+    case 'thread': return <ThreadView key={panel.ids.join()} ids={panel.ids} title={panel.title} nav={nav} />;
     case 'relation': return panel.edit ? <RelationEditor key={`e-${panel.id}`} id={panel.id} nav={nav} /> : <RelationView key={panel.id} id={panel.id} nav={nav} />;
     case 'item': return panel.edit ? <ItemEditor key={`e-${panel.id}`} id={panel.id} nav={nav} /> : <ItemView key={panel.id} id={panel.id} nav={nav} />;
     case 'new-item': return <ItemEditor key={`new-${panel.draft?.item.id ?? `${panel.year}-${panel.kind}-${panel.categoryId}-${panel.lane}-${panel.partOf}`}`} id={null} init={panel} draft={panel.draft} nav={nav} />;

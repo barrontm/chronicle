@@ -3,7 +3,8 @@ import { formatYear, parseHistDate } from '../model/dates';
 import type { Category, Flow, FlowCause, Relation, Series, Territory, TimelineItem } from '../model/types';
 import type { Area } from '../data/geo';
 import { addPoint, canFinish, closePart, EMPTY_DRAFT, toGeometry, undo, type Draft } from './drawing';
-import { worldMembers } from '../model/polities';
+import { polityMembers, worldMembers } from '../model/polities';
+import { entryLanes } from '../model/lanes';
 import { loadCountriesFile } from '../data/countries';
 import { eraRegions } from '../model/eras';
 import { activeRoutes, CAUSES, choroplethAt, eraExtents, followAt, landRings, mapKindOf, type ContactHow, type TimelineFocus } from './mapData';
@@ -54,6 +55,8 @@ interface Props {
   /** The region Bob clicked (through one of its territories); clicking a territory with a region focuses it. */
   region?: MapRegion;
   onRegion?: (r: MapRegion | undefined) => void;
+  /** "Show all threads": every connection as a faint arc while it lasts. */
+  allThreads?: boolean;
 }
 
 export interface MapRegion { name: string; territoryId: string }
@@ -91,6 +94,16 @@ export function MapPane(p: Props) {
     return () => { live = false; };
   }, []);
   const eras = useMemo(() => (land ? eraExtents(eraRegions(p.items, [], p.relations, new Date().getFullYear()), p.items, p.relations, p.territories, land) : undefined), [land, p.items, p.relations, p.territories]);
+  // Threads over time: the open entry's, else the picked polity's or world event's.
+  const threadDoc = useMemo(() => {
+    let members: Map<string, string[]> | undefined;
+    return {
+      items: p.items, relations: p.relations, territories: p.territories, lanesOf: entryLanes(p.items, []),
+      members: (tid: string) => (members ??= polityMembers({ items: p.items, territories: p.territories, relations: p.relations })).get(tid) ?? [],
+    };
+  }, [p.items, p.relations, p.territories]);
+  const threadFocus = p.selectedId ?? p.focus?.pick;
+  const threads = useMemo(() => (following ? { focus: threadFocus, all: !!p.allThreads, doc: threadDoc } : undefined), [following, threadFocus, p.allThreads, threadDoc]);
   const picked = p.focus?.pick?.startsWith('pol:') ? p.territories.find((t) => `pol:${t.id}` === p.focus!.pick) : undefined;
   const byHow = (how: ContactHow) => [...(follow?.marks ?? [])].filter(([, m]) => m.how === how).map(([id]) => p.territories.find((t) => t.id === id)?.title).filter(Boolean);
   const regionTerritory = p.region && p.territories.find((t) => t.id === p.region!.territoryId);
@@ -119,6 +132,7 @@ export function MapPane(p: Props) {
           }}
           follow={follow}
           eras={eras}
+          threads={threads}
           onOpenFlow={p.onOpenFlow}
           onBackdropStatus={setBackdrop}
           camera={p.camera}

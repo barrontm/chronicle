@@ -470,6 +470,14 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .tl-svg .tl-influence, .tl-svg .tl-influence-halo, .tl-svg .tl-influence-head, .tl-svg .tl-effect, .tl-svg .tl-effect-label { transition: opacity var(--motion-quick); }
 .tl-svg .tl-influence, .tl-svg .tl-influence-halo { fill: none; stroke-linecap: round; }
 .tl-svg .tl-effect, .tl-svg .tl-effect-label, .tl-svg .tl-effect-line { cursor: pointer; }
+/* Threads at level 0: ribbons between polities and eras, labelled in the gutter over a halo. */
+.tl-svg .tl-ribbon { stroke-linejoin: round; cursor: pointer; transition: opacity var(--motion-quick); }
+.tl-svg .tl-thread-label { paint-order: stroke; stroke: var(--panel); stroke-width: 3px; stroke-linejoin: round; cursor: pointer; }
+/* "Show all threads" is for a pointer that hovers; on touch, threads light up when a strip is tapped. */
+@media (hover: none) { .threads-toggle { display: none; } }
+.thread-links { list-style: none; padding: 0; margin: 12px 0 0; display: grid; gap: 14px; }
+.thread-links li { border-top: 1px solid var(--rule-soft); padding-top: 10px; }
+.thread-links .relation-title { font-size: 15px; text-align: left; }
 .tl-tip b { font-family: var(--font-read); font-weight: 600; font-size: 13.5px; }
 .tl-tip span { color: var(--muted); }
 

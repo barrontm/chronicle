@@ -628,3 +628,70 @@ test('a theme added to Classical Greece shows as a chip on its era, and the map�
   await expect(map).toHaveAttribute('data-eras', /^Hellenistic period/, { timeout: 15_000 });
   await page.getByRole('button', { name: 'Pause' }).click();
 });
+
+test('Athens’ threads: a ribbon to Macedon with its count, all threads faintly, a ribbon’s list; then Aristotle’s thread plays on the map', async ({ page }) => {
+  test.slow();
+  await page.addInitScript(() => { try { localStorage.setItem('chronicle.speed', '100'); } catch { /* fine */ } });
+  await page.goto('/');
+  await expect(page.getByTestId('save-state')).toHaveText('Saved on this device');
+  await page.getByTestId('import-input').setInputFiles(fileURLToPath(new URL('../tests/fixtures/greece/classical-greece.json', import.meta.url)));
+  await expect(page.locator('.doc-title')).toHaveValue(/Classical Greece/);
+  const timeline = page.locator('[data-testid=timeline][data-ready]');
+  await expect(timeline).toBeVisible();
+  await page.getByTestId('time-bar').getByRole('button', { name: 'Overview' }).click();
+  await expect(timeline).toHaveAttribute('data-level', '0');
+  const group = timeline.locator('.tl-strip[data-id="grp:g_classical_greece"]');
+  await scrollToMark(timeline, group);
+  await group.click({ position: { x: 30, y: 6 }, force: true });
+  const athens = timeline.locator('.tl-strip[data-id="pol:t_athens"]');
+  await expect(athens).toBeVisible();
+
+  // Hovering Athens lights up its threads: one ribbon to Macedon, labelled with its count and main effect.
+  const hoverAthens = async () => { const a = (await athens.boundingBox())!; await page.mouse.move(a.x + a.width * 0.45, a.y + a.height / 2); };
+  await hoverAthens();
+  const ribbon = timeline.locator('path.tl-ribbon[data-id="__thread:pol:t_athens|pol:t_macedon"]');
+  await expect(ribbon).toHaveClass(/focus/);
+  const label = timeline.locator('text.tl-thread-label', { hasText: '3 · influenced' });
+  await expect(label).toBeVisible();
+
+  // "Show all threads": every ribbon, faintly, with nothing in focus.
+  const toggle = page.getByTestId('time-bar').getByRole('button', { name: 'Show all threads' });
+  await toggle.click();
+  await expect(toggle).toHaveAttribute('aria-pressed', 'true');
+  await expect(timeline.locator('path.tl-ribbon').first()).toBeAttached();
+  await expect(timeline.locator('path.tl-ribbon.focus')).toHaveCount(0);
+
+  // Hover Athens again and click its ribbon's label: its connections, with their effects.
+  await hoverAthens();
+  await expect(label).toBeVisible();
+  const l = (await label.boundingBox())!;
+  await page.mouse.move(l.x + l.width / 2, l.y + l.height / 2);
+  await page.mouse.click(l.x + l.width / 2, l.y + l.height / 2);
+  const list = page.getByTestId('thread-view');
+  await expect(list.getByRole('heading')).toContainText('Macedon');
+  await expect(list.getByTestId('thread-link')).toHaveCount(3);
+  await expect(list.getByTestId('thread-link').filter({ hasText: 'Isocrates' })).toContainText('Isocrates legitimised Philip II of Macedon');
+  await list.getByRole('button', { name: /Aristotle influenced Alexander/ }).click();
+  await expect(page.getByTestId('relation-view')).toContainText('tutored him at Mieza');
+
+  // Focus Aristotle and play the map: Athens → Alexandria draws in, long before Baghdad → Toledo.
+  await openFromSearch(page, 'Aristotle');
+  await expect(page.getByTestId('item-view').getByRole('heading', { name: 'Aristotle' })).toBeVisible();
+  const map = page.locator('[data-testid=map][data-ready]');
+  await expect(map).toBeAttached({ timeout: 20_000 });
+  const year = page.getByTestId('yearbar').getByLabel('Year', { exact: true });
+  await year.fill('300 BCE');
+  await year.press('Enter');
+  await expect(map).not.toHaveAttribute('data-arcs', /Alexandria/);
+  await page.getByRole('button', { name: 'Play through time' }).click();
+  await expect(map).toHaveAttribute('data-arcs', /Athens → Alexandria/, { timeout: 10_000 });
+  await page.getByRole('button', { name: 'Pause' }).click();
+  await expect(map).not.toHaveAttribute('data-arcs', /Baghdad → Toledo/);
+  await year.fill('1100');
+  await year.press('Enter');
+  await expect(map).toHaveAttribute('data-arcs', /Alexandria → Baghdad/);
+  await expect(map).not.toHaveAttribute('data-arcs', /Baghdad → Toledo/);
+  await page.getByRole('button', { name: 'Play through time' }).click();
+  await expect(map).toHaveAttribute('data-arcs', /Athens → Alexandria \| .*Baghdad → Toledo/, { timeout: 10_000 });
+  await page.getByRole('button', { name: 'Pause' }).click();
+});

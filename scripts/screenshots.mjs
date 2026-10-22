@@ -326,20 +326,43 @@ async function overview(p, prefix) {
   await p.getByTestId('time-bar').getByRole('button', { name: 'Overview' }).click();
   await p.waitForTimeout(700);
   await shot(p, `${prefix}-overview`);
-  // Shift + wheel scrolls the bands down to Greece.
+  // Shift + wheel scrolls the bands down until Greece's group is in view.
   const tl = await p.getByTestId('timeline').boundingBox();
+  const group = p.locator('.tl-strip[data-id="grp:g_classical_greece"]');
   await p.mouse.move(tl.x + tl.width / 2, tl.y + tl.height / 2);
   await p.keyboard.down('Shift');
-  await p.mouse.wheel(0, 200);
+  for (let i = 0; i < 20; i++) {
+    const g = await group.boundingBox().catch(() => null);
+    if (g && g.y > tl.y + 70 && g.y + g.height < tl.y + tl.height - 10) break;
+    await p.mouse.wheel(0, 60);
+    await p.waitForTimeout(80);
+  }
   await p.keyboard.up('Shift');
   await p.waitForTimeout(200);
-  await p.locator('.tl-strip[data-id="grp:g_classical_greece"]').click({ force: true });
+  await group.click({ position: { x: 30, y: 6 }, force: true });
   await p.waitForTimeout(600);
   const athens = await p.locator('.tl-strip[data-id="pol:t_athens"]').boundingBox();
   if (athens) await p.mouse.click(athens.x + athens.width * 0.6, athens.y + athens.height / 2);
   if (athens) await p.mouse.move(athens.x + athens.width * 0.6, athens.y + athens.height / 2);
   await p.waitForTimeout(300);
   await shot(p, `${prefix}-overview-group`);
+  if (!wanted(`${prefix}-threads`) && !wanted(`${prefix}-thread-map`)) return;
+  // Threads: Athens' lit up (picked, and hovered on a laptop), with "Show all threads" on where there's a pointer.
+  const all = p.getByTestId('time-bar').getByRole('button', { name: 'Show all threads' });
+  if (await all.isVisible().catch(() => false)) await all.click();
+  if (athens) await p.mouse.move(athens.x + athens.width * 0.6, athens.y + athens.height / 2);
+  await p.waitForTimeout(400);
+  await shot(p, `${prefix}-threads`);
+  // Aristotle's thread on the map, played to 1140: Athens → Alexandria → Baghdad → Toledo.
+  if (!wanted(`${prefix}-thread-map`)) return;
+  await p.locator('.brand').click();
+  await p.keyboard.press('/');
+  await p.getByRole('combobox', { name: 'Search Chronicle' }).fill('Aristotle');
+  await p.getByRole('listbox', { name: 'Search results' }).getByRole('option').first().click();
+  await showMap(p, '1140');
+  for (let i = 0; i < 3; i++) await p.getByRole('button', { name: 'Zoom out' }).click();
+  await p.waitForTimeout(1200);
+  await shot(p, `${prefix}-thread-map`);
 }
 // Level 1: the Classical period opened into its six lanes. With `era-zoom`, the opening itself as
 // a filmstrip of frames 50 ms apart (the page's clock is paused and stepped, so frames are exact).
@@ -384,9 +407,9 @@ async function eraLanes(p, prefix) {
 if (any('desktop-era-lanes') || any('desktop-era-zoom')) await eraLanes(await page('desktop-era-lanes', desktop), 'desktop');
 if (any('dark-era-lanes')) await eraLanes(await page('dark-era-lanes', { ...desktop, colorScheme: 'dark' }), 'dark');
 if (any('phone-era-lanes') || any('phone-era-zoom')) await eraLanes(await page('phone-era-lanes', { viewport: { width: 412, height: 860 }, isMobile: true, hasTouch: true }), 'phone');
-if (any('desktop-overview')) await overview(await page('desktop-overview', desktop), 'desktop');
-if (any('dark-overview')) await overview(await page('dark-overview', { ...desktop, colorScheme: 'dark' }), 'dark');
-if (any('phone-overview')) await overview(await page('phone-overview', { viewport: { width: 412, height: 860 }, isMobile: true, hasTouch: true }), 'phone');
+if (any('desktop-overview', 'desktop-threads', 'desktop-thread-map')) await overview(await page('desktop-overview', desktop), 'desktop');
+if (any('dark-overview', 'dark-threads', 'dark-thread-map')) await overview(await page('dark-overview', { ...desktop, colorScheme: 'dark' }), 'dark');
+if (any('phone-overview', 'phone-threads', 'phone-thread-map')) await overview(await page('phone-overview', { viewport: { width: 412, height: 860 }, isMobile: true, hasTouch: true }), 'phone');
 
 // Level 1 in a polity: Athens picked on the overview, then opened into its six lanes (closed), then
 // its War lane opened. With `polity-zoom`, the drop-down as a filmstrip of frames 50 ms apart.

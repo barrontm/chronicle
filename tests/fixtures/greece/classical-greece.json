@@ -3789,6 +3789,14 @@
    ],
    "lanes": [
     "ideas"
+   ],
+   "places": [
+    {
+     "name": "Athens",
+     "lat": 37.972,
+     "lon": 23.727,
+     "role": "site"
+    }
    ]
   },
   {
@@ -4055,6 +4063,14 @@
    ],
    "lanes": [
     "ideas"
+   ],
+   "places": [
+    {
+     "name": "Athens",
+     "lat": 37.972,
+     "lon": 23.727,
+     "role": "site"
+    }
    ]
   },
   {
@@ -4150,6 +4166,14 @@
    ],
    "lanes": [
     "politics"
+   ],
+   "places": [
+    {
+     "name": "Athens",
+     "lat": 37.972,
+     "lon": 23.727,
+     "role": "site"
+    }
    ]
   },
   {
@@ -4175,6 +4199,14 @@
    "lanes": [
     "politics",
     "war"
+   ],
+   "places": [
+    {
+     "name": "Pella",
+     "lat": 40.76,
+     "lon": 22.52,
+     "role": "site"
+    }
    ]
   },
   {
@@ -4200,6 +4232,14 @@
    "lanes": [
     "war",
     "politics"
+   ],
+   "places": [
+    {
+     "name": "Pella",
+     "lat": 40.76,
+     "lon": 22.52,
+     "role": "born"
+    }
    ]
   },
   {
@@ -4248,6 +4288,81 @@
      "role": "site"
     }
    ]
+  },
+  {
+   "id": "i_mouseion",
+   "kind": "span",
+   "title": "Library of Alexandria",
+   "start": {
+    "y": -284
+   },
+   "end": {
+    "y": 642
+   },
+   "categoryId": "ideas",
+   "description": "The Ptolemies collect and copy Greek books, Aristotle’s among them.",
+   "lanes": [
+    "ideas"
+   ],
+   "places": [
+    {
+     "name": "Alexandria",
+     "lat": 31.2,
+     "lon": 29.92,
+     "role": "site"
+    }
+   ],
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "i_house_wisdom",
+   "kind": "span",
+   "title": "House of Wisdom",
+   "start": {
+    "y": 830
+   },
+   "end": {
+    "y": 1258
+   },
+   "categoryId": "ideas",
+   "description": "Translators in Baghdad put Aristotle into Arabic.",
+   "lanes": [
+    "ideas"
+   ],
+   "places": [
+    {
+     "name": "Baghdad",
+     "lat": 33.32,
+     "lon": 44.42,
+     "role": "site"
+    }
+   ],
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "i_toledo",
+   "kind": "span",
+   "title": "Toledo School of Translators",
+   "start": {
+    "y": 1130
+   },
+   "end": {
+    "y": 1284
+   },
+   "categoryId": "ideas",
+   "description": "Arabic Aristotle, with Averroes’ commentaries, into Latin.",
+   "lanes": [
+    "ideas"
+   ],
+   "places": [
+    {
+     "name": "Toledo",
+     "lat": 39.86,
+     "lon": -4.02,
+     "role": "site"
+    }
+   ],
+   "updatedAt": 1760000000000
   }
  ],
  "series": [
@@ -7964,6 +8079,48 @@
    "highlightIds": [
     "h_tribute_pay"
    ],
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_to_philip",
+   "fromId": "i_isocrates",
+   "toId": "i_philip",
+   "type": "influenced",
+   "effect": "legitimised",
+   "note": "His open letter To Philip asked him to unite the Greeks against Persia.",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_philippics",
+   "fromId": "i_philip",
+   "toId": "i_demosthenes",
+   "type": "caused",
+   "effect": "prompted",
+   "note": "The Philippics warned Athens against him.",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_aristotle_alexandria",
+   "fromId": "i_aristotle",
+   "toId": "i_mouseion",
+   "type": "influenced",
+   "note": "His books were collected and copied there.",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_alexandria_baghdad",
+   "fromId": "i_mouseion",
+   "toId": "i_house_wisdom",
+   "type": "influenced",
+   "note": "Greek manuscripts reached the translators through Syriac.",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "r_baghdad_toledo",
+   "fromId": "i_house_wisdom",
+   "toId": "i_toledo",
+   "type": "influenced",
+   "note": "Arabic Aristotle was put into Latin.",
    "updatedAt": 1760000000000
   }
  ],

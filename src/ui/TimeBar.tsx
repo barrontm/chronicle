@@ -15,7 +15,7 @@ const INTERRUPTS = ['pointerdown', 'wheel', 'keydown'] as const;
  * Under the timeline: a thumbwheel to spin through time, and a zoom bar with
  * stops from a year to a millennium (and, on the new timeline, the overview).
  */
-export function TimeBar({ win, control }: { win: VisibleWindow; control: RefObject<TimelineControl | null> }) {
+export function TimeBar({ win, control, allThreads, onAllThreads }: { win: VisibleWindow; control: RefObject<TimelineControl | null>; allThreads?: boolean; onAllThreads?: (all: boolean) => void }) {
   const span = win.end - win.start;
   const center = (win.start + win.end) / 2;
   const stop = currentStop(span);
@@ -45,6 +45,7 @@ export function TimeBar({ win, control }: { win: VisibleWindow; control: RefObje
             <button key={s.label} className="chip" aria-pressed={!eras && stop === s.label} onClick={() => zoomTo(s.years)}>{s.label}</button>
           ))}
           <button className="chip" aria-pressed={false} onClick={() => { entries(); control.current?.fit(); }}>All</button>
+          {eras && onAllThreads && <button className="chip threads-toggle" aria-pressed={!!allThreads} onClick={() => onAllThreads(!allThreads)}>Show all threads</button>}
         </div>
         <span className="zoom-span" data-testid="zoom-span">{spanLabel(span)} in view</span>
       </div>
