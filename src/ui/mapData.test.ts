@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { parseDoc } from '../model/doc';
 import type { Flow, Relation, Territory, TimelineItem } from '../model/types';
 import { eraRegions } from '../model/eras';
-import { aboutPeople, activeRoutes, eraExtents, eraTintsAt, landRings, contactsAt, contactsDuring, followAt, arcPoints, arcsBetween, choroplethAt, draftPins, endBearing, flowDashes, flowFeatures, flowScale, mapKindOf, mixColor, parseColor, pinsAt, placesToDraw, rateAt, territoriesAt, territoryCircles, type FlowPlaces } from './mapData';
+import { threadArcs, threadLinks, THREAD_DRAW, aboutPeople, activeRoutes, eraExtents, eraTintsAt, landRings, contactsAt, contactsDuring, followAt, arcPoints, arcsBetween, choroplethAt, draftPins, endBearing, flowDashes, flowFeatures, flowScale, mapKindOf, mixColor, parseColor, pinsAt, placesToDraw, rateAt, territoriesAt, territoryCircles, type FlowPlaces } from './mapData';
 
 const fixture = () => parseDoc(readFileSync(new URL('../../tests/fixtures/sample-history.json', import.meta.url), 'utf8'));
 const colorOf = (id: string) => (id === 'hidden' ? undefined : '#123456');
@@ -335,5 +335,39 @@ describe('eras on the map', () => {
     const ex = eraExtents(eraRegions(doc.items, doc.highlights, doc.relations, 2026), doc.items, doc.relations, doc.territories, world);
     expect(ex.map((x) => x.title)).toEqual(['Archaic Greece', 'Classical Greece', 'Hellenistic period']);
     expect([-500, -400, -300].map((y) => eraTintsAt(ex, doc.territories, y, 8).features.map((f) => f.properties.title))).toEqual([['Archaic Greece'], ['Classical Greece'], ['Hellenistic period']]);
+  });
+});
+
+describe('threadArcs', () => {
+  const greece = parseDoc(readFileSync(new URL('../../tests/fixtures/greece/classical-greece.json', import.meta.url), 'utf8'));
+  const doc = { ...greece, members: (tid: string) => (tid === 't_athens' ? ['i_aristotle', 'i_isocrates', 'i_demosthenes'] : []) };
+  const labels = (year: number, focus = 'i_aristotle', o = {}) => threadArcs(focus, year, doc, o).features.map((f) => f.properties.label);
+
+  it('follows a focused entry down its chain: Athens → Alexandria draws in long before Baghdad → Toledo', () => {
+    expect(threadLinks('i_aristotle', doc).map((r) => r.id)).toEqual(expect.arrayContaining(['r_39', 'r_aristotle_alexandria', 'r_alexandria_baghdad', 'r_baghdad_toledo', 'r_38']));
+    expect(labels(-300)).not.toContain('Athens → Alexandria');
+    expect(labels(-280)).toContain('Athens → Alexandria');
+    expect(labels(-280)).not.toContain('Baghdad → Toledo');
+    expect(labels(1000)).toContain('Alexandria → Baghdad');
+    expect(labels(1000)).not.toContain('Baghdad → Toledo');
+    expect(labels(1140)).toContain('Baghdad → Toledo');
+  });
+
+  it('draws an arc in over the years after it happened, then settles to a faint trace', () => {
+    const arc = (year: number) => threadArcs('i_aristotle', year, doc).features.find((f) => f.properties.id === 'r_baghdad_toledo')!;
+    const half = arc(1130 + THREAD_DRAW / 2), full = arc(1130 + THREAD_DRAW), later = arc(1200);
+    expect(half.geometry.coordinates.length).toBeLessThan(full.geometry.coordinates.length);
+    expect(half.properties.opacity).toBe(0.9);
+    expect(later.properties.opacity).toBeCloseTo(0.3);
+    // Reduced motion: it's there whole from its year.
+    expect(threadArcs('i_aristotle', 1130, doc, { draw: 0 }).features.find((f) => f.properties.id === 'r_baghdad_toledo')!.geometry.coordinates).toHaveLength(full.geometry.coordinates.length);
+  });
+
+  it('a polity’s threads are its links to entries outside it, and “Show all threads” adds the rest faintly while they last', () => {
+    expect(threadLinks('pol:t_athens', doc).map((r) => r.id)).toEqual(expect.arrayContaining(['r_39', 'r_philippics', 'r_to_philip']));
+    const all = threadArcs(undefined, -330, doc, { all: true }).features;
+    expect(all.length).toBeGreaterThan(0);
+    expect(all.every((f) => f.properties.opacity === 0.15)).toBe(true);
+    expect(threadArcs(undefined, -330, doc).features).toHaveLength(0);
   });
 });

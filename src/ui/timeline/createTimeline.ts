@@ -4,11 +4,12 @@ import type { EraRegion } from '../../model/eras';
 import type { Overview } from '../../model/overview';
 import type { DatedItem, HistDate, Lane, Relation, TimelineItem } from '../../model/types';
 import { bandSummary, chipSummary, parseThemeKey } from '../representations/era';
-import { ARROW } from '../representations/influence';
+import { ARROW, RIBBON } from '../representations/influence';
+import type { Thread } from '../../model/threads';
 import { DEEP_LIMITS, panBy, windowAround, zoomAround, type YearWindow } from '../timeNav';
 import { attachGestures } from './gestures';
 import {
-  AXIS_H, describeEntry, describeEra, describeLane1, eraLanes, eraSpan, ERAS_BACK, head1H, HEAD_ROW, THEMES_MORE, LANE_TOGGLE, laneTop, OPEN_PICK, polityLanes, regionSpan, hitBox, hitTest, lane1Span, laneAt, layout, maxScroll, PHONE_W, prepare, rowSpan,
+  AXIS_H, describeEntry, hasThreads, describeEra, describeLane1, eraLanes, eraSpan, ERAS_BACK, head1H, HEAD_ROW, THEMES_MORE, LANE_TOGGLE, laneTop, OPEN_PICK, polityLanes, regionSpan, hitBox, hitTest, lane1Span, laneAt, layout, maxScroll, PHONE_W, prepare, rowSpan,
   stepActive, stepEra, stepLane1, type EraLanes, type Head1, type LaneInput, type Level, type PEra, type Prepared, type StepKey, type View,
 } from './layout';
 import { svgPainter } from './paint';
@@ -37,6 +38,8 @@ export interface TimelineData {
   entryLanes?: ReadonlyMap<string, readonly Lane[]>;
   /** Level 1: what's in a polity (`pol:<territory>`) or a world event (its id), opened from the overview. */
   membersOf?: (pick: string) => readonly string[];
+  /** Level 0: connections rolled up by polity or era (`threads`). */
+  threads?: readonly Thread[];
 }
 
 /** New dates for an entry Bob dragged (or moved with Alt and an arrow key). */
@@ -61,6 +64,8 @@ export interface TimelineCallbacks {
   onRegion?: (region: string | undefined) => void;
   /** Level 1: Bob clicked an arrow between lanes (or its line on the phone): open that connection. */
   onOpenRelation?: (id: string) => void;
+  /** Level 0: Bob clicked a ribbon: list its connections (`title` names the two rows it joins). */
+  onOpenThread?: (t: { ids: string[]; title: string }) => void;
 }
 
 /** What the overview has picked (`pol:<territory>` or a world event's id), whether it's open into its lanes, and its open lane with what's in it. */
@@ -87,10 +92,14 @@ export interface TimelineHandle {
   inEra(id: string): boolean;
   /** Focus a region of the overview (Bob clicked it on the map): back to the overview, its rows grown and in view. */
   setRegion(region: string | undefined): void;
+  /** Level 0: "Show all threads", every ribbon faintly (laptop only). */
+  setAllThreads(all: boolean): void;
   dispose(): void;
 }
 
 const MOVE_MS = 400;
+/** How long the pointer rests on a strip before its threads take over from the ones lit. */
+const THREAD_DWELL = 220;
 /** --motion-move's easing, cubic-bezier(.2,.7,.2,1). */
 const ease = (() => {
   const bez = (a: number, b: number) => (t: number) => 3 * (1 - t) * (1 - t) * t * a + 3 * (1 - t) * t * t * b + t * t * t;
@@ -302,6 +311,10 @@ export function createTimeline(host: HTMLElement, cb: TimelineCallbacks, initial
       return { title: `${t.cluster.count} ${noun}${lead ? `, among them ${lead.title}` : ''}`, sub: 'Click to zoom in on them' };
     }
     if (t.id === THEMES_MORE) return { title: V.era?.allThemes ? 'Show fewer themes' : 'Show all the themes', sub: `${V.era?.themes.length ?? 0} themes` };
+    if (t.id.startsWith(RIBBON)) {
+      const r = scene?.ribbons?.get(t.id);
+      return r ? { title: r.title, sub: `${r.ids.length} ${r.ids.length === 1 ? 'connection' : 'connections'} · Click to list them` } : null;
+    }
     if (t.id.startsWith(ARROW)) {
       const x = V.era?.influences.find((i) => i.r.id === t.id.slice(ARROW.length));
       const a = x && D.byId.get(x.r.fromId), b = x && D.byId.get(x.r.toId);
@@ -345,6 +358,13 @@ export function createTimeline(host: HTMLElement, cb: TimelineCallbacks, initial
     tip.style.transform = `translate(${clamp(x + 12, 4, size.w - tw - 4)}px, ${y + 16}px)`;
   };
 
+  let threadTimer = 0;
+  const hoverThreads = (key: string | undefined) => {
+    clearTimeout(threadTimer);
+    if (key === V.threadHover) return;
+    threadTimer = window.setTimeout(() => { V.threadHover = key; schedule(); }, V.threadHover ? THREAD_DWELL : 0);
+  };
+
   /** What a press grabbed: the playhead, or a part of the open entry (with where the press began). */
   let dragging: { what: 'playhead' } | { what: 'entry'; id: string; part: 'body' | 'start' | 'end'; from: number; y: number; moved?: MovedDates } | null = null;
   const unchanged = (a: MovedDates, it: TimelineItem) => JSON.stringify([a.start, a.end]) === JSON.stringify([it.start, it.end]);
@@ -375,6 +395,7 @@ export function createTimeline(host: HTMLElement, cb: TimelineCallbacks, initial
       if (t?.id === OPEN_PICK) { if (V.pick) openPick(V.pick); return; }
       if (t?.id.startsWith(LANE_TOGGLE)) { toggleLane(t.id.slice(LANE_TOGGLE.length)); return; }
       if (t?.id.startsWith(ARROW)) { cb.onOpenRelation?.(t.id.slice(ARROW.length)); return; }
+      if (t?.id.startsWith(RIBBON)) { const r = scene?.ribbons?.get(t.id); if (r) cb.onOpenThread?.(r); return; }
       if (t?.id === THEMES_MORE && V.era) { V.era.allThemes = !V.era.allThemes; V.scrollY = clamp(V.scrollY, 0, maxY()); schedule(); return; }
       // A theme chip: on the overview it opens its era with the theme picked; in the lanes it picks it, or lets go.
       const chip = t && parseThemeKey(t.id);
@@ -405,7 +426,7 @@ export function createTimeline(host: HTMLElement, cb: TimelineCallbacks, initial
       }
       if (t) { setActive(t.id); cb.onSelect(t.id); return; }
       if (y < scene!.plot.y || x < gut()) return;
-      if (V.pick) { V.pick = undefined; schedule(); }
+      if (V.pick || V.threadHover) { V.pick = undefined; V.threadHover = undefined; schedule(); }
       cb.onSelect(undefined);
       if (V.playYear !== undefined) cb.onYear?.(Math.round(yearAt(x)));
     },
@@ -424,9 +445,12 @@ export function createTimeline(host: HTMLElement, cb: TimelineCallbacks, initial
       const draft = t && D.byId.get(t.id)?.draft;
       host.style.cursor = t?.id === 'playhead' || t?.grip === 'start' || t?.grip === 'end' ? 'ew-resize' : t?.grip ? 'grab' : t && !draft && t.id !== HEAD_ROW ? 'pointer' : '';
       if (key !== V.hover) { V.hover = key === 'playhead' ? undefined : key; schedule(); }
+      // Threads follow the strip, group or era hovered that has some, once the pointer rests there a moment,
+      // so crossing other strips on the way to a ribbon leaves them lit.
+      if (level === 0) hoverThreads(key && hasThreads(D, key) ? key : V.threadHover);
       showTip(t, x, y);
     },
-    leave: () => { if (V.hover) { V.hover = undefined; schedule(); } tip.hidden = true; },
+    leave: () => { clearTimeout(threadTimer); if (V.hover || V.threadHover) { V.hover = undefined; V.threadHover = undefined; schedule(); } tip.hidden = true; },
     grab: (x, y) => {
       const t = targetAt(x, y);
       V.ring = false;
@@ -562,9 +586,10 @@ export function createTimeline(host: HTMLElement, cb: TimelineCallbacks, initial
       // Esc lets go of the region focused from the map, before anything else it holds.
       cb.onRegion(undefined);
       e.stopPropagation();
-    } else if (e.key === 'Escape' && level === 0 && V.pick) {
-      // Esc lets go of the picked strip.
+    } else if (e.key === 'Escape' && level === 0 && (V.pick || V.threadHover)) {
+      // Esc lets go of the picked strip, and of the threads lit up.
       V.pick = undefined;
+      V.threadHover = undefined;
       schedule();
       e.stopPropagation();
     } else if (e.key === 'Escape' && level === 1 && V.era?.open && !morph) {
@@ -695,7 +720,7 @@ export function createTimeline(host: HTMLElement, cb: TimelineCallbacks, initial
 
   return {
     setData(d) {
-      D = prepare(d.items, d.lanes, { now: V.now, prominence: d.prominence, thumbFor: d.thumbFor, drafts: d.drafts, relations: d.relations, eras: d.eras, overview: d.overview });
+      D = prepare(d.items, d.lanes, { now: V.now, prominence: d.prominence, thumbFor: d.thumbFor, drafts: d.drafts, relations: d.relations, eras: d.eras, overview: d.overview, threads: d.threads });
       // A pick whose strip or world event has gone lets go.
       if (V.pick && !D.polById.has(V.pick.slice(4)) && !D.byId.get(V.pick)?.world) V.pick = undefined;
       eraById = new Map(D.regions.flatMap((R) => R.eras.map((e) => [e.id, e])));
@@ -749,6 +774,7 @@ export function createTimeline(host: HTMLElement, cb: TimelineCallbacks, initial
     level: shownLevel,
     setLevel: switchLevel,
     inEra: (id) => shownLevel() === 1 && !!V.era && (id === V.era.head.opens || V.era.laneOf.has(id)),
+    setAllThreads(all) { if (all !== !!V.allThreads) { V.allThreads = all; schedule(); } },
     setRegion(region) {
       if (region === V.region) return;
       V.region = region;
@@ -774,6 +800,7 @@ export function createTimeline(host: HTMLElement, cb: TimelineCallbacks, initial
     dispose() {
       live = false;
       cancelAnimationFrame(raf);
+      clearTimeout(threadTimer);
       ro.disconnect();
       detach();
       host.removeEventListener('keydown', onKey);

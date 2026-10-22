@@ -1,6 +1,7 @@
 import type { Feature, FeatureCollection, LineString, MultiPolygon, Point, Polygon, Position } from 'geojson';
 import { bbox, clipToConvex, convexHull, labelPoint, pointBlob, type Area } from '../data/geo';
 import type { EraRegion } from '../model/eras';
+import { linkYear } from '../model/threads';
 import { presenceAt, regionExtent, snapshotAt, valueAt } from '../model/atYear';
 import { formatYear, toDecimalYear } from '../model/dates';
 import type { Flow, FlowCause, FlowEnd, FlowRoute, Lane, Place, Relation, Series, SeriesPoint, Territory, TerritorySnapshot, TimelineItem } from '../model/types';
@@ -722,5 +723,97 @@ export function eraTintsAt(extents: EraExtent[], territories: Territory[], year:
     const geometry = t ? shapeOf(t, year) : x.shape;
     if (geometry) features.push({ type: 'Feature', properties: { id: x.id, title: x.title, region: x.region, opacity }, geometry });
   }
+  return fc(features);
+}
+
+/* ---------- threads on the map, over time ---------- */
+
+export interface ThreadArcProps { id: string; color: string; opacity: number; width: number; label: string; year: number }
+
+export interface ThreadDoc {
+  items: readonly TimelineItem[];
+  relations: readonly Relation[];
+  territories: readonly Territory[];
+  /** What's in a polity, by territory id (`polityMembers`). */
+  members?: (territoryId: string) => readonly string[];
+  /** Each entry's lanes (`entryLanes`): an arc takes its cause's pigment. */
+  lanesOf?: ReadonlyMap<string, readonly Lane[]>;
+}
+
+/** An arc draws in over this many years of the clock, then settles to its trace over as many again. */
+export const THREAD_DRAW = 8;
+/** At most this many links follow from a focused entry. */
+const CHAIN_MAX = 60;
+
+/**
+ * The connections a focus has on the map: a polity's (`pol:<territory>`) are its links to entries
+ * outside it; an entry's are what it led to, followed on down the chain (Aristotle → Alexandria →
+ * Baghdad → Toledo), and what led to it.
+ */
+export function threadLinks(focus: string, doc: Pick<ThreadDoc, 'relations' | 'territories' | 'members'>): Relation[] {
+  const rels = doc.relations.filter((r) => r.type !== 'part-of' && r.fromId !== r.toId);
+  if (focus.startsWith('pol:')) {
+    const tid = focus.slice(4), t = doc.territories.find((x) => x.id === tid);
+    const inside = new Set([tid, ...(t?.itemId ? [t.itemId] : []), ...(doc.members?.(tid) ?? [])]);
+    return rels.filter((r) => inside.has(r.fromId) !== inside.has(r.toId));
+  }
+  const out = new Set(rels.filter((r) => r.toId === focus));
+  const seen = new Set([focus]);
+  for (let q = [focus]; q.length && out.size < CHAIN_MAX;) {
+    const next: string[] = [];
+    for (const id of q) for (const r of rels) {
+      if (r.fromId !== id || out.size >= CHAIN_MAX) continue;
+      out.add(r);
+      if (!seen.has(r.toId)) { seen.add(r.toId); next.push(r.toId); }
+    }
+    q = next;
+  }
+  return [...out];
+}
+
+/**
+ * Threads on the map (docs/vision.md, Threads on the map, over time): an arc between each link's ends'
+ * places that draws in from the year it happened (`linkYear`) over `THREAD_DRAW` years, then settles to a
+ * faint trace. With "Show all threads", every other link is a faint arc while its effect lasts. An end
+ * without a place of its own takes what it's part of, or its polity's middle. Great circles for now;
+ * sea legs from `scripts/sea-route.mjs` come with Phase 5c's transmission arrows on this same layer.
+ */
+export function threadArcs(focus: string | undefined, year: number, doc: ThreadDoc, o: { all?: boolean; draw?: number } = {}): FeatureCollection<LineString, ThreadArcProps> {
+  const draw = o.draw ?? THREAD_DRAW;
+  const strong = focus ? threadLinks(focus, doc) : [];
+  const faint = o.all ? doc.relations.filter((r) => r.type !== 'part-of' && r.fromId !== r.toId && !strong.includes(r)) : [];
+  if (!strong.length && !faint.length) return fc([]);
+  const items = new Map(doc.items.map((i) => [i.id, i]));
+  const terr = new Map(doc.territories.map((t) => [t.id, t]));
+  const byItem = new Map(doc.territories.flatMap((t) => (t.itemId ? [[t.itemId, t] as const] : [])));
+  const partOf = new Map(doc.relations.filter((r) => r.type === 'part-of').map((r) => [r.fromId, r.toId]));
+  const years = (id: string) => { const i = items.get(id); return i?.start ? { s: toDecimalYear(i.start), e: toDecimalYear(i.end ?? i.start) } : undefined; };
+  const placeOf = (id: string): { name: string; at: Position } | undefined => {
+    for (let x: string | undefined = id, n = 0; x && n < 6; x = partOf.get(x), n++) {
+      const it = items.get(x);
+      const p = it && placesToDraw(it)[0];
+      if (p) return { name: p.name ?? it.title, at: [p.lon, p.lat] };
+      const t = terr.get(x) ?? byItem.get(x);
+      const g = t && shapeOf(t, year);
+      if (t && g) { const b = bbox(g); return { name: t.title, at: [(b[0] + b[2]) / 2, (b[1] + b[3]) / 2] }; }
+    }
+    return undefined;
+  };
+  const features: Feature<LineString, ThreadArcProps>[] = [];
+  const add = (r: Relation, on: boolean) => {
+    const ly = linkYear(r, years);
+    if (ly === undefined || year < ly) return;
+    if (!on && year > Math.max(ly + 25, years(r.toId)?.e ?? ly)) return;
+    const a = placeOf(r.fromId), b = placeOf(r.toId);
+    if (!a || !b || (a.at[0] === b.at[0] && a.at[1] === b.at[1])) return;
+    const t = draw > 0 ? (year - ly) / draw : 1;
+    let line = arcPoints(a.at, b.at);
+    if (on && t < 1) line = line.slice(0, Math.max(2, Math.ceil(t * (line.length - 1)) + 1));
+    const lane = doc.lanesOf?.get(r.fromId)?.[0] ?? items.get(r.fromId)?.lanes?.[0];
+    const opacity = !on ? 0.15 : t <= 1 ? 0.9 : Math.max(0.3, 0.9 - 0.6 * Math.min(1, (t - 1)));
+    features.push({ type: 'Feature', geometry: { type: 'LineString', coordinates: line }, properties: { id: r.id, color: lane ? `var(--pig-${LANE_PIGMENT[lane]})` : 'var(--pig-umber)', opacity, width: on ? 2.2 : 1.2, label: `${a.name} → ${b.name}`, year: ly } });
+  };
+  for (const r of faint) add(r, false);
+  for (const r of strong) add(r, true);
   return fc(features);
 }

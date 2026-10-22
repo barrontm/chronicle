@@ -6,6 +6,8 @@ import type { ItemKind, Lane } from '../model/types';
 export type Panel =
   | { type: 'item'; id: string; edit?: boolean }
   | { type: 'relation'; id: string; edit?: boolean }
+  /** A ribbon's connections, from the overview. */
+  | { type: 'thread'; ids: string[]; title: string }
   /** `lane` and `partOf` come from a lane's "+ Add" in an era or polity. */
   | { type: 'new-item'; year?: number; categoryId?: string; kind?: ItemKind; lane?: Lane; partOf?: string; draft?: ItemDraft }
   | { type: 'ai-draft' }

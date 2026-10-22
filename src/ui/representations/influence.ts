@@ -159,3 +159,99 @@ export function arrowPrims(arrows: readonly ArrowIn[], X: (y: number) => number,
   }
   return { marks, labels, targets };
 }
+
+/* ---------- level 0: threads as ribbons ---------- */
+
+/** Hit targets on a ribbon are this prefix and its key. */
+export const RIBBON = '__thread:';
+/** A ribbon in focus, and one drawn by "Show all threads". */
+export const RIBBON_STRONG = 0.55;
+export const RIBBON_FAINT = 0.12;
+const RIBBON_R = 8;
+const RIBBON_LABEL_H = 13;
+
+/** 1.4 px plus 1.1 per link, at most 9. */
+export const ribbonWidth = (count: number) => Math.min(9, 1.4 + 1.1 * count);
+
+export interface RibbonIn {
+  /** Its two rows' keys, `a|b`. */
+  key: string;
+  /** Where it leaves one strip and enters the other. */
+  a: Pt;
+  b: Pt;
+  /** The gutter it runs along under the upper band; none when both ends are in one band. */
+  gy?: number;
+  count: number;
+  /** "3 · influenced", shown in focus. */
+  label: string;
+  /** The main lane's pigment. */
+  color: string;
+  focus: boolean;
+}
+
+/** Down from one strip to the gutter, along it, and into the other strip, with rounded corners; inside one band, an S between rows. */
+export function ribbonPath({ a, b, gy }: Pick<RibbonIn, 'a' | 'b' | 'gy'>): string {
+  if (gy === undefined) {
+    const my = (a.y + b.y) / 2;
+    return `M${r1(a.x)} ${r1(a.y)} C${r1(a.x)} ${r1(my)} ${r1(b.x)} ${r1(my)} ${r1(b.x)} ${r1(b.y)}`;
+  }
+  const dx = b.x >= a.x ? 1 : -1;
+  const r = Math.min(RIBBON_R, Math.abs(b.x - a.x) / 2, Math.abs(gy - a.y), Math.abs(gy - b.y));
+  const da = gy > a.y ? 1 : -1, db = b.y > gy ? 1 : -1;
+  return `M${r1(a.x)} ${r1(a.y)}V${r1(gy - da * r)}Q${r1(a.x)} ${r1(gy)} ${r1(a.x + dx * r)} ${r1(gy)}H${r1(b.x - dx * r)}Q${r1(b.x)} ${r1(gy)} ${r1(b.x)} ${r1(gy + db * r)}V${r1(b.y)}`;
+}
+
+/**
+ * The ribbons' prims: faint ones first, then those in focus, each as wide as its links in its main
+ * lane's pigment. Labels only in focus, in the gutter, never over another. Every ribbon answers a
+ * click along its run and on its label.
+ */
+export function ribbonPrims(list: readonly RibbonIn[], M: Measure, bounds: { x0: number; x1: number; y0: number; y1: number }, text: readonly Box[] = []): { marks: Prim[]; labels: Prim[]; targets: Target[] } {
+  const marks: Prim[] = [], labels: Prim[] = [], targets: Target[] = [];
+  const taken: Box[] = [...text];
+  const order = [...list].sort((p, q) => Number(p.focus) - Number(q.focus));
+  for (const r of order) {
+    const id = RIBBON + r.key;
+    const cls = `tl-ribbon${r.focus ? ' focus' : ''}`;
+    marks.push({ t: 5, k: `rb${r.key}`, a: r.focus ? RIBBON_STRONG : RIBBON_FAINT, cls, id, d: ribbonPath(r), stroke: r.color, sw: ribbonWidth(r.count) });
+    // Its run answers, along the gutter or around the middle of an S, and so do its legs.
+    const run = r.gy ?? (r.a.y + r.b.y) / 2;
+    const lo = Math.max(bounds.x0, Math.min(r.a.x, r.b.x) - 4), hi = Math.min(bounds.x1, Math.max(r.a.x, r.b.x) + 4);
+    if (hi > lo) targets.push({ id, x: lo, y: run - 5, w: hi - lo, h: 10 });
+    for (const end of [r.a, r.b]) {
+      const top = Math.max(bounds.y0, Math.min(end.y, run)), bottom = Math.min(bounds.y1, Math.max(end.y, run));
+      if (bottom - top > 6) targets.push({ id, x: end.x - 5, y: top, w: 10, h: bottom - top });
+    }
+    if (!r.focus) continue;
+    const w = M('eff', r.label) + 8;
+    const pad = RIBBON_LABEL_H;
+    const at = (cx: number, cy: number): Box => {
+      const x = clamp(cx, bounds.x0 + w / 2 + 4, bounds.x1 - w / 2 - 4);
+      return { x: x - w / 2, y: cy - RIBBON_LABEL_H / 2, w, h: RIBBON_LABEL_H };
+    };
+    // In the gutter while it's in view, sliding along it to stay clear of names; else beside the leg
+    // that's in view, from its strip toward the edge, wherever it's clear.
+    const tries: Box[] = [];
+    if (run > bounds.y0 + pad && run < bounds.y1 - pad) {
+      const mid = (r.a.x + r.b.x) / 2, half = Math.abs(r.b.x - r.a.x) / 2;
+      for (const f of [0, 0.4, -0.4, 0.8, -0.8]) tries.push(at(mid + f * half, run));
+    } else {
+      for (const leg of [r.a, r.b]) {
+        if (leg.y <= bounds.y0 || leg.y >= bounds.y1) continue;
+        const dir = run < leg.y ? -1 : 1;
+        for (let d = 12; d < 160; d += 8) {
+          const cy = leg.y + dir * d;
+          if (cy < bounds.y0 + pad || cy > bounds.y1 - pad) break;
+          tries.push(at(leg.x + w / 2 + 6, cy), at(leg.x - w / 2 - 6, cy));
+        }
+      }
+    }
+    const box = tries.find((b) => !taken.some((q) => overlaps(b, q)));
+    if (!box) continue;
+    taken.push(box);
+    const cx = box.x + w / 2, ly = box.y + RIBBON_LABEL_H / 2;
+    labels.push({ t: 2, k: `rbl${r.key}`, a: 1, cls: 'tl-thread-label', id, x: cx, y: ly + 3.5, s: r.label, f: 'eff', fill: r.color, anchor: 'middle' });
+    targets.push({ id, x: box.x - 2, y: box.y - 3, w: box.w + 4, h: box.h + 6 });
+  }
+  return { marks, labels, targets };
+}

@@ -10,7 +10,7 @@ import { loadCountries } from '../data/countries';
 import { formatYear } from '../model/dates';
 import type { Category, Flow, Relation, Series, Territory, TimelineItem } from '../model/types';
 import { draftFeatures, type Draft } from './drawing';
-import { activeRoutes, arcsBetween, causeOf, choroplethAt, CONTACT_COLOR, draftPins, type EraExtent, eraTintsAt, type FollowAt, flowDashes, flowFeatures, flowScale, mixColor, pinsAt, territoriesAt, territoryCircles, type FlowLineProps, type FlowPlaces } from './mapData';
+import { activeRoutes, arcsBetween, causeOf, choroplethAt, CONTACT_COLOR, draftPins, type EraExtent, eraTintsAt, type FollowAt, threadArcs, type ThreadDoc, flowDashes, flowFeatures, flowScale, mixColor, pinsAt, territoriesAt, territoryCircles, type FlowLineProps, type FlowPlaces } from './mapData';
 import { formatValue } from './util';
 
 /**
@@ -69,6 +69,8 @@ interface Props {
   follow?: FollowAt;
   /** Each region's eras and where they were (`eraExtents`); the year's are tinted. */
   eras?: EraExtent[];
+  /** Threads over time (`threadArcs`): the focus (an entry, or `pol:<territory>`), "Show all threads", and the doc. */
+  threads?: { focus?: string; all: boolean; doc: ThreadDoc };
 }
 
 export interface MapFit { bounds: [number, number, number, number]; at: number }
@@ -84,6 +86,7 @@ const BASE = import.meta.env.BASE_URL;
 const ERA_FADE = 8;
 const EMPTY: FeatureCollection = { type: 'FeatureCollection', features: [] };
 const EMPTY_ERAS: ReturnType<typeof eraTintsAt> = { type: 'FeatureCollection', features: [] };
+const EMPTY_ARCS: ReturnType<typeof threadArcs> = { type: 'FeatureCollection', features: [] };
 
 interface Colors {
   water: string; land: string; border: string; river: string; ink: string; panel: string; backdrop: string; era: string;
@@ -123,6 +126,7 @@ function buildStyle(c: Colors): StyleSpecification {
       territories: { type: 'geojson', data: EMPTY },
       circles: { type: 'geojson', data: EMPTY },
       arcs: { type: 'geojson', data: EMPTY },
+      threads: { type: 'geojson', data: EMPTY },
       flows: { type: 'geojson', data: EMPTY },
       'flow-dashes': { type: 'geojson', data: EMPTY },
       'flow-heads': { type: 'geojson', data: EMPTY },
@@ -153,6 +157,8 @@ function buildStyle(c: Colors): StyleSpecification {
       { id: 'follow-fill', type: 'fill', source: 'follow', paint: { 'fill-color': ['get', 'color'], 'fill-opacity': ['get', 'fill'] } },
       { id: 'follow-line', type: 'line', source: 'follow', filter: ['!', ['get', 'dashed']], paint: { 'line-color': ['get', 'color'], 'line-width': ['get', 'width'] } },
       { id: 'follow-dash', type: 'line', source: 'follow', filter: ['get', 'dashed'], paint: { 'line-color': ['get', 'color'], 'line-width': ['get', 'width'], 'line-dasharray': [3, 2] } },
+      // Threads: arcs that draw in from the year their connection happened, then settle to a faint trace.
+      { id: 'threads', type: 'line', source: 'threads', layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': ['get', 'color'], 'line-opacity': ['get', 'opacity'], 'line-width': ['get', 'width'] } },
       {
         id: 'circles', type: 'circle', source: 'circles',
         paint: { 'circle-color': ['get', 'color'], 'circle-opacity': 0.35, 'circle-radius': ['get', 'radius'], 'circle-stroke-color': ['get', 'color'], 'circle-stroke-width': 1.5 },
@@ -426,6 +432,16 @@ export default function MapView(props: Props) {
     // Which eras are tinted, the strongest first (for tests).
     if (host.current) host.current.dataset.eras = tints.features.toSorted((a, b) => b.properties.opacity - a.properties.opacity).map((f) => f.properties.title).join(' | ');
   }, [ready, props.eras, territories, year]);
+  // Threads over time, drawn in by the year clock (cut with reduced motion).
+  const threads = props.threads;
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !ready) return;
+    const arcs = threads ? threadArcs(threads.focus, year, threads.doc, { all: threads.all, draw: reducedMotion() ? 0 : undefined }) : EMPTY_ARCS;
+    (map.getSource('threads') as GeoJSONSource).setData({ ...arcs, features: arcs.features.map((f) => ({ ...f, properties: { ...f.properties, color: colors.resolve(f.properties.color) } })) });
+    // Which arcs are drawn, in the order they happened (for tests).
+    if (host.current) host.current.dataset.arcs = arcs.features.toSorted((a, b) => a.properties.year - b.properties.year).map((f) => f.properties.label).join(' | ');
+  }, [ready, threads, year, colors]);
   // Territories (only redrawn when a different snapshot becomes current).
   const terr = useMemo(() => territoriesAt(territories, year, colorOf), [territories, year, colorOf]);
   useEffect(() => {

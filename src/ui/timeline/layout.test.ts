@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { isDated } from '../../model/dates';
+import { isDated, toDecimalYear } from '../../model/dates';
 import { parseDoc } from '../../model/doc';
 import { eraRegions } from '../../model/eras';
 import { entryLanes } from '../../model/lanes';
@@ -12,7 +12,8 @@ import {
   AXIS_H, describeEntry, describeEra, describeLane1, eraLanes, ERAS_BACK, HEAD1_H, head1H, LANE_TOGGLE, OPEN_PICK, polityLanes, hitBox, hitTest, laneAt, layout, maxScroll, MIN_HIT, NO_LANE, prepare, REGION_GROW, regionSpan, ROW_H, stepActive, stepEra, stepLane1,
   type Env, type View,
 } from './layout';
-import { ARROW } from '../representations/influence';
+import { ARROW, RIBBON, RIBBON_FAINT, RIBBON_STRONG } from '../representations/influence';
+import { threads } from '../../model/threads';
 import type { Measure, Prim, Scene } from './scene';
 
 const measure: Measure = (_font, s) => s.length * 7;
@@ -477,6 +478,56 @@ describe('level 0: the overview', () => {
     expect(stepEra(D, 'i_archaic', 'ArrowRight', win)).toBe('i_classical');
     expect(stepEra(D, 'i_classical', 'End', win)).toBe('i_hellenistic');
     expect(describeEra(D, 'i_classical')).toMatch(/^Classical Greece, 480–323 BCE, Greece, \d+ highlights, 2 of 6$/);
+  });
+});
+
+describe('level 0: threads', () => {
+  const doc = parseDoc(readFileSync(new URL('../../../tests/fixtures/greece/classical-greece.json', import.meta.url), 'utf8'));
+  const items = doc.items.filter(isDated);
+  const lanes = doc.categories.map((c) => ({ id: c.id, label: c.label, color: c.color }));
+  const prominence = prominenceOf(doc);
+  const eras = eraRegions(items, doc.highlights, doc.relations, 2026);
+  const T = threads({
+    relations: doc.relations, polities: polityMembers(doc), polityRegions: new Map(doc.territories.map((t) => [t.id, t.region ?? ''])),
+    eras: eras.flatMap((r) => r.eras), lanesOf: entryLanes(doc.items, doc.highlights), prominence,
+    years: (id) => { const i = doc.items.find((x) => x.id === id); return i?.start ? { s: toDecimalYear(i.start), e: toDecimalYear(i.end ?? i.start) } : undefined; },
+  });
+  const D = prepare(items, lanes, { now: 2026, prominence, relations: doc.relations, eras, overview: overview({ ...doc, items, prominence, now: 2026 }), threads: T });
+  const open = new Map([['g_classical_greece', 1]]);
+  const at = (extra: Partial<View> = {}, w = 1200) => layout(D, view(-520, -300, { unfolded: open, ...extra }), env(w, 1400), 0);
+  const ribbons = (S: Scene) => S.z[1].filter((p) => p.cls?.startsWith('tl-ribbon'));
+  const labels = (S: Scene) => S.z[2].flatMap((p) => (p.t === 2 && p.cls === 'tl-thread-label' ? [p.s] : []));
+  const stripA = (S: Scene, id: string) => S.z[1].find((p) => p.t === 7 && p.id === id)!.a;
+
+  it('draws nothing until a strip is in focus', () => {
+    expect(ribbons(at())).toHaveLength(0);
+  });
+
+  it('lights up Athens’ threads when its strip is hovered: a ribbon to Macedon with its count, and the strips it doesn’t touch fade', () => {
+    const S = at({ threadHover: 'pol:t_athens' });
+    const rb = ribbons(S).find((p) => p.id === `${RIBBON}pol:t_athens|pol:t_macedon`)!;
+    expect(rb).toBeDefined();
+    expect(rb.a).toBe(RIBBON_STRONG);
+    expect(labels(S)).toContain('3 · influenced');
+    expect(S.ribbons?.get(rb.id!)).toEqual({ ids: expect.arrayContaining(['r_39', 'r_philippics', 'r_to_philip']), title: 'Athens and Macedon' });
+    expect(stripA(S, 'pol:t_macedon')).toBe(1);
+    expect(stripA(S, 'pol:t_persia')).toBeLessThan(0.5);
+    // It runs in the gutter under Greece's band, not across Macedon's rows.
+    expect(rb.t === 5 && /H/.test(rb.d)).toBe(true);
+  });
+
+  it('a picked strip keeps its threads; a folded group carries its members’ ribbons', () => {
+    expect(labels(at({ pick: 'pol:t_athens' }))).toContain('3 · influenced');
+    const folded = layout(D, view(-520, -300, { threadHover: 'grp:g_classical_greece' }), env(1200, 1400), 0);
+    expect(ribbons(folded).map((p) => p.id)).toContain(`${RIBBON}grp:g_classical_greece|pol:t_macedon`);
+  });
+
+  it('“Show all threads” draws every ribbon faintly, and not on the phone', () => {
+    const all = ribbons(at({ allThreads: true }));
+    expect(all.length).toBeGreaterThan(0);
+    expect(all.every((p) => p.a === RIBBON_FAINT)).toBe(true);
+    expect(labels(at({ allThreads: true }))).toHaveLength(0);
+    expect(ribbons(at({ allThreads: true }, 420))).toHaveLength(0);
   });
 });
 

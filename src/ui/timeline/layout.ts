@@ -7,7 +7,8 @@ import { LANES, type DatedItem, type Lane, type Relation, type TimelineItem } fr
 import { anchors, arcCurve, loopCurve, type Box as Edges } from '../influenceLinks';
 import { makerOf, markOf, representationOf, warOf, type Representation } from '../representations';
 import { chipLines, chipPrims, CHIP_LINE, innerPrims, packChips, themeKey, washPrims, type ChipBox } from '../representations/era';
-import { ARROW, arrowPrims, type ArrowIn } from '../representations/influence';
+import { ARROW, arrowPrims, RIBBON, ribbonPrims, type ArrowIn, type RibbonIn } from '../representations/influence';
+import { threadLabel, threadsAround, type Thread } from '../../model/threads';
 import { stripPrims, type StripLook } from '../representations/polity';
 import type { YearWindow } from '../timeNav';
 import { LANE_LABEL, PIGMENT } from '../util';
@@ -153,6 +154,8 @@ export interface Prepared {
   overviewExtent?: YearWindow;
   /** Every connection, for level 1's influences between lanes. */
   relations: readonly Relation[];
+  /** Level 0: connections rolled up by polity or era (`threads`), heaviest first. */
+  threads: readonly Thread[];
 }
 
 export interface PrepareOptions {
@@ -168,6 +171,8 @@ export interface PrepareOptions {
   eras?: EraRegion[];
   /** Level 0: the overview (`overview` in `src/model/overview.ts`). */
   overview?: Overview;
+  /** Level 0: threads between polities and eras (`threads` in `src/model/threads.ts`). */
+  threads?: readonly Thread[];
 }
 
 export function prepare(items: DatedItem[], lanes: LaneInput[], o: PrepareOptions): Prepared {
@@ -242,7 +247,7 @@ export function prepare(items: DatedItem[], lanes: LaneInput[], o: PrepareOption
   });
   const prominence = o.prominence ?? (() => 0);
   const eras = prepareEras(o.eras ?? [], byId);
-  return { lanes: out, byId, contentH: top, prominence, extent: lo <= hi ? { start: lo, end: hi } : undefined, relations: rels, ...eras, ...prepareOverview(o.overview, eras.regions, byId) };
+  return { lanes: out, byId, contentH: top, prominence, extent: lo <= hi ? { start: lo, end: hi } : undefined, relations: rels, threads: o.threads ?? [], ...eras, ...prepareOverview(o.overview, eras.regions, byId) };
 }
 
 /** The eras in each region. Inside one, eras pack into rows by time only, outer eras above the eras inside them. */
@@ -560,6 +565,10 @@ export interface View {
   region?: string;
   /** Level 1: the theme chip picked (`<era>:<theme>`) and what's in it; everything else fades. */
   theme?: { key: string; ids: ReadonlySet<string> };
+  /** Level 0: the strip, group or era hovered for its threads (it stays while the pointer moves onto them). */
+  threadHover?: string;
+  /** Level 0: "Show all threads", every ribbon faintly (laptop only). */
+  allThreads?: boolean;
 }
 
 export interface Env {
@@ -570,7 +579,7 @@ export interface Env {
   measure: Measure;
 }
 
-interface Ctx { D: Prepared; V: View; E: Env; S: Scene; X: (y: number) => number; x0: number; x1: number; top: number; bottom: number }
+interface Ctx { D: Prepared; V: View; E: Env; S: Scene; X: (y: number) => number; x0: number; x1: number; top: number; bottom: number; involved?: ReadonlySet<string> }
 
 /** A screen `w` px wide with no gutter, measuring about 7 px a character: for callers that only know the width. */
 const roughFit = (w: number): Fit => ({ w, gutter: 0, measure: (_, t) => t.length * 7 });
@@ -698,6 +707,8 @@ function overviewRows(c: Ctx) {
   }
   const shareOf = (p: PPolity) => (p.unknown ? () => UNKNOWN_SHARE : (y: number) => stripShare(strengthAt(p.t, y), widest));
   if (G.topH) topRow(c, base, G.topH);
+  const ribbons = threadRibbons(c, G, base);
+  if (ribbons.involved) c.involved = ribbons.involved;
   const focus = V.region && D.bands.some((B) => B.name === V.region) ? V.region : undefined;
   for (const g of G.bands) {
     const top = base + g.top, bottom = base + g.bottom;
@@ -711,6 +722,94 @@ function overviewRows(c: Ctx) {
       for (let k = from[4]; k < S.gutter.length; k++) S.gutter[k] = { ...S.gutter[k], a: S.gutter[k].a * REGION_FADE };
     }
   }
+  // Threads over the strips, their labels with the text.
+  const names = ribbons.list.some((r) => r.focus) ? S.z[2].flatMap((p) => { const b = textBox(E.measure, p); return b ? [b] : []; }) : [];
+  const { marks, labels, targets } = ribbonPrims(ribbons.list, E.measure, { x0, x1, y0: AXIS_H, y1: E.h }, names);
+  S.z[1].push(...marks);
+  S.z[2].push(...labels);
+  S.targets.push(...targets);
+  if (ribbons.list.length) S.ribbons = ribbons.ids;
+}
+
+/** Strips the threads don't touch fade to this. */
+const THREAD_FADE = 0.35;
+/** A row a thread end is drawn in: its key (`pol:`, `grp:` or an era's id), its middle and band, and its name. */
+interface ThreadRow { key: string; y: number; band: number; title: string }
+
+/** The thread ends a hovered or picked strip, group or era stands for (an inner era's are its outer era's). */
+function threadFocus(D: Prepared, id: string | undefined): string[] | undefined {
+  if (!id) return undefined;
+  if (id.startsWith('pol:')) return [id];
+  if (id.startsWith('grp:')) return D.groupById.get(id.slice(4))?.members.map((m) => `pol:${m.id}`);
+  for (const B of D.bands) {
+    let e = B.eras.find((x) => x.id === id);
+    if (!e) continue;
+    for (let n = 0; e.parent && n < 20; n++) e = B.eras.find((x) => x.id === e!.parent) ?? e;
+    return [e.id];
+  }
+  return undefined;
+}
+
+/** Whether a strip, group or era has threads to light up. */
+export function hasThreads(D: Prepared, id: string | undefined): boolean {
+  const ends = threadFocus(D, id);
+  return !!ends && D.threads.some((t) => ends.includes(t.a) || ends.includes(t.b));
+}
+
+/**
+ * Level 0's threads (docs/design.md, Long range: Threads): the focused strip's connections to other
+ * polities and eras, one ribbon per pair of rows as drawn (a folded group is one row), and with "Show
+ * all threads" every ribbon faintly. The focus is the strip, group or era hovered, else the one picked.
+ */
+function threadRibbons(c: Ctx, G: Geo, base: number): { list: RibbonIn[]; ids: Map<string, { ids: string[]; title: string }>; involved?: Set<string> } {
+  const { D, V, E, X, x0, x1 } = c;
+  const ids = new Map<string, { ids: string[]; title: string }>();
+  if (!D.threads.length) return { list: [], ids };
+  const all = !!V.allThreads && E.w >= PHONE_W;
+  const on = [V.threadHover, V.pick].find((id) => hasThreads(D, id));
+  const focus = threadFocus(D, on);
+  if (!focus && !all) return { list: [], ids };
+  // Where each end is drawn: its strip's row (its folded group's while folded), or its era's band.
+  const rows = new Map<string, ThreadRow>();
+  G.bands.forEach((g, bi) => {
+    for (const sg of g.subs) {
+      if (sg.h < 4) continue;
+      const y = base + sg.y + sg.h / 2;
+      for (const x of sg.slots) {
+        if (x.pol && sg.a > 0.5) rows.set(`pol:${x.pol.id}`, { key: `pol:${x.pol.id}`, y, band: bi, title: x.pol.title });
+        if (x.group && unfoldOf(V, x.group.id) < 0.5) for (const m of x.group.members) rows.set(`pol:${m.id}`, { key: `grp:${x.group.id}`, y, band: bi, title: x.group.title });
+      }
+    }
+    for (const e of outerEras(g.B)) if (!rows.has(e.id)) rows.set(e.id, { key: e.id, y: base + g.headY - 4, band: bi, title: e.title });
+  });
+  const strong = new Set(focus ? threadsAround(D.threads, focus) : []);
+  const shown = all ? D.threads : [...strong];
+  // One ribbon per pair of rows: its links summed, its look the heaviest thread's.
+  const merged = new Map<string, { ra: ThreadRow; rb: ThreadRow; ya: number; yb: number; t: Thread; count: number; ids: string[]; focus: boolean }>();
+  for (const t of shown) {
+    let ra = rows.get(t.a), rb = rows.get(t.b), ya = t.ya, yb = t.yb;
+    if (!ra || !rb || ra.key === rb.key) continue;
+    if (rb.key < ra.key) { [ra, rb, ya, yb] = [rb, ra, yb, ya]; }
+    const key = `${ra.key}|${rb.key}`;
+    const m = merged.get(key);
+    const on = strong.has(t);
+    if (!m) merged.set(key, { ra, rb, ya, yb, t, count: t.count, ids: t.links.map((l) => l.r.id), focus: on });
+    else { m.count += t.count; m.ids.push(...t.links.map((l) => l.r.id)); m.focus ||= on; }
+  }
+  const list: RibbonIn[] = [];
+  const involved = focus ? new Set<string>() : undefined;
+  let lane = 0;
+  for (const [key, m] of merged) {
+    const ax = X(m.ya), bx = X(m.yb);
+    if (Math.max(ax, bx) < x0 || Math.min(ax, bx) > x1) continue;
+    const clampX = (x: number) => Math.min(x1 - 4, Math.max(x0 + 4, x));
+    const gy = m.ra.band === m.rb.band ? undefined : base + G.bands[Math.min(m.ra.band, m.rb.band)].bottom + BAND_GAP / 2 + ((lane++ % 3) - 1) * 2;
+    list.push({ key, a: { x: clampX(ax), y: m.ra.y }, b: { x: clampX(bx), y: m.rb.y }, gy, count: m.count, label: threadLabel({ count: m.count, effect: m.t.effect }), color: m.t.lane ? `var(--pig-${PIGMENT[m.t.lane]})` : UMBER, focus: m.focus });
+    ids.set(RIBBON + key, { ids: m.ids, title: `${m.ra.title} and ${m.rb.title}` });
+    if (m.focus) { involved!.add(m.ra.key); involved!.add(m.rb.key); }
+  }
+  if (focus && involved) for (const f of focus) { const r = rows.get(f); if (r) involved.add(r.key); }
+  return { list, ids, involved };
 }
 
 function parentRule(c: Ctx, B: PBand, y: number, phone: boolean) {
@@ -813,7 +912,11 @@ function band(c: Ctx, g: BandGeo, base: number, phone: boolean, shareOf: (p: PPo
         name: x.pol ? x.pol.title : `▸ ${x.group.title}`,
         sub: x.group?.members.map((m) => m.title).join(' · '),
       };
-      const { marks, text } = stripPrims(tid, tid, look, M, fold);
+      const strip = stripPrims(tid, tid, look, M, fold);
+      // Threads in focus: the strips they don't touch fade.
+      const fade = c.involved && !c.involved.has(tid) ? THREAD_FADE : 1;
+      const marks = fade < 1 ? strip.marks.map((p) => ({ ...p, a: p.a * fade })) : strip.marks;
+      const text = fade < 1 ? strip.text.map((p) => ({ ...p, a: p.a * fade })) : strip.text;
       S.z[1].push(...marks);
       S.z[2].push(...text);
       // The whole row is its hit area, so a sliver can still be picked.

@@ -428,6 +428,29 @@ for (const p of ov.participants) {
   }
 }
 
+// Phase 4b ticket 4: threads across polities, and on the map over time. Athens and Macedon get links
+// between their people, and Aristotle's works travel Athens → Alexandria → Baghdad → Toledo.
+{
+  const place = (id, p) => { const it = items.find((x) => x.id === `i_${id}`); it.places = [p]; };
+  place('aristotle', { name: 'Athens', lat: 37.972, lon: 23.727, role: 'site' });
+  place('alexander', { name: 'Pella', lat: 40.76, lon: 22.52, role: 'born' });
+  place('philip', { name: 'Pella', lat: 40.76, lon: 22.52, role: 'site' });
+  place('isocrates', { name: 'Athens', lat: 37.972, lon: 23.727, role: 'site' });
+  place('demosthenes', { name: 'Athens', lat: 37.972, lon: 23.727, role: 'site' });
+  items.push(
+    { id: 'i_mouseion', kind: 'span', title: 'Library of Alexandria', start: { y: bce(285) }, end: { y: 642 }, categoryId: 'ideas', description: 'The Ptolemies collect and copy Greek books, Aristotle’s among them.', lanes: ['ideas'], places: [{ name: 'Alexandria', lat: 31.2, lon: 29.92, role: 'site' }], updatedAt: NOW },
+    { id: 'i_house_wisdom', kind: 'span', title: 'House of Wisdom', start: { y: 830 }, end: { y: 1258 }, categoryId: 'ideas', description: 'Translators in Baghdad put Aristotle into Arabic.', lanes: ['ideas'], places: [{ name: 'Baghdad', lat: 33.32, lon: 44.42, role: 'site' }], updatedAt: NOW },
+    { id: 'i_toledo', kind: 'span', title: 'Toledo School of Translators', start: { y: 1130 }, end: { y: 1284 }, categoryId: 'ideas', description: 'Arabic Aristotle, with Averroes’ commentaries, into Latin.', lanes: ['ideas'], places: [{ name: 'Toledo', lat: 39.86, lon: -4.02, role: 'site' }], updatedAt: NOW },
+  );
+  relations.push(
+    { id: 'r_to_philip', fromId: 'i_isocrates', toId: 'i_philip', type: 'influenced', effect: 'legitimised', note: 'His open letter To Philip asked him to unite the Greeks against Persia.', updatedAt: NOW },
+    { id: 'r_philippics', fromId: 'i_philip', toId: 'i_demosthenes', type: 'caused', effect: 'prompted', note: 'The Philippics warned Athens against him.', updatedAt: NOW },
+    { id: 'r_aristotle_alexandria', fromId: 'i_aristotle', toId: 'i_mouseion', type: 'influenced', note: 'His books were collected and copied there.', updatedAt: NOW },
+    { id: 'r_alexandria_baghdad', fromId: 'i_mouseion', toId: 'i_house_wisdom', type: 'influenced', note: 'Greek manuscripts reached the translators through Syriac.', updatedAt: NOW },
+    { id: 'r_baghdad_toledo', fromId: 'i_house_wisdom', toId: 'i_toledo', type: 'influenced', note: 'Arabic Aristotle was put into Latin.', updatedAt: NOW },
+  );
+}
+
 const usedWp = [...wpIds.values()].map((s) => ({ ...s }));
 const doc = {
   schemaVersion: 9, id: 'doc_classical_greece', title: 'Classical Greece (test fixture)', updatedAt: NOW,

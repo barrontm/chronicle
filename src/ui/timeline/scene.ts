@@ -134,6 +134,8 @@ export interface Scene {
   contentH: number;
   /** Level 1: each lane's "Add" under its name, drawn as real buttons so the keyboard reaches them. */
   adds: AddSpot[];
+  /** Level 0: each ribbon's target id, with its connections and the two rows it joins in words. */
+  ribbons?: Map<string, { ids: string[]; title: string }>;
 }
 
 /** Where a lane's "Add" button sits, in px from the plot's top left like everything else. */

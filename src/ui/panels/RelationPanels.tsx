@@ -135,3 +135,35 @@ export function RelationEditor({ id, nav }: { id: string; nav: Nav }) {
     </form>
   );
 }
+
+/**
+ * A thread between two polities or eras, from a ribbon in the overview: each of its connections with
+ * what it did and the highlights that show it, heaviest first. Each opens the connection.
+ */
+export function ThreadView({ ids, title, nav }: { ids: string[]; title: string; nav: Nav }) {
+  const { doc } = useDoc();
+  const links = ids.flatMap((id) => doc.relations.filter((r) => r.id === id));
+  return (
+    <article data-testid="thread-view">
+      <div className="meta"><span>Thread</span></div>
+      <h2>{title}</h2>
+      <p className="hint" style={{ color: 'var(--muted)' }}>{links.length === 1 ? '1 connection' : `${links.length} connections`}</p>
+      {links.length === 0 && <p className="notice">These connections were deleted.</p>}
+      <ul className="thread-links">
+        {links.map((r) => {
+          const evidence = (r.highlightIds ?? []).flatMap((hid) => doc.highlights.filter((h) => h.id === hid));
+          return (
+            <li key={r.id} data-testid="thread-link">
+              <button type="button" className="linkish relation-title" onClick={() => nav.open({ type: 'relation', id: r.id })}>
+                {titleOf(doc, r.fromId) ?? 'Missing entry'} <em>{describeEffect(r, 'out').toLowerCase()}</em> {titleOf(doc, r.toId) ?? 'Missing entry'}
+              </button>
+              {r.note && <p className="prose">{r.note}</p>}
+              {evidence.map((h) => <blockquote key={h.id} className="quote">“{h.text.length > 200 ? `${h.text.slice(0, 200)}…` : h.text}”</blockquote>)}
+              {evidence.length === 0 && <p className="hint" style={{ color: 'var(--muted)' }}>No highlights yet.</p>}
+            </li>
+          );
+        })}
+      </ul>
+    </article>
+  );
+}

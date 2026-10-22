@@ -1,9 +1,10 @@
 import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef } from 'react';
-import { isDated, jsDateToDecimalYear } from '../model/dates';
+import { isDated, jsDateToDecimalYear, toDecimalYear } from '../model/dates';
 import { eraRegions } from '../model/eras';
 import { entryLanes } from '../model/lanes';
 import { overview } from '../model/overview';
 import { polityMembers, worldMembers } from '../model/polities';
+import { threads as rollThreads } from '../model/threads';
 import type { Category, DatedItem, Highlight, Lane, MediaRef, PolityGroup, Relation, Territory, TimelineItem } from '../model/types';
 import { draftArrows, influenceArrows, influenceClasses } from './influenceLinks';
 import { createTimeline, type MovedDates, type OverviewFocus, type TimelineHandle } from './timeline/createTimeline';
@@ -80,6 +81,9 @@ interface Props {
   /** The region Bob clicked on the map: the overview grows its rows. Esc lets go (`onRegion(undefined)`). */
   region?: string;
   onRegion?: (region: string | undefined) => void;
+  /** Level 0: "Show all threads", and a ribbon clicked (its connections, and the two rows it joins). */
+  allThreads?: boolean;
+  onOpenThread?: (t: { ids: string[]; title: string }) => void;
 }
 
 export type { OverviewFocus };
@@ -97,14 +101,14 @@ function focusTarget(id: string, items: DatedItem[], relations: Relation[], show
   return focusWindow(item, items.filter((i) => otherIds.has(i.id) && shown(i.id)));
 }
 
-export const TimelineView = forwardRef<TimelineControl, Props>(function TimelineView({ items: allItems, categories, relations, selectedId, thumbFor, onSelect, onAddAt, onAddIn, onWindow, onCanGoBack, year, onYear, prominence, drafts: allDrafts = NO_DRAFTS, onMove, highlights = NO_HIGHLIGHTS, picked = NO_PICKS, onPick, territories = NO_TERRITORIES, groups, regionParents, onFocus, region, onRegion, onOpenRelation }, ref) {
+export const TimelineView = forwardRef<TimelineControl, Props>(function TimelineView({ items: allItems, categories, relations, selectedId, thumbFor, onSelect, onAddAt, onAddIn, onWindow, onCanGoBack, year, onYear, prominence, drafts: allDrafts = NO_DRAFTS, onMove, highlights = NO_HIGHLIGHTS, picked = NO_PICKS, onPick, territories = NO_TERRITORIES, groups, regionParents, onFocus, region, onRegion, onOpenRelation, allThreads = false, onOpenThread }, ref) {
   // Only entries with a start date: a place with none is on the map only.
   const items = useMemo(() => allItems.filter(isDated), [allItems]);
   const drafts = useMemo(() => ({ ...allDrafts, items: allDrafts.items.filter(isDated) }), [allDrafts]);
   const host = useRef<HTMLDivElement>(null);
   const tl = useRef<TimelineHandle | null>(null);
-  const cb = useRef({ onSelect, onAddAt, onAddIn, onWindow, onYear, onCanGoBack, onMove, onPick, onFocus, onRegion, onOpenRelation });
-  cb.current = { onSelect, onAddAt, onAddIn, onWindow, onYear, onCanGoBack, onMove, onPick, onFocus, onRegion, onOpenRelation };
+  const cb = useRef({ onSelect, onAddAt, onAddIn, onWindow, onYear, onCanGoBack, onMove, onPick, onFocus, onRegion, onOpenRelation, onOpenThread });
+  cb.current = { onSelect, onAddAt, onAddIn, onWindow, onYear, onCanGoBack, onMove, onPick, onFocus, onRegion, onOpenRelation, onOpenThread };
   const latest = useRef({ items, relations, categories });
   latest.current = { items, relations, categories };
   const beforeFocus = useRef<YearWindow | null>(null);
@@ -121,6 +125,7 @@ export const TimelineView = forwardRef<TimelineControl, Props>(function Timeline
       onFocus: (f) => cb.current.onFocus?.(f),
       onRegion: (r) => cb.current.onRegion?.(r),
       onOpenRelation: (id) => cb.current.onOpenRelation?.(id),
+      onOpenThread: (t) => cb.current.onOpenThread?.(t),
     }, { window: { start: -800, end: 2030 }, level: 2 });
     tl.current = t;
     return () => { t.dispose(); tl.current = null; };
@@ -138,15 +143,23 @@ export const TimelineView = forwardRef<TimelineControl, Props>(function Timeline
   }, [items, categories, highlights, relations, territories, groups, regionParents, prominence]);
   // Level 1's lanes: each entry's lanes.
   const laneMap = useMemo(() => entryLanes(items, highlights), [items, highlights]);
-  // What's in a polity or world event, worked out the first time one is opened.
-  const membersOf = useMemo(() => {
-    let byPolity: Map<string, string[]> | undefined;
-    return (pick: string): string[] => {
-      if (!pick.startsWith('pol:')) return worldMembers(pick, { relations });
-      byPolity ??= polityMembers({ items, territories, relations });
-      return byPolity.get(pick.slice(4)) ?? [];
-    };
-  }, [items, territories, relations]);
+  // What's in each polity, for opening one and for the threads between them.
+  const byPolity = useMemo(() => polityMembers({ items, territories, relations }), [items, territories, relations]);
+  const membersOf = useMemo(() => (pick: string): string[] => (pick.startsWith('pol:') ? byPolity.get(pick.slice(4)) ?? [] : worldMembers(pick, { relations })), [byPolity, relations]);
+  // Level 0's threads: connections rolled up by polity, else era.
+  const threadList = useMemo(() => {
+    const byId = new Map(items.map((i) => [i.id, i]));
+    return rollThreads({
+      relations,
+      polities: byPolity,
+      polityItems: new Map(territories.flatMap((t) => (t.itemId ? [[t.itemId, t.id] as const] : []))),
+      polityRegions: new Map(territories.map((t) => [t.id, t.region ?? ''])),
+      eras: eras.flatMap((r) => r.eras),
+      lanesOf: laneMap,
+      prominence: prominence ?? (() => 0),
+      years: (id) => { const i = byId.get(id); return i && { s: toDecimalYear(i.start), e: toDecimalYear(i.end ?? i.start) }; },
+    });
+  }, [items, relations, byPolity, territories, eras, laneMap, prominence]);
 
   useEffect(() => {
     tl.current?.setData({
@@ -160,8 +173,10 @@ export const TimelineView = forwardRef<TimelineControl, Props>(function Timeline
       overview: overviewData,
       entryLanes: laneMap,
       membersOf,
+      threads: threadList,
     });
-  }, [items, categories, thumbFor, prominence, drafts.items, relations, eras, overviewData, laneMap, membersOf]);
+  }, [items, categories, thumbFor, prominence, drafts.items, relations, eras, overviewData, laneMap, membersOf, threadList]);
+  useEffect(() => { tl.current?.setAllThreads(allThreads); }, [allThreads]);
 
   // The open entry's connections light up with arrows; Claude's drafted ones show whenever their highlight is open.
   useEffect(() => {
