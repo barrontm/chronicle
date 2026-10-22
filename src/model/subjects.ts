@@ -1,6 +1,6 @@
 import { formatRange, fromWikidataTime, toDecimalYear } from './dates';
 import { newId } from './doc';
-import type { HistDate, Relation, RelationType, SubjectKind, TimelineItem } from './types';
+import type { HistDate, Relation, RelationType, SubjectKind, TimelineDoc, TimelineItem } from './types';
 
 export type { SubjectKind };
 
@@ -294,6 +294,11 @@ export function toSubject(e: SubjectEntity, parents: ClassParents, labels: Recor
 /** The regions Bob has given his periods, in his spelling, A to Z. */
 export function regionsIn(items: TimelineItem[]): string[] {
   return [...new Set(items.flatMap((i) => (i.region?.trim() ? [i.region.trim()] : [])))].sort((a, b) => a.localeCompare(b));
+}
+
+/** Every region Bob has used, on periods and territories, A to Z: the overview's bands. */
+export function allRegions(doc: Pick<TimelineDoc, 'items' | 'territories'>): string[] {
+  return [...new Set([...regionsIn(doc.items), ...doc.territories.flatMap((t) => (t.region?.trim() ? [t.region.trim()] : []))])].sort((a, b) => a.localeCompare(b));
 }
 
 /** A period's region from Wikidata: its country, else its continent, spelled the way Bob already spells it when he has used it. */

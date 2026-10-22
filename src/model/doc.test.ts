@@ -6,6 +6,7 @@ import {
   createEmptyDoc,
   eraTerritory,
   setEraTerritory,
+  setRegionParent,
   DocValidationError,
   influencesOf,
   mergeDocs,
@@ -213,6 +214,20 @@ describe('mutations', () => {
     const doc = remove(withTheme, 'highlights', 'h_magna_reader', 5);
     expect(doc.items.find((i) => i.id === span.id)?.themes?.[0].highlightIds).toEqual(['h_i_magna']);
     expect(doc.relations.find((r) => r.id === 'r_3')?.highlightIds).toEqual([]);
+  });
+});
+
+describe('region parents', () => {
+  it('sets, changes and takes away a region’s parent, stamping the doc', () => {
+    const d0 = createEmptyDoc();
+    const d1 = setRegionParent(d0, ' Greece ', 'Mediterranean', 5);
+    expect(d1.regionParents).toEqual({ Greece: 'Mediterranean' });
+    expect(d1.updatedAt).toBe(5);
+    expect(setRegionParent(d1, 'Greece', 'Mediterranean', 9)).toBe(d1);
+    expect(setRegionParent(d1, 'Greece', 'Aegean', 6).regionParents).toEqual({ Greece: 'Aegean' });
+    expect(setRegionParent(d1, 'Greece', '', 7).regionParents).toEqual({});
+    // A region isn't its own parent.
+    expect(setRegionParent(d1, 'Greece', 'Greece', 8).regionParents).toEqual({});
   });
 });
 

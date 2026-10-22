@@ -1,6 +1,7 @@
 import { formatRange, jsDateToDecimalYear, moveDates, precisionOf, toDecimalYear } from '../../model/dates';
 import { describeEffect } from '../../model/doc';
 import type { EraRegion } from '../../model/eras';
+import type { LensMarks } from '../../model/lenses';
 import type { Overview } from '../../model/overview';
 import type { DatedItem, HistDate, Lane, Relation, TimelineItem } from '../../model/types';
 import { bandSummary, chipSummary, parseThemeKey } from '../representations/era';
@@ -40,6 +41,8 @@ export interface TimelineData {
   membersOf?: (pick: string) => readonly string[];
   /** Level 0: connections rolled up by polity or era (`threads`). */
   threads?: readonly Thread[];
+  /** Level 0: each region's entries per lane, for the lenses (`lensMarks`). */
+  lenses?: LensMarks;
 }
 
 /** New dates for an entry Bob dragged (or moved with Alt and an arrow key). */
@@ -66,6 +69,8 @@ export interface TimelineCallbacks {
   onOpenRelation?: (id: string) => void;
   /** Level 0: Bob clicked a ribbon: list its connections (`title` names the two rows it joins). */
   onOpenThread?: (t: { ids: string[]; title: string }) => void;
+  /** Level 0: Bob folded or unfolded a group: the groups now open, to remember. */
+  onUnfold?: (ids: string[]) => void;
 }
 
 /** What the overview has picked (`pol:<territory>` or a world event's id), whether it's open into its lanes, and its open lane with what's in it. */
@@ -94,6 +99,10 @@ export interface TimelineHandle {
   setRegion(region: string | undefined): void;
   /** Level 0: "Show all threads", every ribbon faintly (laptop only). */
   setAllThreads(all: boolean): void;
+  /** Level 0: the lenses on, a strip of each lane's ticks under every band. */
+  setLenses(lanes: readonly Lane[]): void;
+  /** Level 0: the groups shown open (remembered from before), without the unfolding motion. */
+  setUnfolded(ids: readonly string[]): void;
   dispose(): void;
 }
 
@@ -505,6 +514,8 @@ export function createTimeline(host: HTMLElement, cb: TimelineCallbacks, initial
     const now = unfolded.get(id) ?? 0, to = folds.get(id)?.to === 1 || (!folds.has(id) && now >= 0.5) ? 0 : 1;
     if (reducedMotion()) { folds.delete(id); if (to) unfolded.set(id, 1); else unfolded.delete(id); }
     else folds.set(id, { from: now, to, t0: null });
+    const open = new Set([...unfolded.keys(), ...folds.keys()].filter((g) => (folds.has(g) ? folds.get(g)!.to === 1 : (unfolded.get(g) ?? 0) >= 0.5)));
+    cb.onUnfold?.([...open]);
     V.hover = undefined;
     tip.hidden = true;
     schedule();
@@ -720,7 +731,7 @@ export function createTimeline(host: HTMLElement, cb: TimelineCallbacks, initial
 
   return {
     setData(d) {
-      D = prepare(d.items, d.lanes, { now: V.now, prominence: d.prominence, thumbFor: d.thumbFor, drafts: d.drafts, relations: d.relations, eras: d.eras, overview: d.overview, threads: d.threads });
+      D = prepare(d.items, d.lanes, { now: V.now, prominence: d.prominence, thumbFor: d.thumbFor, drafts: d.drafts, relations: d.relations, eras: d.eras, overview: d.overview, threads: d.threads, lenses: d.lenses });
       // A pick whose strip or world event has gone lets go.
       if (V.pick && !D.polById.has(V.pick.slice(4)) && !D.byId.get(V.pick)?.world) V.pick = undefined;
       eraById = new Map(D.regions.flatMap((R) => R.eras.map((e) => [e.id, e])));
@@ -775,6 +786,17 @@ export function createTimeline(host: HTMLElement, cb: TimelineCallbacks, initial
     setLevel: switchLevel,
     inEra: (id) => shownLevel() === 1 && !!V.era && (id === V.era.head.opens || V.era.laneOf.has(id)),
     setAllThreads(all) { if (all !== !!V.allThreads) { V.allThreads = all; schedule(); } },
+    setLenses(lanes) {
+      if ((V.lenses ?? []).join() === lanes.join()) return;
+      V.lenses = lanes.length ? [...lanes] : undefined;
+      schedule();
+    },
+    setUnfolded(ids) {
+      const want = new Set(ids);
+      for (const id of [...unfolded.keys()]) if (!want.has(id) && !folds.has(id)) unfolded.delete(id);
+      for (const id of want) if (!folds.has(id)) unfolded.set(id, 1);
+      schedule();
+    },
     setRegion(region) {
       if (region === V.region) return;
       V.region = region;

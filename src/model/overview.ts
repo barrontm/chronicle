@@ -79,6 +79,9 @@ export interface OverviewInput {
 const short = (s: string) => s.replace(/\s*\([^)]*\)\s*$/, '').trim() || s;
 const exact = (d: HistDate): HistDate => ({ ...d, approx: undefined });
 
+/** A polity's region: its own, else its entry's, else Elsewhere (''). */
+export const polityRegion = (t: Pick<Territory, 'region'>, item?: Pick<DatedItem, 'region'>) => t.region?.trim() || item?.region?.trim() || ELSEWHERE;
+
 /** A polity's life: from its entry, its borders and Bob's strength points; still there if its last borders have no end and its entry none. */
 export function polityLife(t: Territory, item: DatedItem | undefined, now: number): Pick<OPolity, 's' | 'e' | 'approx' | 'endApprox' | 'when'> | undefined {
   const starts: HistDate[] = [...t.snapshots.map((s) => s.from), ...(t.strength ?? []).map((p) => p.at), ...(item ? [item.start] : [])];
@@ -196,7 +199,7 @@ export function overview(o: OverviewInput): Overview {
     const item = t.itemId ? itemById.get(t.itemId) : undefined;
     const life = polityLife(t, item, o.now);
     if (!life) continue;
-    polities.push({ id: t.id, itemId: t.itemId, title: short(t.title), fullTitle: t.title, region: t.region?.trim() || item?.region?.trim() || ELSEWHERE, ...life, t });
+    polities.push({ id: t.id, itemId: t.itemId, title: short(t.title), fullTitle: t.title, region: polityRegion(t, item), ...life, t });
   }
   const polById = new Map(polities.map((p) => [p.id, p]));
 

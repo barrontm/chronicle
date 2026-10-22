@@ -4,12 +4,13 @@ import { isDated, toDecimalYear } from '../../model/dates';
 import { parseDoc } from '../../model/doc';
 import { eraRegions } from '../../model/eras';
 import { entryLanes } from '../../model/lanes';
+import { lensMarks } from '../../model/lenses';
 import { overview } from '../../model/overview';
 import { polityMembers } from '../../model/polities';
 import { prominence as prominenceOf } from '../../model/prominence';
 import type { DatedItem, Lane, Relation } from '../../model/types';
 import {
-  AXIS_H, describeEntry, describeEra, describeLane1, eraLanes, ERAS_BACK, HEAD1_H, head1H, LANE_TOGGLE, OPEN_PICK, polityLanes, hitBox, hitTest, laneAt, layout, maxScroll, MIN_HIT, NO_LANE, prepare, REGION_GROW, regionSpan, ROW_H, stepActive, stepEra, stepLane1,
+  AXIS_H, describeEntry, describeEra, describeLane1, eraLanes, ERAS_BACK, HEAD1_H, head1H, LANE_TOGGLE, OPEN_PICK, polityLanes, hitBox, hitTest, laneAt, layout, LENS_H, maxScroll, MIN_HIT, NO_LANE, prepare, REGION_GROW, regionSpan, ROW_H, stepActive, stepEra, stepLane1,
   type Env, type View,
 } from './layout';
 import { ARROW, RIBBON, RIBBON_FAINT, RIBBON_STRONG } from '../representations/influence';
@@ -478,6 +479,40 @@ describe('level 0: the overview', () => {
     expect(stepEra(D, 'i_archaic', 'ArrowRight', win)).toBe('i_classical');
     expect(stepEra(D, 'i_classical', 'End', win)).toBe('i_hellenistic');
     expect(describeEra(D, 'i_classical')).toMatch(/^Classical Greece, 480–323 BCE, Greece, \d+ highlights, 2 of 6$/);
+  });
+
+  it('a lens adds a strip of its lane’s ticks under every band, and never moves what’s above it', () => {
+    const lanesOf = entryLanes(doc.items, doc.highlights);
+    const lenses = lensMarks({
+      entries: items.map((i) => ({ id: i.id, s: toDecimalYear(i.start) })),
+      polities: polityMembers(doc),
+      polityItems: new Map(doc.territories.flatMap((t) => (t.itemId ? [[t.itemId, t.id] as const] : []))),
+      polityRegions: new Map(O.polities.map((p) => [p.id, p.region])),
+      eras: eraRegions(items, doc.highlights, doc.relations, 2026).flatMap((r) => r.eras),
+      lanesOf,
+    });
+    const DL = prepare(items, lanes, { now: 2026, prominence, relations: doc.relations, eras: eraRegions(items, doc.highlights, doc.relations, 2026), overview: O, lenses });
+    const win: [number, number] = [-520, -300];
+    const plain = layout(DL, view(win[0], win[1]), env(1200, 1400), 0);
+    const S = layout(DL, view(win[0], win[1], { lenses: ['war'] }), env(1200, 1400), 0);
+    const ticks = S.z[1].filter((p) => p.cls?.startsWith('tl-lens-tick'));
+    expect(ticks.map((p) => p.id)).toContain('i_lade');
+    expect(plain.z[1].some((p) => p.cls?.startsWith('tl-lens'))).toBe(false);
+    // One strip per band, named in the gutter, in the lane's pigment.
+    expect(S.z[0].filter((p) => p.cls === 'tl-lens')).toHaveLength(DL.bands.length);
+    expect(S.gutter.filter((p) => p.t === 2 && p.s === 'War')).toHaveLength(DL.bands.length);
+    expect(ticks.every((p) => p.t === 0 && p.fill === 'var(--pig-cinnabar)')).toBe(true);
+    // Strips stay where they were; only the bands' feet move down.
+    const top = (X: Scene, id: string) => X.targets.find((t) => t.id === id)!;
+    expect(top(S, 'pol:t_persia').y).toBeGreaterThan(top(plain, 'pol:t_persia').y);
+    expect(top(S, 'pol:t_syracuse').y).toBe(top(plain, 'pol:t_syracuse').y);
+    // Greece is the third band: the two above it each grew by one strip.
+    expect(top(S, 'grp:g_classical_greece').y).toBe(top(plain, 'grp:g_classical_greece').y + 2 * (2 + LENS_H));
+    // Two lenses, two strips a band; a tick opens its entry.
+    const two = layout(DL, view(win[0], win[1], { lenses: ['war', 'economy'] }), env(1200, 1400), 0);
+    expect(two.z[0].filter((p) => p.cls === 'tl-lens')).toHaveLength(DL.bands.length * 2);
+    const t = S.targets.find((x) => x.id === 'i_lade')!;
+    expect(hitTest(S, t.x + t.w / 2, t.y + t.h / 2)?.id).toBe('i_lade');
   });
 });
 

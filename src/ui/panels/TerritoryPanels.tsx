@@ -4,8 +4,10 @@ import { BASEMAP_YEARS, basemapFor, BASEMAPS_CREDIT, fetchBasemap, polityNames, 
 import { isCliopatria } from '../../data/cliopatria';
 import { areaKm2, FINE, parseGeoJsonAreas, simplifyArea, type Area } from '../../data/geo';
 import { compareHistDate, formatRange, formatYear, toDecimalYear } from '../../model/dates';
-import { newId, notesFor, remove, upsert } from '../../model/doc';
-import type { HistDate, Territory, TerritorySnapshot } from '../../model/types';
+import { highlightsFor, newId, notesFor, remove, upsert } from '../../model/doc';
+import { polityRegion } from '../../model/overview';
+import { allRegions } from '../../model/subjects';
+import type { Highlight, HistDate, StrengthPoint, Territory, TerritorySnapshot, TimelineDoc } from '../../model/types';
 import { useDoc } from '../DocContext';
 import { DateField, Field, RecordPicker } from '../fields';
 import type { Nav } from '../nav';
@@ -24,6 +26,21 @@ function spanOf(t: Territory): string {
 
 const sortSnaps = (s: TerritorySnapshot[]) => [...s].sort((a, b) => compareHistDate(a.from, b.from));
 
+/** Strength levels in Bob's words, 1 to 5. */
+const LEVELS = ['1 · a sliver', '2 · minor', '3 · a power', '4 · a great power', '5 · dominant'] as const;
+const clip = (s: string, n = 90) => (s.length > n ? `${s.slice(0, n - 1).trimEnd()}…` : s);
+
+/** Highlights a strength point can rest on: the territory's, its entry's, and those of what's connected to either. */
+function strengthHighlights(doc: TimelineDoc, t: Territory): Highlight[] {
+  const ids = new Set([t.id, ...(t.itemId ? [t.itemId] : [])]);
+  for (const r of doc.relations) {
+    if (ids.has(r.fromId) || ids.has(r.toId)) { ids.add(r.fromId); ids.add(r.toId); }
+  }
+  return [...new Set([...ids].flatMap((id) => highlightsFor(doc, id)))];
+}
+
+interface PointRow { k: string; p: StrengthPoint; ok: boolean }
+
 export function TerritoryView({ id, nav }: { id: string; nav: Nav }) {
   const { doc, update } = useDoc();
   const t = doc.territories.find((x) => x.id === id);
@@ -31,6 +48,7 @@ export function TerritoryView({ id, nav }: { id: string; nav: Nav }) {
   const cat = doc.categories.find((c) => c.id === t.categoryId);
   const notes = notesFor(doc, id);
   const values = doc.series.filter((s) => s.regions?.[id]);
+  const region = polityRegion(t, doc.items.find((i) => i.id === t.itemId));
   return (
     <article data-testid="territory-view">
       <h2>{t.title}</h2>
@@ -41,6 +59,26 @@ export function TerritoryView({ id, nav }: { id: string; nav: Nav }) {
       </div>
       {t.itemId && (
         <p>On your timeline: <button className="btn small quiet" onClick={() => nav.open({ type: 'item', id: t.itemId! })}>{titleOf(doc, t.itemId) ?? 'Missing entry'}</button></p>
+      )}
+      <p data-testid="territory-region">{region ? <>Region on the overview: <strong>{region}</strong>{!t.region?.trim() && ' (from its entry)'}</> : <>Region on the overview: <strong>Elsewhere</strong>. Give it one under Edit to put it beside its neighbours.</>}</p>
+
+      {!!t.strength?.length && (
+        <>
+          <h3>How strong it was</h3>
+          <ul className="linklist strength-list">
+            {t.strength.map((p, i) => {
+              const quote = p.highlightIds?.map((h) => doc.highlights.find((x) => x.id === h)).find(Boolean);
+              return (
+                <li key={i}>
+                  <button onClick={() => nav.showOnMap(toDecimalYear(p.at))}>
+                    <strong>{formatYear(p.at.y)}: {LEVELS[p.level - 1]}</strong>
+                    {quote && <small>“{clip(quote.text)}”</small>}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </>
       )}
 
       <h3>Borders over time</h3>
@@ -159,18 +197,23 @@ export function TerritoryEditor({ id, nav }: { id: string; nav: Nav }) {
   const existing = doc.territories.find((x) => x.id === id);
   const [d, setD] = useState<Territory | undefined>(existing);
   const [rows, setRows] = useState<Row[]>(() => (existing?.snapshots ?? []).map((s) => ({ k: newId('s'), s, ok: true })));
+  const [points, setPoints] = useState<PointRow[]>(() => (existing?.strength ?? []).map((p) => ({ k: newId('p'), p, ok: true })));
   if (!d) return <div className="notice">This territory was deleted.</div>;
+  const setPoint = (k: string, change: Partial<StrengthPoint>, ok = true) => setPoints((ps) => ps.map((r) => (r.k === k ? { ...r, p: { ...r.p, ...change }, ok } : r)));
+  const quotes = strengthHighlights(doc, d);
+  const entryRegion = doc.items.find((i) => i.id === d.itemId)?.region?.trim();
   const set = <K extends keyof Territory>(k: K, v: Territory[K]) => setD({ ...d, [k]: v });
   const setRow = (k: string, change: Partial<TerritorySnapshot>, ok: boolean) =>
     setRows((rs) => rs.map((r) => (r.k === k ? { ...r, s: { ...r.s, ...change }, ok } : r)));
   const addShape = (geometry: Area, year: number) => setRows((rs) => [...rs, { k: newId('s'), s: snapshotOf(geometry, { y: year }), ok: true }]);
   const backwards = rows.find((r) => r.s.to && compareHistDate(r.s.to, r.s.from) <= 0);
-  const valid = !!d.title.trim() && rows.every((r) => r.ok) && !backwards;
+  const valid = !!d.title.trim() && rows.every((r) => r.ok) && !backwards && points.every((r) => r.ok);
   return (
     <form data-testid="territory-editor" onSubmit={(e) => {
       e.preventDefault();
       if (!valid) return;
-      update((doc) => upsert(doc, 'territories', { ...d, title: d.title.trim(), snapshots: sortSnaps(rows.map((r) => r.s)) }));
+      const strength = points.map((r) => r.p).sort((a, b) => compareHistDate(a.at, b.at));
+      update((doc) => upsert(doc, 'territories', { ...d, title: d.title.trim(), region: d.region?.trim() || undefined, strength: strength.length ? strength : undefined, snapshots: sortSnaps(rows.map((r) => r.s)) }));
       nav.replace({ type: 'territory', id });
     }}>
       <h2>Edit territory</h2>
@@ -181,6 +224,42 @@ export function TerritoryEditor({ id, nav }: { id: string; nav: Nav }) {
         </select>
       </Field>
       <LinkedEntry value={d.itemId} onChange={(itemId) => set('itemId', itemId)} />
+      <Field label="Region" hint={entryRegion ? `The band it sits in on the overview. Empty: ${entryRegion}, from its entry.` : 'The band it sits in on the overview, such as Greece. Empty: Elsewhere.'}>
+        <input value={d.region ?? ''} onChange={(e) => set('region', e.target.value || undefined)} list="territory-regions" placeholder={entryRegion} />
+      </Field>
+      <datalist id="territory-regions">{allRegions(doc).map((r) => <option key={r} value={r} />)}</datalist>
+
+      <h3>How strong it was</h3>
+      <p className="lede">How strong it was at a date, from 1 (a sliver) to 5 (dominant), with straight lines between your dates. This sets how thick its strip is on the overview, in place of the size of its borders.</p>
+      <div className="editor-list">
+        {points.map((r, i) => (
+          <fieldset className="snapshot" key={r.k} aria-label={`Strength ${i + 1}`}>
+            <div className="row">
+              <DateField label="At" value={r.p.at} onChange={(at, ok) => setPoint(r.k, at ? { at } : {}, ok && !!at)} />
+              <Field label="Strength">
+                <select value={r.p.level} onChange={(e) => setPoint(r.k, { level: Number(e.target.value) as StrengthPoint['level'] })}>
+                  {LEVELS.map((l, j) => <option key={j} value={j + 1}>{l}</option>)}
+                </select>
+              </Field>
+            </div>
+            <div className="editor-row beside-input">
+              <div className="grow">
+                <Field label="Resting on" hint={quotes.length ? undefined : 'Highlight a passage about it, or its entry, to cite it here.'}>
+                  <select value={r.p.highlightIds?.[0] ?? ''} onChange={(e) => setPoint(r.k, { highlightIds: e.target.value ? [e.target.value] : undefined })} disabled={!quotes.length}>
+                    <option value="">No highlight</option>
+                    {quotes.map((h) => <option key={h.id} value={h.id}>“{clip(h.text, 70)}”</option>)}
+                  </select>
+                </Field>
+              </div>
+              <button type="button" className="btn small quiet" onClick={() => setPoints((ps) => ps.filter((x) => x.k !== r.k))}>Remove</button>
+            </div>
+          </fieldset>
+        ))}
+      </div>
+      <div className="actions">
+        <button type="button" className="btn" onClick={() => setPoints((ps) => [...ps, { k: newId('p'), p: { at: ps.at(-1)?.p.at ?? d.snapshots[0]?.from ?? { y: 0 }, level: 3 }, ok: true }])}>Add a strength</button>
+      </div>
+
       <h3>Borders over time</h3>
       <p className="lede">Each set of borders applies from its first year until the year you give (or until the next set).</p>
       <div className="editor-list">
