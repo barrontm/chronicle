@@ -2,7 +2,8 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { parseDoc } from '../model/doc';
 import type { Flow, Relation, Territory, TimelineItem } from '../model/types';
-import { aboutPeople, activeRoutes, contactsAt, contactsDuring, followAt, arcPoints, arcsBetween, choroplethAt, draftPins, endBearing, flowDashes, flowFeatures, flowScale, mapKindOf, mixColor, parseColor, pinsAt, placesToDraw, rateAt, territoriesAt, territoryCircles, type FlowPlaces } from './mapData';
+import { eraRegions } from '../model/eras';
+import { aboutPeople, activeRoutes, eraExtents, eraTintsAt, landRings, contactsAt, contactsDuring, followAt, arcPoints, arcsBetween, choroplethAt, draftPins, endBearing, flowDashes, flowFeatures, flowScale, mapKindOf, mixColor, parseColor, pinsAt, placesToDraw, rateAt, territoriesAt, territoryCircles, type FlowPlaces } from './mapData';
 
 const fixture = () => parseDoc(readFileSync(new URL('../../tests/fixtures/sample-history.json', import.meta.url), 'utf8'));
 const colorOf = (id: string) => (id === 'hidden' ? undefined : '#123456');
@@ -281,5 +282,58 @@ describe('following the timeline', () => {
     const f = followAt({ ...doc, focus: {}, region: 'Persia', year: -430, window: { start: -500, end: -300 } });
     expect(f.regionFit?.key).toBe('Persia');
     expect(f.regionFit!.bounds[2]).toBeGreaterThan(50);
+  });
+});
+
+describe('eras on the map', () => {
+  const span = (id: string, a: number, b: number, o: Partial<TimelineItem> = {}): TimelineItem => ({ id, kind: 'span', title: id, start: { y: a }, end: { y: b }, categoryId: 'c', subject: 'period', region: 'Greece', updatedAt: 0, ...o });
+  const ev = (id: string, y: number, lon: number, lat: number): TimelineItem => ({ id, kind: 'event', title: id, start: { y }, categoryId: 'c', places: [{ lon, lat }], updatedAt: 0 });
+  // One square of land from 20°E to 30°E, 35°N to 42°N.
+  const land = landRings({ type: 'FeatureCollection', features: [{ type: 'Feature', properties: {}, geometry: { type: 'Polygon', coordinates: [[[20, 35], [30, 35], [30, 42], [20, 42], [20, 35]]] } }] });
+  const items = [
+    span('archaic', -800, -480), span('classical', -480, -323), span('fifty', -479, -431),
+    ev('a1', -600, 23, 38), ev('c1', -400, 24, 38), ev('c2', -350, 27, 39), ev('f1', -450, 26, 37),
+    span('hellenistic', -323, -30),
+  ];
+  const extentsOf = (rel: Relation[] = [], terr: Territory[] = []) => eraExtents(eraRegions(items, [], rel, 2026), items, rel, terr, land);
+  const box = (g: { coordinates: number[][][][] }) => { const xs = g.coordinates.flat(2).map((p) => p[0]); return [Math.min(...xs), Math.max(...xs)]; };
+
+  it('covers the places of an era and its inner eras, clipped to land, and leaves out an era with none', () => {
+    const ex = extentsOf();
+    expect(ex.map((x) => x.id)).toEqual(['archaic', 'classical']);
+    const [w, e] = box(ex[1].shape!);
+    // From the inner era's place at 26°E… to Classical's own at 27°E, a little around each.
+    expect(w).toBeLessThan(24);
+    expect(e).toBeGreaterThan(27);
+    expect(e).toBeLessThan(28);
+    // Nothing reaches past the land's edge.
+    expect(ex[1].shape!.coordinates.flat(2).every(([x, y]) => x >= 20 && x <= 30 && y >= 35 && y <= 42)).toBe(true);
+  });
+
+  it('takes a territory Bob linked to it as part of the era instead', () => {
+    const athens: Territory = { id: 't_ath', title: 'Athens', categoryId: 'c', updatedAt: 0, snapshots: [{ from: { y: -500 }, geometry: { type: 'Polygon', coordinates: [[[23, 37], [24, 37], [24, 38], [23, 37]]] } }] };
+    const rel: Relation[] = [{ id: 'r', fromId: 't_ath', toId: 'hellenistic', type: 'part-of', updatedAt: 0 }];
+    const ex = extentsOf(rel, [athens]);
+    expect(ex.find((x) => x.id === 'hellenistic')).toMatchObject({ territoryId: 't_ath' });
+    expect(eraTintsAt(ex, [athens], -200, 0).features[0].geometry).toEqual(athens.snapshots[0].geometry);
+  });
+
+  it('tints the year’s era, crossfading at the turn, or cutting when fade is 0', () => {
+    const ex = extentsOf();
+    const at = (y: number, fade: number) => eraTintsAt(ex, [], y, fade).features.map((f) => [f.properties.id, +f.properties.opacity.toFixed(2)]);
+    expect(at(-600, 8)).toEqual([['archaic', 1]]);
+    expect(at(-480, 8)).toEqual([['archaic', 0.5], ['classical', 0.5]]);
+    expect(at(-478, 8)).toEqual([['archaic', 0.25], ['classical', 0.75]]);
+    expect(at(-480, 0)).toEqual([['classical', 1]]);
+    expect(at(-481, 0)).toEqual([['archaic', 1]]);
+    expect(at(-100, 8)).toEqual([]);
+  });
+
+  it('gives the Classical Greece fixture an extent for each of its three Greek eras', () => {
+    const doc = parseDoc(readFileSync(new URL('../../tests/fixtures/greece/classical-greece.json', import.meta.url), 'utf8'));
+    const world = landRings({ type: 'FeatureCollection', features: [{ type: 'Feature', properties: {}, geometry: { type: 'Polygon', coordinates: [[[-20, 20], [60, 20], [60, 55], [-20, 55], [-20, 20]]] } }] });
+    const ex = eraExtents(eraRegions(doc.items, doc.highlights, doc.relations, 2026), doc.items, doc.relations, doc.territories, world);
+    expect(ex.map((x) => x.title)).toEqual(['Archaic Greece', 'Classical Greece', 'Hellenistic period']);
+    expect([-500, -400, -300].map((y) => eraTintsAt(ex, doc.territories, y, 8).features.map((f) => f.properties.title))).toEqual([['Archaic Greece'], ['Classical Greece'], ['Hellenistic period']]);
   });
 });

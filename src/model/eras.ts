@@ -34,6 +34,18 @@ export interface Era {
   noLane: number;
   /** Entries in it and not in an inner era (never eras), for its landmarks. */
   members: string[];
+  /** Bob's themes for it, in his order. */
+  themes: EraTheme[];
+}
+
+/** A theme as a chip: its label, how many highlights it groups, its main lane, and the entries those highlights are used by. */
+export interface EraTheme {
+  id: string;
+  label: string;
+  highlights: number;
+  /** The lane most of its highlights are in (the first in lane order on a tie); none when they have no lanes. */
+  lane?: Lane;
+  ids: string[];
 }
 
 export interface EraRegion {
@@ -68,7 +80,7 @@ export function eraRegions(items: TimelineItem[], highlights: Highlight[], relat
     const s = toDecimalYear(it.start);
     eras.set(it.id, {
       id: it.id, title: it.title, region: it.region?.trim() ?? ELSEWHERE, s, e: Math.max(s, it.end ? toDecimalYear(it.end) : now),
-      approx: !!it.start.approx, endApprox: !!it.end?.approx, when: formatRange(exact(it.start), it.end && exact(it.end)), highlights: 0, mix: emptyMix(), noLane: 0, members: [],
+      approx: !!it.start.approx, endApprox: !!it.end?.approx, when: formatRange(exact(it.start), it.end && exact(it.end)), highlights: 0, mix: emptyMix(), noLane: 0, members: [], themes: [],
     });
   }
   if (!eras.size) return [];
@@ -162,9 +174,40 @@ export function eraRegions(items: TimelineItem[], highlights: Highlight[], relat
     }
   }
 
+  // Each era's themes, as chips.
+  const hById = new Map(highlights.map((h) => [h.id, h]));
+  for (const it of items) {
+    const era = eras.get(it.id);
+    if (!era) continue;
+    era.themes = (it.themes ?? []).filter((t) => t.label?.trim()).map((t): EraTheme => {
+      const hs = t.highlightIds.map((id) => hById.get(id)).filter((h): h is Highlight => !!h);
+      const n = emptyMix();
+      for (const h of hs) for (const l of h.lanes?.length ? h.lanes : h.usedBy.map((id) => laneMap.get(id)).find(Boolean) ?? []) n[l]++;
+      const lane = LANES.reduce<Lane | undefined>((b, l) => (n[l] && (!b || n[l] > n[b]) ? l : b), undefined);
+      return { id: t.id, label: t.label.trim(), highlights: hs.length, lane, ids: [...new Set(hs.flatMap((h) => h.usedBy))] };
+    });
+  }
+
   const regions = new Map<string, Era[]>();
   for (const e of list) regions.set(e.region, [...(regions.get(e.region) ?? []), e]);
   return [...regions.entries()]
     .map(([name, es]): EraRegion => ({ name, eras: es.sort((a, b) => a.s - b.s || b.e - a.e || a.id.localeCompare(b.id)), highlights: regionSeen.get(name)?.size ?? 0 }))
     .sort((a, b) => Number(a.name === ELSEWHERE) - Number(b.name === ELSEWHERE) || b.highlights - a.highlights || a.name.localeCompare(b.name));
+}
+
+/**
+ * The highlights in an era, as level 0 counts them: those used by the era, its inner eras or any
+ * entry in them, plus any already in one of its themes. In the order Bob made them.
+ */
+export function eraHighlights(items: TimelineItem[], highlights: Highlight[], relations: Relation[], eraId: string, now: number): Highlight[] {
+  const R = eraRegions(items, highlights, relations, now).find((r) => r.eras.some((e) => e.id === eraId));
+  if (!R) return [];
+  const inside = new Set([eraId]);
+  for (let grew = true; grew;) {
+    grew = false;
+    for (const e of R.eras) if (e.parent && inside.has(e.parent) && !inside.has(e.id)) { inside.add(e.id); grew = true; }
+  }
+  const ids = new Set(R.eras.filter((e) => inside.has(e.id)).flatMap((e) => [e.id, ...e.members]));
+  const themed = new Set((items.find((i) => i.id === eraId)?.themes ?? []).flatMap((t) => t.highlightIds));
+  return highlights.filter((h) => themed.has(h.id) || h.usedBy.some((id) => ids.has(id)));
 }

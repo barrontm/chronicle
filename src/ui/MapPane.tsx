@@ -4,7 +4,9 @@ import type { Category, Flow, FlowCause, Relation, Series, Territory, TimelineIt
 import type { Area } from '../data/geo';
 import { addPoint, canFinish, closePart, EMPTY_DRAFT, toGeometry, undo, type Draft } from './drawing';
 import { worldMembers } from '../model/polities';
-import { activeRoutes, CAUSES, choroplethAt, followAt, mapKindOf, type ContactHow, type TimelineFocus } from './mapData';
+import { loadCountriesFile } from '../data/countries';
+import { eraRegions } from '../model/eras';
+import { activeRoutes, CAUSES, choroplethAt, eraExtents, followAt, landRings, mapKindOf, type ContactHow, type TimelineFocus } from './mapData';
 import type { BackdropStatus, MapCamera, MapFit, MapOptions } from './MapView';
 import { formatValue } from './util';
 
@@ -81,6 +83,14 @@ export function MapPane(p: Props) {
     focus: p.focus ?? {}, region: p.region?.name, year: p.year, window: p.window ?? { start: p.year - 50, end: p.year + 50 },
     worldMembers: (id) => worldMembers(id, { relations: p.relations }),
   }) : undefined), [following, p.items, p.territories, p.relations, p.flows, p.focus, p.region?.name, p.year, p.window]);
+  // Each region's era of the year, tinted over its extent.
+  const [land, setLand] = useState<ReturnType<typeof landRings> | null>(null);
+  useEffect(() => {
+    let live = true;
+    loadCountriesFile().then((fc) => { if (live) setLand(landRings(fc)); }, () => {});
+    return () => { live = false; };
+  }, []);
+  const eras = useMemo(() => (land ? eraExtents(eraRegions(p.items, [], p.relations, new Date().getFullYear()), p.items, p.relations, p.territories, land) : undefined), [land, p.items, p.relations, p.territories]);
   const picked = p.focus?.pick?.startsWith('pol:') ? p.territories.find((t) => `pol:${t.id}` === p.focus!.pick) : undefined;
   const byHow = (how: ContactHow) => [...(follow?.marks ?? [])].filter(([, m]) => m.how === how).map(([id]) => p.territories.find((t) => t.id === id)?.title).filter(Boolean);
   const regionTerritory = p.region && p.territories.find((t) => t.id === p.region!.territoryId);
@@ -108,6 +118,7 @@ export function MapPane(p: Props) {
             else p.onOpenTerritory(id);
           }}
           follow={follow}
+          eras={eras}
           onOpenFlow={p.onOpenFlow}
           onBackdropStatus={setBackdrop}
           camera={p.camera}

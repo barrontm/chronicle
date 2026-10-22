@@ -3,12 +3,12 @@ import { describeEffect } from '../../model/doc';
 import type { EraRegion } from '../../model/eras';
 import type { Overview } from '../../model/overview';
 import type { DatedItem, HistDate, Lane, Relation, TimelineItem } from '../../model/types';
-import { bandSummary } from '../representations/era';
+import { bandSummary, chipSummary, parseThemeKey } from '../representations/era';
 import { ARROW } from '../representations/influence';
 import { DEEP_LIMITS, panBy, windowAround, zoomAround, type YearWindow } from '../timeNav';
 import { attachGestures } from './gestures';
 import {
-  AXIS_H, describeEntry, describeEra, describeLane1, eraLanes, eraSpan, ERAS_BACK, HEAD1_H, HEAD_ROW, LANE_TOGGLE, laneTop, OPEN_PICK, polityLanes, regionSpan, hitBox, hitTest, lane1Span, laneAt, layout, maxScroll, PHONE_W, prepare, rowSpan,
+  AXIS_H, describeEntry, describeEra, describeLane1, eraLanes, eraSpan, ERAS_BACK, head1H, HEAD_ROW, THEMES_MORE, LANE_TOGGLE, laneTop, OPEN_PICK, polityLanes, regionSpan, hitBox, hitTest, lane1Span, laneAt, layout, maxScroll, PHONE_W, prepare, rowSpan,
   stepActive, stepEra, stepLane1, type EraLanes, type Head1, type LaneInput, type Level, type PEra, type Prepared, type StepKey, type View,
 } from './layout';
 import { svgPainter } from './paint';
@@ -223,7 +223,7 @@ export function createTimeline(host: HTMLElement, cb: TimelineCallbacks, initial
 
   /** On a phone, levels 0 and 1 have no gutter: names sit above their rows. */
   const gut = () => (level !== 2 && size.w < PHONE_W ? 0 : size.gutter);
-  const maxY = () => maxScroll(D, size.h, level, size.w, V);
+  const maxY = () => maxScroll(D, size.h, level, env(), V);
   /** The level Bob is on: while an era closes, already 0. */
   const shownLevel = (): Level => (morph?.to === 0 ? 0 : level);
   const env = () => ({ w: size.w, h: size.h, gutter: gut(), measure });
@@ -301,10 +301,17 @@ export function createTimeline(host: HTMLElement, cb: TimelineCallbacks, initial
       const noun = t.cluster.kind === 'event' ? 'events' : t.cluster.kind === 'person' ? 'people' : 'periods';
       return { title: `${t.cluster.count} ${noun}${lead ? `, among them ${lead.title}` : ''}`, sub: 'Click to zoom in on them' };
     }
+    if (t.id === THEMES_MORE) return { title: V.era?.allThemes ? 'Show fewer themes' : 'Show all the themes', sub: `${V.era?.themes.length ?? 0} themes` };
     if (t.id.startsWith(ARROW)) {
       const x = V.era?.influences.find((i) => i.r.id === t.id.slice(ARROW.length));
       const a = x && D.byId.get(x.r.fromId), b = x && D.byId.get(x.r.toId);
       return x && a && b ? { title: `${a.title} ${describeEffect(x.r, 'out').toLowerCase()} ${b.title}`, sub: 'Click to see the evidence' } : null;
+    }
+    const chip = parseThemeKey(t.id);
+    if (chip) {
+      const th = eraById.get(chip.era)?.themes.find((x) => x.id === chip.theme);
+      const on = V.theme?.key === `${chip.era}:${chip.theme}`;
+      return th ? { title: th.label, sub: `${chipSummary(th)} · ${level === 0 ? 'Click to open its era with this theme picked' : on ? 'Click to show everything again' : 'Click to fade everything outside it'}` } : null;
     }
     const era = level !== 2 ? eraById.get(t.id) : undefined;
     if (era) return { title: era.title, sub: bandSummary(era) };
@@ -368,6 +375,15 @@ export function createTimeline(host: HTMLElement, cb: TimelineCallbacks, initial
       if (t?.id === OPEN_PICK) { if (V.pick) openPick(V.pick); return; }
       if (t?.id.startsWith(LANE_TOGGLE)) { toggleLane(t.id.slice(LANE_TOGGLE.length)); return; }
       if (t?.id.startsWith(ARROW)) { cb.onOpenRelation?.(t.id.slice(ARROW.length)); return; }
+      if (t?.id === THEMES_MORE && V.era) { V.era.allThemes = !V.era.allThemes; V.scrollY = clamp(V.scrollY, 0, maxY()); schedule(); return; }
+      // A theme chip: on the overview it opens its era with the theme picked; in the lanes it picks it, or lets go.
+      const chip = t && parseThemeKey(t.id);
+      if (chip) {
+        const key = `${chip.era}:${chip.theme}`;
+        if (level === 0) { openEra(chip.era); if ((level as Level) === 1) pickTheme(key); }
+        else if (level === 1) pickTheme(V.theme?.key === key ? undefined : key);
+        return;
+      }
       if (t?.cluster) {
         // Zoom to fit the cluster, so its members have room to split.
         const { s, e } = t.cluster;
@@ -505,10 +521,10 @@ export function createTimeline(host: HTMLElement, cb: TimelineCallbacks, initial
   const scrollTo = (id: string, pad: number) => {
     const it = D.byId.get(id);
     const phone = size.w < PHONE_W;
-    const ys = level === 0 ? eraSpan(D, V, id, phone) : level === 1 && V.era ? lane1Span(V.era, id, phone) : it && rowSpan(D, it);
+    const ys = level === 0 ? eraSpan(D, V, id, env()) : level === 1 && V.era ? lane1Span(V.era, id, phone) : it && rowSpan(D, it);
     if (!ys || !size.h) return;
     const [top, bottom] = ys;
-    const viewH = size.h - AXIS_H - (level === 1 ? HEAD1_H : 0);
+    const viewH = size.h - AXIS_H - (level === 1 && V.era ? head1H(V.era, env(), V.theme?.key) : 0);
     if (top < V.scrollY) V.scrollY = clamp(top - pad, 0, maxY());
     else if (bottom > V.scrollY + viewH) V.scrollY = clamp(bottom - viewH + pad, 0, maxY());
   };
@@ -573,6 +589,13 @@ export function createTimeline(host: HTMLElement, cb: TimelineCallbacks, initial
   const eraAt = (x: number, y: number) => scene?.targets.find((t) => eraById.has(t.id) && x >= t.x && x <= t.x + t.w && y >= t.y && y <= t.y + t.h)?.id;
 
   /** Level 0 → 1: the era's band opens into its lanes, framed in time. */
+  /** Level 1: pick a theme chip (`<era>:<theme>`), or let go of it. Everything outside it fades. */
+  const pickTheme = (key: string | undefined) => {
+    const [era, id] = key?.split(':') ?? [];
+    const th = V.era?.themes.find((x) => x.era === era && x.theme.id === id)?.theme;
+    V.theme = th ? { key: key!, ids: new Set(th.ids) } : undefined;
+    schedule();
+  };
   const openEra = (id: string) => {
     if (eraById.has(id) && level === 0 && !morph) openLanes(eraLanes(D, id, dims));
   };
@@ -600,6 +623,7 @@ export function createTimeline(host: HTMLElement, cb: TimelineCallbacks, initial
     const fade = reducedMotion();
     level = 1;
     V.era = EL;
+    V.theme = undefined;
     V.zoom = { t: 0, fade, scroll0: V.scrollY };
     V.scrollY = 0;
     V.hover = undefined;
@@ -624,6 +648,7 @@ export function createTimeline(host: HTMLElement, cb: TimelineCallbacks, initial
   const closed = () => {
     level = 0;
     V.era = undefined;
+    V.theme = undefined;
     V.zoom = undefined;
     V.scrollY = scrolls.get(0) ?? 0;
     before0 = null;
@@ -637,6 +662,7 @@ export function createTimeline(host: HTMLElement, cb: TimelineCallbacks, initial
       // Straight to the entries: the era's lanes go without folding back.
       morph = null;
       V.era = undefined;
+      V.theme = undefined;
       V.zoom = undefined;
       before0 = null;
     } else scrolls.set(level, V.scrollY);
@@ -678,7 +704,7 @@ export function createTimeline(host: HTMLElement, cb: TimelineCallbacks, initial
       // The open era or polity follows the data; if it's gone (deleted, or its category hidden), back to the overview.
       if (level === 1 && V.era) {
         const EL = V.era.era ? eraLanes(D, V.era.era.id, dims) : polityLanes(D, V.era.head.id, membersOf(V.era.head.id), dims);
-        if (EL) { EL.open = V.era.open; V.era = EL; }
+        if (EL) { EL.open = V.era.open; EL.allThemes = V.era.allThemes; V.era = EL; pickTheme(V.theme?.key); }
         else { morph = null; closed(); }
       }
       source = new Map(d.items.map((i) => [i.id, i]));
@@ -730,11 +756,13 @@ export function createTimeline(host: HTMLElement, cb: TimelineCallbacks, initial
       else delete host.dataset.region;
       if (region) {
         // Its band in the middle of the view (or its top, if it's taller).
-        const ys = regionSpan(D, V, region, size.w < PHONE_W);
+        // Measured in the overview's years: an open polity or era goes back to them.
+        const V0 = { ...V, era: undefined, win: level === 1 && before0 ? before0 : V.win };
+        const ys = regionSpan(D, V0, region, { ...env(), gutter: size.w < PHONE_W ? 0 : size.gutter });
         if (ys) {
           const view = size.h - AXIS_H, h = ys[1] - ys[0];
           const target = h > view ? ys[0] : ys[0] - (view - h) / 2;
-          scrolls.set(0, clamp(target, 0, maxScroll(D, size.h, 0, size.w, { ...V, era: undefined })));
+          scrolls.set(0, clamp(target, 0, maxScroll(D, size.h, 0, { ...env(), gutter: size.w < PHONE_W ? 0 : size.gutter }, V0)));
           if (level === 0 && !morph) V.scrollY = scrolls.get(0)!;
         }
         // The overview is where regions are: an open polity or era folds back first, keeping its pick.

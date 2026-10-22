@@ -32,6 +32,9 @@ export const FONTS = {
   wash: 'italic 12.5px Spectral, Georgia, serif',
   washIn: 'italic 11px Spectral, Georgia, serif',
   world: '500 12.5px Spectral, Georgia, serif',
+  // A theme chip: its label in Spectral, its count in Public Sans.
+  chip: '12.5px Spectral, Georgia, serif',
+  chipN: '10.5px "Public Sans", system-ui, sans-serif',
   // Level 1: lane names in spaced capitals with their counts, an empty lane's note, the phone's list.
   dim: '600 11.5px "Public Sans", system-ui, sans-serif',
   dimCount: '11px "Public Sans", system-ui, sans-serif',

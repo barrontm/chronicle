@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { parseDoc } from './doc';
-import { eraRegions, ELSEWHERE, isEra } from './eras';
+import { eraHighlights, eraRegions, ELSEWHERE, isEra } from './eras';
 import type { Highlight, Relation, TimelineItem } from './types';
 
 const NOW = 2026.8;
@@ -80,5 +80,26 @@ describe('eraRegions', () => {
     expect(eraRegions([ev('x', 1)], [], [], NOW)).toEqual([]);
     const [r] = eraRegions([{ ...span('modern', 1900, 0, { subject: 'period' }), end: undefined }], [], [], NOW);
     expect(r.eras[0].e).toBe(NOW);
+  });
+});
+
+describe('themes', () => {
+  const items = [
+    span('classical', -480, -323, { subject: 'period', region: 'Greece', themes: [{ id: 't1', label: ' War ', highlightIds: ['h1', 'h2', 'gone'] }, { id: 't2', label: 'Plays', highlightIds: ['h3'] }, { id: 't3', label: '  ', highlightIds: [] }] }),
+    span('fifty', -479, -431, { subject: 'period', region: 'Greece' }),
+    ev('war', -420, { lanes: ['war'] }), ev('tribute', -454), ev('play', -458), ev('later', -100),
+  ];
+  const hs = [hl('h1', ['war'], 'war', 'economy'), hl('h2', ['tribute'], 'economy'), hl('h3', ['play']), hl('h4', ['tribute']), hl('h5', ['later'])];
+  it('gives each era its themes as chips: label, highlights, main lane and what they are used by', () => {
+    const era = eraRegions(items, hs, [], NOW)[0].eras.find((e) => e.id === 'classical')!;
+    expect(era.themes).toEqual([
+      { id: 't1', label: 'War', highlights: 2, lane: 'economy', ids: ['war', 'tribute'] },
+      { id: 't2', label: 'Plays', highlights: 1, lane: undefined, ids: ['play'] },
+    ]);
+  });
+  it('lists the highlights in an era, through its inner eras, to pick from', () => {
+    expect(eraHighlights(items, hs, [], 'classical', NOW).map((h) => h.id)).toEqual(['h1', 'h2', 'h3', 'h4']);
+    expect(eraHighlights(items, hs, [], 'fifty', NOW).map((h) => h.id)).toEqual(['h2', 'h3', 'h4']);
+    expect(eraHighlights(items, hs, [], 'nothing', NOW)).toEqual([]);
   });
 });

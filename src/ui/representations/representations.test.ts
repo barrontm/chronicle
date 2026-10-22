@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { SUBJECT_KINDS, type Relation, type TimelineItem } from '../../model/types';
 import { makerOf, markOf, REPRESENTATIONS, representationOf, warOf } from '.';
+import { chipLines, chipPrims, packChips, parseThemeKey, themeKey } from './era';
 
 const rel = (fromId: string, toId: string, type: Relation['type'] = 'part-of'): Relation => ({ id: `${fromId}>${toId}`, fromId, toId, type, updatedAt: 0 });
 
@@ -71,5 +72,31 @@ describe('makerOf', () => {
   it('falls back to the first connected person, and never to anything but a life', () => {
     expect(makerOf(items, [rel('homer', 'histories', 'influenced')]).get('histories')).toBe('homer');
     expect(makerOf(items, [rel('histories', 'athens', 'related')]).has('histories')).toBe(false);
+  });
+});
+
+describe('theme chips', () => {
+  const M = (_: string, s: string) => s.length * 7;
+  const t = (id: string, label: string) => ({ era: 'e', theme: { id, label, highlights: 3, lane: 'war' as const, ids: [] } });
+  it('packs chips onto new lines when they run past the room, never leaving one out', () => {
+    const boxes = packChips([t('a', 'War'), t('b', 'Democracy'), t('c', 'Plays')], 100, 300, M);
+    expect(boxes.map((b) => b.line)).toEqual([0, 0, 1]);
+    expect(boxes[0].x).toBe(100);
+    expect(boxes[2].x).toBe(100);
+    expect(chipLines(boxes)).toBe(2);
+    expect(chipLines([])).toBe(0);
+  });
+  it('cuts a long label short, and gives a narrow era at least 150 px', () => {
+    const [b] = packChips([t('a', 'Socrates, Plato, Aristotle and the schools')], 0, 20, M);
+    expect(b.label.endsWith('…')).toBe(true);
+    expect(b.w).toBeLessThanOrEqual(150);
+  });
+  it('draws a square in the theme’s lane pigment and a target id that names its era', () => {
+    const [b] = packChips([t('a', 'War')], 0, 300, M);
+    const prims = chipPrims(b, 10, { hot: false, picked: true });
+    expect(prims[1]).toMatchObject({ fill: 'var(--pig-cinnabar)' });
+    expect(prims[0].cls).toContain('picked');
+    expect(parseThemeKey(themeKey('i_classical', 't-war'))).toEqual({ era: 'i_classical', theme: 't-war' });
+    expect(parseThemeKey('pol:x')).toBeUndefined();
   });
 });

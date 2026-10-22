@@ -10,7 +10,7 @@ import { loadCountries } from '../data/countries';
 import { formatYear } from '../model/dates';
 import type { Category, Flow, Relation, Series, Territory, TimelineItem } from '../model/types';
 import { draftFeatures, type Draft } from './drawing';
-import { activeRoutes, arcsBetween, causeOf, choroplethAt, CONTACT_COLOR, draftPins, type FollowAt, flowDashes, flowFeatures, flowScale, mixColor, pinsAt, territoriesAt, territoryCircles, type FlowLineProps, type FlowPlaces } from './mapData';
+import { activeRoutes, arcsBetween, causeOf, choroplethAt, CONTACT_COLOR, draftPins, type EraExtent, eraTintsAt, type FollowAt, flowDashes, flowFeatures, flowScale, mixColor, pinsAt, territoriesAt, territoryCircles, type FlowLineProps, type FlowPlaces } from './mapData';
 import { formatValue } from './util';
 
 /**
@@ -67,6 +67,8 @@ interface Props {
   onDrawPoint?: (p: [number, number], nearFirst: boolean) => void;
   /** Following the overview (`followAt`): shapes over the territories, pins, marked labels, and where to fit. */
   follow?: FollowAt;
+  /** Each region's eras and where they were (`eraExtents`); the year's are tinted. */
+  eras?: EraExtent[];
 }
 
 export interface MapFit { bounds: [number, number, number, number]; at: number }
@@ -78,10 +80,13 @@ function fitMap(map: maplibregl.Map, [w, s, e, n]: MapFit['bounds']) {
 }
 
 const BASE = import.meta.env.BASE_URL;
+/** Years over which one era's tint crossfades into the next's. */
+const ERA_FADE = 8;
 const EMPTY: FeatureCollection = { type: 'FeatureCollection', features: [] };
+const EMPTY_ERAS: ReturnType<typeof eraTintsAt> = { type: 'FeatureCollection', features: [] };
 
 interface Colors {
-  water: string; land: string; border: string; river: string; ink: string; panel: string; backdrop: string;
+  water: string; land: string; border: string; river: string; ink: string; panel: string; backdrop: string; era: string;
   resolve: (c: string) => string;
 }
 
@@ -94,7 +99,7 @@ function readColors(): Colors {
   };
   return {
     water: v('--map-water'), land: v('--map-land'), border: v('--map-border'), river: v('--map-river'),
-    ink: v('--ink'), panel: v('--panel'), backdrop: v('--map-backdrop'), resolve,
+    ink: v('--ink'), panel: v('--panel'), backdrop: v('--map-backdrop'), era: v('--pig-umber'), resolve,
   };
 }
 
@@ -114,6 +119,7 @@ function buildStyle(c: Colors): StyleSpecification {
       rivers: { type: 'geojson', data: `${BASE}geo/rivers.json` },
       graticule: { type: 'geojson', data: graticule() },
       backdrop: { type: 'geojson', data: EMPTY, attribution: `<a href="${BASEMAPS_CREDIT.url}" target="_blank" rel="noreferrer">historical-basemaps</a>` },
+      eras: { type: 'geojson', data: EMPTY },
       territories: { type: 'geojson', data: EMPTY },
       circles: { type: 'geojson', data: EMPTY },
       arcs: { type: 'geojson', data: EMPTY },
@@ -139,6 +145,8 @@ function buildStyle(c: Colors): StyleSpecification {
       { id: 'borders', type: 'line', source: 'countries', layout: { visibility: 'none' }, paint: { 'line-color': c.border, 'line-width': 0.6 } },
       { id: 'backdrop-fill', type: 'fill', source: 'backdrop', paint: { 'fill-color': c.backdrop, 'fill-opacity': 0.06 } },
       { id: 'backdrop-line', type: 'line', source: 'backdrop', paint: { 'line-color': c.backdrop, 'line-opacity': 0.55, 'line-width': 0.8, 'line-dasharray': [3, 2] } },
+      // The year's era in each region: a faint umber wash over its extent, under the territories (Bob's pick A, 2026-10-21).
+      { id: 'eras-fill', type: 'fill', source: 'eras', paint: { 'fill-color': c.era, 'fill-opacity': ['*', 0.22, ['get', 'opacity']] } },
       { id: 'territories-fill', type: 'fill', source: 'territories', paint: { 'fill-color': ['get', 'color'], 'fill-opacity': 0.32 } },
       { id: 'territories-line', type: 'line', source: 'territories', paint: { 'line-color': ['get', 'color'], 'line-width': 1.6 } },
       // Following the overview: the picked polity in ink, the polities it dealt with in their contact's colour, its reach and earlier borders dashed.
@@ -199,6 +207,7 @@ function applyColors(map: maplibregl.Map, c: Colors) {
   map.setPaintProperty('borders', 'line-color', c.border);
   map.setPaintProperty('backdrop-fill', 'fill-color', c.backdrop);
   map.setPaintProperty('backdrop-line', 'line-color', c.backdrop);
+  map.setPaintProperty('eras-fill', 'fill-color', c.era);
   map.setPaintProperty('pins', 'circle-stroke-color', ['case', ['get', 'selected'], c.ink, c.panel]);
   map.setPaintProperty('follow-pins', 'circle-stroke-color', c.panel);
   map.setPaintProperty('draft-fill', 'fill-color', c.ink);
@@ -408,6 +417,15 @@ export default function MapView(props: Props) {
     }
   }, [seshat, ready]);
 
+  // The year's era in each region, crossfading at the turn (cut with reduced motion).
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !ready) return;
+    const tints = props.eras ? eraTintsAt(props.eras, territories, year, reducedMotion() ? 0 : ERA_FADE) : EMPTY_ERAS;
+    (map.getSource('eras') as GeoJSONSource).setData(tints);
+    // Which eras are tinted, the strongest first (for tests).
+    if (host.current) host.current.dataset.eras = tints.features.toSorted((a, b) => b.properties.opacity - a.properties.opacity).map((f) => f.properties.title).join(' | ');
+  }, [ready, props.eras, territories, year]);
   // Territories (only redrawn when a different snapshot becomes current).
   const terr = useMemo(() => territoriesAt(territories, year, colorOf), [territories, year, colorOf]);
   useEffect(() => {
