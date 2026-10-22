@@ -58,6 +58,7 @@ TimelineDoc
 - **Lanes are not categories.** A category is Bob's topic. A lane is one of six fixed sides of history (Politics and law, War, Economy, Philosophy and religion, Technology, Nature) that a polity or era opens into. An entry or highlight can be in several. `lanesOf(entry, doc)` decides: Bob's lanes win; else the kind of thing (a war is War, an idea Philosophy and religion); else the lanes of its highlights. The automatic sort never overrides what Bob set.
 - **The overview mark is Bob's choice.** `overview: 'shown'` puts an entry at the top of the overview; `'world'` makes it a world event, gold and always shown. There is no kind of entry for world events.
 - **Polities are territories.** A territory's `region` gives its strip a row, `strength` overrides the thickness its area gives it, and a `group` folds city-states into one strip. A territory can be a connection end; `side` says which side it took part on, so opposite sides of a war are at war and the same side are allied. Deleting a territory takes it out of its groups; deleting a highlight takes it out of strength points.
+- **An era's place on the map.** A territory linked to a period as `part of` it is where that era was on the map (`eraTerritory`). Without one, the map uses the area around its entries' places. Themes are on the period (`themes`), so neither needs a schema change.
 - **Region parents have no stamp.** `regionParents` merges per region, the newer copy winning. Groups merge like other records.
 
 ## Dates

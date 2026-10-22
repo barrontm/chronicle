@@ -1,5 +1,6 @@
-import type { Feature, FeatureCollection, LineString, Point, Position } from 'geojson';
-import { bbox, labelPoint } from '../data/geo';
+import type { Feature, FeatureCollection, LineString, MultiPolygon, Point, Polygon, Position } from 'geojson';
+import { bbox, clipToConvex, convexHull, labelPoint, pointBlob, type Area } from '../data/geo';
+import type { EraRegion } from '../model/eras';
 import { presenceAt, regionExtent, snapshotAt, valueAt } from '../model/atYear';
 import { formatYear, toDecimalYear } from '../model/dates';
 import type { Flow, FlowCause, FlowEnd, FlowRoute, Lane, Place, Relation, Series, SeriesPoint, Territory, TerritorySnapshot, TimelineItem } from '../model/types';
@@ -632,4 +633,94 @@ export function followAt(o: FollowInput): FollowAt {
   // Opening a lane refits: War takes in everyone it fought.
   if (b) out.pickFit = { key: `${pick}|${lane ?? ''}`, bounds: b };
   return out;
+}
+
+/** An era's place on the map: a territory Bob linked as `part of` it, else the hull of its entries' places clipped to land. */
+export interface EraExtent {
+  id: string;
+  title: string;
+  region: string;
+  /** Decimal years. */
+  s: number;
+  e: number;
+  territoryId?: string;
+  shape?: MultiPolygon;
+}
+
+/** How far around a lone place the hull reaches, in degrees (about 70 km). */
+const ERA_REACH = 0.6;
+
+/** Land outlines (outer rings) from the bundled countries, for clipping an era's hull to the coast. */
+export function landRings(fc: FeatureCollection): Position[][] {
+  const out: Position[][] = [];
+  for (const f of fc.features) {
+    const g = f.geometry;
+    if (g?.type === 'Polygon') out.push(g.coordinates[0]);
+    else if (g?.type === 'MultiPolygon') for (const p of g.coordinates) out.push(p[0]);
+  }
+  return out;
+}
+
+/**
+ * Each top-level era's extent (inner eras such as the Fifty Years fold into theirs). Its places are
+ * those of the era itself and every entry in it or its inner eras. Without a linked territory or at
+ * least one place, an era isn't on the map.
+ */
+export function eraExtents(regions: EraRegion[], items: TimelineItem[], relations: Relation[], territories: Territory[], land: Position[][]): EraExtent[] {
+  const byId = new Map(items.map((i) => [i.id, i]));
+  const terr = new Set(territories.map((t) => t.id));
+  const linked = new Map<string, string>();
+  for (const r of relations) if (r.type === 'part-of' && terr.has(r.fromId) && !linked.has(r.toId)) linked.set(r.toId, r.fromId);
+  const landBoxes = land.map((r) => bbox({ type: 'Polygon', coordinates: [r] }));
+  const out: EraExtent[] = [];
+  for (const R of regions) {
+    const kids = new Map<string, string[]>();
+    for (const e of R.eras) if (e.parent) kids.set(e.parent, [...(kids.get(e.parent) ?? []), e.id]);
+    const eraById = new Map(R.eras.map((e) => [e.id, e]));
+    for (const e of R.eras) {
+      if (e.parent && eraById.has(e.parent)) continue;
+      const base = { id: e.id, title: e.title, region: R.name, s: e.s, e: e.e };
+      const territoryId = linked.get(e.id);
+      if (territoryId) { out.push({ ...base, territoryId }); continue; }
+      const ids: string[] = [];
+      for (const stack = [e.id]; stack.length;) {
+        const id = stack.pop()!;
+        ids.push(id, ...(eraById.get(id)?.members ?? []));
+        stack.push(...(kids.get(id) ?? []));
+      }
+      const points = ids.flatMap((id) => { const it = byId.get(id); return it ? placesToDraw(it) : []; }).flatMap((p) => pointBlob([p.lon, p.lat], ERA_REACH));
+      const hull = convexHull(points);
+      if (!hull) continue;
+      const [w, s, ea, n] = bbox({ type: 'Polygon', coordinates: [hull] });
+      const pieces: Position[][][] = [];
+      land.forEach((ring, i) => {
+        const b = landBoxes[i];
+        if (b[2] < w || b[0] > ea || b[3] < s || b[1] > n) return;
+        const cut = clipToConvex(ring, hull);
+        if (cut) pieces.push([cut.map(([x, y]) => [round4(x), round4(y)])]);
+      });
+      if (pieces.length) out.push({ ...base, shape: { type: 'MultiPolygon', coordinates: pieces } });
+    }
+  }
+  return out;
+}
+
+export interface EraTintProps { id: string; title: string; region: string; opacity: number }
+
+/**
+ * The era of each region in a year, as a tint over its extent. Within `fade` years of the turn from
+ * one era to the next both are drawn, one fading out as the other fades in; 0 cuts (reduced motion).
+ */
+export function eraTintsAt(extents: EraExtent[], territories: Territory[], year: number, fade: number): FeatureCollection<Polygon | MultiPolygon, EraTintProps> {
+  const byId = new Map(territories.map((t) => [t.id, t]));
+  const ramp = (x: number) => Math.max(0, Math.min(1, x));
+  const features: Feature<Area, EraTintProps>[] = [];
+  for (const x of extents) {
+    const opacity = fade > 0 ? ramp((year - x.s) / fade + 0.5) * ramp((x.e - year) / fade + 0.5) : Number(year >= x.s && year < x.e);
+    if (opacity <= 0) continue;
+    const t = x.territoryId ? byId.get(x.territoryId) : undefined;
+    const geometry = t ? shapeOf(t, year) : x.shape;
+    if (geometry) features.push({ type: 'Feature', properties: { id: x.id, title: x.title, region: x.region, opacity }, geometry });
+  }
+  return fc(features);
 }

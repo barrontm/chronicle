@@ -4,6 +4,8 @@ import {
   authoredBy,
   bibliographyFor,
   createEmptyDoc,
+  eraTerritory,
+  setEraTerritory,
   DocValidationError,
   influencesOf,
   mergeDocs,
@@ -479,5 +481,25 @@ describe('authoredBy', () => {
   it('doesn’t match part of a word or a missing author', () => {
     expect(authoredBy('Andrei Platonov', 'Plato')).toBe(false);
     expect(authoredBy(undefined, 'Plato')).toBe(false);
+  });
+});
+
+describe('where an era was on the map', () => {
+  it('links one territory to it as part of it, swaps it, and lets go', () => {
+    let doc = createEmptyDoc();
+    doc = upsert(doc, 'items', { id: 'era', kind: 'span', title: 'Classical', start: { y: -480 }, end: { y: -323 }, categoryId: 'c', subject: 'period', updatedAt: 0 });
+    for (const id of ['t_a', 't_b']) doc = upsert(doc, 'territories', { id, title: id, categoryId: 'c', snapshots: [], updatedAt: 0 });
+    doc = upsert(doc, 'relations', { id: 'r_other', fromId: 'era', toId: 'era', type: 'related', updatedAt: 0 });
+    expect(eraTerritory(doc, 'era')).toBeUndefined();
+    doc = setEraTerritory(doc, 'era', 't_a');
+    expect(eraTerritory(doc, 'era')?.id).toBe('t_a');
+    const same = setEraTerritory(doc, 'era', 't_a');
+    expect(same.relations).toEqual(doc.relations);
+    doc = setEraTerritory(doc, 'era', 't_b');
+    expect(eraTerritory(doc, 'era')?.id).toBe('t_b');
+    expect(doc.relations.filter((r) => r.type === 'part-of')).toHaveLength(1);
+    doc = setEraTerritory(doc, 'era', undefined);
+    expect(eraTerritory(doc, 'era')).toBeUndefined();
+    expect(doc.relations.map((r) => r.id)).toEqual(['r_other']);
   });
 });

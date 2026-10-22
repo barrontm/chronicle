@@ -9,7 +9,7 @@ import { polityMembers } from '../../model/polities';
 import { prominence as prominenceOf } from '../../model/prominence';
 import type { DatedItem, Lane, Relation } from '../../model/types';
 import {
-  AXIS_H, describeEntry, describeEra, describeLane1, eraLanes, ERAS_BACK, HEAD1_H, LANE_TOGGLE, OPEN_PICK, polityLanes, hitBox, hitTest, laneAt, layout, maxScroll, MIN_HIT, NO_LANE, prepare, REGION_GROW, regionSpan, ROW_H, stepActive, stepEra, stepLane1,
+  AXIS_H, describeEntry, describeEra, describeLane1, eraLanes, ERAS_BACK, HEAD1_H, head1H, LANE_TOGGLE, OPEN_PICK, polityLanes, hitBox, hitTest, laneAt, layout, maxScroll, MIN_HIT, NO_LANE, prepare, REGION_GROW, regionSpan, ROW_H, stepActive, stepEra, stepLane1,
   type Env, type View,
 } from './layout';
 import { ARROW } from '../representations/influence';
@@ -334,6 +334,25 @@ describe('level 0: the overview', () => {
   const at = (win: [number, number], extra: Partial<View> = {}, e = env(1200, 1400)) => layout(D, view(win[0], win[1], extra), e, 0);
   const strip = (S: Scene, id: string) => S.z[1].find((p) => p.t === 7 && p.id === id);
 
+  it('puts each era’s theme chips on its wash, and the band grows a line for each line they take', () => {
+    const bare = doc.items.filter(isDated).map((i) => ({ ...i, themes: undefined }));
+    const D0 = prepare(bare, lanes, { now: 2026, prominence, relations: doc.relations, eras: eraRegions(bare, doc.highlights, doc.relations, 2026), overview: O });
+    const chips = (S: Scene) => S.z[2].filter((p) => p.cls?.startsWith('tl-chip') && p.t === 0);
+    const greece = (S: Scene) => S.targets.filter((t) => t.id === 'i_classical')[0];
+    const wide = at([-520, -300]), narrow = at([-900, 100]);
+    expect(chips(wide).map((p) => p.id)).toContain('theme:i_classical:t-war');
+    expect(chips(wide)).toHaveLength(8);
+    expect(textOf(wide)).toContain('Peloponnesian War');
+    // Narrower, the chips wrap onto more lines and the band grows to hold them all.
+    expect(chips(narrow)).toHaveLength(8);
+    const plain = layout(D0, view(-900, 100), env(1200, 1400), 0);
+    expect(greece(narrow).h).toBeGreaterThan(greece(plain).h);
+    expect(greece(narrow).h).toBeGreaterThan(greece(wide).h);
+    // A chip is a target of its own on top of the wash.
+    const c = wide.targets.find((t) => t.id === 'theme:i_classical:t-dem')!;
+    expect(hitTest(wide, c.x + 4, c.y + 4)?.id).toBe('theme:i_classical:t-dem');
+  });
+
   it('grows the region Bob clicked on the map by 30% and fades the other bands to 40%, still drawn', () => {
     const win: [number, number] = [-560, -320];
     const plain = at(win), focused = at(win, { region: 'Persia' });
@@ -346,7 +365,7 @@ describe('level 0: the overview', () => {
     expect(strip(focused, 'pol:t_persia')!.a).toBe(strip(plain, 'pol:t_persia')!.a);
     expect(textOf(focused)).toContain('Macedon');
     // Its band can be scrolled to.
-    expect(regionSpan(D, view(win[0], win[1], { region: 'Persia' }), 'Persia', false)![0]).toBeGreaterThan(regionSpan(D, view(win[0], win[1]), 'Greece', false)![0]);
+    expect(regionSpan(D, view(win[0], win[1], { region: 'Persia' }), 'Persia', env())![0]).toBeGreaterThan(regionSpan(D, view(win[0], win[1]), 'Greece', env())![0]);
   });
 
   it('puts the bands in the overview’s order, with a group folded into one sub-row and the Delian League in another', () => {
@@ -534,6 +553,32 @@ describe('level 1: an era’s six lanes', () => {
     expect(owls.t === 0 && owls.y).toBeGreaterThan(AXIS_H + HEAD1_H);
   });
 
+  it('lines its theme chips up under the name, and a picked theme fades everything outside it', () => {
+    expect(EL.themes.map((t) => t.theme.id)).toContain('t-war');
+    expect(head1H(EL, env(1200, 2400))).toBeGreaterThan(HEAD1_H);
+    // One line, ending in "+N more" when they don't all fit; opened, they take as many lines as they need.
+    const phone = { ...env(412, 2400), gutter: 0 };
+    expect(head1H(EL, phone)).toBe(HEAD1_H + 25);
+    const shut = layout(D, view(win.start, win.end, { era: EL }), phone, 1);
+    expect(textOf(shut).some((t) => /^\+\d+ more$/.test(t))).toBe(true);
+    const opened = { ...EL, allThemes: true };
+    expect(head1H(opened, phone)).toBeGreaterThan(head1H(EL, phone));
+    expect(textOf(layout(D, view(win.start, win.end, { era: opened }), phone, 1))).toContain('Show fewer');
+    // A picked theme past the first line opens them all.
+    const lastKey = `${EL.themes.at(-1)!.era}:${EL.themes.at(-1)!.theme.id}`;
+    expect(head1H(EL, phone, lastKey)).toBe(head1H(opened, phone));
+    const war = EL.themes.find((t) => t.theme.id === 't-war')!.theme;
+    const S = open({ theme: { key: 'i_classical:t-war', ids: new Set(war.ids) } });
+    const chip = S.z[3].find((p) => p.t === 0 && p.id === 'theme:i_classical:t-war')!;
+    expect(chip.cls).toContain('picked');
+    const marks = [...S.z[1], ...S.z[2]].filter((p) => p.id && p.cls && !p.id.startsWith('theme:'));
+    const inIt = marks.filter((p) => war.ids.includes(p.id!)), outside = marks.filter((p) => !war.ids.includes(p.id!) && D.byId.has(p.id!));
+    expect(inIt.length).toBeGreaterThan(0);
+    expect(inIt.every((p) => !p.cls!.includes('dimmed'))).toBe(true);
+    expect(outside.some((p) => p.cls!.includes('dimmed'))).toBe(true);
+    expect(textOf(open())).toContain('Athenian democracy');
+  });
+
   it('is a vertical list on a phone: names above, bars without labels, then a dated list to tap', () => {
     const S = open({}, { ...env(412, 6000), gutter: 0 });
     expect(S.gutter.length).toBe(0);
@@ -621,6 +666,12 @@ describe('level 1: a polity’s six lanes', () => {
     expect(textOf(S)).toContain(`Show all ${war.order.length} ▾`);
     const toggle = S.targets.find((t) => t.id === `${LANE_TOGGLE}war` && t.gutter)!;
     expect(hitTest(S, toggle.x + 20, toggle.y + 12)?.id).toBe(`${LANE_TOGGLE}war`);
+  });
+
+  it('carries the themes of the eras its region had while it lived, outer eras first; a world event has none', () => {
+    expect(athens().themes.map((t) => `${t.era}:${t.theme.id}`)).toContain('i_classical:t-war');
+    expect(athens().themes[0].era).toBe('i_classical');
+    expect(polityLanes(D, 'i_alexander_persia', ['i_issus'], dims)!.themes).toEqual([]);
   });
 
   it('opens one lane to all its entries, and says when a lane is empty', () => {

@@ -198,14 +198,14 @@ async function scrollToMark(timeline: Locator, target: Locator) {
   // Below the axis and level 1's header row, which a click there would hit instead.
   const lo = host.y + 90, hi = host.y + host.height - 20;
   for (let i = 0; i < 150; i++) {
-    // Any one of its marks in view will do (a world event has one in each band it touched).
+    // Any one of its marks in view will do (a world event has one in each band it touched). Not drawn at all: look up first, then down.
     const mids = (await target.evaluateAll((els) => els.map((e) => { const r = e.getBoundingClientRect(); return r.y + Math.min(r.height, 30) / 2; })));
     if (mids.some((m) => m > lo && m < hi)) break;
     const mid = mids.sort((a, b) => Math.min(Math.abs(a - lo), Math.abs(a - hi)) - Math.min(Math.abs(b - lo), Math.abs(b - hi)))[0];
     await timeline.evaluate(async (el, at) => {
       el.dispatchEvent(new WheelEvent('wheel', { deltaY: at.dy, shiftKey: true, clientX: at.x, clientY: at.y, bubbles: true, cancelable: true }));
       await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
-    }, { x: host.x + host.width / 2, y: host.y + host.height / 2, dy: mid !== undefined && mid <= lo ? -40 : 40 });
+    }, { x: host.x + host.width / 2, y: host.y + host.height / 2, dy: mid !== undefined ? (mid <= lo ? -40 : 40) : i < 40 ? -40 : 40 });
   }
   await expect(target.first()).toBeVisible();
 }
@@ -337,8 +337,8 @@ test('Athens opens into its six lanes: Laurion in Economy, the war in War; a lan
 
   // Opening War shows all of it; Esc closes it again, then folds Athens back into the overview, then lets go of it.
   const toggle = timeline.locator('text.tl-lane-toggle[data-id="__lane:war"]');
-  await expect(toggle).toHaveText(/^Show all \d+ ▾$/);
   await scrollToMark(timeline, toggle);
+  await expect(toggle).toHaveText(/^Show all \d+ ▾$/);
   await toggle.click({ force: true });
   await expect(toggle).toHaveText('Show fewer ▴');
   if (!isMobile) await scrollToMark(timeline, timeline.locator('.tl-phase[data-id=i_pelop]'));
@@ -578,4 +578,53 @@ test('⌘-drag boxes entries; Edit sets a lane on all of them, Delete removes th
   await expect(page.getByTestId('item-view')).toHaveCount(0);
   await timeline.press('Escape');
   await expect(bar).toHaveCount(0);
+});
+
+test('a theme added to Classical Greece shows as a chip on its era, and the map’s Greek tint plays from Archaic to Hellenistic', async ({ page }) => {
+  test.slow();
+  await page.addInitScript(() => { try { localStorage.setItem('chronicle.speed', '50'); } catch { /* fine */ } });
+  await page.goto('/');
+  await expect(page.getByTestId('save-state')).toHaveText('Saved on this device');
+  await page.getByTestId('import-input').setInputFiles(fileURLToPath(new URL('../tests/fixtures/greece/classical-greece.json', import.meta.url)));
+  await expect(page.locator('.doc-title')).toHaveValue(/Classical Greece/);
+  const timeline = page.locator('[data-testid=timeline][data-ready]');
+  await expect(timeline).toBeVisible();
+
+  // On the period's panel: a new theme over one of its highlights, and where it is on the map.
+  await openFromSearch(page, 'Classical Greece');
+  const view = page.getByTestId('item-view');
+  await expect(view.getByRole('heading', { name: 'Classical Greece' })).toBeVisible();
+  const themes = view.getByTestId('themes');
+  await expect(themes.getByRole('button', { name: 'Edit the theme Peloponnesian War' })).toBeVisible();
+  await themes.getByRole('button', { name: 'Add a theme' }).click();
+  const form = themes.getByTestId('theme-form');
+  await form.getByLabel('Theme').fill('Building program');
+  await form.getByRole('checkbox').first().check();
+  await form.getByRole('button', { name: 'Add theme' }).click();
+  await expect(themes.getByRole('button', { name: 'Edit the theme Building program' })).toContainText('1 highlight');
+  await expect(themes.getByLabel('Where on the map')).toHaveValue('');
+  await page.getByRole('button', { name: 'Close panel' }).click();
+
+  // Its chip sits on the era's wash in the overview; clicking it opens the era with the theme picked.
+  await page.getByTestId('time-bar').getByRole('button', { name: 'Overview' }).click();
+  await expect(timeline).toHaveAttribute('data-level', '0');
+  const chip = timeline.locator('text.tl-chip-label', { hasText: 'Building program' });
+  await scrollToMark(timeline, chip);
+  await chip.click();
+  await expect(timeline).toHaveAttribute('data-level', '1');
+  await expect(timeline.locator('text.tl-era-head', { hasText: 'Classical Greece' })).toBeVisible();
+  await expect(timeline.locator('rect.tl-chip.picked')).toHaveAttribute('data-id', /^theme:i_classical:/);
+  await expect(timeline.locator('.dimmed').first()).toBeAttached();
+
+  // The map tints Greece in the year's era as it plays.
+  const map = page.locator('[data-testid=map][data-ready]');
+  await expect(map).toBeAttached({ timeout: 20_000 });
+  const year = page.getByTestId('yearbar').getByLabel('Year', { exact: true });
+  await year.fill('500 BCE');
+  await year.press('Enter');
+  await expect(map).toHaveAttribute('data-eras', /^Archaic Greece/);
+  await page.getByRole('button', { name: 'Play through time' }).click();
+  await expect(map).toHaveAttribute('data-eras', /^Classical Greece/, { timeout: 15_000 });
+  await expect(map).toHaveAttribute('data-eras', /^Hellenistic period/, { timeout: 15_000 });
+  await page.getByRole('button', { name: 'Pause' }).click();
 });

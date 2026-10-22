@@ -15,19 +15,29 @@ export function parseCountries(fc: FeatureCollection): CountryPlace[] {
   return [...byCode.values()].sort((a, b) => a.name.localeCompare(b.name));
 }
 
-let loading: Promise<CountryPlace[]> | null = null;
+let file: Promise<FeatureCollection> | null = null;
 
-/** The bundled countries (precached, so this works offline). Loaded once. */
-export function loadCountries(): Promise<CountryPlace[]> {
-  loading ??= fetch(`${import.meta.env.BASE_URL}geo/countries.json`)
+/** The bundled countries file (precached, so this works offline). Fetched once. */
+export function loadCountriesFile(): Promise<FeatureCollection> {
+  file ??= fetch(`${import.meta.env.BASE_URL}geo/countries.json`)
     .then((r) => {
       if (!r.ok) throw new Error(`Couldn’t load the list of countries (${r.status}).`);
       return r.json() as Promise<FeatureCollection>;
     })
-    .then(parseCountries)
     .catch((e: unknown) => {
-      loading = null;
+      file = null;
       throw e;
     });
+  return file;
+}
+
+let loading: Promise<CountryPlace[]> | null = null;
+
+/** The bundled countries as places, loaded once. */
+export function loadCountries(): Promise<CountryPlace[]> {
+  loading ??= loadCountriesFile().then(parseCountries).catch((e: unknown) => {
+    loading = null;
+    throw e;
+  });
   return loading;
 }

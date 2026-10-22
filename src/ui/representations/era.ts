@@ -1,7 +1,7 @@
 import { LANES } from '../../model/types';
-import type { Era } from '../../model/eras';
+import type { Era, EraTheme } from '../../model/eras';
 import type { Measure, Prim } from '../timeline/scene';
-import { LANE_LABEL } from '../util';
+import { LANE_LABEL, PIGMENT } from '../util';
 
 /**
  * An era on the overview: the backdrop behind its region's polities (docs/design.md, Overview).
@@ -66,4 +66,78 @@ export function bandSummary(e: Era): string {
   if (!e.highlights) return `${e.when} · No highlights yet`;
   const dims = LANES.filter((d) => e.mix[d]).sort((a, b) => e.mix[b] - e.mix[a]).map((d) => `${e.mix[d]} ${LANE_LABEL[d].toLowerCase()}`);
   return `${e.when} · ${e.highlights} ${e.highlights === 1 ? 'highlight' : 'highlights'}${dims.length ? `: ${dims.join(', ')}` : ''}`;
+}
+
+/* ---------- theme chips ---------- */
+
+/** A theme chip's id as a target: `theme:<era>:<theme>`. */
+export const THEME = 'theme:';
+export const themeKey = (era: string, theme: string) => `${THEME}${era}:${theme}`;
+export function parseThemeKey(id: string): { era: string; theme: string } | undefined {
+  if (!id.startsWith(THEME)) return undefined;
+  const [era, theme] = id.slice(THEME.length).split(':');
+  return era && theme ? { era, theme } : undefined;
+}
+
+/** A chip's height, and a line of chips with the gap under it. */
+const CHIP_H = 17;
+export const CHIP_LINE = 21;
+const SQ = 7;
+
+export interface ChipBox { era: string; theme: EraTheme; label: string; x: number; w: number; line: number }
+
+const countOf = (t: EraTheme) => String(t.highlights);
+const chipW = (M: Measure, label: string, t: EraTheme) => 6 + SQ + 5 + M('chip', label) + 5 + M('chipN', countOf(t)) + 6;
+
+/** A narrow era's chips get at least this much room, running on past its end. */
+const CHIP_ROOM = 150;
+
+/**
+ * Chips packed left to right from `left`, onto a new line whenever the next would run past `right`.
+ * None is ever left out: a chip wider than the room has its label cut short.
+ */
+export function packChips(chips: { era: string; theme: EraTheme }[], left: number, right: number, M: Measure): ChipBox[] {
+  const room = Math.max(right - left, CHIP_ROOM);
+  const out: ChipBox[] = [];
+  let x = left, line = 0;
+  for (const c of chips) {
+    let label = c.theme.label, w = chipW(M, label, c.theme);
+    if (w > room) {
+      const bare = chipW(M, '', c.theme);
+      while (label.length > 1 && bare + M('chip', `${label}…`) > room) label = label.slice(0, -1);
+      label = `${label.trimEnd()}…`;
+      w = bare + M('chip', label);
+    }
+    if (x > left && x + w > left + room) { x = left; line++; }
+    out.push({ ...c, label, x, w, line });
+    x += w + 4;
+  }
+  return out;
+}
+
+/** How many lines some packed chips take. */
+export const chipLines = (boxes: ChipBox[]) => (boxes.length ? Math.max(...boxes.map((b) => b.line)) + 1 : 0);
+
+/**
+ * A theme chip (docs/design.md): a square in its main lane's pigment, the label in Spectral and its
+ * count. Hovered, its edge takes the pigment; picked, it's washed in it too.
+ */
+export function chipPrims(b: ChipBox, top: number, o: { hot: boolean; picked: boolean; a?: number; role?: string }): Prim[] {
+  const color = `var(--pig-${PIGMENT[b.theme.lane ?? 'none']})`;
+  const k = `ch${b.era}:${b.theme.id}`, a = o.a ?? 1, id = themeKey(b.era, b.theme.id);
+  const cls = `tl-chip${o.picked ? ' picked' : ''}${o.role ?? ''}`;
+  const cy = top + CHIP_H / 2;
+  const tx = b.x + 6 + SQ + 5;
+  return [
+    { t: 0, k, a, cls, id, x: b.x, y: top, w: b.w, h: CHIP_H, r: 3, fill: o.picked ? `color-mix(in srgb, ${color} 14%, var(--panel))` : 'var(--panel)', stroke: o.hot || o.picked ? color : 'var(--rule)', sw: 1 },
+    { t: 0, k: `${k}q`, a, x: b.x + 6, y: cy - SQ / 2, w: SQ, h: SQ, r: 1, fill: color },
+    { t: 2, k: `${k}t`, a, cls: 'tl-chip-label', id, x: tx, y: cy + 4.2, s: b.label, f: 'chip', fill: 'var(--ink)' },
+    { t: 2, k: `${k}n`, a, x: b.x + b.w - 6, y: cy + 3.6, s: countOf(b.theme), f: 'chipN', fill: 'var(--muted)', anchor: 'end' },
+  ];
+}
+
+/** What a chip's tooltip says. */
+export function chipSummary(t: EraTheme): string {
+  const n = `${t.highlights} ${t.highlights === 1 ? 'highlight' : 'highlights'}`;
+  return t.lane ? `${n}, mostly ${LANE_LABEL[t.lane].toLowerCase()}` : n;
 }

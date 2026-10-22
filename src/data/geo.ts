@@ -167,3 +167,51 @@ export function parseGeoJsonAreas(text: string): Array<{ name?: string; geometry
   if (!out.length) throw new Error('No areas in this file. It needs polygons, not just points or lines.');
   return out;
 }
+
+const cross = (o: Position, a: Position, b: Position) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
+
+/** The convex hull of some points (Andrew's monotone chain), counter-clockwise and closed; null for fewer than three apart. */
+export function convexHull(points: Position[]): Position[] | null {
+  const p = [...points].sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+  if (p.length < 3) return null;
+  const lower: Position[] = [], upper: Position[] = [];
+  for (const q of p) {
+    while (lower.length >= 2 && cross(lower[lower.length - 2], lower[lower.length - 1], q) <= 0) lower.pop();
+    lower.push(q);
+  }
+  for (let i = p.length - 1; i >= 0; i--) {
+    while (upper.length >= 2 && cross(upper[upper.length - 2], upper[upper.length - 1], p[i]) <= 0) upper.pop();
+    upper.push(p[i]);
+  }
+  const hull = [...lower.slice(0, -1), ...upper.slice(0, -1)];
+  return hull.length < 3 ? null : [...hull, hull[0]];
+}
+
+/**
+ * A ring cut to a convex, counter-clockwise, closed ring (Sutherland–Hodgman). A concave ring can
+ * come back with zero-width slivers along the cut, which fill nothing. Null when nothing is left.
+ */
+export function clipToConvex(ring: Position[], clip: Position[]): Position[] | null {
+  let out = ring.slice(0, -1);
+  for (let i = 0; i < clip.length - 1 && out.length; i++) {
+    const a = clip[i], b = clip[i + 1];
+    const input = out;
+    out = [];
+    for (let j = 0; j < input.length; j++) {
+      const p = input[j], q = input[(j + 1) % input.length];
+      const pin = cross(a, b, p) >= 0, qin = cross(a, b, q) >= 0;
+      if (pin) out.push(p);
+      if (pin !== qin) {
+        const dp = cross(a, b, p), dq = cross(a, b, q), t = dp / (dp - dq);
+        out.push([p[0] + (q[0] - p[0]) * t, p[1] + (q[1] - p[1]) * t]);
+      }
+    }
+  }
+  return out.length < 3 ? null : [...out, out[0]];
+}
+
+/** A point drawn as a small octagon `r` degrees across (wider in longitude away from the equator), for a hull around one or two places. */
+export function pointBlob([lon, lat]: Position, r: number): Position[] {
+  const k = 1 / Math.max(0.2, Math.cos((lat * Math.PI) / 180));
+  return Array.from({ length: 8 }, (_, i) => [lon + r * k * Math.cos((i * Math.PI) / 4), lat + r * Math.sin((i * Math.PI) / 4)]);
+}

@@ -725,3 +725,20 @@ export function mergeDocs(a: TimelineDoc, b: TimelineDoc): TimelineDoc {
     updatedAt: Math.max(a.updatedAt, b.updatedAt),
   };
 }
+
+/** The territory Bob picked as where an era was on the map: one linked to it as `part of`. */
+export function eraTerritory(doc: Pick<TimelineDoc, 'relations' | 'territories'>, eraId: string): Territory | undefined {
+  const r = doc.relations.find((x) => x.type === 'part-of' && x.toId === eraId && doc.territories.some((t) => t.id === x.fromId));
+  return r && doc.territories.find((t) => t.id === r.fromId);
+}
+
+/** Make a territory where an era was on the map (a `part of` connection), or, with none, go back to where its entries are. */
+export function setEraTerritory(doc: TimelineDoc, eraId: string, territoryId: string | undefined, now = Date.now()): TimelineDoc {
+  let next = doc;
+  for (const r of doc.relations) {
+    if (r.type !== 'part-of' || r.toId !== eraId || !doc.territories.some((t) => t.id === r.fromId)) continue;
+    if (r.fromId === territoryId) return next;
+    next = remove(next, 'relations', r.id, now);
+  }
+  return territoryId ? upsert(next, 'relations', { id: newId('r'), fromId: territoryId, toId: eraId, type: 'part-of', updatedAt: now }, now) : next;
+}

@@ -1,12 +1,12 @@
 import { axisTicks, formatRange, formatYear, toDecimalYear } from '../../model/dates';
-import { ELSEWHERE, type Era, type EraRegion } from '../../model/eras';
+import { ELSEWHERE, type Era, type EraRegion, type EraTheme } from '../../model/eras';
 import type { OGroup, OPolity, Overview } from '../../model/overview';
 import { areaWeight, strengthAt, strengthKnown, stripShare, UNKNOWN_SHARE } from '../../model/strength';
 import { describeEffect, laneInfluences, type LaneInfluence } from '../../model/doc';
 import { LANES, type DatedItem, type Lane, type Relation, type TimelineItem } from '../../model/types';
 import { anchors, arcCurve, loopCurve, type Box as Edges } from '../influenceLinks';
 import { makerOf, markOf, representationOf, warOf, type Representation } from '../representations';
-import { innerPrims, washPrims } from '../representations/era';
+import { chipLines, chipPrims, CHIP_LINE, innerPrims, packChips, themeKey, washPrims, type ChipBox } from '../representations/era';
 import { ARROW, arrowPrims, type ArrowIn } from '../representations/influence';
 import { stripPrims, type StripLook } from '../representations/polity';
 import type { YearWindow } from '../timeNav';
@@ -338,14 +338,34 @@ const REGION_FADE = 0.4;
 
 /** A sub-row on screen: what's in it, how tall and how faded (a group's members while it unfolds), and the group whose members it holds. */
 interface SubGeo { slots: Slot[]; y: number; h: number; a: number; group?: PGroup; folding?: number }
-interface BandGeo { B: PBand; top: number; bottom: number; empty: boolean; headY: number; worldY: number; subs: SubGeo[] }
+interface BandGeo { B: PBand; top: number; bottom: number; empty: boolean; headY: number; worldY: number; subs: SubGeo[]; chips: ChipBox[]; chipY: number }
+/** What level 0's geometry needs of the screen: band heights depend on how many lines their theme chips take. */
+export type Fit = Pick<Env, 'w' | 'gutter' | 'measure'>
 interface Geo { topH: number; bands: BandGeo[]; H: number }
 
 const inWin = (x: { s: number; e: number }, win: YearWindow) => x.e >= win.start && x.s <= win.end;
 const unfoldOf = (V: Pick<View, 'unfolded'>, id: string) => V.unfolded?.get(id) ?? 0;
 
+/** Outer eras in a band (the backdrop's washes); inner ones are drawn as rules. */
+const outerEras = (B: PBand) => B.eras.filter((e) => !e.parent || !B.eras.some((o) => o.id === e.parent));
+
+/** A band's theme chips: each outer era's in view, then its inner eras', packed inside the era's years (as much of them as is in view). */
+function bandChips(B: PBand, win: YearWindow, F: Fit): ChipBox[] {
+  const x0 = F.gutter, x1 = F.w, ppy = (x1 - x0) / (win.end - win.start);
+  const X = (y: number) => x0 + (y - win.start) * ppy;
+  const out: ChipBox[] = [];
+  for (const e of outerEras(B)) {
+    if (!inWin(e, win)) continue;
+    const inner = (id: string): PEra[] => B.eras.filter((o) => o.parent === id).flatMap((o) => [o, ...inner(o.id)]);
+    const chips = [e, ...inner(e.id)].flatMap((x) => x.themes.map((theme) => ({ era: x.id, theme })));
+    if (chips.length) out.push(...packChips(chips, Math.max(X(e.s), x0) + 6, Math.min(X(e.e), x1) - 6, F.measure));
+  }
+  return out;
+}
+
 /** Where every band and sub-row sits, in px from the top of the content (under the axis). */
-function overviewGeo(D: Prepared, V: Pick<View, 'win' | 'unfolded' | 'region'>, phone: boolean): Geo {
+function overviewGeo(D: Prepared, V: Pick<View, 'win' | 'unfolded' | 'region'>, F: Fit): Geo {
+  const phone = F.w < PHONE_W;
   const base = phone ? SUB_H_PHONE : SUB_H;
   const topH = D.top.length ? TOP_PAD * 2 + Math.min(TOP_ROWS, D.top.length) * TOP_ROW_H : 0;
   let y = topH;
@@ -356,6 +376,9 @@ function overviewGeo(D: Prepared, V: Pick<View, 'win' | 'unfolded' | 'region'>, 
     const top = y;
     const headY = top + GOLD_H + 13;
     y += GOLD_H + HEAD_LINE;
+    // Theme chips never hide: the band grows a line for each line they need.
+    const chips = bandChips(B, V.win, F), chipY = y;
+    y += chipLines(chips) * CHIP_LINE;
     const worldY = y + 12;
     if (B.named) y += WORLD_LINE;
     // A band with no polities in the years in view is one thin row that says so.
@@ -378,20 +401,20 @@ function overviewGeo(D: Prepared, V: Pick<View, 'win' | 'unfolded' | 'region'>, 
     y += BAND_PAD;
     const bottom = y;
     y += BAND_GAP;
-    return { B, top, bottom, empty, headY, worldY, subs };
+    return { B, top, bottom, empty, headY, worldY, subs, chips, chipY };
   });
   return { topH, bands, H: y };
 }
 
 /** How far down level 0 an era's band is, in px from the top of the content. */
-export function eraSpan(D: Prepared, V: Pick<View, 'win' | 'unfolded' | 'region'>, id: string, phone: boolean): [number, number] | undefined {
-  const g = overviewGeo(D, V, phone).bands.find((b) => b.B.eras.some((e) => e.id === id));
+export function eraSpan(D: Prepared, V: Pick<View, 'win' | 'unfolded' | 'region'>, id: string, F: Fit): [number, number] | undefined {
+  const g = overviewGeo(D, V, F).bands.find((b) => b.B.eras.some((e) => e.id === id));
   return g && [g.top, g.bottom];
 }
 
 /** How far down level 0 a region's band is, in px from the top of the content. */
-export function regionSpan(D: Prepared, V: Pick<View, 'win' | 'unfolded' | 'region'>, name: string, phone: boolean): [number, number] | undefined {
-  const g = overviewGeo(D, V, phone).bands.find((b) => b.B.name === name);
+export function regionSpan(D: Prepared, V: Pick<View, 'win' | 'unfolded' | 'region'>, name: string, F: Fit): [number, number] | undefined {
+  const g = overviewGeo(D, V, F).bands.find((b) => b.B.name === name);
   return g && [g.top - (g.B.parentHead ? PARENT_H : 0), g.bottom];
 }
 
@@ -535,6 +558,8 @@ export interface View {
   box?: Box;
   /** Level 0: the region Bob clicked on the map; its rows grow and the other bands fade. */
   region?: string;
+  /** Level 1: the theme chip picked (`<era>:<theme>`) and what's in it; everything else fades. */
+  theme?: { key: string; ids: ReadonlySet<string> };
 }
 
 export interface Env {
@@ -547,10 +572,14 @@ export interface Env {
 
 interface Ctx { D: Prepared; V: View; E: Env; S: Scene; X: (y: number) => number; x0: number; x1: number; top: number; bottom: number }
 
+/** A screen `w` px wide with no gutter, measuring about 7 px a character: for callers that only know the width. */
+const roughFit = (w: number): Fit => ({ w, gutter: 0, measure: (_, t) => t.length * 7 });
+
 /** How far the lanes (or, at level 0, the bands; at level 1, the open era's lanes) can scroll. `V` is the view, for level 0's and 1's. */
-export function maxScroll(D: Prepared, h: number, level: Level = 2, w = Infinity, V?: Pick<View, 'win' | 'unfolded' | 'era' | 'region'>): number {
-  if (level === 1 && V?.era) return Math.max(0, lanesH(V.era, w < PHONE_W) - (h - AXIS_H - HEAD1_H) + 8);
-  const content = level === 0 && V ? overviewGeo(D, V, w < PHONE_W).H : D.contentH;
+export function maxScroll(D: Prepared, h: number, level: Level = 2, fit: Fit | number = Infinity, V?: Pick<View, 'win' | 'unfolded' | 'era' | 'region' | 'theme'>): number {
+  const F = typeof fit === 'number' ? roughFit(fit) : fit;
+  if (level === 1 && V?.era) return Math.max(0, lanesH(V.era, F.w < PHONE_W) - (h - AXIS_H - head1H(V.era, F, V.theme?.key)) + 8);
+  const content = level === 0 && V ? overviewGeo(D, V, F).H : D.contentH;
   return Math.max(0, content - (h - AXIS_H) + 8);
 }
 
@@ -576,7 +605,9 @@ const titleOf = (it: PItem) => (it.draft ? `${it.title} ?` : it.title);
 
 /** The extra class an entry gets while an entry with connections is open: its role, or faded. */
 function roleOf(V: View, it: PItem): string {
-  if (!V.roles || it.draft) return '';
+  if (it.draft) return '';
+  if (V.theme && !V.theme.ids.has(it.id)) return ' dimmed';
+  if (!V.roles) return '';
   return ` ${V.roles.get(it.id) ?? 'dimmed'}`;
 }
 /** The outline that lights up an influence: amber for who influenced, blue for whom. */
@@ -588,7 +619,7 @@ export function layout(D: Prepared, V: View, E: Env, level: Level = 2): Scene {
     z: [[], [], [], []], gutter: [], axis: [], targets: [], clusters: [], boxes: new Map(), laneBoxes: new Map(),
     plot: { x: x0, y: AXIS_H, w: Math.max(0, x1 - x0), h: Math.max(0, E.h - AXIS_H) },
     gutterBox: { x: 0, y: AXIS_H, w: x0, h: Math.max(0, E.h - AXIS_H) },
-    contentH: level === 0 ? overviewGeo(D, V, E.w < PHONE_W).H : level === 1 && V.era ? lanesH(V.era, E.w < PHONE_W) : D.contentH,
+    contentH: level === 0 ? overviewGeo(D, V, E).H : level === 1 && V.era ? lanesH(V.era, E.w < PHONE_W) : D.contentH,
     adds: [],
   };
   const span = V.win.end - V.win.start;
@@ -653,7 +684,7 @@ function overviewRows(c: Ctx) {
     return;
   }
   const phone = E.w < PHONE_W;
-  const G = overviewGeo(D, V, phone);
+  const G = overviewGeo(D, V, E);
   const base = AXIS_H - V.scrollY;
   // The widest polity in view fills its row: the rest are scaled to it.
   let widest = 0;
@@ -716,7 +747,7 @@ function band(c: Ctx, g: BandGeo, base: number, phone: boolean, shareOf: (p: PPo
     S.gutter.push({ t: 3, k: `gr${B.name}`, a: 1, x1: 0, y1: gy, x2: E.gutter, y2: gy, stroke: 'var(--rule-soft)' });
   }
   // Eras are the backdrop: a wash across the band each, inner ones a rule along its foot.
-  const outer = B.eras.filter((e) => !e.parent || !B.eras.some((o) => o.id === e.parent));
+  const outer = outerEras(B);
   outer.forEach((e, i) => {
     if (e.e < V.win.start || e.s > V.win.end) return;
     const xa = X(e.s), xb = Math.max(X(e.e), xa + 1);
@@ -732,6 +763,13 @@ function band(c: Ctx, g: BandGeo, base: number, phone: boolean, shareOf: (p: PPo
     const { marks, text } = innerPrims(e, { xa: X(e.s), xb: X(e.e), x0, x1, bottom, role: roleOf(V, D.byId.get(e.id)!) }, M);
     S.z[0].push(...marks);
     S.z[2].push(...text);
+  }
+  // Theme chips on the wash, under the eras' names.
+  for (const b of g.chips) {
+    const cy = base + g.chipY + b.line * CHIP_LINE, id = themeKey(b.era, b.theme.id);
+    if (b.x > x1 || b.x + b.w < x0) continue;
+    S.z[2].push(...chipPrims(b, cy, { hot: V.hover === id, picked: false, role: roleOf(V, D.byId.get(b.era)!) }));
+    S.targets.push({ id, x: b.x, y: cy, w: b.w, h: CHIP_LINE - 4 });
   }
   if (g.empty) S.z[2].push({ t: 2, k: `be${B.name}`, a: 1, cls: 'tl-band-empty', x: x0 + 12, y: top + GOLD_H + HEAD_LINE + (B.named ? WORLD_LINE : 0) + 15, s: 'No polities in these years', f: 'ui', fill: 'var(--muted)' });
   // World events: gold along the top of every band they touched, named on a line of their own at home.
@@ -865,6 +903,40 @@ export const LANE_TOGGLE = '__lane:';
 export const OPEN_PICK = '__open';
 /** The row above the lanes with the era's name and dates (its theme chips join it in Phase 4). */
 export const HEAD1_H = 38;
+
+/** Level 1's "+3 more" and "Show fewer" chip. */
+export const THEMES_MORE = '__themes_more';
+const MORE_PAD = 16;
+
+/**
+ * Level 1's theme chips, packed under the name across the whole width: one line, ending in
+ * "+3 more" when there are more, unless Bob opened them all (or the theme picked is past the line).
+ */
+function headChips(EL: EraLanes, F: Fit, picked?: string): { chips: ChipBox[]; more?: { x: number; w: number; line: number; label: string } } {
+  if (!EL.themes.length) return { chips: [] };
+  const left = F.gutter + 12, right = F.w - 12, M = F.measure;
+  const all = packChips(EL.themes, left, right, M);
+  if (chipLines(all) <= 1) return { chips: all };
+  const open = EL.allThemes || all.some((b) => b.line > 0 && `${b.era}:${b.theme.id}` === picked);
+  if (open) {
+    const last = all[all.length - 1], w = M('chipN', 'Show fewer') + MORE_PAD;
+    const fits = last.x + last.w + 4 + w <= right;
+    return { chips: all, more: { x: fits ? last.x + last.w + 4 : left, w, line: fits ? last.line : last.line + 1, label: 'Show fewer' } };
+  }
+  const first = all.filter((b) => b.line === 0);
+  for (;;) {
+    const label = `+${all.length - first.length} more`, w = M('chipN', label) + MORE_PAD;
+    const end = first.length ? first[first.length - 1].x + first[first.length - 1].w + 4 : left;
+    if (end + w <= right || !first.length) return { chips: first, more: { x: end, w, line: 0, label } };
+    first.pop();
+  }
+}
+/** Level 1's head: the name's line, then a line for each line of theme chips. */
+export function head1H(EL: EraLanes, F: Fit, picked?: string): number {
+  const { chips, more } = headChips(EL, F, picked);
+  const n = Math.max(chipLines(chips), more ? more.line + 1 : 0);
+  return HEAD1_H + (n ? n * CHIP_LINE + 4 : 0);
+}
 const PAD1 = 6;
 const MOMENT_ROW = 26;
 const DIAMOND = 12;
@@ -927,6 +999,10 @@ export interface EraLanes {
   influences: LaneInfluence[];
   /** On a phone: the effect lines under an entry in a lane (`<lane>:<id>`), each an influence it's at an end of there. */
   effLines: Map<string, LaneInfluence[]>;
+  /** Theme chips along the top: the era's and its inner eras', or those of the eras a polity lived through in its region. */
+  themes: { era: string; theme: EraTheme }[];
+  /** Whether Bob opened the chips past their first line ("+3 more"). */
+  allThemes?: boolean;
 }
 
 /** Entries by start into the six lanes, in pigment order, then "No lane yet" when anything has none. An entry is in each of its lanes. */
@@ -989,7 +1065,8 @@ export function eraLanes(D: Prepared, eraId: string, lanesOf: ReadonlyMap<string
     return [n, n ? highlightsN(n) : ''];
   });
   const head: Head1 = { id: era.id, title: era.title, s: era.s, e: era.e, fit: era, when: era.when, sub: highlightsN(era.highlights), opens: era.id, back: '‹ All eras' };
-  return { head, era, compact: false, ...built };
+  const themes = R.eras.filter(inside).sort((a, b) => Number(b.id === eraId) - Number(a.id === eraId) || a.s - b.s).flatMap((e) => e.themes.map((theme) => ({ era: e.id, theme })));
+  return { head, era, compact: false, ...built, themes };
 }
 
 /**
@@ -1012,7 +1089,9 @@ export function polityLanes(D: Prepared, pick: string, members: readonly string[
     id: pick, title: pol ? pol.fullTitle : world!.title, s, e, fit: hi - lo < 10 ? { s: lo - 5, e: hi + 5 } : { s: lo, e: hi },
     when: pol ? pol.when : world!.when, sub: `${pol ? '' : 'World event · '}${entriesN(n)}`, opens: own && D.byId.has(own) ? own : undefined, back: '‹ Overview',
   };
-  return { head, compact: true, ...built };
+  // A polity's chips are its region's eras' while it lived, outer eras first.
+  const themes = pol ? D.regions.filter((R) => R.name === pol.region).flatMap((R) => R.eras.filter((x) => x.e > s && x.s < e).sort((a, b) => Number(!!a.parent) - Number(!!b.parent) || a.s - b.s)).flatMap((x) => x.themes.map((theme) => ({ era: x.id, theme }))) : [];
+  return { head, compact: true, ...built, themes };
 }
 
 /** Whether a lane shows all its entries: always in an era, and in a polity once Bob opens it. */
@@ -1106,9 +1185,9 @@ function squash(p: Prim, Y: (y: number) => number, ma: number, ta: number): Prim
 }
 
 /** Where what's open sat on level 0, in px from the top of the content: the lanes grow out of it. */
-function headSpan(D: Prepared, V: View, EL: EraLanes, phone: boolean): [number, number] | undefined {
-  if (EL.era) return eraSpan(D, V, EL.era.id, phone);
-  const G = overviewGeo(D, V, phone);
+function headSpan(D: Prepared, V: View, EL: EraLanes, F: Fit): [number, number] | undefined {
+  if (EL.era) return eraSpan(D, V, EL.era.id, F);
+  const G = overviewGeo(D, V, F);
   const id = EL.head.id;
   if (id.startsWith('pol:')) {
     const pid = id.slice(4);
@@ -1136,9 +1215,9 @@ function eraLevel(c: Ctx, EL: EraLanes) {
   for (const p of c0.S.gutter) S.gutter.push({ ...p, a: p.a * (1 - t) });
   const c1: Ctx = { ...c, S: blank(S) };
   lanes1(c1, EL, phone);
-  const band = headSpan(D, { ...V, scrollY: z.scroll0 }, EL, phone);
+  const band = headSpan(D, { ...V, scrollY: z.scroll0 }, EL, E);
   const by = band ? AXIS_H + band[0] - z.scroll0 : AXIS_H, bh = band ? band[1] - band[0] : 60;
-  const visH = Math.max(1, Math.min(HEAD1_H + lanesH(EL, phone) - V.scrollY, E.h - AXIS_H));
+  const visH = Math.max(1, Math.min(head1H(EL, E, V.theme?.key) + lanesH(EL, phone) - V.scrollY, E.h - AXIS_H));
   const Y = z.fade ? (y: number) => y : (y: number) => { const shut = by + clamp01((y - AXIS_H) / visH) * bh; return shut + (y - shut) * t; };
   const ma = z.fade ? t : Math.min(1, t * 1.6), ta = z.fade ? t : clamp01((t - 0.45) / 0.55);
   for (let i = 0; i < 4; i++) for (const p of c1.S.z[i]) { const q = squash(p, Y, ma, ta); if (q) S.z[i].push(q); }
@@ -1148,7 +1227,7 @@ function eraLevel(c: Ctx, EL: EraLanes) {
 
 function lanes1(c: Ctx, EL: EraLanes, phone: boolean) {
   const { V, E } = c;
-  const lanesTop = AXIS_H + HEAD1_H;
+  const lanesTop = AXIS_H + head1H(EL, E, V.theme?.key);
   const cl: Ctx = { ...c, top: lanesTop };
   let top = lanesTop - V.scrollY;
   for (const L of EL.lanes) {
@@ -1564,6 +1643,29 @@ function head1(c: Ctx, EL: EraLanes, phone: boolean) {
   if (H.opens) S.targets.push({ id: H.opens, x: nx - 4, y, w: nw + 8, h });
   const rest = `${H.when} · ${H.sub}`;
   if (nx + nw + 12 + M('eraDates', rest) <= x1 - 8) S.z[3].push({ t: 2, k: 'qhd', a: 1, x: nx + nw + 12, y: ty, s: rest, f: 'eraDates', fill: 'var(--muted)' });
+  themeRow(c, EL, y + HEAD1_H - 4);
+}
+
+/** Level 1's theme chips under the name; picking one fades everything outside it. */
+function themeRow(c: Ctx, EL: EraLanes, top: number) {
+  const { V, E, S } = c;
+  const { chips, more } = headChips(EL, E, V.theme?.key);
+  if (!chips.length && !more) return;
+  const h = head1H(EL, E, V.theme?.key) - HEAD1_H;
+  S.z[3].push({ t: 0, k: 'qtbg', a: 1, x: c.x0, y: top + 4, w: c.x1 - c.x0, h, fill: 'var(--panel)' });
+  S.z[3].push({ t: 3, k: 'qtr', a: 1, x1: c.x0, y1: top + 4 + h - 0.5, x2: c.x1, y2: top + 4 + h - 0.5, stroke: 'var(--rule)' });
+  if (E.gutter) S.gutter.push({ t: 0, k: 'qtgbg', a: 1, x: 0, y: top + 4, w: E.gutter, h, fill: 'var(--panel)' });
+  for (const b of chips) {
+    const y = top + 4 + b.line * CHIP_LINE, key = `${b.era}:${b.theme.id}`, id = themeKey(b.era, b.theme.id);
+    S.z[3].push(...chipPrims(b, y, { hot: V.hover === id, picked: V.theme?.key === key, a: V.theme && V.theme.key !== key ? 0.55 : 1 }));
+    S.targets.push({ id, x: b.x, y, w: b.w, h: CHIP_LINE - 4 });
+  }
+  if (more) {
+    const y = top + 4 + more.line * CHIP_LINE, hot = V.hover === THEMES_MORE;
+    S.z[3].push({ t: 0, k: 'qtm', a: 1, cls: 'tl-chip-more', id: THEMES_MORE, x: more.x, y, w: more.w, h: CHIP_LINE - 4, r: 3, fill: 'var(--panel)', stroke: hot ? 'var(--ink-2)' : 'var(--rule)', sw: 1 });
+    S.z[3].push({ t: 2, k: 'qtmt', a: 1, cls: 'tl-chip-more-label', id: THEMES_MORE, x: more.x + more.w / 2, y: y + 12, s: more.label, f: 'chipN', fill: hot ? 'var(--ink)' : 'var(--muted)', anchor: 'middle' });
+    S.targets.push({ id: THEMES_MORE, x: more.x, y, w: more.w, h: CHIP_LINE - 4 });
+  }
 }
 
 function laneFrame(c: Ctx, L: PLane, top: number, bot: number) {

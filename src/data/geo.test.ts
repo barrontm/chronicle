@@ -1,7 +1,7 @@
 import type { FeatureCollection, Polygon } from 'geojson';
 import { describe, expect, it } from 'vitest';
 import { BASEMAP_YEARS, basemapFor, basemapUrl, mapsDuring, matchPolity, polityNames, snapshotsFor, withinLife } from './basemaps';
-import { areaKm2, bbox, FINE, isArea, labelPoint, parseGeoJsonAreas, simplifyArea, simplifyLine } from './geo';
+import { areaKm2, bbox, clipToConvex, convexHull, FINE, isArea, labelPoint, parseGeoJsonAreas, pointBlob, simplifyArea, simplifyLine } from './geo';
 
 const square = (x: number, y: number, size: number): Polygon => ({
   type: 'Polygon',
@@ -145,5 +145,33 @@ describe('GeoJSON files', () => {
     const island = square(23.4, 37.7, 0.01);
     expect(simplifyArea(island)).toBeNull();
     expect(simplifyArea(island, FINE.tolerance, FINE.decimals)).toEqual(island);
+  });
+});
+
+describe('hulls and clipping (an era’s extent)', () => {
+  const area = (r: number[][]) => Math.abs(r.slice(0, -1).reduce((a, p, i) => a + p[0] * r[i + 1][1] - r[i + 1][0] * p[1], 0) / 2);
+  it('wraps points in a closed, counter-clockwise hull, leaving inner points out', () => {
+    const h = convexHull([[0, 0], [4, 0], [4, 4], [0, 4], [2, 2], [1, 3]])!;
+    expect(h).toHaveLength(5);
+    expect(h[0]).toEqual(h[4]);
+    expect(h).not.toContainEqual([2, 2]);
+    expect(area(h)).toBe(16);
+    expect(convexHull([[0, 0], [1, 1]])).toBeNull();
+    expect(convexHull([[0, 0], [1, 1], [2, 2]])).toBeNull();
+  });
+  it('cuts a ring to a convex one, and gives nothing when they miss', () => {
+    const clip = convexHull([[0, 0], [4, 0], [4, 4], [0, 4]])!;
+    expect(area(clipToConvex([[2, 2], [6, 2], [6, 6], [2, 6], [2, 2]], clip)!)).toBeCloseTo(4);
+    // A concave L-shaped coast keeps only what's inside.
+    const L = [[-1, -1], [3, -1], [3, 1], [1, 1], [1, 3], [-1, 3], [-1, -1]];
+    expect(area(clipToConvex(L, clip)!)).toBeCloseTo(5);
+    expect(clipToConvex([[10, 10], [12, 10], [12, 12], [10, 10]], clip)).toBeNull();
+  });
+  it('draws a lone place as an octagon, wider in longitude away from the equator', () => {
+    const b = pointBlob([20, 60], 1);
+    expect(b).toHaveLength(8);
+    const xs = b.map((p) => p[0]), ys = b.map((p) => p[1]);
+    expect(Math.max(...xs) - 20).toBeCloseTo(2);
+    expect(Math.max(...ys) - 60).toBeCloseTo(1);
   });
 });

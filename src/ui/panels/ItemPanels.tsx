@@ -17,6 +17,8 @@ import { PlacePolity, usePlacePolity } from '../PlacePolity';
 import { InfluenceSuggestions } from './Influences';
 import { PlacesEditor } from './PlacesEditor';
 import { QuickSource } from './SourcePanels';
+import { ThemesSection } from './Themes';
+import { isEra } from '../../model/eras';
 
 const KIND_LABEL: Record<ItemKind, string> = { event: 'Event', span: 'Period', person: 'Person' };
 
@@ -96,6 +98,8 @@ export function ItemView({ id, nav }: { id: string; nav: Nav }) {
           </ul>
         </>
       )}
+
+      {isEra(item) && <ThemesSection key={item.id} item={item} />}
 
       <h3>Notes</h3>
       <ul className="linklist">
