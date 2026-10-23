@@ -742,3 +742,16 @@ export function setEraTerritory(doc: TimelineDoc, eraId: string, territoryId: st
   }
   return territoryId ? upsert(next, 'relations', { id: newId('r'), fromId: territoryId, toId: eraId, type: 'part-of', updatedAt: now }, now) : next;
 }
+
+/**
+ * Set a region's parent (Greece → Mediterranean), or with none, take it away. Region parents are
+ * Bob's words with no record of their own, so this stamps the doc rather than going through `upsert`.
+ */
+export function setRegionParent(doc: TimelineDoc, region: string, parent: string | undefined, now = Date.now()): TimelineDoc {
+  const r = region.trim(), p = parent?.trim();
+  if (!r || (doc.regionParents?.[r] ?? '') === (p ?? '')) return doc;
+  const next = { ...doc.regionParents };
+  if (p && p !== r) next[r] = p;
+  else delete next[r];
+  return { ...doc, regionParents: next, updatedAt: now };
+}

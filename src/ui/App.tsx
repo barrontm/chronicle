@@ -4,7 +4,9 @@ import { formatRange, toDecimalYear } from '../model/dates';
 import { applyUndo, bulkRemove, type Undo } from '../model/bulk';
 import { mergeDocs, parseDoc, serializeDoc, upsert } from '../model/doc';
 import { prominence as prominenceOf } from '../model/prominence';
-import type { HistDate, MediaRef, TimelineDoc, TimelineItem } from '../model/types';
+import type { HistDate, Lane, MediaRef, TimelineDoc, TimelineItem } from '../model/types';
+import { sortLanes } from '../model/lanes';
+import { LaneChips } from './LaneChips';
 import type { Area } from '../data/geo';
 import type { DocStore } from '../store/store';
 import { DocProvider, useDoc } from './DocContext';
@@ -192,6 +194,8 @@ function Workspace() {
   const [playing, setPlaying] = useState(false);
   const [speed, setSpeed] = useStored<number>('chronicle.speed', () => 25);
   const [allThreads, setAllThreads] = useStored<boolean>('chronicle.allThreads', () => false);
+  const [lenses, setLenses] = useStored<Lane[]>('chronicle.lenses', () => []);
+  const [unfolded, setUnfolded] = useStored<string[]>('chronicle.unfoldedGroups', () => []);
   const [mapOptions, setMapOptions] = useStored<MapOptions>('chronicle.mapOptions', () => ({ backdrop: false, keepPast: false, connections: false }));
   const [mapCamera, setMapCamera] = useStored<MapCamera>('chronicle.mapView', () => ({ center: [20, 35], zoom: 1.6 }));
   const [dataSeriesId, setDataSeriesId] = useStored<string | null>('chronicle.mapData', () => null);
@@ -480,6 +484,12 @@ function Workspace() {
             <p className="empty-strip" data-testid="empty-state">Your map and timeline fill in as you add what you read.</p>
           )}
           {canGoBackInTime && <button className="btn small focus-chip" onClick={() => timeline.current?.back()}>Back to where I was</button>}
+          {win?.level === 0 && (
+            <div className="lens-bar">
+              <span className="lens-bar-label" aria-hidden="true">Lenses</span>
+              <LaneChips label="Lenses" value={lenses} onToggle={(l) => setLenses(sortLanes(lenses.includes(l) ? lenses.filter((x) => x !== l) : [...lenses, l]))} />
+            </div>
+          )}
           <TimelineView
             ref={timeline}
             items={doc.items}
@@ -493,6 +503,9 @@ function Workspace() {
             onOpenRelation={(id) => setStack([{ type: 'relation', id }])}
             onOpenThread={(t) => setStack([{ type: 'thread', ...t }])}
             allThreads={allThreads}
+            lenses={lenses}
+            unfolded={unfolded}
+            onUnfold={setUnfolded}
             onWindow={setWin}
             onCanGoBack={setCanGoBackInTime}
             year={year}

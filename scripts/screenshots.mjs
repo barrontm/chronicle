@@ -346,6 +346,45 @@ async function overview(p, prefix) {
   if (athens) await p.mouse.move(athens.x + athens.width * 0.6, athens.y + athens.height / 2);
   await p.waitForTimeout(300);
   await shot(p, `${prefix}-overview-group`);
+  if (wanted(`${prefix}-lenses`)) {
+    // The War and Economy lenses: a strip of each lane's ticks under every band.
+    const lenses = p.getByRole('group', { name: 'Lenses' });
+    await lenses.getByRole('button', { name: 'War' }).click();
+    await lenses.getByRole('button', { name: 'Economy' }).click();
+    // Scroll until Greece's lens strips are in view.
+    const strip = p.locator('rect.tl-lens').last();
+    await p.mouse.move(tl.x + tl.width / 2, tl.y + tl.height / 2);
+    await p.keyboard.down('Shift');
+    for (let i = 0; i < 20; i++) {
+      const g = await strip.boundingBox({ timeout: 500 }).catch(() => null);
+      if (g && g.y + g.height < tl.y + tl.height - 10) break;
+      await p.mouse.wheel(0, 60);
+      await p.waitForTimeout(80);
+    }
+    await p.keyboard.up('Shift');
+    await p.waitForTimeout(300);
+    await shot(p, `${prefix}-lenses`);
+    await lenses.getByRole('button', { name: 'War' }).click();
+    await lenses.getByRole('button', { name: 'Economy' }).click();
+  }
+  if (wanted(`${prefix}-regions`) && prefix !== 'phone') {
+    // The Library's regions and groups, then Athens' strength points in its editor.
+    await p.getByRole('button', { name: 'Library' }).click();
+    await p.getByTestId('library').getByRole('tab', { name: 'Regions and groups' }).click();
+    await p.waitForTimeout(200);
+    await shot(p, `${prefix}-regions`);
+    await p.getByRole('button', { name: 'Close panel' }).click();
+    await p.locator('.brand').click();
+    await p.keyboard.press('/');
+    await p.getByRole('combobox', { name: 'Search Chronicle' }).fill('Athens (Attica)');
+    await p.getByRole('listbox', { name: 'Search results' }).getByRole('option').first().click();
+    await p.getByTestId('territory-view').getByRole('button', { name: 'Edit' }).click();
+    await p.getByRole('heading', { name: 'How strong it was' }).scrollIntoViewIfNeeded();
+    await p.waitForTimeout(200);
+    await shot(p, `${prefix}-strength`);
+    await p.getByRole('button', { name: 'Cancel' }).click();
+    await p.getByRole('button', { name: 'Close panel' }).click();
+  }
   if (!wanted(`${prefix}-threads`) && !wanted(`${prefix}-thread-map`)) return;
   // Threads: Athens' lit up (picked, and hovered on a laptop), with "Show all threads" on where there's a pointer.
   const all = p.getByTestId('time-bar').getByRole('button', { name: 'Show all threads' });
@@ -407,9 +446,9 @@ async function eraLanes(p, prefix) {
 if (any('desktop-era-lanes') || any('desktop-era-zoom')) await eraLanes(await page('desktop-era-lanes', desktop), 'desktop');
 if (any('dark-era-lanes')) await eraLanes(await page('dark-era-lanes', { ...desktop, colorScheme: 'dark' }), 'dark');
 if (any('phone-era-lanes') || any('phone-era-zoom')) await eraLanes(await page('phone-era-lanes', { viewport: { width: 412, height: 860 }, isMobile: true, hasTouch: true }), 'phone');
-if (any('desktop-overview', 'desktop-threads', 'desktop-thread-map')) await overview(await page('desktop-overview', desktop), 'desktop');
-if (any('dark-overview', 'dark-threads', 'dark-thread-map')) await overview(await page('dark-overview', { ...desktop, colorScheme: 'dark' }), 'dark');
-if (any('phone-overview', 'phone-threads', 'phone-thread-map')) await overview(await page('phone-overview', { viewport: { width: 412, height: 860 }, isMobile: true, hasTouch: true }), 'phone');
+if (any('desktop-overview', 'desktop-threads', 'desktop-thread-map', 'desktop-lenses', 'desktop-regions')) await overview(await page('desktop-overview', desktop), 'desktop');
+if (any('dark-overview', 'dark-threads', 'dark-thread-map', 'dark-lenses', 'dark-regions')) await overview(await page('dark-overview', { ...desktop, colorScheme: 'dark' }), 'dark');
+if (any('phone-overview', 'phone-threads', 'phone-thread-map', 'phone-lenses', 'phone-regions')) await overview(await page('phone-overview', { viewport: { width: 412, height: 860 }, isMobile: true, hasTouch: true }), 'phone');
 
 // Level 1 in a polity: Athens picked on the overview, then opened into its six lanes (closed), then
 // its War lane opened. With `polity-zoom`, the drop-down as a filmstrip of frames 50 ms apart.

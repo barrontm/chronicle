@@ -324,6 +324,12 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .effectpick button { min-height: 28px; padding: 3px 11px; border: 1px solid var(--rule); border-radius: 999px; background: var(--panel); color: var(--ink-2); font: 12.5px var(--font-ui); cursor: pointer; }
 .effectpick button[aria-pressed='true'] { border-color: var(--ink); background: var(--ink); color: var(--panel); font-weight: 600; }
 .effectpick button.own { border-style: dashed; }
+.checklist { display: grid; gap: 4px; border: 0; padding: 0; margin: 0 0 8px; min-width: 0; }
+.checklist legend { padding: 0; margin-bottom: 4px; font: 600 12px var(--font-ui); color: var(--ink-2); }
+.checklist label { font-size: 13.5px; }
+.checklist label.muted { color: var(--muted); }
+.checklist small { color: var(--muted); }
+.strength-list small { font-family: var(--font-read); }
 .evidencepick { display: grid; gap: 6px; margin-top: 8px; max-height: 18em; overflow-y: auto; }
 .evidencepick .quote { font-family: var(--font-read); font-size: 14px; line-height: 1.4; }
 .relation-title em { font-style: italic; font-weight: 600; }
@@ -419,6 +425,9 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .segmented { display: inline-flex; border: 1px solid var(--rule); border-radius: var(--radius-s); overflow: hidden; }
 .segmented button { border: 0; background: var(--panel); padding: 6px 12px; cursor: pointer; border-right: 1px solid var(--rule); }
 .segmented button:last-child { border-right: 0; }
+/* The Library's seven tabs scroll sideways rather than widening the drawer. */
+.library-tabs { display: flex; max-width: 100%; overflow-x: auto; scrollbar-width: thin; }
+.library-tabs button { flex: none; white-space: nowrap; }
 .segmented button[aria-pressed='true'], .segmented button[aria-selected='true'] { background: var(--ink); color: var(--panel); }
 
 /* ---------- Category lanes ---------- */
@@ -502,6 +511,11 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .zoom-stops .chip[aria-pressed='true'] { background: var(--ink); color: var(--panel); }
 .zoom-span { font-size: 12px; color: var(--muted); min-width: 11ch; }
 .timeline-pane { position: relative; }
+/* Lenses above the overview: the six lanes as small chips, each adding a strip of ticks under every band. */
+.lens-bar { flex: none; display: flex; align-items: center; gap: 8px; padding: 6px 16px 4px; overflow-x: auto; scrollbar-width: none; }
+.lens-bar-label { flex: none; font: 600 11px var(--font-ui); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.lens-bar .lanepick { flex-wrap: nowrap; gap: 4px; }
+.lens-bar .lanepick button { flex: none; min-height: 24px; padding: 1px 9px 1px 6px; font-size: 12px; }
 .focus-chip { position: absolute; top: 8px; right: 16px; z-index: 5; box-shadow: 0 1px 4px color-mix(in srgb, var(--ink) 20%, transparent); }
 .moved-note { position: absolute; left: 50%; bottom: 72px; transform: translateX(-50%); z-index: 5; display: flex; align-items: center; gap: 10px; max-width: calc(100% - 32px); padding: 6px 8px 6px 12px; background: var(--panel); box-shadow: 0 2px 8px color-mix(in srgb, var(--ink) 20%, transparent); }
 @media (max-width: 640px) {

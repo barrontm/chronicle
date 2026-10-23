@@ -1,5 +1,6 @@
 import { axisTicks, formatRange, formatYear, toDecimalYear } from '../../model/dates';
 import { ELSEWHERE, type Era, type EraRegion, type EraTheme } from '../../model/eras';
+import type { LensMarks } from '../../model/lenses';
 import type { OGroup, OPolity, Overview } from '../../model/overview';
 import { areaWeight, strengthAt, strengthKnown, stripShare, UNKNOWN_SHARE } from '../../model/strength';
 import { describeEffect, laneInfluences, type LaneInfluence } from '../../model/doc';
@@ -136,6 +137,8 @@ export interface PBand {
   worlds: PWorld[];
   /** Whether any world event is named here, which gives it a line of its own. */
   named: boolean;
+  /** Lenses: the entries in each lane here, earliest first, for a lens's ticks. */
+  lens: ReadonlyMap<Lane, PItem[]>;
 }
 export interface Prepared {
   lanes: PLane[];
@@ -173,6 +176,8 @@ export interface PrepareOptions {
   overview?: Overview;
   /** Level 0: threads between polities and eras (`threads` in `src/model/threads.ts`). */
   threads?: readonly Thread[];
+  /** Level 0: each region's entries per lane, for the lenses (`lensMarks` in `src/model/lenses.ts`). */
+  lenses?: LensMarks;
 }
 
 export function prepare(items: DatedItem[], lanes: LaneInput[], o: PrepareOptions): Prepared {
@@ -247,7 +252,7 @@ export function prepare(items: DatedItem[], lanes: LaneInput[], o: PrepareOption
   });
   const prominence = o.prominence ?? (() => 0);
   const eras = prepareEras(o.eras ?? [], byId);
-  return { lanes: out, byId, contentH: top, prominence, extent: lo <= hi ? { start: lo, end: hi } : undefined, relations: rels, threads: o.threads ?? [], ...eras, ...prepareOverview(o.overview, eras.regions, byId) };
+  return { lanes: out, byId, contentH: top, prominence, extent: lo <= hi ? { start: lo, end: hi } : undefined, relations: rels, threads: o.threads ?? [], ...eras, ...prepareOverview(o.overview, eras.regions, byId, o.lenses) };
 }
 
 /** The eras in each region. Inside one, eras pack into rows by time only, outer eras above the eras inside them. */
@@ -279,7 +284,7 @@ function prepareEras(input: EraRegion[], byId: Map<string, PItem>): Pick<Prepare
  * Level 0's bands, in the overview's order. Inside a band, polities (and folded groups) pack
  * into sub-rows by time only, so a succession shares one and rows stay put while zooming.
  */
-function prepareOverview(O: Overview | undefined, regions: PRegion[], byId: Map<string, PItem>): Pick<Prepared, 'bands' | 'top' | 'polById' | 'groupById' | 'overviewExtent'> {
+function prepareOverview(O: Overview | undefined, regions: PRegion[], byId: Map<string, PItem>, lenses?: LensMarks): Pick<Prepared, 'bands' | 'top' | 'polById' | 'groupById' | 'overviewExtent'> {
   const polById = new Map<string, PPolity>(), groupById = new Map<string, PGroup>();
   let lo = Infinity, hi = -Infinity;
   const span = (s: number, e: number) => { lo = Math.min(lo, s); hi = Math.max(hi, e); };
@@ -313,7 +318,8 @@ function prepareOverview(O: Overview | undefined, regions: PRegion[], byId: Map<
     const eras = [...(eraRegion.get(r.name)?.eras ?? [])].sort((a, b) => a.row - b.row || a.s - b.s);
     const parentHead = !!r.parent && (i === 0 || r.parent !== lastParent);
     lastParent = r.parent;
-    return { name: r.name, label: r.label, parent: r.parent, parentHead, tone: r.tone, subs, eras, worlds, named: worlds.some((w) => w.home) };
+    const lens = new Map([...(lenses?.get(r.name) ?? [])].map(([l, ids]) => [l, ids.flatMap((id) => byId.get(id) ?? [])] as const));
+    return { name: r.name, label: r.label, parent: r.parent, parentHead, tone: r.tone, subs, eras, worlds, named: worlds.some((w) => w.home), lens };
   });
   return { bands, top, polById, groupById, overviewExtent: lo <= hi ? { start: lo, end: hi } : undefined };
 }
@@ -335,6 +341,8 @@ const SUB_H = 32;
 const SUB_H_PHONE = 30;
 const EMPTY_H = 22;
 const BAND_PAD = 6;
+/** A lens's strip under a band's rows. */
+export const LENS_H = 10;
 /** The gap between bands, kept free for threads (Phase 4b). */
 const BAND_GAP = 10;
 /** A region focused from the map: its rows grow by this, and the other bands fade to `REGION_FADE`. */
@@ -343,7 +351,7 @@ const REGION_FADE = 0.4;
 
 /** A sub-row on screen: what's in it, how tall and how faded (a group's members while it unfolds), and the group whose members it holds. */
 interface SubGeo { slots: Slot[]; y: number; h: number; a: number; group?: PGroup; folding?: number }
-interface BandGeo { B: PBand; top: number; bottom: number; empty: boolean; headY: number; worldY: number; subs: SubGeo[]; chips: ChipBox[]; chipY: number }
+interface BandGeo { B: PBand; top: number; bottom: number; empty: boolean; headY: number; worldY: number; subs: SubGeo[]; chips: ChipBox[]; chipY: number; lensY: number }
 /** What level 0's geometry needs of the screen: band heights depend on how many lines their theme chips take. */
 export type Fit = Pick<Env, 'w' | 'gutter' | 'measure'>
 interface Geo { topH: number; bands: BandGeo[]; H: number }
@@ -369,7 +377,7 @@ function bandChips(B: PBand, win: YearWindow, F: Fit): ChipBox[] {
 }
 
 /** Where every band and sub-row sits, in px from the top of the content (under the axis). */
-function overviewGeo(D: Prepared, V: Pick<View, 'win' | 'unfolded' | 'region'>, F: Fit): Geo {
+function overviewGeo(D: Prepared, V: Pick<View, 'win' | 'unfolded' | 'region' | 'lenses'>, F: Fit): Geo {
   const phone = F.w < PHONE_W;
   const base = phone ? SUB_H_PHONE : SUB_H;
   const topH = D.top.length ? TOP_PAD * 2 + Math.min(TOP_ROWS, D.top.length) * TOP_ROW_H : 0;
@@ -403,22 +411,25 @@ function overviewGeo(D: Prepared, V: Pick<View, 'win' | 'unfolded' | 'region'>, 
         for (const m of g.members) { subs.push({ slots: [{ pol: m }], y, h: sub * f, a: f, group: g, folding: f }); y += sub * f; }
       }
     }
+    // Lenses: a thin strip each under the rows; they never move what's above them.
+    const lensY = y + 2;
+    if (V.lenses?.length) y += 2 + V.lenses.length * LENS_H;
     y += BAND_PAD;
     const bottom = y;
     y += BAND_GAP;
-    return { B, top, bottom, empty, headY, worldY, subs, chips, chipY };
+    return { B, top, bottom, empty, headY, worldY, subs, chips, chipY, lensY };
   });
   return { topH, bands, H: y };
 }
 
 /** How far down level 0 an era's band is, in px from the top of the content. */
-export function eraSpan(D: Prepared, V: Pick<View, 'win' | 'unfolded' | 'region'>, id: string, F: Fit): [number, number] | undefined {
+export function eraSpan(D: Prepared, V: Pick<View, 'win' | 'unfolded' | 'region' | 'lenses'>, id: string, F: Fit): [number, number] | undefined {
   const g = overviewGeo(D, V, F).bands.find((b) => b.B.eras.some((e) => e.id === id));
   return g && [g.top, g.bottom];
 }
 
 /** How far down level 0 a region's band is, in px from the top of the content. */
-export function regionSpan(D: Prepared, V: Pick<View, 'win' | 'unfolded' | 'region'>, name: string, F: Fit): [number, number] | undefined {
+export function regionSpan(D: Prepared, V: Pick<View, 'win' | 'unfolded' | 'region' | 'lenses'>, name: string, F: Fit): [number, number] | undefined {
   const g = overviewGeo(D, V, F).bands.find((b) => b.B.name === name);
   return g && [g.top - (g.B.parentHead ? PARENT_H : 0), g.bottom];
 }
@@ -569,6 +580,8 @@ export interface View {
   threadHover?: string;
   /** Level 0: "Show all threads", every ribbon faintly (laptop only). */
   allThreads?: boolean;
+  /** Level 0: the lenses on, in pigment order: a strip of each lane's ticks under every band. */
+  lenses?: readonly Lane[];
 }
 
 export interface Env {
@@ -585,7 +598,7 @@ interface Ctx { D: Prepared; V: View; E: Env; S: Scene; X: (y: number) => number
 const roughFit = (w: number): Fit => ({ w, gutter: 0, measure: (_, t) => t.length * 7 });
 
 /** How far the lanes (or, at level 0, the bands; at level 1, the open era's lanes) can scroll. `V` is the view, for level 0's and 1's. */
-export function maxScroll(D: Prepared, h: number, level: Level = 2, fit: Fit | number = Infinity, V?: Pick<View, 'win' | 'unfolded' | 'era' | 'region' | 'theme'>): number {
+export function maxScroll(D: Prepared, h: number, level: Level = 2, fit: Fit | number = Infinity, V?: Pick<View, 'win' | 'unfolded' | 'era' | 'region' | 'theme' | 'lenses'>): number {
   const F = typeof fit === 'number' ? roughFit(fit) : fit;
   if (level === 1 && V?.era) return Math.max(0, lanesH(V.era, F.w < PHONE_W) - (h - AXIS_H - head1H(V.era, F, V.theme?.key)) + 8);
   const content = level === 0 && V ? overviewGeo(D, V, F).H : D.contentH;
@@ -935,11 +948,32 @@ function band(c: Ctx, g: BandGeo, base: number, phone: boolean, shareOf: (p: PPo
       if (sg.a > 0.5) S.targets.push({ id: `grp:${sg.group.id}`, x: x0, y, w: 12, h });
     }
   }
+  lensStrips(c, g, base, phone);
   // Inner eras answer along the foot, over the strips.
   for (const e of B.eras) {
     if (outer.includes(e) || e.e < V.win.start || e.s > V.win.end || X(e.e) - X(e.s) < 70) continue;
     S.targets.push({ id: e.id, x: Math.max(X(e.s), x0), y: bottom - 9, w: Math.min(X(e.e), x1) - Math.max(X(e.s), x0), h: 9 });
   }
+}
+
+/** Lenses: under the band's rows, a faint strip of each lane's pigment with a tick for each entry in it here (a period's years as a thread). */
+function lensStrips(c: Ctx, g: BandGeo, base: number, phone: boolean) {
+  const { V, E, S, X, x0, x1 } = c;
+  const B = g.B;
+  (V.lenses ?? []).forEach((lane, i) => {
+    const y = base + g.lensY + i * LENS_H, h = LENS_H - 2, color = `var(--pig-${PIGMENT[lane]})`;
+    if (y + h < AXIS_H || y > E.h) return;
+    S.z[0].push({ t: 0, k: `lz${B.name}:${lane}`, a: 1, cls: 'tl-lens', id: `lens:${lane}`, x: x0, y, w: x1 - x0, h, fill: tint(color, 12) });
+    if (!phone) S.gutter.push({ t: 2, k: `ln${B.name}:${lane}`, a: 1, cls: 'tl-lens-name', x: E.gutter - 10, y: y + h - 0.5, s: LANE_LABEL[lane], f: 'lensName', fill: color, anchor: 'end' });
+    for (const it of B.lens.get(lane) ?? []) {
+      if (it.e < V.win.start || it.s > V.win.end) continue;
+      const xa = X(it.s), xb = X(it.e);
+      const role = roleOf(V, it);
+      if (xb - xa > 3) S.z[1].push({ t: 0, k: `ls${B.name}:${lane}:${it.id}`, a: 0.45, cls: `tl-lens-span${role}`, id: it.id, x: xa, y: y + h / 2 - 1, w: Math.min(xb, x1) - xa, h: 2, fill: color });
+      S.z[1].push({ t: 0, k: `lt${B.name}:${lane}:${it.id}`, a: 1, cls: `tl-lens-tick${role}`, id: it.id, x: xa - 0.75, y, w: 1.5, h, fill: color });
+      S.targets.push({ id: it.id, x: xa - 3, y, w: Math.max(6, Math.min(xb, x1) - xa + 6), h });
+    }
+  });
 }
 
 const OPEN_LABEL = 'Open ▾';

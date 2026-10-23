@@ -243,10 +243,11 @@ test('the Overview stop shows polities as strips over their eras, world events i
   await group.click({ position: { x: 30, y: 6 }, force: true }); // the timeline hit-tests by position
   const athens = timeline.locator('.tl-strip[data-id="pol:t_athens"]');
   await expect(athens).toBeVisible();
+  await scrollToMark(timeline, athens);
   await expect(timeline.locator('text.tl-pol-name', { hasText: /^Athens$/ })).toBeVisible();
   await expect(timeline).toHaveAttribute('data-level', '0');
-  const a = (await athens.boundingBox())!;
-  await page.mouse.click(a.x + a.width * 0.45, a.y + a.height / 2);
+  const a = await stripPoint(athens);
+  await page.mouse.click(a.x, a.y);
   await expect(athens).toHaveClass(/picked/);
   await timeline.press('Escape');
   await expect(athens).not.toHaveClass(/picked/);
@@ -314,12 +315,13 @@ async function openAthens(page: Page, isMobile: boolean) {
   await group.click({ position: { x: 30, y: 6 }, force: true });
   const athens = timeline.locator('.tl-strip[data-id="pol:t_athens"]');
   await expect(athens).toBeVisible();
+  await scrollToMark(timeline, athens);
   await expect(timeline).toHaveAttribute('data-level', '0');
-  const a = (await athens.boundingBox())!;
-  await page.mouse.click(a.x + a.width * 0.45, a.y + a.height / 2);
+  const a = await stripPoint(athens);
+  await page.mouse.click(a.x, a.y);
   await expect(athens).toHaveClass(/picked/);
   await expect(timeline.locator('text.tl-open-pill')).toBeVisible();
-  await page.mouse.click(a.x + a.width * 0.45, a.y + a.height / 2);
+  await page.mouse.click(a.x, a.y);
   await expect(timeline).toHaveAttribute('data-level', '1');
   await expect(timeline.locator('text.tl-era-head', { hasText: 'Athens (Attica)' })).toBeVisible();
   await expect(timeline.locator('text.tl-back', { hasText: '‹ Overview' })).toBeVisible();
@@ -468,6 +470,7 @@ test('the map follows the overview: Athens in 431 BCE at war with Sparta and Cor
   await group.click({ position: { x: 30, y: 6 }, force: true });
   const athens = timeline.locator('.tl-strip[data-id="pol:t_athens"]');
   await expect(athens).toBeVisible();
+  await scrollToMark(timeline, athens);
   await expect(timeline).toHaveAttribute('data-level', '0');
   const a = (await athens.boundingBox())!;
   await page.mouse.click(a.x + a.width * 0.45, a.y + a.height / 2);
@@ -510,6 +513,12 @@ test('the map follows the overview: Athens in 431 BCE at war with Sparta and Cor
 });
 
 /** Open an entry by name from Search (`/`), which also brings it into view on the timeline. */
+/** A point on a strip at its name, which thread labels keep clear of (a tap brings its ribbons up under the finger). */
+async function stripPoint(strip: Locator): Promise<{ x: number; y: number }> {
+  const a = (await strip.boundingBox())!;
+  return { x: a.x + Math.min(24, a.width * 0.1), y: a.y + a.height / 2 };
+}
+
 async function openFromSearch(page: Page, name: string) {
   await page.locator('.brand').click();
   await page.keyboard.press('/');
@@ -645,6 +654,7 @@ test('Athens’ threads: a ribbon to Macedon with its count, all threads faintly
   await group.click({ position: { x: 30, y: 6 }, force: true });
   const athens = timeline.locator('.tl-strip[data-id="pol:t_athens"]');
   await expect(athens).toBeVisible();
+  await scrollToMark(timeline, athens);
 
   // Hovering Athens lights up its threads: one ribbon to Macedon, labelled with its count and main effect.
   const hoverAthens = async () => { const a = (await athens.boundingBox())!; await page.mouse.move(a.x + a.width * 0.45, a.y + a.height / 2); };
@@ -694,4 +704,103 @@ test('Athens’ threads: a ribbon to Macedon with its count, all threads faintly
   await page.getByRole('button', { name: 'Play through time' }).click();
   await expect(map).toHaveAttribute('data-arcs', /Athens → Alexandria \| .*Baghdad → Toledo/, { timeout: 10_000 });
   await page.getByRole('button', { name: 'Pause' }).click();
+});
+
+/** A small doc for lenses, regions, strength and groups: Athens and Sparta in Greece, Megara drawn by hand with no region yet. */
+function lensDoc() {
+  const square = (lon: number, lat: number, d: number) => ({ type: 'Polygon', coordinates: [[[lon - d, lat - d], [lon + d, lat - d], [lon + d, lat + d], [lon - d, lat + d], [lon - d, lat - d]]] });
+  const t = (id: string, title: string, region: string | undefined, lon: number, lat: number, d: number, areaKm2: number) =>
+    ({ id, title, categoryId: 'c_pol', ...(region ? { region } : {}), snapshots: [{ from: { y: -500 }, to: { y: -300 }, geometry: square(lon, lat, d), areaKm2 }], updatedAt: 1 });
+  return {
+    schemaVersion: 9, id: 'd_lens', title: 'Lens test', updatedAt: 1, deleted: {},
+    categories: [{ id: 'c_pol', label: 'Politics', color: '#3b5b92' }],
+    items: [
+      { id: 'i_classical', kind: 'span', subject: 'period', title: 'Classical Greece', region: 'Greece', start: { y: -479 }, end: { y: -322 }, categoryId: 'c_pol', updatedAt: 1 },
+      { id: 'i_war', kind: 'span', subject: 'war', title: 'Peloponnesian War', lanes: ['war'], start: { y: -430 }, end: { y: -403 }, categoryId: 'c_pol', updatedAt: 1 },
+    ],
+    territories: [
+      t('t_athens', 'Athens', 'Greece', 23.7, 38.0, 0.4, 2500),
+      t('t_sparta', 'Sparta', 'Greece', 22.4, 37.1, 0.9, 8500),
+      t('t_megara', 'Megara', undefined, 23.35, 38.0, 0.1, 470),
+    ],
+    relations: [{ id: 'r_war', fromId: 'i_war', toId: 't_athens', type: 'part-of', updatedAt: 1 }],
+    series: [], flows: [], notes: [], sources: [], highlights: [], groups: [],
+  };
+}
+
+test('lenses, regions, strength and groups: the War lens ticks, Megara moves into Greece, Athens grows, a group folds and stays open', async ({ page }) => {
+  test.slow();
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.goto('/');
+  await expect(page.getByTestId('save-state')).toHaveText('Saved on this device');
+  await page.getByTestId('import-input').setInputFiles({ name: 'lens.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(lensDoc())) });
+  await expect(page.locator('.doc-title')).toHaveValue('Lens test');
+  const timeline = page.locator('[data-testid=timeline][data-ready]');
+  await page.getByTestId('time-bar').getByRole('button', { name: 'Overview' }).click();
+  await expect(timeline).toHaveAttribute('data-level', '0');
+
+  // The War lens: a strip under each band with a tick for the war, in Greece.
+  const lenses = page.getByRole('group', { name: 'Lenses' });
+  await expect(timeline.locator('.tl-lens-tick')).toHaveCount(0);
+  await lenses.getByRole('button', { name: 'War' }).click();
+  await expect(lenses.getByRole('button', { name: 'War' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(timeline.locator('.tl-lens-tick[data-id="i_war"]')).toHaveCount(1);
+  await expect(timeline.locator('rect.tl-lens')).toHaveCount(2);
+
+  // Megara, drawn by hand, is in Elsewhere until it's given a region.
+  await expect(timeline.locator('text.tl-region', { hasText: 'Elsewhere' })).toHaveCount(1);
+  await openFromSearch(page, 'Megara');
+  const view = page.getByTestId('territory-view');
+  await expect(view.getByTestId('territory-region')).toContainText('Elsewhere');
+  await view.getByRole('button', { name: 'Edit' }).click();
+  const editor = page.getByTestId('territory-editor');
+  await editor.getByLabel('Region').fill('Greece');
+  await editor.getByRole('button', { name: 'Save changes' }).click();
+  await expect(view.getByTestId('territory-region')).toContainText('Greece');
+  await page.getByRole('button', { name: 'Close panel' }).click();
+  await page.getByTestId('time-bar').getByRole('button', { name: 'Overview' }).click();
+  await expect(timeline.locator('text.tl-region', { hasText: 'Elsewhere' })).toHaveCount(0);
+  await expect(timeline.locator('rect.tl-lens')).toHaveCount(1);
+
+  // Athens, a sliver beside Sparta, at strength 5 fills its row.
+  const athens = timeline.locator('.tl-strip[data-id="pol:t_athens"]');
+  const before = (await athens.boundingBox())!.height;
+  await openFromSearch(page, 'Athens');
+  await view.getByRole('button', { name: 'Edit' }).click();
+  await editor.getByRole('button', { name: 'Add a strength' }).click();
+  const point = editor.getByRole('group', { name: 'Strength 1' });
+  await point.getByLabel('At').fill('450 BCE');
+  await point.getByLabel('Strength').selectOption('5');
+  await editor.getByRole('button', { name: 'Save changes' }).click();
+  await expect(view).toContainText('450 BCE: 5 · dominant');
+  await page.getByRole('button', { name: 'Close panel' }).click();
+  await page.getByTestId('time-bar').getByRole('button', { name: 'Overview' }).click();
+  await expect.poll(async () => (await athens.boundingBox())!.height).toBeGreaterThan(before * 1.5);
+
+  // A group of Athens and Megara folds into one strip; unfolded, it stays open after a reload.
+  await page.getByRole('button', { name: 'Library' }).click();
+  await page.getByTestId('library').getByRole('tab', { name: 'Regions and groups' }).click();
+  const tab = page.getByTestId('regions-tab');
+  await tab.getByLabel('Greece is part of').fill('Mediterranean');
+  await tab.getByLabel('Greece is part of').press('Enter');
+  await tab.getByRole('button', { name: 'New group' }).click();
+  const form = page.getByTestId('group-form');
+  await form.getByLabel('Group name').fill('Saronic Gulf');
+  await form.getByRole('checkbox', { name: /Athens/ }).check();
+  await form.getByRole('checkbox', { name: /Megara/ }).check();
+  await form.getByRole('button', { name: 'Add group' }).click();
+  await expect(tab.getByRole('button', { name: 'Edit the group Saronic Gulf' })).toContainText('Athens, Megara');
+  await page.getByRole('button', { name: 'Close panel' }).click();
+  await page.getByTestId('time-bar').getByRole('button', { name: 'Overview' }).click();
+  await expect(timeline.locator('text.tl-parent', { hasText: /Mediterranean/i })).toHaveCount(1);
+  const group = timeline.locator('.tl-strip[data-id^="grp:"]');
+  await expect(group).toHaveCount(1);
+  await expect(athens).toHaveCount(0);
+  await group.click({ position: { x: 30, y: 6 }, force: true });
+  await expect(athens).toHaveCount(1);
+  await page.reload();
+  await page.getByTestId('time-bar').getByRole('button', { name: 'Overview' }).click();
+  await expect(timeline).toHaveAttribute('data-level', '0');
+  await expect(athens).toHaveCount(1);
+  await expect(page.getByRole('group', { name: 'Lenses' }).getByRole('button', { name: 'War' })).toHaveAttribute('aria-pressed', 'true');
 });

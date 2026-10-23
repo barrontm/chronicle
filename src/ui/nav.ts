@@ -22,7 +22,7 @@ export type Panel =
   | { type: 'new-flow'; itemId?: string }
   | { type: 'help'; section?: string }
   | { type: 'bulk-edit'; ids: string[] }
-  | { type: 'library'; tab: 'notes' | 'highlights' | 'sources' | 'trends' | 'territories' | 'migration' };
+  | { type: 'library'; tab: 'notes' | 'highlights' | 'sources' | 'trends' | 'territories' | 'regions' | 'migration' };
 
 export interface Nav {
   /** Open a panel on top of the current one. */
