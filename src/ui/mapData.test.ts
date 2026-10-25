@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { parseDoc } from '../model/doc';
 import type { Flow, Region, Relation, Territory, TimelineItem } from '../model/types';
 import { eraRegions } from '../model/eras';
-import { threadArcs, threadLinks, THREAD_DRAW, aboutPeople, activeRoutes, eraExtents, eraTintsAt, landRings, contactsAt, contactsDuring, followAt, arcPoints, arcsBetween, choroplethAt, draftPins, endBearing, flowDashes, flowFeatures, flowScale, mapKindOf, mixColor, parseColor, pinsAt, placesToDraw, rateAt, regionAt, regionShape, territoriesAt, territoryCircles, type FlowPlaces } from './mapData';
+import { bordersAt, threadArcs, threadLinks, THREAD_DRAW, aboutPeople, activeRoutes, eraExtents, eraTintsAt, landRings, contactsAt, contactsDuring, followAt, arcPoints, arcsBetween, choroplethAt, draftPins, endBearing, flowDashes, flowFeatures, flowScale, mapKindOf, mixColor, parseColor, pinsAt, placesToDraw, rateAt, regionAt, regionShape, territoriesAt, territoryCircles, type FlowPlaces } from './mapData';
 
 const fixture = () => parseDoc(readFileSync(new URL('../../tests/fixtures/sample-history.json', import.meta.url), 'utf8'));
 const colorOf = (id: string) => (id === 'hidden' ? undefined : '#123456');
@@ -75,6 +75,62 @@ describe('territories and values', () => {
     expect(c.key).not.toBe(a.key);
     expect(a.labels[0]).toMatchObject({ id: 't_fixture', title: 'Fixture Republic', lon: 12.5, lat: 42 });
     expect(territoriesAt(doc.territories, 500, colorOf).shapes.features).toHaveLength(0);
+  });
+
+  describe('a change of borders, while Play runs', () => {
+    const sq = (s: number): Territory['snapshots'][number]['geometry'] => ({ type: 'Polygon', coordinates: [[[23, 37], [23 + s, 37], [23 + s, 37 + s], [23, 37 + s], [23, 37]]] });
+    // Athens' borders: small from 508 BCE, larger from 450, larger still from 440 until 404.
+    const t: Territory = {
+      id: 't_ath', title: 'Athens', categoryId: 'politics', updatedAt: 0,
+      snapshots: [{ from: { y: -507 }, geometry: sq(1) }, { from: { y: -449 }, geometry: sq(2) }, { from: { y: -439 }, to: { y: -403 }, geometry: sq(3) }],
+    };
+    const at = (y: number, w: number) => bordersAt(t, y, w);
+
+    it('shows each set exactly as drawn when paused', () => {
+      expect(at(-449.2, 0)).toEqual({ snap: t.snapshots[0], geometry: sq(1) });
+      expect(at(-449, 0).geometry).toBe(t.snapshots[1].geometry);
+    });
+
+    it('morphs over a second of play, centred on the new set’s first year', () => {
+      // At 1 year a second: half a year either side of 450 BCE.
+      expect(at(-449.6, 1).morph).toBeUndefined();
+      expect(at(-449.25, 1).morph!.t).toBeCloseTo(0.156, 3);
+      expect(at(-449, 1).morph!.t).toBeCloseTo(0.5, 9);
+      expect(at(-449, 1).snap).toBe(t.snapshots[1]);
+      expect(at(-448.6, 1).morph!.t).toBeGreaterThan(0.9);
+      expect(at(-448.5, 1)).toEqual({ snap: t.snapshots[1], geometry: sq(2) });
+      // Halfway, the square is halfway between its two sizes.
+      const xs = (at(-449, 1).geometry!.coordinates as number[][][][])[0][0].map((p) => p[0]);
+      expect(Math.max(...xs)).toBeCloseTo(24.5, 9);
+    });
+
+    it('never runs more than halfway to the changes either side', () => {
+      // At 25 years a second the morph would be 25 years long; the sets either side of 450 BCE are 58 and 10 years away.
+      expect(at(-455, 25).morph).toBeUndefined();
+      expect(at(-454, 25).morph!.t).toBeCloseTo(0, 9);
+      expect(at(-449, 25).morph!.t).toBeCloseTo(0.5, 9);
+      expect(at(-444.01, 25).morph!.t).toBeGreaterThan(0.99);
+      // 440 BCE's change starts where 450's ends.
+      expect(at(-444, 25).morph!.after).toBe(t.snapshots[2].geometry);
+      expect(at(-444, 25).morph!.t).toBeCloseTo(0, 9);
+    });
+
+    it('doesn’t morph across a gap, at an end, or out of the start', () => {
+      const gap: Territory = { ...t, snapshots: [{ from: { y: -507 }, to: { y: -479 }, geometry: sq(1) }, { from: { y: -469 }, geometry: sq(2) }] };
+      expect(bordersAt(gap, -469, 25).morph).toBeUndefined();
+      expect(bordersAt(gap, -479.1, 25)).toEqual({ snap: gap.snapshots[0], geometry: sq(1) });
+      expect(at(-507, 25).morph).toBeUndefined();
+    });
+
+    it('moves the key and the label while it morphs, and names what’s morphing', () => {
+      const a = territoriesAt([t], -449.3, colorOf, 1), b = territoriesAt([t], -449.2, colorOf, 1);
+      expect(a.key).not.toBe(b.key);
+      expect(a.morphing).toEqual(['Athens']);
+      expect(a.labels[0].lon).toBeGreaterThan(23.5);
+      expect(a.labels[0].lon).toBeLessThan(24);
+      expect(territoriesAt([t], -430, colorOf, 1).morphing).toEqual([]);
+      expect(territoriesAt([t], -449.3, colorOf, 0).key).toBe(territoriesAt([t], -449.2, colorOf, 0).key);
+    });
   });
 
   it('switches a city-state’s borders at the dates Bob gave them', () => {

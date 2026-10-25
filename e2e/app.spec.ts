@@ -662,6 +662,68 @@ test('draw a city-state’s borders and date them @phone', async ({ page }) => {
   await expect(territoryLabel(page, 'Athens')).toBeVisible();
 });
 
+test('copy borders to new dates, move a point, and watch one set change into the next', async ({ page }) => {
+  test.slow();
+  await open(page);
+  await openMap(page);
+  await goToYear(page, '450 BCE');
+  await page.getByRole('button', { name: 'Add a territory' }).click();
+  await page.getByTestId('own-borders').getByRole('button', { name: 'Draw on the map' }).click();
+  const map = page.getByTestId('map');
+  const canvas = page.locator('[data-testid=map] canvas');
+  const corners = [[-40, -40], [40, -40], [40, 40], [-40, 40]];
+  let box = (await map.boundingBox())!;
+  for (const [dx, dy] of corners) await canvas.click({ position: { x: box.width / 2 + dx, y: box.height / 2 + dy } });
+  await page.getByTestId('draw-toolbar').getByRole('button', { name: 'Done' }).click();
+
+  // What's drawn stays on the map while its form is open.
+  const form = page.getByTestId('own-borders');
+  await expect(territoryLabel(page, 'New territory')).toBeVisible();
+  await form.getByLabel('Name').fill('Athens');
+  await expect(territoryLabel(page, 'Athens')).toBeVisible();
+  await form.getByLabel('From').fill('508 BCE');
+  await form.getByRole('button', { name: 'Add to map' }).click();
+
+  // A copy waits for its own first year.
+  await page.getByTestId('territory-view').getByRole('button', { name: 'Edit' }).click();
+  const editor = page.getByTestId('territory-editor');
+  await editor.getByRole('button', { name: 'Copy to new dates' }).click();
+  const copy = editor.getByRole('group', { name: 'Borders 2' });
+  await expect(copy.getByLabel('From')).toBeFocused();
+  await expect(editor.getByRole('button', { name: 'Save changes' })).toBeDisabled();
+  await copy.getByLabel('From').fill('440 BCE');
+  const area = async () => Number((await copy.getByText(/About .* km²/).textContent())!.replace(/\D/g, ''));
+  const before = await area();
+
+  // Drag the copy's top-right corner out to the right.
+  await copy.getByRole('button', { name: 'Edit shape' }).click();
+  const toolbar = page.getByTestId('reshape-toolbar');
+  await expect(toolbar).toContainText('Drag a point to move it');
+  await expect(map).not.toHaveAttribute('data-moving');
+  box = (await map.boundingBox())!;
+  const at = (dx: number, dy: number) => [box.x + box.width / 2 + dx, box.y + box.height / 2 + dy] as const;
+  await page.mouse.move(...at(40, -40));
+  await page.mouse.down();
+  await page.mouse.move(...at(100, -40), { steps: 6 });
+  await page.mouse.up();
+  await expect(toolbar.getByRole('button', { name: 'Undo' })).toBeEnabled();
+  await toolbar.getByRole('button', { name: 'Done' }).click();
+  await expect(toolbar).toHaveCount(0);
+  await expect.poll(area).toBeGreaterThan(before * 1.2);
+  await editor.getByRole('button', { name: 'Save changes' }).click();
+  await expect(page.getByTestId('territory-view')).toContainText('From 440 BCE');
+
+  // Playing across 440 BCE, the first set changes into the second; paused, each is as drawn.
+  await page.getByRole('button', { name: 'Close panel' }).click();
+  await expect(map).toHaveAttribute('data-morphing', '');
+  await page.getByLabel('Speed').selectOption('5');
+  await goToYear(page, '445 BCE');
+  await page.getByRole('button', { name: 'Play through time' }).click();
+  await expect.poll(() => map.getAttribute('data-morphing'), { intervals: [50], timeout: 10_000 }).toBe('Athens');
+  await expect.poll(() => map.getAttribute('data-morphing'), { intervals: [50], timeout: 10_000 }).toBe('');
+  await page.getByRole('button', { name: 'Pause' }).click();
+});
+
 test('bring city-state borders from a GeoJSON file and date them in the editor', async ({ page }) => {
   await open(page);
   await openMap(page);

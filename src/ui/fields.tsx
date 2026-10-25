@@ -25,11 +25,12 @@ export function Field({ label, children, hint, hintTone }: { label: string; chil
 }
 
 /** Text input that understands "431 BCE", "c. 1440", "1914-07-28" and shows how it was read. */
-export function DateField({ label, value, onChange, optional }: {
+export function DateField({ label, value, onChange, optional, autoFocus }: {
   label: string;
   value: HistDate | undefined;
   onChange: (d: HistDate | undefined, valid: boolean) => void;
   optional?: boolean;
+  autoFocus?: boolean;
 }) {
   const [text, setText] = useState(value ? toInputString(value) : '');
   const parsed = text.trim() ? parseHistDate(text) : undefined;
@@ -44,6 +45,7 @@ export function DateField({ label, value, onChange, optional }: {
       <input
         value={text}
         placeholder="e.g. 431 BCE"
+        autoFocus={autoFocus}
         aria-invalid={bad || (!optional && !parsed)}
         onChange={(e) => {
           const t = e.target.value;

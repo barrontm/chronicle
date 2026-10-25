@@ -7,6 +7,8 @@
 //   --filmstrip <view>    map | split | timeline played from --from to --to (BCE years, default 480 to 400) in --frames steps (default 9),
 //                         tiled into screenshots/filmstrip-<view>.png: one image to see motion
 //   --video               the same run recorded as screenshots/video-<view>.webm (Play at 10 years a second)
+//   --filmstrip morph     a border changing while Play runs: 1 year a second from --from (default 455 BCE, across the
+//                         Delian League's change of 454), the page's clock stepped so each of --frames is an exact moment
 // Output: screenshots/*.png (git-ignored). Set PW_CHROMIUM_PATH in sandboxes without Playwright browsers.
 import { gunzipSync } from 'node:zlib';
 import { chromium } from '@playwright/test';
@@ -176,6 +178,26 @@ async function drawBorder(p, prefix) {
   await p.getByTestId('own-borders').getByLabel('Name').fill('Athens');
   await p.waitForTimeout(300);
   await shot(p, `${prefix}-draw-form`);
+  if (!wanted(`${prefix}-draw-reshape`) && !wanted(`${prefix}-draw-editor`)) return;
+  // Changing its points from the form, one point picked.
+  await p.getByTestId('own-borders').getByRole('button', { name: 'Edit shape' }).click();
+  await p.getByTestId('reshape-toolbar').waitFor();
+  await p.waitForTimeout(400);
+  const again = await p.getByTestId('map').boundingBox();
+  await canvas.click({ position: { x: again.width / 2 + 40, y: again.height * 0.5 - 40 * 0.7 } });
+  await p.waitForTimeout(300);
+  await shot(p, `${prefix}-draw-reshape`);
+  await p.getByTestId('reshape-toolbar').getByRole('button', { name: 'Done' }).click();
+  // Its editor, with the borders copied to new dates.
+  const form = p.getByTestId('own-borders');
+  await form.getByLabel('From').fill('508 BCE');
+  await form.getByRole('button', { name: 'Add to map' }).click();
+  await p.getByTestId('territory-view').getByRole('button', { name: 'Edit' }).click();
+  const editor = p.getByTestId('territory-editor');
+  await editor.getByRole('button', { name: 'Copy to new dates' }).click();
+  await editor.getByRole('group', { name: 'Borders 2' }).scrollIntoViewIfNeeded();
+  await p.waitForTimeout(300);
+  await shot(p, `${prefix}-draw-editor`);
 }
 
 if (any('desktop-draw')) await drawBorder(await page('desktop-draw', desktop), 'desktop');
@@ -954,7 +976,36 @@ async function setYear(p, year) {
   await input.press('Enter');
 }
 const runView = flag('--filmstrip', null) ?? (argv.includes('--video') ? flag('--view', 'map') : null);
-if (runView && !runView.startsWith('--')) {
+if (runView === 'morph') {
+  // The change is a second of play centred on its year: half a second in, half a second out.
+  const base = presets.find((x) => x.id === 'map-war');
+  const from = Number(flag('--from', 455)), frames = Number(flag('--frames', 9));
+  p = await galleryPage(base);
+  await p.locator('[data-testid=map][data-ready]').waitFor({ timeout: 20000 });
+  await p.getByLabel('Speed').selectOption('1');
+  await setYear(p, `${from} BCE`);
+  await p.waitForTimeout(1500);
+  await p.clock.install();
+  await p.clock.pauseAt(new Date(Date.now() + 1000));
+  await p.getByRole('button', { name: 'Play through time' }).click();
+  const target = p.getByTestId('map'), strip = [];
+  const first = 300, last = 1700, step = (last - first) / (frames - 1);
+  await p.clock.runFor(first);
+  for (let i = 0; i < frames; i++) {
+    // The map draws on animation frames, which the paused clock holds back: give it real time and one frame.
+    await p.waitForTimeout(400);
+    await p.clock.runFor(16);
+    await p.waitForTimeout(150);
+    strip.push({ caption: `${((first + i * step) / 1000).toFixed(2)} s · ${(await target.getAttribute('data-morphing')) || 'no change'}`, png: (await target.screenshot()).toString('base64') });
+    if (i < frames - 1) await p.clock.runFor(step - 16);
+  }
+  await p.clock.resume();
+  const sheet = await (await browser.newContext({ viewport: { width: 1500, height: 100 } })).newPage();
+  const cols = 3, w = Math.floor(1480 / cols) - 8;
+  await sheet.setContent(`<style>body{margin:8px;font:14px system-ui;display:flex;flex-wrap:wrap;gap:8px}figure{margin:0}img{width:${w}px;display:block;border:1px solid #ccc}figcaption{padding:2px 0;font-weight:600}</style>${strip.map((f) => `<figure><img src="data:image/png;base64,${f.png}"><figcaption>${f.caption}</figcaption></figure>`).join('')}`);
+  await sheet.screenshot({ path: `${OUT}filmstrip-morph.png`, fullPage: true });
+  taken.push('filmstrip-morph');
+} else if (runView && !runView.startsWith('--')) {
   const preset = { map: 'map-war', split: 'split-decelea', timeline: 'timeline' }[runView];
   if (!preset) throw new Error(`--filmstrip needs map, split or timeline (got ${runView})`);
   const base = presets.find((x) => x.id === preset);

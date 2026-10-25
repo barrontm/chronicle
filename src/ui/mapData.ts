@@ -5,6 +5,7 @@ import type { EraRegion } from '../model/eras';
 import { linkYear } from '../model/threads';
 import { presenceAt, regionExtent, snapshotAt, valueAt } from '../model/atYear';
 import { formatYear, toDecimalYear } from '../model/dates';
+import { morphBetween } from './morph';
 import type { Flow, FlowCause, FlowEnd, FlowRoute, Lane, Place, Region, Relation, Series, SeriesPoint, Territory, TerritorySnapshot, TimelineItem } from '../model/types';
 
 /**
@@ -86,26 +87,72 @@ export function arcsBetween(relations: Relation[], pins: FeatureCollection<Point
   return fc(features);
 }
 
+/** How long a change of borders takes to morph while Play runs: about a second of play, at any speed. */
+export const MORPH_SECONDS = 1;
+
+export interface BordersAt {
+  /** The set of borders that applies in the year. */
+  snap?: TerritorySnapshot;
+  geometry?: Area;
+  /** While a change morphs: how far along it is (0 the old borders, 1 the new). */
+  morph?: { t: number; before: Area; after: Area };
+}
+
+const ease = (u: number) => u * u * (3 - 2 * u);
+
+/**
+ * A territory's borders in a year. While Play runs, `morphYears` is how many years a second of
+ * play covers, and a change of borders morphs over that many years, centred on the new set's
+ * first year and never more than halfway to the changes either side (Bob's choice, 2026-10-25).
+ * Paused (0), each set shows exactly as drawn. Only sets that meet morph: one that ends before
+ * the next begins just goes, and the next appears.
+ */
+export function bordersAt(t: Pick<Territory, 'snapshots'>, year: number, morphYears = 0): BordersAt {
+  const snap = snapshotAt(t, year);
+  const now: BordersAt = { snap, geometry: snap?.geometry };
+  if (!(morphYears > 0) || t.snapshots.length < 2) return now;
+  const sets = t.snapshots.map((s) => ({ s, from: toDecimalYear(s.from), to: s.to ? toDecimalYear(s.to) : Infinity })).sort((a, b) => a.from - b.from);
+  for (let i = 1; i < sets.length; i++) {
+    const p = sets[i - 1], s = sets[i], c = s.from;
+    if (Math.abs(year - c) >= morphYears / 2) continue;
+    if (!p.s.geometry || !s.s.geometry || p.to < c || p.from === c) continue;
+    const h = Math.min(morphYears / 2, (c - p.from) / 2, (Math.min(s.to, sets[i + 1]?.from ?? Infinity) - c) / 2);
+    if (year < c - h || year >= c + h) continue;
+    const u = ease((year - (c - h)) / (2 * h));
+    return { snap, geometry: morphBetween(p.s.geometry, s.s.geometry)(u), morph: { t: u, before: p.s.geometry, after: s.s.geometry } };
+  }
+  return now;
+}
+
 export interface TerritoriesAt {
   shapes: FeatureCollection<NonNullable<TerritorySnapshot['geometry']>, TerritoryProps>;
   labels: Array<{ id: string; title: string; lon: number; lat: number }>;
-  /** Changes only when a different snapshot becomes current, so the map can skip redrawing. */
+  /** Changes only when a different snapshot becomes current, or a morph moves on, so the map can skip redrawing. */
   key: string;
+  /** The territories whose borders are morphing. */
+  morphing: string[];
 }
 
-export function territoriesAt(territories: Territory[], year: number, colorOf: ColorOf): TerritoriesAt {
+/** The territories with borders in a year; while Play runs, those changing borders morph (`bordersAt`). */
+export function territoriesAt(territories: Territory[], year: number, colorOf: ColorOf, morphYears = 0): TerritoriesAt {
   const shapes: Feature<NonNullable<TerritorySnapshot['geometry']>, TerritoryProps>[] = [];
   const labels: TerritoriesAt['labels'] = [];
   const keys: string[] = [];
+  const morphing: string[] = [];
   for (const t of territories) {
     const color = colorOf(t.categoryId);
-    const snap = color ? snapshotAt(t, year) : undefined;
-    if (!snap?.geometry || !color) continue;
-    keys.push(`${t.id}@${t.snapshots.indexOf(snap)}:${color}:${t.title}`);
-    shapes.push({ type: 'Feature', geometry: snap.geometry, properties: { id: t.id, title: t.title, color, areaKm2: snap.areaKm2 } });
-    labels.push({ id: t.id, title: t.title, ...labelPoint(snap.geometry) });
+    if (!color) continue;
+    const { snap, geometry, morph } = bordersAt(t, year, morphYears);
+    if (!snap || !geometry) continue;
+    keys.push(`${t.id}@${t.snapshots.indexOf(snap)}${morph ? `~${morph.t.toFixed(3)}` : ''}:${color}:${t.title}`);
+    shapes.push({ type: 'Feature', geometry, properties: { id: t.id, title: t.title, color, areaKm2: snap.areaKm2 } });
+    if (morph) {
+      morphing.push(t.title);
+      const a = labelPoint(morph.before), b = labelPoint(morph.after);
+      labels.push({ id: t.id, title: t.title, lon: a.lon + (b.lon - a.lon) * morph.t, lat: a.lat + (b.lat - a.lat) * morph.t });
+    } else labels.push({ id: t.id, title: t.title, ...labelPoint(geometry) });
   }
-  return { shapes: fc(shapes), labels, key: keys.join('|') };
+  return { shapes: fc(shapes), labels, key: keys.join('|'), morphing };
 }
 
 const isCountryCode = (k: string) => /^[A-Z]{3}$/.test(k);
@@ -516,11 +563,13 @@ export interface FollowInput extends ContactDoc {
   window: { start: number; end: number };
   /** What's in a world event (`worldMembers`). */
   worldMembers?: (id: string) => string[];
+  /** While Play runs, the years a change of borders morphs over (`bordersAt`). */
+  morphYears?: number;
 }
 
-/** A territory's borders in a year, else its nearest snapshot's (a polity with borders only later still has a place). */
-function shapeOf(t: Territory, year: number) {
-  const now = snapshotAt(t, year)?.geometry;
+/** A territory's borders in a year (morphing while Play runs), else its nearest snapshot's (a polity with borders only later still has a place). */
+function shapeOf(t: Territory, year: number, morphYears = 0) {
+  const now = bordersAt(t, year, morphYears).geometry;
   if (now) return now;
   const shaped = t.snapshots.filter((s) => s.geometry);
   return shaped.sort((a, b) => Math.abs(toDecimalYear(a.from) - year) - Math.abs(toDecimalYear(b.from) - year))[0]?.geometry;
@@ -585,7 +634,7 @@ export function followAt(o: FollowInput): FollowAt {
   const out: FollowAt = { shapes: fc(shapes), pins: fc(pins), marks, regionEdge: fc([]) };
   const byId = new Map(o.territories.map((t) => [t.id, t]));
   const items = new Map(o.items.map((i) => [i.id, i]));
-  const shape = (t: Territory, color: string, fill: number, width: number, dashed = false, geometry = shapeOf(t, o.year)) => {
+  const shape = (t: Territory, color: string, fill: number, width: number, dashed = false, geometry = shapeOf(t, o.year, o.morphYears)) => {
     if (geometry) shapes.push({ type: 'Feature', geometry, properties: { id: t.id, color, fill, width, dashed } });
     return geometry;
   };

@@ -2,13 +2,13 @@ import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { formatYear, parseHistDate } from '../model/dates';
 import type { Category, Flow, FlowCause, Region, Relation, Series, Territory, TimelineItem } from '../model/types';
 import type { Area } from '../data/geo';
-import { addPoint, canFinish, closePart, EMPTY_DRAFT, toGeometry, undo, type Draft } from './drawing';
+import { addPoint, canDelete, canFinish, closePart, deleteVertex, EMPTY_DRAFT, insertVertex, moveVertex, toGeometry, undo, type Draft, type Vertex } from './drawing';
 import { polityMembers, worldMembers } from '../model/polities';
 import { entryLanes } from '../model/lanes';
 import { loadCountriesFile } from '../data/countries';
 import { eraRegions } from '../model/eras';
 import { activeRoutes, CAUSES, choroplethAt, eraExtents, followAt, landRings, mapKindOf, type ContactHow, type TimelineFocus } from './mapData';
-import type { BackdropStatus, MapCamera, MapFit, MapOptions } from './MapView';
+import type { BackdropStatus, MapCamera, MapFit, MapOptions, ShapeEdit } from './MapView';
 import { formatValue } from './util';
 
 // MapLibre is large; load it only when the map is first shown.
@@ -21,6 +21,8 @@ export interface FlowOptions { show: boolean; hiddenCauses: FlowCause[] }
 
 interface Props {
   year: number;
+  /** While Play runs, the years a change of borders morphs over (`bordersAt`); 0 when paused. */
+  morphYears?: number;
   items: TimelineItem[];
   territories: Territory[];
   /** Bob's region records: their outlines are focused, and tint their eras. */
@@ -49,6 +51,8 @@ interface Props {
   fitTo?: MapFit;
   /** Set while Bob is drawing a border on the map. */
   drawing?: { onDone: (g: Area) => void; onCancel: () => void };
+  /** Set while Bob is changing a border's points on the map. */
+  reshaping?: { geometry: Area; onDone: (g: Area) => void; onCancel: () => void };
   /** Set while Bob is picking one point on the map (a migration route's end). */
   picking?: { onDone: (p: [number, number]) => void; onCancel: () => void };
   /** The reader layout: the map follows what the overview has picked or open, in the years in view. */
@@ -68,6 +72,32 @@ export function MapPane(p: Props) {
   const [menu, setMenu] = useState(false);
   const [draft, setDraft] = useState<Draft>(EMPTY_DRAFT);
   useEffect(() => setDraft(EMPTY_DRAFT), [p.drawing]);
+  // Changing a border: the shape so far, the shapes before each change (for Undo), and the picked point.
+  const [shape, setShape] = useState<{ g: Area; undo: Area[]; picked?: Vertex } | null>(null);
+  const reshapeFrom = p.reshaping?.geometry;
+  useEffect(() => setShape(reshapeFrom ? { g: reshapeFrom, undo: [] } : null), [reshapeFrom]);
+  const onShapeEdit = (e: ShapeEdit) => setShape((s) => {
+    if (!s) return s;
+    if (e.type === 'pick') return { ...s, picked: e.at };
+    if (e.type === 'insert') return { g: insertVertex(s.g, e.after, e.p), undo: [...s.undo, s.g], picked: { ...e.after, i: e.after.i + 1 } };
+    return { g: moveVertex(s.g, e.at, e.p), undo: e.first ? [...s.undo, s.g] : s.undo, picked: e.at };
+  });
+  const undoShape = () => setShape((s) => (s?.undo.length ? { g: s.undo.at(-1)!, undo: s.undo.slice(0, -1) } : s));
+  const deletePoint = () => setShape((s) => (s?.picked && canDelete(s.g, s.picked) ? { g: deleteVertex(s.g, s.picked), undo: [...s.undo, s.g] } : s));
+  // Delete or Backspace removes the picked point (unless Bob is typing somewhere).
+  const reshapingNow = !!shape;
+  useEffect(() => {
+    if (!reshapingNow) return;
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.key !== 'Delete' && e.key !== 'Backspace') || (e.target as HTMLElement).closest('input, textarea, select, [contenteditable]')) return;
+      e.preventDefault();
+      deletePoint();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [reshapingNow]);
+  // Morphs run only while playing, and never with reduced motion.
+  const morphYears = p.morphYears && !matchMedia('(prefers-reduced-motion: reduce)').matches ? p.morphYears : 0;
   const [backdrop, setBackdrop] = useState<BackdropStatus>({ state: 'off' });
   const mapSeries = useMemo(() => p.series.filter((s) => mapKindOf(s)), [p.series]);
   const dataSeries = mapSeries.find((s) => s.id === p.dataSeriesId);
@@ -86,8 +116,8 @@ export function MapPane(p: Props) {
   const follow = useMemo(() => (following ? followAt({
     items: p.items, territories: p.territories, relations: p.relations, flows: p.flows,
     focus: p.focus ?? {}, region: p.region?.name, regions: p.regions, year: p.year, window: p.window ?? { start: p.year - 50, end: p.year + 50 },
-    worldMembers: (id) => worldMembers(id, { relations: p.relations }),
-  }) : undefined), [following, p.items, p.territories, p.regions, p.relations, p.flows, p.focus, p.region?.name, p.year, p.window]);
+    worldMembers: (id) => worldMembers(id, { relations: p.relations }), morphYears,
+  }) : undefined), [following, p.items, p.territories, p.regions, p.relations, p.flows, p.focus, p.region?.name, p.year, p.window, morphYears]);
   // Each region's era of the year, tinted over its extent.
   const [land, setLand] = useState<ReturnType<typeof landRings> | null>(null);
   useEffect(() => {
@@ -116,6 +146,7 @@ export function MapPane(p: Props) {
       <Suspense fallback={<div className="map-host map-loading" role="status">Loading the map…</div>}>
         <MapView
           year={p.year}
+          morphYears={morphYears}
           items={p.items}
           territories={p.territories}
           categories={p.categories}
@@ -141,6 +172,8 @@ export function MapPane(p: Props) {
           onCamera={p.onCamera}
           fitTo={p.fitTo}
           draft={p.drawing ? draft : undefined}
+          shape={shape ? { geometry: shape.g, picked: shape.picked } : undefined}
+          onShapeEdit={shape ? onShapeEdit : undefined}
           onDrawPoint={p.drawing ? (pt, nearFirst) => setDraft((d) => (nearFirst ? closePart(d) : addPoint(d, pt))) : p.picking ? (pt) => p.picking!.onDone(pt) : undefined}
         />
       </Suspense>
@@ -149,6 +182,14 @@ export function MapPane(p: Props) {
         <div className="map-draw" role="toolbar" aria-label="Picking a place" data-testid="pick-toolbar">
           <span className="grow">Click on the map to place this end of the route.</span>
           <button className="btn small quiet" onClick={p.picking.onCancel}>Cancel</button>
+        </div>
+      ) : p.reshaping && shape ? (
+        <div className="map-draw" role="toolbar" aria-label="Changing a border" data-testid="reshape-toolbar">
+          <span className="grow">{shape.picked ? 'Drag the point to move it, or delete it.' : 'Drag a point to move it, or a dot between two points to add one. Click a point to pick it.'}</span>
+          <button className="btn small" disabled={!shape.undo.length} onClick={undoShape}>Undo</button>
+          <button className="btn small" disabled={!shape.picked || !canDelete(shape.g, shape.picked)} onClick={deletePoint} title={shape.picked && !canDelete(shape.g, shape.picked) ? 'A border keeps at least three points' : undefined}>Delete point</button>
+          <button className="btn small primary" onClick={() => p.reshaping!.onDone(shape.g)}>Done</button>
+          <button className="btn small quiet" onClick={p.reshaping.onCancel}>Cancel</button>
         </div>
       ) : p.drawing ? (
         <div className="map-draw" role="toolbar" aria-label="Drawing a border" data-testid="draw-toolbar">

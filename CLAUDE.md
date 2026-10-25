@@ -15,6 +15,7 @@ npm run check         # same, full output: only when debugging a failure
 npm run shots -- --only map --sheet   # screenshots of the views you touched, tiled into one image
 npm run shots -- --gallery --sheet    # the app on the Classical Greece fixture, one shot per preset (starts a dev server)
 npm run shots -- --filmstrip map      # the map played 480→400 BCE as one image (--video for a .webm; --from/--to/--frames)
+npm run shots -- --filmstrip morph    # a border changing while Play runs, clock stepped (the Delian League in 454 BCE)
 node tests/fixtures/greece/build.mjs  # rebuild the Classical Greece fixture from the prototypes' data
 npx playwright test e2e/visual.spec.ts --update-snapshots   # after an intended visual change
 node scripts/check-draft.mjs <file> --bbox …   # check a drafted import file before Bob merges it
