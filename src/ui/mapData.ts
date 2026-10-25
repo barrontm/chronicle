@@ -1,10 +1,11 @@
 import type { Feature, FeatureCollection, LineString, MultiPolygon, Point, Polygon, Position } from 'geojson';
-import { bbox, clipToConvex, convexHull, labelPoint, pointBlob, type Area } from '../data/geo';
+import { areaKm2, bbox, clipToConvex, convexHull, labelPoint, pointBlob, type Area } from '../data/geo';
+import { holds } from '../model/polities';
 import type { EraRegion } from '../model/eras';
 import { linkYear } from '../model/threads';
 import { presenceAt, regionExtent, snapshotAt, valueAt } from '../model/atYear';
 import { formatYear, toDecimalYear } from '../model/dates';
-import type { Flow, FlowCause, FlowEnd, FlowRoute, Lane, Place, Relation, Series, SeriesPoint, Territory, TerritorySnapshot, TimelineItem } from '../model/types';
+import type { Flow, FlowCause, FlowEnd, FlowRoute, Lane, Place, Region, Relation, Series, SeriesPoint, Territory, TerritorySnapshot, TimelineItem } from '../model/types';
 
 /**
  * Turns the doc into GeoJSON for one year of the map. Pure (no MapLibre), so
@@ -500,12 +501,16 @@ export interface FollowAt {
   /** Where to fit the map for the pick, and for the region; each refits only when its key changes. */
   pickFit?: { key: string; bounds: [number, number, number, number] };
   regionFit?: { key: string; bounds: [number, number, number, number] };
+  /** The focused region's outline, when Bob gave it one: drawn as a faint ink edge. */
+  regionEdge: FeatureCollection<Area, { name: string }>;
 }
 
 export interface FollowInput extends ContactDoc {
   focus: TimelineFocus;
   /** The region Bob clicked on the map, if any. */
   region?: string;
+  /** Bob's region records, for their outlines. */
+  regions?: Region[];
   year: number;
   /** The years in view on the timeline. */
   window: { start: number; end: number };
@@ -526,6 +531,42 @@ function union(boxes: [number, number, number, number][]): [number, number, numb
   return [Math.min(...boxes.map((b) => b[0])), Math.min(...boxes.map((b) => b[1])), Math.max(...boxes.map((b) => b[2])), Math.max(...boxes.map((b) => b[3]))];
 }
 
+/* ---------- a region's outline ---------- */
+
+/** Several areas as one MultiPolygon. */
+function joinAreas(gs: Area[]): MultiPolygon | undefined {
+  const polys = gs.flatMap((g) => (g.type === 'Polygon' ? [g.coordinates] : g.coordinates));
+  return polys.length ? { type: 'MultiPolygon', coordinates: polys } : undefined;
+}
+
+/**
+ * Where a region is in a year, from its outline: the shape Bob drew, else the borders of the
+ * territories he picked for it then (each its nearest borders, if it has none that year). None
+ * without an outline: the region is then only where its territories are.
+ */
+export function regionShape(region: Pick<Region, 'outline'> | undefined, territories: readonly Territory[], year: number): Area | undefined {
+  const o = region?.outline;
+  if (o?.geometry) return o.geometry;
+  if (!o?.territoryIds?.length) return undefined;
+  const ids = new Set(o.territoryIds);
+  return joinAreas(territories.filter((t) => ids.has(t.id)).flatMap((t) => { const g = shapeOf(t, year); return g ? [g] : []; }));
+}
+
+/**
+ * The region a point is in, by Bob's outlines: of those that hold it, the smallest (Attica
+ * before Greece). Undefined where no outline reaches.
+ */
+export function regionAt(lon: number, lat: number, regions: readonly Region[] | undefined, territories: readonly Territory[], year: number): string | undefined {
+  let best: { name: string; area: number } | undefined;
+  for (const r of regions ?? []) {
+    const g = regionShape(r, territories, year);
+    if (!g || !holds(g, lon, lat)) continue;
+    const area = areaKm2(g);
+    if (!best || area < best.area) best = { name: r.name, area };
+  }
+  return best?.name;
+}
+
 const LANE_PIGMENT: Record<Lane, string> = { politics: 'lapis', war: 'cinnabar', economy: 'ochre', ideas: 'indigo', technology: 'verdigris', nature: 'terre' };
 
 /**
@@ -535,13 +576,13 @@ const LANE_PIGMENT: Record<Lane, string> = { politics: 'lapis', war: 'cinnabar',
  * it (the Delian League) is its reach, dashed lapis. An open lane shows its layer: War everyone it
  * fought in the years in view; Politics its borders before, dashed; the others their entries' pins
  * in view, stronger near the year. A picked world event shows the polities it touched in gold and
- * its entries' pins. A region Bob clicked is fitted.
+ * its entries' pins. A region Bob clicked is fitted: to its outline, edged in ink, if it has one.
  */
 export function followAt(o: FollowInput): FollowAt {
   const shapes: Feature<NonNullable<TerritorySnapshot['geometry']>, FollowProps>[] = [];
   const pins: Feature<Point, FollowPinProps>[] = [];
   const marks: FollowAt['marks'] = new Map();
-  const out: FollowAt = { shapes: fc(shapes), pins: fc(pins), marks };
+  const out: FollowAt = { shapes: fc(shapes), pins: fc(pins), marks, regionEdge: fc([]) };
   const byId = new Map(o.territories.map((t) => [t.id, t]));
   const items = new Map(o.items.map((i) => [i.id, i]));
   const shape = (t: Territory, color: string, fill: number, width: number, dashed = false, geometry = shapeOf(t, o.year)) => {
@@ -559,7 +600,10 @@ export function followAt(o: FollowInput): FollowAt {
   };
 
   if (o.region) {
-    const boxes = o.territories.filter((t) => t.region === o.region).flatMap((t) => { const g = shapeOf(t, o.year); return g ? [bbox(g)] : []; });
+    // Its outline, else where its territories are.
+    const edge = regionShape(o.regions?.find((r) => r.name === o.region), o.territories, o.year);
+    if (edge) out.regionEdge = fc([{ type: 'Feature', geometry: edge, properties: { name: o.region } }]);
+    const boxes = edge ? [bbox(edge)] : o.territories.filter((t) => t.region === o.region).flatMap((t) => { const g = shapeOf(t, o.year); return g ? [bbox(g)] : []; });
     const b = union(boxes);
     if (b) out.regionFit = { key: o.region, bounds: b };
   }
@@ -636,7 +680,10 @@ export function followAt(o: FollowInput): FollowAt {
   return out;
 }
 
-/** An era's place on the map: a territory Bob linked as `part of` it, else the hull of its entries' places clipped to land. */
+/**
+ * An era's place on the map: a territory Bob linked as `part of` it, else its region's outline,
+ * else the hull of its entries' places clipped to land.
+ */
 export interface EraExtent {
   id: string;
   title: string;
@@ -645,6 +692,8 @@ export interface EraExtent {
   s: number;
   e: number;
   territoryId?: string;
+  /** Its region's outline, made of these territories (each at the year). */
+  territoryIds?: string[];
   shape?: MultiPolygon;
 }
 
@@ -664,10 +713,10 @@ export function landRings(fc: FeatureCollection): Position[][] {
 
 /**
  * Each top-level era's extent (inner eras such as the Fifty Years fold into theirs). Its places are
- * those of the era itself and every entry in it or its inner eras. Without a linked territory or at
- * least one place, an era isn't on the map.
+ * those of the era itself and every entry in it or its inner eras. Without a linked territory, its
+ * region's outline (`records`) or at least one place, an era isn't on the map.
  */
-export function eraExtents(regions: EraRegion[], items: TimelineItem[], relations: Relation[], territories: Territory[], land: Position[][]): EraExtent[] {
+export function eraExtents(regions: EraRegion[], items: TimelineItem[], relations: Relation[], territories: Territory[], land: Position[][], records: Region[] = []): EraExtent[] {
   const byId = new Map(items.map((i) => [i.id, i]));
   const terr = new Set(territories.map((t) => t.id));
   const linked = new Map<string, string>();
@@ -675,6 +724,7 @@ export function eraExtents(regions: EraRegion[], items: TimelineItem[], relation
   const landBoxes = land.map((r) => bbox({ type: 'Polygon', coordinates: [r] }));
   const out: EraExtent[] = [];
   for (const R of regions) {
+    const outline = records.find((r) => r.name === R.name)?.outline;
     const kids = new Map<string, string[]>();
     for (const e of R.eras) if (e.parent) kids.set(e.parent, [...(kids.get(e.parent) ?? []), e.id]);
     const eraById = new Map(R.eras.map((e) => [e.id, e]));
@@ -683,6 +733,9 @@ export function eraExtents(regions: EraRegion[], items: TimelineItem[], relation
       const base = { id: e.id, title: e.title, region: R.name, s: e.s, e: e.e };
       const territoryId = linked.get(e.id);
       if (territoryId) { out.push({ ...base, territoryId }); continue; }
+      const drawn = outline?.geometry && joinAreas([outline.geometry]);
+      if (drawn) { out.push({ ...base, shape: drawn }); continue; }
+      if (outline?.territoryIds?.length) { out.push({ ...base, territoryIds: outline.territoryIds }); continue; }
       const ids: string[] = [];
       for (const stack = [e.id]; stack.length;) {
         const id = stack.pop()!;
@@ -720,7 +773,7 @@ export function eraTintsAt(extents: EraExtent[], territories: Territory[], year:
     const opacity = fade > 0 ? ramp((year - x.s) / fade + 0.5) * ramp((x.e - year) / fade + 0.5) : Number(year >= x.s && year < x.e);
     if (opacity <= 0) continue;
     const t = x.territoryId ? byId.get(x.territoryId) : undefined;
-    const geometry = t ? shapeOf(t, year) : x.shape;
+    const geometry = t ? shapeOf(t, year) : x.territoryIds ? regionShape({ outline: { territoryIds: x.territoryIds } }, territories, year) : x.shape;
     if (geometry) features.push({ type: 'Feature', properties: { id: x.id, title: x.title, region: x.region, opacity }, geometry });
   }
   return fc(features);

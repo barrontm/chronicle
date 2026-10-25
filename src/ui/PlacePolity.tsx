@@ -5,6 +5,7 @@ import { havePolity, seshatPolity } from '../model/passage';
 import type { TimelineItem } from '../model/types';
 import type { Tied } from '../ai/draft';
 import { useDoc } from './DocContext';
+import { regionAt } from './mapData';
 import { useOnline } from './useAi';
 
 /** Who held an entry's place in its year, in Seshat's maps, as far as Chronicle has found out. */
@@ -44,9 +45,16 @@ export function usePlacePolity(at: PlaceAt | undefined) {
   return {
     at, held, have, ticked,
     setTicked: (on: boolean) => held.status === 'found' && setSkip(on ? undefined : held.polity.id),
-    /** The polity to add with the entry, when it's ticked: made once, as the entry is saved. */
-    toAdd: (categoryId: string): { item: TimelineItem; territory: Tied } | undefined =>
-      (ticked && held.status === 'found' ? seshatPolity(held.polity, held.file, categoryId) : undefined),
+    /**
+     * The polity to add with the entry, when it's ticked: made once, as the entry is saved. It starts
+     * in the region whose outline holds the place, if any.
+     */
+    toAdd: (categoryId: string): { item: TimelineItem; territory: Tied } | undefined => {
+      if (!ticked || held.status !== 'found' || !at) return undefined;
+      const made = seshatPolity(held.polity, held.file, categoryId);
+      const region = regionAt(at.lon, at.lat, doc.regions, doc.territories, at.year);
+      return region ? { ...made, territory: { next: { ...made.territory.next, region } } } : made;
+    },
   };
 }
 

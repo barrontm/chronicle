@@ -263,7 +263,7 @@ export function validateDoc(doc: TimelineDoc): string[] {
     if (!r.id || typeof r.name !== 'string' || !r.name.trim()) p.push('a region is missing its id or name');
     if (r.parent !== undefined && typeof r.parent !== 'string') p.push(`region "${r.name}" has a malformed larger area`);
     if (r.order !== undefined && !Number.isFinite(r.order)) p.push(`region "${r.name}" has a malformed order`);
-    if (r.outline !== undefined && (typeof r.outline !== 'object' || (r.outline.territoryIds !== undefined && !Array.isArray(r.outline.territoryIds)))) p.push(`region "${r.name}" has a malformed outline`);
+    if (r.outline !== undefined && (typeof r.outline !== 'object' || (r.outline.territoryIds !== undefined && !Array.isArray(r.outline.territoryIds)) || (r.outline.geometry !== undefined && !isArea(r.outline.geometry)))) p.push(`region "${r.name}" has a malformed outline`);
   }
   return p;
 }
@@ -855,6 +855,20 @@ export function setRegionParent(doc: TimelineDoc, region: string, parent: string
   const { doc: next, region: rec } = ensureRegion(doc, r, now);
   const { parent: _p, ...rest } = rec;
   return upsert(next, 'regions', p && p !== r ? { ...rest, parent: p } : rest, now);
+}
+
+/**
+ * Where a region is on the map: some of Bob's territories, or a shape he drew; with neither, it's
+ * only where its territories are again. Makes the record if it has none.
+ */
+export function setRegionOutline(doc: TimelineDoc, region: string, outline: Region['outline'], now = Date.now()): TimelineDoc {
+  const r = region.trim();
+  const ids = outline?.territoryIds?.filter(Boolean);
+  const next = outline?.geometry ? { geometry: outline.geometry } : ids?.length ? { territoryIds: [...new Set(ids)] } : undefined;
+  if (!r || (!next && !regionNamed(doc, r)?.outline)) return doc;
+  const { doc: d, region: rec } = ensureRegion(doc, r, now);
+  const { outline: _o, ...rest } = rec;
+  return upsert(d, 'regions', next ? { ...rest, outline: next } : rest, now);
 }
 
 /**

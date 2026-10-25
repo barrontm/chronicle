@@ -643,6 +643,12 @@ dialog h2 { font-family: var(--font-read); margin: 0 0 12px; font-weight: 600; }
 .region-menu-form label { font-size: 12.5px; color: var(--ink-2); }
 .region-menu-form .actions { display: flex; gap: 6px; }
 .region-menu-form .actions button { padding: 4px 10px; }
+/* Where a region is on the map: its territories to tick (scrolling when there are many), or Draw it. */
+.region-where { display: grid; gap: 6px; }
+.region-where .hint { margin: 0; }
+.region-where-list { display: grid; gap: 2px; max-height: 190px; overflow-y: auto; margin: 0; padding: 4px 6px; border: 1px solid var(--rule-soft); border-radius: 6px; }
+.region-where .actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.region-row .region-where { margin-top: 6px; }
 
 .picker-pop { border: 1px solid var(--rule); border-radius: var(--radius-s); background: var(--panel); max-height: 200px; overflow: auto; margin-top: 2px; }
 .picker-pop button { display: block; width: 100%; text-align: left; border: 0; background: none; padding: 6px 9px; cursor: pointer; }

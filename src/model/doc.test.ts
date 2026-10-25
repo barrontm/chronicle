@@ -7,6 +7,7 @@ import {
   eraTerritory,
   setEraTerritory,
   setRegionParent,
+  setRegionOutline,
   renameRegion,
   mergeRegions,
   removeRegion,
@@ -253,6 +254,23 @@ describe('regions (v10)', () => {
     expect(regionNamed(setRegionParent(d1, 'Greece', '', 7), 'Greece')?.parent).toBeUndefined();
     // A region isn't its own larger area.
     expect(regionNamed(setRegionParent(d1, 'Greece', 'Greece', 8), 'Greece')?.parent).toBeUndefined();
+  });
+
+  it('sets a region’s outline (territories or a drawn shape), replaces it, clears it, and keeps it through a merge', () => {
+    const square = { type: 'Polygon' as const, coordinates: [[[20, 35], [28, 35], [28, 42], [20, 35]]] };
+    const d1 = setRegionOutline(createEmptyDoc(), 'Greece', { territoryIds: ['t_athens', 't_athens', 't_sparta'] }, 5);
+    expect(regionNamed(d1, 'Greece')).toMatchObject({ outline: { territoryIds: ['t_athens', 't_sparta'] }, updatedAt: 5 });
+    const d2 = setRegionOutline(d1, 'Greece', { geometry: square }, 6);
+    expect(regionNamed(d2, 'Greece')?.outline).toEqual({ geometry: square });
+    expect(regionNamed(setRegionOutline(d2, 'Greece', undefined, 7), 'Greece')?.outline).toBeUndefined();
+    expect(regionNamed(setRegionOutline(d2, 'Greece', { territoryIds: [] }, 7), 'Greece')?.outline).toBeUndefined();
+    // Clearing one that has none changes nothing.
+    const d0 = createEmptyDoc();
+    expect(setRegionOutline(d0, 'Greece', undefined, 7)).toBe(d0);
+    // It merges per record, and a v10 backup with an outline imports.
+    expect(regionNamed(mergeDocs(d1, d2), 'Greece')?.outline).toEqual({ geometry: square });
+    expect(regionNamed(parseDoc(serializeDoc(d2)), 'Greece')?.outline).toEqual({ geometry: square });
+    expect(() => parseDoc(serializeDoc({ ...d2, regions: [{ ...d2.regions![0], outline: { geometry: { type: 'Point', coordinates: [0, 0] } as never } }] }))).toThrow(DocValidationError);
   });
 
   it('renames a region across its entries, territories and group, and the regions inside it', () => {

@@ -1,9 +1,9 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { parseDoc } from '../model/doc';
-import type { Flow, Relation, Territory, TimelineItem } from '../model/types';
+import type { Flow, Region, Relation, Territory, TimelineItem } from '../model/types';
 import { eraRegions } from '../model/eras';
-import { threadArcs, threadLinks, THREAD_DRAW, aboutPeople, activeRoutes, eraExtents, eraTintsAt, landRings, contactsAt, contactsDuring, followAt, arcPoints, arcsBetween, choroplethAt, draftPins, endBearing, flowDashes, flowFeatures, flowScale, mapKindOf, mixColor, parseColor, pinsAt, placesToDraw, rateAt, territoriesAt, territoryCircles, type FlowPlaces } from './mapData';
+import { threadArcs, threadLinks, THREAD_DRAW, aboutPeople, activeRoutes, eraExtents, eraTintsAt, landRings, contactsAt, contactsDuring, followAt, arcPoints, arcsBetween, choroplethAt, draftPins, endBearing, flowDashes, flowFeatures, flowScale, mapKindOf, mixColor, parseColor, pinsAt, placesToDraw, rateAt, regionAt, regionShape, territoriesAt, territoryCircles, type FlowPlaces } from './mapData';
 
 const fixture = () => parseDoc(readFileSync(new URL('../../tests/fixtures/sample-history.json', import.meta.url), 'utf8'));
 const colorOf = (id: string) => (id === 'hidden' ? undefined : '#123456');
@@ -318,6 +318,17 @@ describe('eras on the map', () => {
     expect(eraTintsAt(ex, [athens], -200, 0).features[0].geometry).toEqual(athens.snapshots[0].geometry);
   });
 
+  it('falls back to its region’s outline before the hull of its places', () => {
+    const square = { type: 'Polygon' as const, coordinates: [[[21, 36], [29, 36], [29, 41], [21, 41], [21, 36]]] };
+    const drawn = eraExtents(eraRegions(items, [], [], 2026), items, [], [], land, [{ id: 'rg_greece', name: 'Greece', outline: { geometry: square }, updatedAt: 0 }]);
+    expect(drawn.find((x) => x.id === 'classical')!.shape).toEqual({ type: 'MultiPolygon', coordinates: [square.coordinates] });
+    // Made of territories: each at the year.
+    const t: Territory = { id: 't', title: 'T', categoryId: 'c', updatedAt: 0, snapshots: [{ from: { y: -500 }, geometry: square }] };
+    const ex = eraExtents(eraRegions(items, [], [], 2026), items, [], [t], land, [{ id: 'rg_greece', name: 'Greece', outline: { territoryIds: ['t'] }, updatedAt: 0 }]);
+    expect(ex.find((x) => x.id === 'classical')).toMatchObject({ territoryIds: ['t'] });
+    expect(eraTintsAt(ex, [t], -400, 0).features[0].geometry.coordinates).toEqual([square.coordinates]);
+  });
+
   it('tints the year’s era, crossfading at the turn, or cutting when fade is 0', () => {
     const ex = extentsOf();
     const at = (y: number, fade: number) => eraTintsAt(ex, [], y, fade).features.map((f) => [f.properties.id, +f.properties.opacity.toFixed(2)]);
@@ -369,5 +380,46 @@ describe('threadArcs', () => {
     expect(all.length).toBeGreaterThan(0);
     expect(all.every((f) => f.properties.opacity === 0.15)).toBe(true);
     expect(threadArcs(undefined, -330, doc).features).toHaveLength(0);
+  });
+});
+
+describe('a region’s outline', () => {
+  const sq = (w: number, s: number, e: number, n: number) => ({ type: 'Polygon' as const, coordinates: [[[w, s], [e, s], [e, n], [w, n], [w, s]]] });
+  const terr = (id: string, g: ReturnType<typeof sq>, from = -800): Territory => ({ id, title: id, categoryId: 'c', updatedAt: 0, snapshots: [{ from: { y: from }, geometry: g }] });
+  const region = (name: string, outline: Region['outline']): Region => ({ id: `rg_${name}`, name, outline, updatedAt: 0 });
+  const athens = terr('athens', sq(23, 37.5, 24.5, 38.5));
+  const sparta = terr('sparta', sq(22, 36.5, 23, 37.5), -600);
+  const regions = [
+    region('Greece', { geometry: sq(19, 34, 28, 42) }),
+    region('Attica', { territoryIds: ['athens'] }),
+    region('Persia', { geometry: sq(40, 25, 60, 40) }),
+    region('Nowhere', undefined),
+  ];
+
+  it('is the shape Bob drew, or his territories’ borders in the year', () => {
+    expect(regionShape(regions[0], [], -400)).toEqual(regions[0].outline!.geometry);
+    expect(regionShape(region('Peloponnese', { territoryIds: ['sparta', 'athens', 'gone'] }), [athens, sparta], -400)!.coordinates).toHaveLength(2);
+    // Before Sparta has borders, its nearest ones stand in.
+    expect(regionShape(region('Peloponnese', { territoryIds: ['sparta'] }), [sparta], -700)!.coordinates).toHaveLength(1);
+    expect(regionShape(regions[3], [athens], -400)).toBeUndefined();
+  });
+
+  it('finds the region a point is in, preferring the smaller of two outlines', () => {
+    expect(regionAt(23.7, 38, regions, [athens, sparta], -400)).toBe('Attica');
+    expect(regionAt(22.4, 37, regions, [athens, sparta], -400)).toBe('Greece');
+    expect(regionAt(51, 32, regions, [athens, sparta], -400)).toBe('Persia');
+    expect(regionAt(0, 0, regions, [athens, sparta], -400)).toBeUndefined();
+    expect(regionAt(23.7, 38, undefined, [], -400)).toBeUndefined();
+  });
+
+  it('a focused region with an outline is edged and fitted to it', () => {
+    const base = { items: [], relations: [], flows: [], territories: [athens, sparta], regions, focus: {}, year: -400, window: { start: -500, end: -300 } };
+    const f = followAt({ ...base, region: 'Greece' });
+    expect(f.regionEdge.features.map((x) => x.properties.name)).toEqual(['Greece']);
+    expect(f.regionFit).toEqual({ key: 'Greece', bounds: [19, 34, 28, 42] });
+    // Without an outline, nothing is edged and its territories are fitted, as before.
+    const g = followAt({ ...base, territories: [{ ...sparta, region: 'Nowhere' }], region: 'Nowhere' });
+    expect(g.regionEdge.features).toEqual([]);
+    expect(g.regionFit?.bounds).toEqual([22, 36.5, 23, 37.5]);
   });
 });

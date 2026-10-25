@@ -13,6 +13,7 @@ import { LaneChips } from '../LaneChips';
 import { entryLanes, lanesOf, sortLanes } from '../../model/lanes';
 import { placeLabel } from '../../model/places';
 import { placeYear } from '../../model/polities';
+import { regionAt } from '../mapData';
 import { PlacePolity, usePlacePolity } from '../PlacePolity';
 import { InfluenceSuggestions } from './Influences';
 import { PlacesEditor } from './PlacesEditor';
@@ -271,9 +272,12 @@ export function ItemEditor({ id, init, draft: prefill, nav }: {
   const first = draft.places?.[0];
   const year = first && draft.start && valid.start && draft.subject !== 'polity' && (!existing || first !== existing.places?.[0]) ? placeYear(draft, first) : undefined;
   const heldBy = usePlacePolity(first && year !== undefined ? { name: first.name, lat: first.lat, lon: first.lon, year } : undefined);
+  // A new period, or one with a new place, starts in the region whose outline holds that place.
+  const placeRegion = isPeriod && first && draft.start && valid.start && (!existing || first !== existing.places?.[0])
+    ? regionAt(first.lon, first.lat, doc.regions, doc.territories, placeYear(draft, first) ?? toDecimalYear(draft.start)) : undefined;
 
   const save = () => {
-    const item: TimelineItem = { ...draft, title: draft.title.trim(), end: draft.kind === 'event' ? undefined : draft.end, region: isPeriod ? draft.region?.trim() || undefined : undefined };
+    const item: TimelineItem = { ...draft, title: draft.title.trim(), end: draft.kind === 'event' ? undefined : draft.end, region: isPeriod ? draft.region?.trim() || placeRegion : undefined };
     const keep = new Set(relations.map((r) => r.id));
     const cited = new Set([...(item.citations ?? []).map((c) => c.sourceId), quote?.sourceId]);
     const polity = heldBy.toAdd(item.categoryId);
@@ -342,8 +346,8 @@ export function ItemEditor({ id, init, draft: prefill, nav }: {
         <small className="hint">A world event is drawn in gold across every region it touched, and always shows.</small>
       </div>
       {isPeriod && (
-        <Field label="Region" hint="The row this period sits in on the overview, such as Greece.">
-          <input value={draft.region ?? ''} onChange={(e) => set('region', e.target.value || undefined)} list="regions" />
+        <Field label="Region" hint={placeRegion ? `The row this period sits in on the overview. Empty: ${placeRegion}, where its place is.` : 'The row this period sits in on the overview, such as Greece.'}>
+          <input value={draft.region ?? ''} onChange={(e) => set('region', e.target.value || undefined)} list="regions" placeholder={placeRegion} />
         </Field>
       )}
       {isPeriod && <datalist id="regions">{regionsIn(doc.items).map((r) => <option key={r} value={r} />)}</datalist>}

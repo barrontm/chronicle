@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { formatYear, parseHistDate } from '../model/dates';
-import type { Category, Flow, FlowCause, Relation, Series, Territory, TimelineItem } from '../model/types';
+import type { Category, Flow, FlowCause, Region, Relation, Series, Territory, TimelineItem } from '../model/types';
 import type { Area } from '../data/geo';
 import { addPoint, canFinish, closePart, EMPTY_DRAFT, toGeometry, undo, type Draft } from './drawing';
 import { polityMembers, worldMembers } from '../model/polities';
@@ -23,6 +23,8 @@ interface Props {
   year: number;
   items: TimelineItem[];
   territories: Territory[];
+  /** Bob's region records: their outlines are focused, and tint their eras. */
+  regions?: Region[];
   categories: Category[];
   relations: Relation[];
   series: Series[];
@@ -59,7 +61,7 @@ interface Props {
   allThreads?: boolean;
 }
 
-export interface MapRegion { name: string; territoryId: string }
+export interface MapRegion { name: string; territoryId?: string }
 
 /** The map, its layers menu and its legend. The year bar lives outside, shared with the timeline. */
 export function MapPane(p: Props) {
@@ -83,9 +85,9 @@ export function MapPane(p: Props) {
   const following = !!p.onRegion;
   const follow = useMemo(() => (following ? followAt({
     items: p.items, territories: p.territories, relations: p.relations, flows: p.flows,
-    focus: p.focus ?? {}, region: p.region?.name, year: p.year, window: p.window ?? { start: p.year - 50, end: p.year + 50 },
+    focus: p.focus ?? {}, region: p.region?.name, regions: p.regions, year: p.year, window: p.window ?? { start: p.year - 50, end: p.year + 50 },
     worldMembers: (id) => worldMembers(id, { relations: p.relations }),
-  }) : undefined), [following, p.items, p.territories, p.relations, p.flows, p.focus, p.region?.name, p.year, p.window]);
+  }) : undefined), [following, p.items, p.territories, p.regions, p.relations, p.flows, p.focus, p.region?.name, p.year, p.window]);
   // Each region's era of the year, tinted over its extent.
   const [land, setLand] = useState<ReturnType<typeof landRings> | null>(null);
   useEffect(() => {
@@ -93,7 +95,7 @@ export function MapPane(p: Props) {
     loadCountriesFile().then((fc) => { if (live) setLand(landRings(fc)); }, () => {});
     return () => { live = false; };
   }, []);
-  const eras = useMemo(() => (land ? eraExtents(eraRegions(p.items, [], p.relations, new Date().getFullYear()), p.items, p.relations, p.territories, land) : undefined), [land, p.items, p.relations, p.territories]);
+  const eras = useMemo(() => (land ? eraExtents(eraRegions(p.items, [], p.relations, new Date().getFullYear()), p.items, p.relations, p.territories, land, p.regions) : undefined), [land, p.items, p.relations, p.territories, p.regions]);
   // Threads over time: the open entry's, else the picked polity's or world event's.
   const threadDoc = useMemo(() => {
     let members: Map<string, string[]> | undefined;
