@@ -453,7 +453,7 @@ for (const p of ov.participants) {
 
 const usedWp = [...wpIds.values()].map((s) => ({ ...s }));
 const doc = {
-  schemaVersion: 9, id: 'doc_classical_greece', title: 'Classical Greece (test fixture)', updatedAt: NOW,
+  schemaVersion: 10, id: 'doc_classical_greece', title: 'Classical Greece (test fixture)', updatedAt: NOW,
   categories: [
     { id: 'politics', label: 'Politics & government', color: 'var(--pig-lapis)' },
     { id: 'war', label: 'War & conflict', color: 'var(--pig-cinnabar)' },
@@ -467,7 +467,9 @@ const doc = {
   sources: [...sources, ...usedWp].map((s) => ({ ...s, updatedAt: NOW })),
   relations, deleted: {},
   groups: ov.groups.map((g) => ({ id: g.id, title: g.title, territoryIds: g.members, updatedAt: NOW })),
-  regionParents: ov.regionParents,
+  // One record per region in use (v10), with its larger area.
+  regions: [...new Set([...items, ...territories].flatMap((x) => (x.region?.trim() ? [x.region.trim()] : [])))].sort((a, b) => a.localeCompare(b))
+    .map((name) => ({ id: `rg_${name.toLowerCase().replace(/\s+/g, '_')}`, name, ...(ov.regionParents[name] ? { parent: ov.regionParents[name] } : {}), updatedAt: NOW })),
 };
 
 // ---------- the sidecar: shapes the schema does not have yet ----------

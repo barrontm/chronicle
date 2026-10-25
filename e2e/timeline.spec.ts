@@ -806,3 +806,26 @@ test('lenses, regions, strength and groups: the War lens ticks, Megara moves int
   await expect(athens).toHaveCount(1);
   await expect(page.getByRole('group', { name: 'Lenses' }).getByRole('button', { name: 'War' })).toHaveAttribute('aria-pressed', 'true');
 });
+
+test('Bob renames a region in the Library and its band takes the new name, then Undo puts it back', async ({ page }) => {
+  const timeline = await openGreece(page, false);
+  await page.getByTestId('time-bar').getByRole('button', { name: 'All', exact: true }).click();
+  await expect(timeline.locator('text.tl-region', { hasText: /^Macedon$/i })).toHaveCount(1);
+
+  await page.getByRole('button', { name: 'Library' }).click();
+  await page.getByTestId('library').getByRole('tab', { name: 'Regions and groups' }).click();
+  const row = page.getByTestId('regions-tab').getByRole('listitem', { name: 'Macedon' });
+  await expect(row).toContainText('1 territory');
+  await row.getByRole('button', { name: 'Rename Macedon' }).click();
+  await row.getByLabel('New name for Macedon').fill('Macedonia');
+  await row.getByRole('button', { name: 'Rename', exact: true }).click();
+  await expect(page.getByTestId('regions-tab').getByRole('listitem', { name: 'Macedonia' })).toBeVisible();
+  await expect(page.getByTestId('bulk-note')).toHaveText(/Renamed Macedon to Macedonia\./);
+
+  await expect(timeline.locator('text.tl-region', { hasText: /^Macedonia$/i })).toHaveCount(1);
+  await expect(timeline.locator('text.tl-region', { hasText: /^Macedon$/i })).toHaveCount(0);
+  await page.getByTestId('bulk-note').getByRole('button', { name: 'Undo' }).click();
+  await expect(timeline.locator('text.tl-region', { hasText: /^Macedon$/i })).toHaveCount(1);
+  await expect(page.getByTestId('regions-tab').getByRole('listitem', { name: 'Macedon' })).toBeVisible();
+  await expect(page.getByTestId('regions-tab').getByRole('listitem', { name: 'Macedonia' })).toHaveCount(0);
+});

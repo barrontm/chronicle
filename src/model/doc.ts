@@ -18,6 +18,7 @@ import {
   type Note,
   type PolityGroup,
   type Provenance,
+  type Region,
   type Relation,
   type RelationType,
   type Series,
@@ -61,6 +62,7 @@ export function createEmptyDoc(title = 'My history'): TimelineDoc {
     sources: [],
     relations: [],
     groups: [],
+    regions: [],
     deleted: {},
     updatedAt: Date.now(),
   };
@@ -255,9 +257,13 @@ export function validateDoc(doc: TimelineDoc): string[] {
     if (!g.id || !g.title?.trim()) p.push('a group is missing its id or title');
     if (!Array.isArray(g.territoryIds)) p.push(`group "${g.title}" has malformed members`);
   }
-  if (doc.regionParents !== undefined) {
-    const rp = doc.regionParents;
-    if (!rp || typeof rp !== 'object' || Array.isArray(rp) || Object.values(rp).some((v) => typeof v !== 'string')) p.push('the region parents are malformed');
+  if (doc.regions !== undefined && !Array.isArray(doc.regions)) p.push('the regions are malformed');
+  for (const r of Array.isArray(doc.regions) ? doc.regions : []) {
+    checkUnique(r.id);
+    if (!r.id || typeof r.name !== 'string' || !r.name.trim()) p.push('a region is missing its id or name');
+    if (r.parent !== undefined && typeof r.parent !== 'string') p.push(`region "${r.name}" has a malformed larger area`);
+    if (r.order !== undefined && !Number.isFinite(r.order)) p.push(`region "${r.name}" has a malformed order`);
+    if (r.outline !== undefined && (typeof r.outline !== 'object' || (r.outline.territoryIds !== undefined && !Array.isArray(r.outline.territoryIds)))) p.push(`region "${r.name}" has a malformed outline`);
   }
   return p;
 }
@@ -288,6 +294,7 @@ export function parseDoc(json: string): TimelineDoc {
   if (r.schemaVersion === 6) r = migrate6to7(r);
   if (r.schemaVersion === 7) r = migrate7to8(r);
   if (r.schemaVersion === 8) r = migrate8to9(r);
+  if (r.schemaVersion === 9) r = migrate9to10(r);
   const doc: TimelineDoc = {
     schemaVersion: SCHEMA_VERSION,
     id: r.id ?? newId('doc'),
@@ -302,7 +309,7 @@ export function parseDoc(json: string): TimelineDoc {
     relations: r.relations ?? [],
     highlights: r.highlights ?? [],
     groups: r.groups ?? [],
-    ...(r.regionParents ? { regionParents: r.regionParents } : {}),
+    regions: r.regions ?? [],
     deleted: r.deleted ?? {},
     updatedAt: r.updatedAt ?? Date.now(),
   };
@@ -411,6 +418,23 @@ function migrate8to9(r: Partial<TimelineDoc>): Partial<TimelineDoc> {
   return { ...r, schemaVersion: 9, items, territories, highlights: (r.highlights ?? []).map(withLanes), groups: r.groups ?? [] };
 }
 
+/**
+ * v10 makes regions records. One per region name in use on entries and territories, with its
+ * larger area from v9's `regionParents`, which is then dropped. Ids come from the names and the
+ * stamp from the doc, so two devices that upgrade the same timeline make the same records.
+ */
+function migrate9to10(r: Partial<TimelineDoc>): Partial<TimelineDoc> {
+  const { regionParents, ...rest } = r as Partial<TimelineDoc> & { regionParents?: unknown };
+  const parents = regionParents && typeof regionParents === 'object' && !Array.isArray(regionParents) ? regionParents as Record<string, unknown> : {};
+  let doc = { ...rest, schemaVersion: 10, regions: r.regions ?? [] } as TimelineDoc;
+  const names = new Set([...(r.items ?? []), ...(r.territories ?? [])].flatMap((x) => (x.region?.trim() ? [x.region.trim()] : [])));
+  for (const name of [...names].sort((a, b) => a.localeCompare(b))) {
+    const parent = typeof parents[name] === 'string' ? (parents[name] as string).trim() : '';
+    doc = withRegion(doc, name, r.updatedAt ?? 0, parent && parent !== name ? parent : undefined);
+  }
+  return { ...doc, updatedAt: r.updatedAt } as Partial<TimelineDoc>;
+}
+
 export function serializeDoc(doc: TimelineDoc): string {
   return JSON.stringify(doc, null, 2);
 }
@@ -418,7 +442,7 @@ export function serializeDoc(doc: TimelineDoc): string {
 // ---------- Mutations (pure; return a new doc) ----------
 
 /** The collections of id'd, timestamped records inside a doc. */
-export type Collection = 'items' | 'series' | 'territories' | 'flows' | 'notes' | 'sources' | 'relations' | 'highlights' | 'groups';
+export type Collection = 'items' | 'series' | 'territories' | 'flows' | 'notes' | 'sources' | 'relations' | 'highlights' | 'groups' | 'regions';
 export type RecordOf<C extends Collection> = {
   items: TimelineItem;
   series: Series;
@@ -429,16 +453,20 @@ export type RecordOf<C extends Collection> = {
   relations: Relation;
   highlights: Highlight;
   groups: PolityGroup;
+  regions: Region;
 }[C];
 
 export function upsert<C extends Collection>(doc: TimelineDoc, collection: C, record: RecordOf<C>, now = Date.now()): TimelineDoc {
   const list = (doc[collection] ?? []) as RecordOf<C>[];
-  const next = { ...record, updatedAt: now };
+  const stamped = { ...record, updatedAt: now };
   const exists = list.some((r) => r.id === record.id);
-  const updated = exists ? list.map((r) => (r.id === record.id ? next : r)) : [...list, next];
+  const updated = exists ? list.map((r) => (r.id === record.id ? stamped : r)) : [...list, stamped];
   const deleted = { ...doc.deleted };
   delete deleted[record.id];
-  return { ...doc, [collection]: updated, deleted, updatedAt: now };
+  const next = { ...doc, [collection]: updated, deleted, updatedAt: now };
+  // A region typed on an entry or a territory gets its record when saved.
+  const region = (collection === 'items' || collection === 'territories') && (record as { region?: string }).region?.trim();
+  return region ? withRegion(next, region, now) : next;
 }
 
 /**
@@ -719,8 +747,7 @@ export function mergeDocs(a: TimelineDoc, b: TimelineDoc): TimelineDoc {
     relations: mergeList(a.relations, b.relations, deleted),
     highlights: mergeList(a.highlights ?? [], b.highlights ?? [], deleted),
     groups: mergeList(a.groups ?? [], b.groups ?? [], deleted),
-    // A region's parent is open vocabulary with no stamp of its own: the newer copy wins per region.
-    ...(a.regionParents || b.regionParents ? { regionParents: { ...(newer === a ? b : a).regionParents, ...newer.regionParents } } : {}),
+    regions: mergeList(a.regions ?? [], b.regions ?? [], deleted),
     deleted,
     updatedAt: Math.max(a.updatedAt, b.updatedAt),
   };
@@ -743,15 +770,89 @@ export function setEraTerritory(doc: TimelineDoc, eraId: string, territoryId: st
   return territoryId ? upsert(next, 'relations', { id: newId('r'), fromId: territoryId, toId: eraId, type: 'part-of', updatedAt: now }, now) : next;
 }
 
+// ---------- Regions ----------
+
+/** The record for a region name (as typed, trimmed), if there is one. */
+export function regionNamed(doc: Pick<TimelineDoc, 'regions'>, name: string): Region | undefined {
+  const n = name.trim();
+  return n ? doc.regions?.find((r) => r.name === n) : undefined;
+}
+
+/** A region's id comes from its name, so two devices that add the same region make one record. */
+const regionIdFor = (name: string) => `rg_${name.trim().toLowerCase().replace(/\s+/g, '_')}`;
+
+/** The doc with a record for this region name, made if it has none yet. */
+function withRegion(doc: TimelineDoc, name: string, now: number, parent?: string): TimelineDoc {
+  if (regionNamed(doc, name)) return doc;
+  const taken = (id: string) => doc.regions?.some((r) => r.id === id);
+  const id = taken(regionIdFor(name)) ? newId('rg') : regionIdFor(name);
+  const deleted = { ...doc.deleted };
+  delete deleted[id];
+  return { ...doc, regions: [...(doc.regions ?? []), { id, name: name.trim(), ...(parent ? { parent } : {}), updatedAt: now }], deleted, updatedAt: now };
+}
+
+/** Make sure a region name has its record (for one in use that came in some other way), and return it. */
+export function ensureRegion(doc: TimelineDoc, name: string, now = Date.now()): { doc: TimelineDoc; region: Region } {
+  const next = withRegion(doc, name, now);
+  return { doc: next, region: regionNamed(next, name)! };
+}
+
+/** How many entries and territories sit in a region. */
+export function regionCount(doc: Pick<TimelineDoc, 'items' | 'territories'>, name: string): { items: number; territories: number } {
+  const n = name.trim();
+  return { items: doc.items.filter((i) => i.region?.trim() === n).length, territories: doc.territories.filter((t) => t.region?.trim() === n).length };
+}
+
 /**
- * Set a region's parent (Greece → Mediterranean), or with none, take it away. Region parents are
- * Bob's words with no record of their own, so this stamps the doc rather than going through `upsert`.
+ * Every entry and territory in region `from` moves to `to` (a name; none for Elsewhere), and
+ * regions whose larger area was `from` follow. Only what changes is restamped.
  */
+function moveRegion(doc: TimelineDoc, from: string, to: string | undefined, now: number): TimelineDoc {
+  const move = <T extends { region?: string; updatedAt: number }>(x: T): T => {
+    if (x.region?.trim() !== from) return x;
+    const { region: _r, ...rest } = x;
+    return { ...rest, ...(to ? { region: to } : {}), updatedAt: now } as T;
+  };
+  const reparent = (r: Region): Region => {
+    if (r.parent?.trim() !== from) return r;
+    const { parent: _p, ...rest } = r;
+    return { ...rest, ...(to && to !== r.name ? { parent: to } : {}), updatedAt: now };
+  };
+  return { ...doc, items: doc.items.map(move), territories: doc.territories.map(move), regions: doc.regions?.map(reparent), updatedAt: now };
+}
+
+/**
+ * Rename a region: its record, every entry and territory in it, and any region it's the larger
+ * area of. Groups follow their members. Renaming onto another region's name merges into it.
+ */
+export function renameRegion(doc: TimelineDoc, id: string, name: string, now = Date.now()): TimelineDoc {
+  const region = doc.regions?.find((r) => r.id === id), n = name.trim();
+  if (!region || !n || n === region.name) return doc;
+  const other = regionNamed(doc, n);
+  if (other) return mergeRegions(doc, id, other.id, now);
+  const next = moveRegion(doc, region.name, n, now);
+  return { ...next, regions: next.regions?.map((r) => (r.id === id ? { ...r, name: n, updatedAt: now } : r)) };
+}
+
+/** Merge one region into another (Attica into Greece): everything in it moves, then its record goes. */
+export function mergeRegions(doc: TimelineDoc, fromId: string, intoId: string, now = Date.now()): TimelineDoc {
+  const from = doc.regions?.find((r) => r.id === fromId), into = doc.regions?.find((r) => r.id === intoId);
+  if (!from || !into || from === into) return doc;
+  return remove(moveRegion(doc, from.name, into.name, now), 'regions', fromId, now);
+}
+
+/** Delete a region: everything in it moves to Elsewhere, regions inside it lose their larger area, and its record goes. */
+export function removeRegion(doc: TimelineDoc, id: string, now = Date.now()): TimelineDoc {
+  const region = doc.regions?.find((r) => r.id === id);
+  if (!region) return doc;
+  return remove(moveRegion(doc, region.name, undefined, now), 'regions', id, now);
+}
+
+/** Set a region's larger area (Greece → Mediterranean), or with none, take it away. Makes the record if it has none. */
 export function setRegionParent(doc: TimelineDoc, region: string, parent: string | undefined, now = Date.now()): TimelineDoc {
-  const r = region.trim(), p = parent?.trim();
-  if (!r || (doc.regionParents?.[r] ?? '') === (p ?? '')) return doc;
-  const next = { ...doc.regionParents };
-  if (p && p !== r) next[r] = p;
-  else delete next[r];
-  return { ...doc, regionParents: next, updatedAt: now };
+  const r = region.trim(), p = parent?.trim() || undefined;
+  if (!r || (regionNamed(doc, r)?.parent ?? '') === (p ?? '')) return doc;
+  const { doc: next, region: rec } = ensureRegion(doc, r, now);
+  const { parent: _p, ...rest } = rec;
+  return upsert(next, 'regions', p && p !== r ? { ...rest, parent: p } : rest, now);
 }

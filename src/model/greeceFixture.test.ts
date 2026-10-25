@@ -51,7 +51,7 @@ describe('Classical Greece fixture', () => {
     const athens = doc.territories.find((t) => t.id === 't_athens')!;
     expect(athens.region).toBe('Greece');
     expect(athens.strength?.map((s) => s.level)).toContain(5);
-    expect(doc.regionParents?.Macedon).toBe('Mediterranean');
+    expect(doc.regions?.find((r) => r.name === 'Macedon')?.parent).toBe('Mediterranean');
     expect(doc.groups?.[0].territoryIds).toEqual(['t_athens', 't_sparta', 't_corinth', 't_thebes']);
     const pelop = doc.relations.filter((r) => r.toId === 'i_pelop' && r.side);
     expect(pelop.find((r) => r.fromId === 't_athens')?.side).toBe(1);

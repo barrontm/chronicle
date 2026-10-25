@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 9,
+  "schemaVersion": 10,
   "id": "doc_fixture",
   "title": "Test fixture",
   "updatedAt": 1760000000000,
@@ -102,6 +102,9 @@
     { "id": "h_magna_reader", "sourceId": "s_wp_magna", "text": "agreed at Runnymede", "anchor": { "revisionId": 42, "section": "", "exact": "agreed at Runnymede", "prefix": "a royal charter of rights ", "suffix": ".", "pos": 40 }, "dimension": "political", "lanes": ["politics", "economy"], "subjectQid": "Q99999901", "usedBy": [], "updatedAt": 1760000000000 }
   ],
   "groups": [{ "id": "g_fixture", "title": "Fixture League", "territoryIds": ["t_fixture"], "updatedAt": 1760000000000 }],
-  "regionParents": { "Greece": "Mediterranean", "Britain": "Europe" },
+  "regions": [
+    { "id": "rg_britain", "name": "Britain", "parent": "Europe", "updatedAt": 1760000000000 },
+    { "id": "rg_greece", "name": "Greece", "parent": "Mediterranean", "updatedAt": 1760000000000 }
+  ],
   "deleted": {}
 }

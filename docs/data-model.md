@@ -33,7 +33,7 @@ TimelineDoc
 │     ├── strength[]    {at, level 1–5, highlightIds?}: Bob's reading of its power, straight lines between points
 │     └── itemId        → its timeline entry (usually a period)
 ├── groups[]       city-states that fold into one strip {id, title, territoryIds[]}
-├── regionParents{} region → its parent ("Greece" → "Mediterranean"), Bob's own words
+├── regions[]      one per band {name, parent? ("Mediterranean", Bob's word), order? (S8), outline? (S9)}
 ├── flows[]        migrations: people moving between places
 │     ├── cause         conflict | economic | disaster | forced | settlement | family | unknown
 │     ├── measure       moved (people per year) | living (people living abroad)
@@ -59,7 +59,7 @@ TimelineDoc
 - **The overview mark is Bob's choice.** `overview: 'shown'` puts an entry at the top of the overview; `'world'` makes it a world event, gold and always shown. There is no kind of entry for world events.
 - **Polities are territories.** A territory's `region` gives its strip a row, `strength` overrides the thickness its area gives it, and a `group` folds city-states into one strip. A territory can be a connection end; `side` says which side it took part on, so opposite sides of a war are at war and the same side are allied. Deleting a territory takes it out of its groups; deleting a highlight takes it out of strength points.
 - **An era's place on the map.** A territory linked to a period as `part of` it is where that era was on the map (`eraTerritory`). Without one, the map uses the area around its entries' places. Themes are on the period (`themes`), so neither needs a schema change.
-- **Region parents have no stamp.** `regionParents` merges per region, the newer copy winning. Groups merge like other records.
+- **Regions are records, named by their entries.** Entries and territories keep their `region` as a name, so the timeline and map read it directly; the `Region` record is what Bob renames, merges and deletes (each rewrites every entry and territory in it, and any region whose `parent` it is), and where its larger area lives. Saving an entry or territory with a region that has no record makes one. A region's id comes from its name (`rg_greece`), so two devices that add the same region make one record. Regions and groups merge like other records.
 
 ## Dates
 
@@ -67,6 +67,7 @@ TimelineDoc
 
 ## Version history
 
+- **10** (2026-10-25): `regions` on the doc replaces `regionParents`. The upgrade makes one record per region name in use on entries and territories, with its `parent` from `regionParents`, which is then dropped. Ids come from the names and stamps from the doc, so two devices upgrading the same timeline make the same records (`tests/fixtures/sample-history-v9.json`).
 - **9** (2026-10-19): `lanes` on entries and highlights, `overview` on entries, `region` and `strength` on territories, `groups` and `regionParents` on the doc, `side` on connections. The upgrade fills `lanes` from `dimension` (political → politics, economic → economy, intellectual and religious → ideas, technological → technology; social is left to the automatic sort) and keeps `dimension`. A territory takes its period's `region`. Nothing is restamped, so two devices upgrading the same timeline merge cleanly (`tests/fixtures/sample-history-v8.json`).
 - **8** (2026-10-18): a place (`subject: 'place'`) may have no `start` (its founding isn't known), and a place with a start but no `end` is still there. A place with no start is on the map but not the timeline. Every v7 entry is already valid (`tests/fixtures/sample-history-v7.json`).
 - **7** (2026-10-18): optional `subject` and `region` on entries. Both stay empty on upgrade, so an older entry draws as its `kind` does; nothing else changes (`tests/fixtures/sample-history-v6.json`).

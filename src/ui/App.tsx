@@ -519,7 +519,7 @@ function Workspace() {
             onPick={setPicked}
             territories={doc.territories}
             groups={doc.groups}
-            regionParents={doc.regionParents}
+            regions={doc.regions}
             onFocus={setOverviewFocus}
             region={region?.name}
             onRegion={(r) => { if (!r) setRegion(undefined); }}
@@ -604,7 +604,7 @@ function PanelBody({ panel, nav, aiDraft, onAiDraft, onBulkDone }: { panel: Pane
     case 'new-flow': return <FlowEditor key={`new-flow-${panel.itemId ?? ''}`} id={null} itemId={panel.itemId} nav={nav} />;
     case 'territory-import': return <TerritoryImport key={`ti-${panel.year}`} year={panel.year} nav={nav} />;
     case 'help': return <Help key={panel.section ?? 'help'} section={panel.section} />;
-    case 'library': return <Library tab={panel.tab} nav={nav} />;
+    case 'library': return <Library tab={panel.tab} nav={nav} onRegionChange={onBulkDone} />;
     case 'bulk-edit': return <BulkEdit key={panel.ids.join()} ids={panel.ids} nav={nav} onDone={onBulkDone} />;
   }
 }
