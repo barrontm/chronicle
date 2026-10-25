@@ -1,6 +1,6 @@
 import type { Area } from '../data/geo';
 import type { ItemDraft } from '../media/wikipedia';
-import type { ItemKind, Lane } from '../model/types';
+import type { ItemKind, Lane, Territory } from '../model/types';
 
 /** What the side drawer is showing. The drawer keeps a stack so "Back" works across links. */
 export type Panel =
@@ -39,8 +39,12 @@ export interface Nav {
   showOnMap: (year?: number) => void;
   /** Draw a border on the map; `onDone` gets the shape and the map's year when Bob finishes. */
   draw: (onDone: (g: Area, year: number) => void) => void;
+  /** Change a border's points on the map; `onDone` gets the changed shape. */
+  reshape: (g: Area, onDone: (g: Area) => void) => void;
   /** Pick one point on the map; `onDone` gets [lon, lat]. */
   pick: (onDone: (p: [number, number]) => void) => void;
+  /** While a territory's form is open: its borders as they stand in the form, drawn on the map in place of the saved ones (null when it closes). */
+  preview: (t: Territory | null) => void;
   /** Open a Wikipedia article in the reader (on a phone, the map sheet gets out of the way). */
   read: (a: { key: string; title: string }) => void;
 }

@@ -1,5 +1,5 @@
 import type { FeatureCollection } from 'geojson';
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { BASEMAP_YEARS, basemapFor, BASEMAPS_CREDIT, fetchBasemap, polityNames, seshatBordersFor, snapshotsFor, type BasemapYear, type FoundBorders } from '../../data/basemaps';
 import { isCliopatria } from '../../data/cliopatria';
 import { areaKm2, FINE, labelPoint, parseGeoJsonAreas, simplifyArea, type Area } from '../../data/geo';
@@ -188,8 +188,11 @@ function SeshatUpdate({ t }: { t: Territory }) {
   );
 }
 
-/** A snapshot being edited, with a stable key and whether its typed dates read correctly. */
-interface Row { k: string; s: TerritorySnapshot; ok: boolean }
+/** A snapshot being edited, with a stable key and whether its typed dates read correctly; a copy waiting for its first year starts `blank`. */
+interface Row { k: string; s: TerritorySnapshot; ok: boolean; blank?: boolean }
+
+/** The id the map gives a territory still being added, before it's saved. */
+export const NEW_TERRITORY = 'new-territory';
 
 const snapshotOf = (geometry: Area, from: HistDate): TerritorySnapshot => ({ from, geometry, areaKm2: Math.round(areaKm2(geometry)) });
 
@@ -199,13 +202,24 @@ export function TerritoryEditor({ id, nav }: { id: string; nav: Nav }) {
   const [d, setD] = useState<Territory | undefined>(existing);
   const [rows, setRows] = useState<Row[]>(() => (existing?.snapshots ?? []).map((s) => ({ k: newId('s'), s, ok: true })));
   const [points, setPoints] = useState<PointRow[]>(() => (existing?.strength ?? []).map((p) => ({ k: newId('p'), p, ok: true })));
+  // The map draws the borders as they stand here until the form closes.
+  useEffect(() => { if (d) nav.preview({ ...d, snapshots: sortSnaps(rows.filter((r) => r.ok).map((r) => r.s)) }); }, [d, rows]);
+  useEffect(() => () => nav.preview(null), []);
   if (!d) return <div className="notice">This territory was deleted.</div>;
   const setPoint = (k: string, change: Partial<StrengthPoint>, ok = true) => setPoints((ps) => ps.map((r) => (r.k === k ? { ...r, p: { ...r.p, ...change }, ok } : r)));
   const quotes = strengthHighlights(doc, d);
   const entryRegion = doc.items.find((i) => i.id === d.itemId)?.region?.trim();
   const set = <K extends keyof Territory>(k: K, v: Territory[K]) => setD({ ...d, [k]: v });
   const setRow = (k: string, change: Partial<TerritorySnapshot>, ok: boolean) =>
-    setRows((rs) => rs.map((r) => (r.k === k ? { ...r, s: { ...r.s, ...change }, ok } : r)));
+    setRows((rs) => rs.map((r) => (r.k === k ? { ...r, s: { ...r.s, ...change }, ok, blank: false } : r)));
+  const setShape = (k: string, geometry: Area) =>
+    setRows((rs) => rs.map((r) => (r.k === k ? { ...r, s: { ...r.s, geometry, areaKm2: Math.round(areaKm2(geometry)) } } : r)));
+  /** The same borders as a new set, starting when this one ends (or from a year Bob gives it). */
+  const copyRow = (r: Row) => setRows((rs) => {
+    const copy: Row = { k: newId('s'), s: { ...r.s, from: r.s.to ?? r.s.from, to: undefined }, ok: !!r.s.to, blank: !r.s.to };
+    const at = rs.indexOf(r);
+    return [...rs.slice(0, at + 1), copy, ...rs.slice(at + 1)];
+  });
   const addShape = (geometry: Area, year: number) => setRows((rs) => [...rs, { k: newId('s'), s: snapshotOf(geometry, { y: year }), ok: true }]);
   const backwards = rows.find((r) => r.s.to && compareHistDate(r.s.to, r.s.from) <= 0);
   const valid = !!d.title.trim() && rows.every((r) => r.ok) && !backwards && points.every((r) => r.ok);
@@ -262,16 +276,19 @@ export function TerritoryEditor({ id, nav }: { id: string; nav: Nav }) {
       </div>
 
       <h3>Borders over time</h3>
-      <p className="lede">Each set of borders applies from its first year until the year you give (or until the next set).</p>
+      <p className="lede">Each set of borders applies from its first year until the year you give (or until the next set). When you play through time, one set changes into the next.</p>
       <div className="editor-list">
         {rows.map((r, i) => (
           <fieldset className="snapshot" key={r.k} aria-label={`Borders ${i + 1}`}>
             <div className="row">
-              <DateField label="From" value={r.s.from} onChange={(from, ok) => setRow(r.k, from ? { from } : {}, ok)} />
-              <DateField label="Until" optional value={r.s.to} onChange={(to, ok) => setRow(r.k, { to }, ok)} />
+              <DateField label="From" value={r.blank ? undefined : r.s.from} autoFocus={r.blank} onChange={(from, ok) => setRow(r.k, from ? { from } : {}, ok && !!from)} />
+              <DateField label="Until" optional value={r.s.to} onChange={(to, ok) => setRow(r.k, { to }, ok && !r.blank)} />
             </div>
+            {r.s.areaKm2 !== undefined && <small className="snapshot-area">About {km2.format(r.s.areaKm2)} km²</small>}
             <div className="editor-row">
-              <small className="grow">{r.s.areaKm2 !== undefined ? `About ${km2.format(r.s.areaKm2)} km²` : ''}</small>
+              {r.s.geometry && <button type="button" className="btn small" onClick={() => nav.reshape(r.s.geometry!, (g) => setShape(r.k, g))}>Edit shape</button>}
+              {r.s.geometry && <button type="button" className="btn small" onClick={() => copyRow(r)}>Copy to new dates</button>}
+              <span className="grow" />
               <button type="button" className="btn small quiet" onClick={() => setRows((rs) => rs.filter((x) => x.k !== r.k))}>Remove</button>
             </div>
           </fieldset>
@@ -354,6 +371,11 @@ function OwnBorders({ year, nav }: { year: number; nav: Nav }) {
   const [to, setTo] = useState<{ d?: HistDate; ok: boolean }>({ ok: true });
   const backwards = !!(from.d && to.d && compareHistDate(to.d, from.d) <= 0);
   const valid = !!shape && !!title.trim() && !!from.d && from.ok && to.ok && !backwards;
+  // The map draws the borders while the form is open.
+  useEffect(() => {
+    nav.preview(shape ? { id: NEW_TERRITORY, title: title.trim() || 'New territory', categoryId, snapshots: [{ from: from.d ?? { y: year }, ...(to.d ? { to: to.d } : {}), geometry: shape.geometry }], updatedAt: 0 } : null);
+  }, [shape, title, categoryId, from.d, to.d]);
+  useEffect(() => () => nav.preview(null), []);
 
   const save = () => {
     if (!valid) return;
@@ -383,7 +405,10 @@ function OwnBorders({ year, nav }: { year: number; nav: Nav }) {
   return (
     <form data-testid="own-borders" onSubmit={(e) => { e.preventDefault(); save(); }}>
       <h3>Your own borders</h3>
-      <div className="notice" role="status">Borders ready: about {km2.format(areaKm2(shape.geometry))} km².</div>
+      <div className="notice row-notice" role="status">
+        <span className="grow">Borders ready: about {km2.format(areaKm2(shape.geometry))} km².</span>
+        <button type="button" className="btn small" onClick={() => nav.reshape(shape.geometry, (geometry) => setShapeOnly({ ...shape, geometry }))}>Edit shape</button>
+      </div>
       <Field label="Name"><input value={title} onChange={(e) => setTitle(e.target.value)} required autoFocus /></Field>
       <Field label="Category">
         <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>

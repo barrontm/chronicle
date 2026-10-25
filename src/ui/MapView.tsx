@@ -2,14 +2,15 @@ import * as maplibregl from 'maplibre-gl';
 import type { GeoJSONSource, MapLayerMouseEvent, StyleSpecification } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
-import type { FeatureCollection, LineString } from 'geojson';
+import type { FeatureCollection, LineString, Point } from 'geojson';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { basemapFor, BASEMAPS_CREDIT, fetchBasemap } from '../data/basemaps';
 import { CLIOPATRIA_CREDIT, isCliopatria } from '../data/cliopatria';
 import { loadCountries } from '../data/countries';
 import { formatYear } from '../model/dates';
 import type { Category, Flow, Relation, Series, Territory, TimelineItem } from '../model/types';
-import { draftFeatures, type Draft } from './drawing';
+import { bbox, type Area } from '../data/geo';
+import { draftFeatures, shapeFeatures, type Draft, type Vertex } from './drawing';
 import { activeRoutes, arcsBetween, causeOf, choroplethAt, CONTACT_COLOR, draftPins, type EraExtent, eraTintsAt, type FollowAt, threadArcs, type ThreadDoc, flowDashes, flowFeatures, flowScale, mixColor, pinsAt, territoriesAt, territoryCircles, type FlowLineProps, type FlowPlaces } from './mapData';
 import { formatValue } from './util';
 
@@ -38,8 +39,16 @@ export interface MapCamera { center: [number, number]; zoom: number }
 
 export type BackdropStatus = { state: 'off' } | { state: 'loading'; year: number } | { state: 'ready'; year: number } | { state: 'error'; message: string };
 
+/** What Bob did to a border's points while changing it (`MapPane` applies it with `drawing.ts`). */
+export type ShapeEdit =
+  | { type: 'pick'; at?: Vertex }
+  | { type: 'insert'; after: Vertex; p: [number, number] }
+  | { type: 'move'; at: Vertex; p: [number, number]; first: boolean };
+
 interface Props {
   year: number;
+  /** While Play runs, the years a change of borders morphs over (`bordersAt`); 0 when paused. */
+  morphYears?: number;
   items: TimelineItem[];
   territories: Territory[];
   categories: Category[];
@@ -65,6 +74,9 @@ interface Props {
   /** While drawing a border: the shape so far, and where a click lands (and whether it's on the first point). */
   draft?: Draft;
   onDrawPoint?: (p: [number, number], nearFirst: boolean) => void;
+  /** While changing a border: the shape so far and its picked point, and what Bob does to its points. */
+  shape?: { geometry: Area; picked?: Vertex };
+  onShapeEdit?: (e: ShapeEdit) => void;
   /** Following the overview (`followAt`): shapes over the territories, pins, marked labels, and where to fit. */
   follow?: FollowAt;
   /** Each region's eras and where they were (`eraExtents`); the year's are tinted. */
@@ -135,6 +147,7 @@ function buildStyle(c: Colors): StyleSpecification {
       'follow-pins': { type: 'geojson', data: EMPTY },
       'region-edge': { type: 'geojson', data: EMPTY },
       draft: { type: 'geojson', data: EMPTY },
+      shape: { type: 'geojson', data: EMPTY },
     },
     layers: [
       { id: 'water', type: 'background', paint: { 'background-color': c.water } },
@@ -202,6 +215,16 @@ function buildStyle(c: Colors): StyleSpecification {
         id: 'draft-points', type: 'circle', source: 'draft', filter: ['==', ['geometry-type'], 'Point'],
         paint: { 'circle-color': c.panel, 'circle-radius': ['case', ['get', 'first'], 6, 4], 'circle-stroke-color': c.ink, 'circle-stroke-width': 2 },
       },
+      // Changing a border: the shape, a dot halfway along each edge, its points (the picked one filled), and wider invisible targets for a finger.
+      { id: 'shape-fill', type: 'fill', source: 'shape', filter: ['!', ['has', 'handle']], paint: { 'fill-color': c.ink, 'fill-opacity': 0.12 } },
+      { id: 'shape-line', type: 'line', source: 'shape', filter: ['!', ['has', 'handle']], paint: { 'line-color': c.ink, 'line-width': 2 } },
+      { id: 'shape-mid', type: 'circle', source: 'shape', filter: ['==', ['get', 'handle'], 'mid'], paint: { 'circle-color': c.panel, 'circle-radius': 3.5, 'circle-stroke-color': c.ink, 'circle-stroke-width': 1.2, 'circle-opacity': 0.9 } },
+      {
+        id: 'shape-points', type: 'circle', source: 'shape', filter: ['==', ['get', 'handle'], 'point'],
+        paint: { 'circle-color': ['case', ['get', 'picked'], c.ink, c.panel], 'circle-radius': ['case', ['get', 'picked'], 7, 5], 'circle-stroke-color': ['case', ['get', 'picked'], c.panel, c.ink], 'circle-stroke-width': 2 },
+      },
+      { id: 'shape-mid-hit', type: 'circle', source: 'shape', filter: ['==', ['get', 'handle'], 'mid'], paint: { 'circle-radius': 10, 'circle-opacity': 0 } },
+      { id: 'shape-point-hit', type: 'circle', source: 'shape', filter: ['==', ['get', 'handle'], 'point'], paint: { 'circle-radius': 14, 'circle-opacity': 0 } },
     ],
   };
 }
@@ -224,7 +247,16 @@ function applyColors(map: maplibregl.Map, c: Colors) {
   map.setPaintProperty('draft-line', 'line-color', c.ink);
   map.setPaintProperty('draft-points', 'circle-color', c.panel);
   map.setPaintProperty('draft-points', 'circle-stroke-color', c.ink);
+  map.setPaintProperty('shape-fill', 'fill-color', c.ink);
+  map.setPaintProperty('shape-line', 'line-color', c.ink);
+  map.setPaintProperty('shape-mid', 'circle-color', c.panel);
+  map.setPaintProperty('shape-mid', 'circle-stroke-color', c.ink);
+  map.setPaintProperty('shape-points', 'circle-color', ['case', ['get', 'picked'], c.ink, c.panel]);
+  map.setPaintProperty('shape-points', 'circle-stroke-color', ['case', ['get', 'picked'], c.panel, c.ink]);
 }
+
+/** The handles of a border being changed, a point's before a dot's. */
+const HANDLES = ['shape-point-hit', 'shape-mid-hit'];
 
 function useColors(): Colors {
   const [tick, setTick] = useState(0);
@@ -339,14 +371,46 @@ export default function MapView(props: Props) {
       cb.current.onCamera?.({ center: [Math.round(c.lng * 1e4) / 1e4, Math.round(c.lat * 1e4) / 1e4], zoom: Math.round(map.getZoom() * 100) / 100 });
     });
     const pointer = (layer: string) => {
-      map.on('mouseenter', layer, () => { if (!cb.current.onDrawPoint) map.getCanvas().style.cursor = 'pointer'; });
-      map.on('mouseleave', layer, () => { if (!cb.current.onDrawPoint) map.getCanvas().style.cursor = ''; });
+      map.on('mouseenter', layer, () => { if (!cb.current.onDrawPoint && !cb.current.onShapeEdit) map.getCanvas().style.cursor = 'pointer'; });
+      map.on('mouseleave', layer, () => { if (!cb.current.onDrawPoint && !cb.current.onShapeEdit) map.getCanvas().style.cursor = ''; });
     };
     pointer('pins');
     pointer('territories-fill');
     pointer('flows');
     pointer('follow-pins');
+    // Changing a border: drag a point to move it, drag (or click) a dot between two to add one, click a point to pick it.
+    const grab = (e: maplibregl.MapMouseEvent | maplibregl.MapTouchEvent) => {
+      if (!cb.current.onShapeEdit || ('points' in e && e.points.length !== 1)) return;
+      const hits = map.queryRenderedFeatures(e.point, { layers: HANDLES });
+      const f = hits.find((h) => h.layer.id === 'shape-point-hit') ?? hits[0];
+      if (!f) return;
+      e.preventDefault(); // no panning while a point is held
+      const v: Vertex = { part: Number(f.properties.part), ring: Number(f.properties.ring), i: Number(f.properties.i) };
+      const mid = f.properties.handle === 'mid', touch = e.type === 'touchstart', start = e.point;
+      let at = v, moved = false;
+      const move = (m: maplibregl.MapMouseEvent | maplibregl.MapTouchEvent) => {
+        if (!moved && m.point.dist(start) < 3) return;
+        const p: [number, number] = [m.lngLat.lng, m.lngLat.lat];
+        if (!moved && mid) {
+          cb.current.onShapeEdit?.({ type: 'insert', after: v, p });
+          at = { ...v, i: v.i + 1 };
+        } else cb.current.onShapeEdit?.({ type: 'move', at, p, first: !moved });
+        moved = true;
+      };
+      map.on(touch ? 'touchmove' : 'mousemove', move);
+      map.once(touch ? 'touchend' : 'mouseup', () => {
+        map.off(touch ? 'touchmove' : 'mousemove', move);
+        if (!moved) cb.current.onShapeEdit?.(mid ? { type: 'insert', after: v, p: (f.geometry as Point).coordinates as [number, number] } : { type: 'pick', at: v });
+      });
+    };
+    map.on('mousedown', grab);
+    map.on('touchstart', grab);
     map.on('click', (e) => {
+      if (cb.current.onShapeEdit) {
+        // A click away from the points lets go of the picked one.
+        if (!map.queryRenderedFeatures(e.point, { layers: HANDLES }).length) cb.current.onShapeEdit({ type: 'pick' });
+        return;
+      }
       const draw = cb.current.onDrawPoint;
       if (draw) {
         // Clicking within 10 px of the first point closes the outline.
@@ -364,6 +428,11 @@ export default function MapView(props: Props) {
     });
     // Hover: a pin's title, a country's value on the data layer, or a polity name from the backdrop.
     map.on('mousemove', (e: MapLayerMouseEvent) => {
+      if (cb.current.onShapeEdit) {
+        popup.remove();
+        map.getCanvas().style.cursor = map.queryRenderedFeatures(e.point, { layers: HANDLES }).length ? 'move' : '';
+        return;
+      }
       const hits = map.queryRenderedFeatures(e.point, { layers: ['follow-pins', 'pins', 'flows', 'circles', 'territories-fill', 'land', 'backdrop-fill'] });
       let text: string | undefined;
       const pin = hits.find((f) => f.layer.id === 'follow-pins' || f.layer.id === 'pins');
@@ -446,8 +515,9 @@ export default function MapView(props: Props) {
     // Which arcs are drawn, in the order they happened (for tests).
     if (host.current) host.current.dataset.arcs = arcs.features.toSorted((a, b) => a.properties.year - b.properties.year).map((f) => f.properties.label).join(' | ');
   }, [ready, threads, year, colors]);
-  // Territories (only redrawn when a different snapshot becomes current).
-  const terr = useMemo(() => territoriesAt(territories, year, colorOf), [territories, year, colorOf]);
+  // Territories (only redrawn when a different snapshot becomes current, or while borders morph).
+  const morphYears = props.morphYears ?? 0;
+  const terr = useMemo(() => territoriesAt(territories, year, colorOf, morphYears), [territories, year, colorOf, morphYears]);
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !ready) return;
@@ -455,6 +525,8 @@ export default function MapView(props: Props) {
       (map.getSource('territories') as GeoJSONSource).setData(terr.shapes);
       lastTerritoryKey.current = terr.key;
     }
+    // Which borders are morphing (for tests).
+    if (host.current) host.current.dataset.morphing = terr.morphing.join(' | ');
     const marks = props.follow?.marks;
     syncLabels(map, territoryLabels.current, terr.labels.map((l) => {
       const m = marks?.get(l.id);
@@ -605,6 +677,27 @@ export default function MapView(props: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [backdropFile, ready]);
 
+  // Changing a border: the shape and its handles, with no dots on edges under 24 px; the map frames the shape if it's out of view.
+  const shape = props.shape;
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !ready) return;
+    const src = map.getSource('shape') as GeoJSONSource;
+    if (!shape) return void src.setData(EMPTY);
+    const draw = () => src.setData(shapeFeatures(shape.geometry, shape.picked, (24 * 360) / (512 * 2 ** map.getZoom())));
+    draw();
+    map.on('zoomend', draw);
+    return () => void map.off('zoomend', draw);
+  }, [shape?.geometry, shape?.picked, ready]);
+  const shaping = !!shape;
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !ready || !shape) return;
+    const [w, s, e, n] = bbox(shape.geometry), view = map.getBounds();
+    if (!view.contains([w, s]) || !view.contains([e, n])) fitMap(map, [w, s, e, n]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shaping, ready]);
+
   // Drawing a border: show the draft, aim with a crosshair, and let double-clicks add points instead of zooming.
   const drawing = !!props.onDrawPoint;
   useEffect(() => {
@@ -616,9 +709,9 @@ export default function MapView(props: Props) {
     const map = mapRef.current;
     if (!map || !ready) return;
     map.getCanvas().style.cursor = drawing ? 'crosshair' : '';
-    if (drawing) map.doubleClickZoom.disable();
+    if (drawing || shaping) map.doubleClickZoom.disable();
     else map.doubleClickZoom.enable();
-  }, [drawing, ready]);
+  }, [drawing, shaping, ready]);
 
   // AI drafts: dashed rings (HTML, since circle strokes can't dash) with their names, framed whenever the set changes.
   const draftMarkers = useRef(new Map<string, maplibregl.Marker>());

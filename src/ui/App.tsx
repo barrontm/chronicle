@@ -4,7 +4,7 @@ import { formatRange, toDecimalYear } from '../model/dates';
 import { applyUndo, bulkRemove, undoFor, type Undo } from '../model/bulk';
 import { mergeDocs, parseDoc, serializeDoc, setRegionOrders, setRegionOutline, upsert } from '../model/doc';
 import { prominence as prominenceOf } from '../model/prominence';
-import type { HistDate, Lane, TimelineDoc, TimelineItem } from '../model/types';
+import type { HistDate, Lane, Territory, TimelineDoc, TimelineItem } from '../model/types';
 import { sortLanes } from '../model/lanes';
 import { LaneChips } from './LaneChips';
 import type { Area } from '../data/geo';
@@ -21,6 +21,7 @@ import { NoteEditor, NoteView } from './panels/NotePanels';
 import { SeriesEditor } from './panels/SeriesEditor';
 import { SourceEditor, SourceView } from './panels/SourcePanels';
 import { MapPane, YearBar, type FlowOptions, type MapCamera, type MapFit, type MapOptions, type MapRegion } from './MapPane';
+import { MORPH_SECONDS } from './mapData';
 import { FlowEditor, FlowView } from './panels/FlowPanels';
 import { applyUpdate, useUpdateReady } from './updates';
 import { TerritoryEditor, TerritoryImport, TerritoryView } from './panels/TerritoryPanels';
@@ -214,6 +215,8 @@ function Workspace() {
   const setYear = useCallback((y: number) => setYearState(y), []);
   const [drawing, setDrawing] = useState<{ onDone: (g: Area, year: number) => void } | null>(null);
   const [picking, setPicking] = useState<{ onDone: (p: [number, number]) => void } | null>(null);
+  const [reshaping, setReshaping] = useState<{ geometry: Area; onDone: (g: Area) => void } | null>(null);
+  const [preview, setPreview] = useState<Territory | null>(null);
   const [flowOptions, setFlowOptions] = useStored<FlowOptions>('chronicle.mapFlows', () => ({ show: true, hiddenCauses: [] }));
 
   // Remember the year between visits, but not on every animation frame.
@@ -253,6 +256,8 @@ function Workspace() {
   const revealMap = () => { if (narrow) setMapSheet(true); };
 
   const panel = stack.at(-1);
+  // A territory's form that's open draws its borders as they stand in the form.
+  const mapTerritories = useMemo(() => (preview && panel ? [...doc.territories.filter((t) => t.id !== preview.id), preview] : doc.territories), [doc.territories, preview, panel]);
   const nav: Nav = useMemo(() => ({
     open: (p) => setStack((s) => [...s, p]),
     replace: (p) => setStack((s) => [...s.slice(0, -1), p]),
@@ -271,14 +276,24 @@ function Workspace() {
     draw: (onDone) => {
       setPlaying(false);
       setPicking(null);
+      setReshaping(null);
       setDrawing({ onDone });
+      revealMap();
+    },
+    reshape: (geometry, onDone) => {
+      setPlaying(false);
+      setPicking(null);
+      setDrawing(null);
+      setReshaping({ geometry, onDone });
       revealMap();
     },
     pick: (onDone) => {
       setDrawing(null);
+      setReshaping(null);
       setPicking({ onDone });
       revealMap();
     },
+    preview: setPreview,
     read: (a) => {
       setMapSheet(false);
       openArticle(a);
@@ -334,6 +349,7 @@ function Workspace() {
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape' || document.querySelector('dialog[open]')) return;
       if (drawing) setDrawing(null);
+      else if (reshaping) setReshaping(null);
       else if (picking) setPicking(null);
       else if (menu) setMenu(null);
       else if (stack.length) setStack([]);
@@ -342,7 +358,7 @@ function Workspace() {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [menu, stack.length, drawing, picking, picked.length, region]);
+  }, [menu, stack.length, drawing, reshaping, picking, picked.length, region]);
 
   const startNew = (p: Panel) => { setMenu(null); setStack([p]); };
 
@@ -457,8 +473,9 @@ function Workspace() {
           {importError && <div className="notice bad" role="alert" style={{ margin: '0 16px 8px' }}>{importError}</div>}
           <MapPane
             year={year}
+            morphYears={playing ? speed * MORPH_SECONDS : 0}
             items={doc.items}
-            territories={doc.territories}
+            territories={mapTerritories}
             categories={categories}
             relations={doc.relations}
             series={doc.series}
@@ -473,13 +490,14 @@ function Workspace() {
             fadeYears={fadeYears}
             selectedId={selectedId}
             onOpenItem={(id) => setStack([{ type: 'item', id }])}
-            onOpenTerritory={(id) => setStack([{ type: 'territory', id }])}
+            onOpenTerritory={(id) => { if (doc.territories.some((t) => t.id === id)) setStack([{ type: 'territory', id }]); }}
             onOpenFlow={(id) => setStack([{ type: 'flow', id }])}
             onAddTerritory={() => startNew({ type: 'territory-import', year: Math.round(year) })}
             camera={mapCamera}
             fitTo={mapFit}
             onCamera={setMapCamera}
             drawing={drawing ? { onDone: (g) => { drawing.onDone(g, Math.round(year)); setDrawing(null); }, onCancel: () => setDrawing(null) } : undefined}
+            reshaping={reshaping ? { geometry: reshaping.geometry, onDone: (g) => { reshaping.onDone(g); setReshaping(null); }, onCancel: () => setReshaping(null) } : undefined}
             picking={picking ? { onDone: (pt) => { picking.onDone(pt); setPicking(null); }, onCancel: () => setPicking(null) } : undefined}
             focus={overviewFocus}
             window={followWindow}
@@ -598,8 +616,8 @@ function Workspace() {
         )}
 
         {panel && (
-          // On a phone the drawer covers the map, so step aside while drawing or picking a place (it stays mounted, keeping the form).
-          <aside className="drawer" aria-label="Details" hidden={!!(drawing || picking) && narrow}>
+          // On a phone the drawer covers the map, so step aside while drawing, changing a border or picking a place (it stays mounted, keeping the form).
+          <aside className="drawer" aria-label="Details" hidden={!!(drawing || reshaping || picking) && narrow}>
             <div className="drawer-head">
               {nav.canGoBack && <button className="btn small quiet" onClick={nav.back}>Back</button>}
               <span className="spacer" />

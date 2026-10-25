@@ -13,14 +13,14 @@ npm run build && (npm run preview >/dev/null 2>&1 &)   # skip if a preview is al
 npm run shots -- --only <names> --sheet
 ```
 `<names>` are comma-separated fragments of shot names in `scripts/screenshots.mjs`:
-`desktop-empty`, `desktop-timeline`, `desktop-entry`, `desktop-editor`, `desktop-map`, `desktop-split`, `desktop-dark`, `desktop-dark-influences`, `desktop-dark-split`, `phone-timeline`, `phone-influences`, `phone-map`, and `desktop-`/`dark-`/`phone-` + `draw`, `draw-form`, `migration`, `migration-editor`, `trends`, `places`, `help`, `ai-draft`.
+`desktop-empty`, `desktop-timeline`, `desktop-entry`, `desktop-editor`, `desktop-map`, `desktop-split`, `desktop-dark`, `desktop-dark-influences`, `desktop-dark-split`, `phone-timeline`, `phone-influences`, `phone-map`, and `desktop-`/`dark-`/`phone-` + `draw`, `draw-form`, `draw-reshape`, `draw-editor`, `migration`, `migration-editor`, `trends`, `places`, `help`, `ai-draft`.
 Always cover desktop, phone and dark for the touched view. For example `--only map,draw` or `--only trends`.
 If the view you changed has no shot, add one to `scripts/screenshots.mjs` (follow the existing flows) before reviewing.
 
 Read only `screenshots/sheet.png`. Open a single full-size shot only to inspect a detail.
 
 ## 2. Look harder where a static shot can't show it
-For hover, drag, scrubbing the year, playing, or the bottom sheet, use the Playwright MCP server (`.mcp.json`, browser tools `mcp__playwright__*`) against `http://localhost:4173`: import `tests/fixtures/sample-history.json` through the `import-input` file input, then interact and screenshot. Its files go to `screenshots/mcp/` (git-ignored).
+For a border morph, `npm run shots -- --filmstrip morph`. For hover, drag, scrubbing the year, playing, or the bottom sheet, use the Playwright MCP server (`.mcp.json`, browser tools `mcp__playwright__*`) against `http://localhost:4173`: import `tests/fixtures/sample-history.json` through the `import-input` file input, then interact and screenshot. Its files go to `screenshots/mcp/` (git-ignored).
 
 ## 3. Critique against `docs/design.md`
 Check each point and note pass or a concrete problem (what, where, which shot):

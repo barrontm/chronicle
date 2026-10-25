@@ -227,7 +227,7 @@ A new trend opens with **Find a trend**: one search over about 4,200 Our World i
 
 ## The map
 
-- The map and the timeline share one **year**. Type a year in the year box (like `490 BCE`), drag the slider, or press **Play** to move through time. Choose the speed next to it.
+- The map and the timeline share one **year**. Type a year in the year box (like `490 BCE`), drag the slider, or press **Play** to move through time. Choose the speed next to it. While it plays, borders change smoothly from one set into the next (see [Borders that change over time](#borders-that-change-over-time)).
 - Entries with places show as **pins** while the year is within their dates. Events stay for a few decades afterwards so you can see them. **Layers → Keep past entries on the map** leaves them all, to watch something spread.
 - **Layers → Show reference borders** draws faint outlines of every polity from the nearest historical world map. They're for orientation only, aren't saved, and need a connection the first time.
 - **Layers → Color the map by** shades countries by a trend for the current year, on today's borders, with a legend.
@@ -264,8 +264,9 @@ For city-states and anything the historical maps don't have. Works offline.
 3. Click the first point again to close the outline, or press **Done**.
 4. For a separate piece, like an island, press **Add another part** and outline it too.
 5. **Undo point** removes the last point; **Cancel** or **Esc** stops without saving.
-6. Give it a name, a category, and **From** and **Until** dates. Leave **Until** empty if the borders last until your next set (or for good).
-7. **Region** is filled in when the borders are inside a region you've outlined; change it or leave it empty for **Elsewhere**.
+6. The borders stay on the map while you fill in the form. To fix a point first, press **Edit shape** (see [Borders that change over time](#borders-that-change-over-time)).
+7. Give it a name, a category, and **From** and **Until** dates. Leave **Until** empty if the borders last until your next set (or for good).
+8. **Region** is filled in when the borders are inside a region you've outlined; change it or leave it empty for **Elsewhere**.
 
 ### From a GeoJSON file
 
@@ -281,7 +282,15 @@ Seshat's maps (Cliopatria) are the most detailed borders Chronicle can find for 
 
 ### Borders that change over time
 
-Open a territory and press **Edit**. Under **Borders over time**, every set of borders has its own **From** and **Until** dates, which you can change. **Draw borders** or a GeoJSON file adds another set, for example Athens after 338 BCE. **Remove** deletes a set. Press **Save changes** when you're done.
+Open a territory and press **Edit**. Under **Borders over time**, every set of borders has its own **From** and **Until** dates, which you can change. While the form is open, the map shows the borders as they are in it, before you save.
+
+- **Copy to new dates** makes a new set from one you have, for when the borders changed only a little: Athens after 338 BCE from Athens before. The copy starts when the first set ends; if that has no **Until**, type the copy's **From**. Then press **Edit shape** on the copy to change it.
+- **Edit shape** puts the set's points on the map. Drag a point to move it. Drag one of the small dots between two points (or click it) to add a point there. Click a point, then **Delete point** (or press **Delete**) to remove it; a border keeps at least three. **Undo** steps back, **Done** keeps the shape and **Cancel** or **Esc** leaves it as it was. The size in km² updates.
+- **Draw borders** or a GeoJSON file adds another set. **Remove** deletes a set.
+
+Press **Save changes** when you're done.
+
+When you press **Play**, a territory's borders change smoothly from one set into the next, over about a second whatever the speed, around the year the new set starts. Paused, or when you drag the year, each set shows exactly as you drew it. Borders from Seshat change the same way. A set that ends before the next begins doesn't change into it: the territory goes, then comes back. With reduced motion on in your system settings, borders switch without moving.
 
 ## Migration
 
