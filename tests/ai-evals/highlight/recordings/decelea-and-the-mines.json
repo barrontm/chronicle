@@ -1,7 +1,7 @@
 {
   "case": "decelea-and-the-mines",
   "model": "claude-opus-5-5",
-  "prompt": "highlight@3",
+  "prompt": "highlight@7",
   "exchanges": [
     {
       "url": "https://www.wikidata.org/w/api.php?action=wbgetentities&sites=enwiki&titles=Peloponnesian+War&normalize=1&props=claims%7Clabels&languages=en&format=json&origin=*",
@@ -732,62 +732,68 @@
       "status": 200,
       "body": {
         "model": "claude-opus-5-5",
-        "id": "msg_011Cg8ZM3xFWWxGskgm9J11j",
+        "id": "msg_011CgPWzAQgPwaunsSsRiDej",
         "type": "message",
         "role": "assistant",
         "content": [
           {
             "type": "thinking",
             "thinking": "",
-            "signature": "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"
+            "signature": "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"
           },
           {
             "type": "tool_use",
-            "id": "toolu_01WgcijC4kjMa88oK3JUGa3V",
+            "id": "toolu_01FPXLWkWjxMLmSNeKGtR1uy",
             "name": "propose_from_highlight",
             "input": {
-              "dimension": {
-                "value": "economic",
-                "quote": "forced all supplies to be brought in by sea at greater expense"
-              },
+              "lanes": [
+                {
+                  "value": "war",
+                  "quote": "they fortified Decelea, near Athens"
+                },
+                {
+                  "value": "economy",
+                  "quote": "forced all supplies to be brought in by sea at greater expense"
+                }
+              ],
               "entries": [
                 {
                   "ref": "e1",
-                  "title": "Spartan fortification of Decelea",
+                  "title": "Sparta fortifies Decelea",
                   "kind": "event",
                   "start": "c. 413 BCE",
                   "end": "",
                   "place": "Decelea",
                   "category": "war",
                   "quote": "On the advice of Alcibiades, they fortified Decelea, near Athens",
-                  "why": "This was Sparta's permanent base in Attica, which kept Athens from using its land all year round and opened the last phase of the war."
+                  "why": "Marks Sparta's shift to a permanent base in Attica, which cut Athens off from its land all year round."
                 },
                 {
                   "ref": "e2",
-                  "title": "Disruption of the Athenian silver mines",
+                  "title": "Athenian silver mines disrupted",
                   "kind": "event",
                   "start": "c. 413 BCE",
                   "end": "",
                   "place": "",
                   "category": "society",
-                  "quote": "the nearby silver mines were totally disrupted, with as many as 20,000 Athenian slaves freed",
-                  "why": "This records how Athens lost silver income and up to 20,000 slaves, a blow the passage calls more significant than the supply problems."
+                  "quote": "the nearby silver mines were totally disrupted",
+                  "why": "Records the loss of a key source of Athenian wealth, which the passage calls the most significant effect of the fortification."
                 }
               ],
               "connections": [
                 {
                   "from": "e1",
-                  "to": "e2",
-                  "type": "caused",
-                  "effect": "disrupted",
-                  "quote": "More significantly, the nearby silver mines were totally disrupted, with as many as 20,000 Athenian slaves freed by the Spartan hoplites at Decelea"
+                  "to": "Decelea",
+                  "type": "influenced",
+                  "effect": "fortified",
+                  "quote": "they fortified Decelea"
                 },
                 {
                   "from": "e1",
-                  "to": "i_pelop",
-                  "type": "part-of",
-                  "effect": "escalated",
-                  "quote": "they also resolved to take the war to the Athenians. On the advice of Alcibiades, they fortified Decelea"
+                  "to": "e2",
+                  "type": "caused",
+                  "effect": "disrupted",
+                  "quote": "More significantly, the nearby silver mines were totally disrupted"
                 }
               ]
             },
@@ -803,7 +809,7 @@
         "usage": {
           "input_tokens": 441,
           "cache_creation_input_tokens": 0,
-          "cache_read_input_tokens": 19438,
+          "cache_read_input_tokens": 19840,
           "cache_creation": {
             "ephemeral_5m_input_tokens": 0,
             "ephemeral_1h_input_tokens": 0
@@ -811,8 +817,8 @@
           "iterations": [
             {
               "input_tokens": 441,
-              "output_tokens": 1180,
-              "cache_read_input_tokens": 19438,
+              "output_tokens": 1023,
+              "cache_read_input_tokens": 19840,
               "cache_creation_input_tokens": 0,
               "cache_creation": {
                 "ephemeral_5m_input_tokens": 0,
@@ -822,9 +828,9 @@
               "model": null
             }
           ],
-          "output_tokens": 1180,
+          "output_tokens": 1023,
           "output_tokens_details": {
-            "thinking_tokens": 581
+            "thinking_tokens": 517
           },
           "service_tier": "standard",
           "inference_geo": "global",
@@ -856,7 +862,7 @@
               "pageid": 61322,
               "ns": 0,
               "title": "Alcibiades",
-              "index": 6,
+              "index": 5,
               "description": "Athenian general and statesman (c. 450–404 BC)",
               "descriptionsource": "local"
             },
@@ -866,22 +872,6 @@
               "title": "Attica",
               "index": 2,
               "description": "Historical region of Greece, including the city of Athens",
-              "descriptionsource": "local"
-            },
-            {
-              "pageid": 440929,
-              "ns": 0,
-              "title": "Parnitha",
-              "index": 8,
-              "coordinates": [
-                {
-                  "lat": 38.1734,
-                  "lon": 23.7174,
-                  "primary": true,
-                  "globe": "earth"
-                }
-              ],
-              "description": "Mountain range in Attica, Greece",
               "descriptionsource": "local"
             },
             {
@@ -920,19 +910,296 @@
               "pageid": 22178512,
               "ns": 0,
               "title": "Decelea (moth)",
-              "index": 5,
+              "index": 6,
               "description": "Genus of moths",
               "descriptionsource": "local"
             },
             {
-              "pageid": 35014576,
+              "pageid": 24067408,
               "ns": 0,
-              "title": "Cropia indigna",
+              "title": "Ameinias of Athens",
+              "index": 8,
+              "description": "5th-century BC Athenian naval commander",
+              "descriptionsource": "local"
+            },
+            {
+              "pageid": 35014593,
+              "ns": 0,
+              "title": "Cropia subapicalis",
               "index": 7,
               "description": "Species of moth",
               "descriptionsource": "local"
             }
           ]
+        }
+      }
+    },
+    {
+      "url": "https://en.wikipedia.org/api/rest_v1/page/summary/Decelea",
+      "status": 200,
+      "body": {
+        "type": "standard",
+        "title": "Decelea",
+        "displaytitle": "<span lang=\"en\" dir=\"ltr\"><span class=\"mw-page-title-main\">Decelea</span></span>",
+        "namespace": {
+          "id": 0,
+          "text": ""
+        },
+        "wikibase_item": "Q1006561",
+        "titles": {
+          "canonical": "Decelea",
+          "normalized": "Decelea",
+          "display": "<span lang=\"en\" dir=\"ltr\"><span class=\"mw-page-title-main\">Decelea</span></span>"
+        },
+        "pageid": 1184237,
+        "lang": "en",
+        "dir": "ltr",
+        "revision": "1365901818",
+        "tid": "b6803a32-87d0-11f1-841f-36f96ecd0de5",
+        "timestamp": "2026-07-25T02:29:51Z",
+        "description": "Ancient Athenian administrative unit",
+        "description_source": "local",
+        "coordinates": {
+          "lat": 38.11,
+          "lon": 23.7786
+        },
+        "content_urls": {
+          "desktop": {
+            "page": "https://en.wikipedia.org/wiki/Decelea",
+            "revisions": "https://en.wikipedia.org/wiki/Decelea?action=history",
+            "edit": "https://en.wikipedia.org/wiki/Decelea?action=edit",
+            "talk": "https://en.wikipedia.org/wiki/Talk:Decelea"
+          },
+          "mobile": {
+            "page": "https://en.wikipedia.org/wiki/Decelea",
+            "revisions": "https://en.wikipedia.org/wiki/Special:History/Decelea",
+            "edit": "https://en.wikipedia.org/wiki/Decelea?action=edit",
+            "talk": "https://en.wikipedia.org/wiki/Talk:Decelea"
+          }
+        },
+        "extract": "Decelea, was a deme and ancient village in northern Attica serving as a trade route connecting Euboea with Athens, Greece. It was situated near the entrance of the eastern pass across Mount Parnes, which leads from the northeastern part of the Athenian plain to Oropus, and from thence both to Tanagra on the one hand, and to Delium and Chalcis on the other. It was situated about 120 stadia from Athens, and the same distance from the frontiers of Boeotia. It was visible from Athens and from its heights the ships entering the harbour of Piraeus were visible as well.",
+        "extract_html": "<p><b>Decelea</b>, was a deme and ancient village in northern Attica serving as a trade route connecting Euboea with Athens, Greece. It was situated near the entrance of the eastern pass across Mount Parnes, which leads from the northeastern part of the Athenian plain to Oropus, and from thence both to Tanagra on the one hand, and to Delium and Chalcis on the other. It was situated about 120 stadia from Athens, and the same distance from the frontiers of Boeotia. It was visible from Athens and from its heights the ships entering the harbour of Piraeus were visible as well.</p>"
+      }
+    },
+    {
+      "url": "https://www.wikidata.org/w/api.php?action=wbgetentities&ids=Q1006561&props=claims&format=json&origin=*",
+      "status": 200,
+      "body": {
+        "entities": {
+          "Q1006561": {
+            "type": "item",
+            "id": "Q1006561",
+            "claims": {
+              "P625": [
+                {
+                  "mainsnak": {
+                    "snaktype": "value",
+                    "property": "P625",
+                    "hash": "16aea48d252546b900d0898f9885fc688997f0f5",
+                    "datavalue": {
+                      "value": {
+                        "latitude": 38.11,
+                        "longitude": 23.77861111,
+                        "altitude": null,
+                        "precision": 0.00027777777777778,
+                        "globe": "http://www.wikidata.org/entity/Q2"
+                      },
+                      "type": "globecoordinate"
+                    },
+                    "datatype": "globe-coordinate"
+                  },
+                  "type": "statement",
+                  "id": "Q1006561$98D434DD-5821-468C-A45D-74BA099A140E",
+                  "rank": "normal",
+                  "references": [
+                    {
+                      "hash": "9a24f7c0208b05d6be97077d855671d1dfdbc0dd",
+                      "snaks": {
+                        "P143": [
+                          {
+                            "snaktype": "value",
+                            "property": "P143",
+                            "hash": "d38375ffe6fe142663ff55cd783aa4df4301d83d",
+                            "datavalue": {
+                              "value": {
+                                "entity-type": "item",
+                                "numeric-id": 48183,
+                                "id": "Q48183"
+                              },
+                              "type": "wikibase-entityid"
+                            },
+                            "datatype": "wikibase-item"
+                          }
+                        ]
+                      },
+                      "snaks-order": [
+                        "P143"
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "P31": [
+                {
+                  "mainsnak": {
+                    "snaktype": "value",
+                    "property": "P31",
+                    "hash": "2917a2c84d0cb0d6a02a8617d64838594d453a55",
+                    "datavalue": {
+                      "value": {
+                        "entity-type": "item",
+                        "numeric-id": 672490,
+                        "id": "Q672490"
+                      },
+                      "type": "wikibase-entityid"
+                    },
+                    "datatype": "wikibase-item"
+                  },
+                  "type": "statement",
+                  "id": "Q1006561$02B97412-19D7-46BB-AB5B-8BE94846FCFD",
+                  "rank": "normal",
+                  "references": [
+                    {
+                      "hash": "d5847b9b6032aa8b13dae3c2dfd9ed5d114d21b3",
+                      "snaks": {
+                        "P143": [
+                          {
+                            "snaktype": "value",
+                            "property": "P143",
+                            "hash": "5a343e7e758a4282a01316d3e959b6e653b767fc",
+                            "datavalue": {
+                              "value": {
+                                "entity-type": "item",
+                                "numeric-id": 11920,
+                                "id": "Q11920"
+                              },
+                              "type": "wikibase-entityid"
+                            },
+                            "datatype": "wikibase-item"
+                          }
+                        ]
+                      },
+                      "snaks-order": [
+                        "P143"
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "P18": [
+                {
+                  "mainsnak": {
+                    "snaktype": "value",
+                    "property": "P18",
+                    "hash": "af7b4567150292b114208d6d0ed40b6ff798621b",
+                    "datavalue": {
+                      "value": "Dekeleia.png",
+                      "type": "string"
+                    },
+                    "datatype": "commonsMedia"
+                  },
+                  "type": "statement",
+                  "id": "Q1006561$eedb9381-4723-aa2d-c3b9-61a80b3f8ca1",
+                  "rank": "normal"
+                }
+              ]
+            }
+          }
+        },
+        "success": 1
+      }
+    },
+    {
+      "url": "https://commons.wikimedia.org/w/api.php?action=query&format=json&origin=*&titles=File%3ADekeleia.png&prop=imageinfo&iiprop=url%7Cextmetadata%7Cmime&iiurlwidth=640",
+      "status": 200,
+      "body": {
+        "batchcomplete": "",
+        "query": {
+          "pages": {
+            "1362927": {
+              "pageid": 1362927,
+              "ns": 6,
+              "title": "File:Dekeleia.png",
+              "imagerepository": "local",
+              "imageinfo": [
+                {
+                  "thumburl": "https://upload.wikimedia.org/wikipedia/commons/5/5d/Dekeleia.png?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled",
+                  "thumbwidth": 640,
+                  "thumbheight": 539,
+                  "thumbattribs": {
+                    "src": "https://upload.wikimedia.org/wikipedia/commons/5/5d/Dekeleia.png?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled",
+                    "decoding": "async",
+                    "loading": "lazy",
+                    "width": 640,
+                    "height": 539
+                  },
+                  "url": "https://upload.wikimedia.org/wikipedia/commons/5/5d/Dekeleia.png?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+                  "descriptionurl": "https://commons.wikimedia.org/wiki/File:Dekeleia.png",
+                  "descriptionshorturl": "https://commons.wikimedia.org/w/index.php?curid=1362927",
+                  "extmetadata": {
+                    "DateTime": {
+                      "value": "2006-11-12 12:54:50",
+                      "source": "mediawiki-metadata",
+                      "hidden": ""
+                    },
+                    "ObjectName": {
+                      "value": "Dekeleia",
+                      "source": "mediawiki-metadata"
+                    },
+                    "CommonsMetadataExtension": {
+                      "value": 1.2,
+                      "source": "extension",
+                      "hidden": ""
+                    },
+                    "Categories": {
+                      "value": "GFDL|GFDL-GMT|Files with no machine-readable author|Files with no machine-readable source|License migration redundant|License migration completed|Media missing infobox template|Dekeleia",
+                      "source": "commons-categories",
+                      "hidden": ""
+                    },
+                    "Assessments": {
+                      "value": "",
+                      "source": "commons-categories",
+                      "hidden": ""
+                    },
+                    "LicenseShortName": {
+                      "value": "CC BY-SA 3.0",
+                      "source": "commons-desc-page",
+                      "hidden": ""
+                    },
+                    "UsageTerms": {
+                      "value": "Creative Commons Attribution-Share Alike 3.0",
+                      "source": "commons-desc-page"
+                    },
+                    "AttributionRequired": {
+                      "value": "true",
+                      "source": "commons-desc-page",
+                      "hidden": ""
+                    },
+                    "LicenseUrl": {
+                      "value": "http://creativecommons.org/licenses/by-sa/3.0/",
+                      "source": "commons-desc-page"
+                    },
+                    "Copyrighted": {
+                      "value": "True",
+                      "source": "commons-desc-page",
+                      "hidden": ""
+                    },
+                    "Restrictions": {
+                      "value": "",
+                      "source": "commons-desc-page",
+                      "hidden": ""
+                    },
+                    "License": {
+                      "value": "cc-by-sa-3.0",
+                      "source": "commons-templates",
+                      "hidden": ""
+                    }
+                  },
+                  "mime": "image/png"
+                }
+              ]
+            }
+          }
         }
       }
     }

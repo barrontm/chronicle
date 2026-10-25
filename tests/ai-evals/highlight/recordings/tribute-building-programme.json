@@ -1,7 +1,7 @@
 {
   "case": "tribute-building-programme",
   "model": "claude-opus-5-5",
-  "prompt": "highlight@3",
+  "prompt": "highlight@7",
   "exchanges": [
     {
       "url": "https://www.wikidata.org/w/api.php?action=wbgetentities&sites=enwiki&titles=Pericles&normalize=1&props=claims%7Clabels&languages=en&format=json&origin=*",
@@ -110,6 +110,63 @@
                       },
                       "snaks-order": [
                         "P143"
+                      ]
+                    },
+                    {
+                      "hash": "ff6d5b569cc8f394102ea3c32dc438f64e60ce7f",
+                      "snaks": {
+                        "P248": [
+                          {
+                            "snaktype": "value",
+                            "property": "P248",
+                            "hash": "65bf94067e6255ff8d61c9c9535d98794a309a4c",
+                            "datavalue": {
+                              "value": {
+                                "entity-type": "item",
+                                "numeric-id": 746368,
+                                "id": "Q746368"
+                              },
+                              "type": "wikibase-entityid"
+                            },
+                            "datatype": "wikibase-item"
+                          }
+                        ],
+                        "P4342": [
+                          {
+                            "snaktype": "value",
+                            "property": "P4342",
+                            "hash": "8e127719808e57c78cc2482e6c5d07e775a821cd",
+                            "datavalue": {
+                              "value": "Perikles",
+                              "type": "string"
+                            },
+                            "datatype": "external-id"
+                          }
+                        ],
+                        "P813": [
+                          {
+                            "snaktype": "value",
+                            "property": "P813",
+                            "hash": "1df55e30e3de1b5d0ba45c11c463eebd3b0fb4a4",
+                            "datavalue": {
+                              "value": {
+                                "time": "+2026-10-18T00:00:00Z",
+                                "timezone": 0,
+                                "before": 0,
+                                "after": 0,
+                                "precision": 11,
+                                "calendarmodel": "http://www.wikidata.org/entity/Q1985727"
+                              },
+                              "type": "time"
+                            },
+                            "datatype": "time"
+                          }
+                        ]
+                      },
+                      "snaks-order": [
+                        "P248",
+                        "P4342",
+                        "P813"
                       ]
                     }
                   ]
@@ -1242,51 +1299,53 @@
       "status": 200,
       "body": {
         "model": "claude-opus-5-5",
-        "id": "msg_011Cg8ZLLEGxDuEUHad3nB55",
+        "id": "msg_011CgPWyJx7TiiUPZNLvsQCC",
         "type": "message",
         "role": "assistant",
         "content": [
           {
             "type": "thinking",
             "thinking": "",
-            "signature": "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"
+            "signature": "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"
           },
           {
             "type": "tool_use",
-            "id": "toolu_01UNXcpLUHFUoZhJuvt1QeFJ",
+            "id": "toolu_015pnYEwA8wgXV6CWExtfWqz",
             "name": "propose_from_highlight",
             "input": {
-              "dimension": {
-                "value": "economic",
-                "quote": "Pericles drew the funds necessary to enable his ambitious building plan"
-              },
+              "lanes": [
+                {
+                  "value": "economy",
+                  "quote": "Pericles drew the funds necessary to enable his ambitious building plan"
+                }
+              ],
               "entries": [
                 {
                   "ref": "e1",
-                  "title": "Pericles' decree funding the rebuilding of Athenian temples",
+                  "title": "Pericles' decree funding the temple rebuilding programme",
                   "kind": "event",
                   "start": "449 BCE",
                   "end": "",
                   "place": "Athens",
-                  "category": "society",
+                  "category": "politics",
                   "quote": "In 449 BC Pericles proposed a decree allowing the use of 9,000 talents to finance the major rebuilding programme of Athenian temples.",
-                  "why": "Dates the moment Athens officially approved spending money on the temple building programme, including the Parthenon."
+                  "why": "Marks the dated decision that released 9,000 talents for rebuilding Athens' temples."
                 }
               ],
               "connections": [
                 {
                   "from": "i_delian",
-                  "to": "e1",
-                  "type": "influenced",
+                  "to": "Propylaea_(Acropolis_of_Athens)",
+                  "type": "caused",
                   "effect": "funded",
-                  "quote": "It was from the alliance's treasury that Pericles drew the funds necessary to enable his ambitious building plan"
+                  "quote": "It was from the alliance's treasury that Pericles drew the funds necessary to enable his ambitious building plan, centred on the \"Periclean Acropolis\", which included the Propylaea"
                 },
                 {
                   "from": "i_pericles",
                   "to": "e1",
                   "type": "caused",
                   "effect": "proposed",
-                  "quote": "Pericles proposed a decree"
+                  "quote": "Pericles proposed a decree allowing the use of 9,000 talents"
                 }
               ]
             },
@@ -1302,7 +1361,7 @@
         "usage": {
           "input_tokens": 477,
           "cache_creation_input_tokens": 0,
-          "cache_read_input_tokens": 30477,
+          "cache_read_input_tokens": 30879,
           "cache_creation": {
             "ephemeral_5m_input_tokens": 0,
             "ephemeral_1h_input_tokens": 0
@@ -1310,8 +1369,8 @@
           "iterations": [
             {
               "input_tokens": 477,
-              "output_tokens": 948,
-              "cache_read_input_tokens": 30477,
+              "output_tokens": 1071,
+              "cache_read_input_tokens": 30879,
               "cache_creation_input_tokens": 0,
               "cache_creation": {
                 "ephemeral_5m_input_tokens": 0,
@@ -1321,9 +1380,9 @@
               "model": null
             }
           ],
-          "output_tokens": 948,
+          "output_tokens": 1071,
           "output_tokens_details": {
-            "thinking_tokens": 519
+            "thinking_tokens": 607
           },
           "service_tier": "standard",
           "inference_geo": "global",
@@ -1379,7 +1438,7 @@
               "pageid": 48962,
               "ns": 0,
               "title": "Athens International Airport",
-              "index": 8,
+              "index": 6,
               "coordinates": [
                 {
                   "lat": 37.93638889,
@@ -1416,11 +1475,11 @@
               "descriptionsource": "local"
             },
             {
-              "pageid": 441646,
+              "pageid": 430783,
               "ns": 0,
-              "title": "History of Athens",
-              "index": 6,
-              "description": "Historical summary of Athens",
+              "title": "Athens Metro",
+              "index": 7,
+              "description": "Rapid transit railway in Athens, Greece",
               "descriptionsource": "local"
             },
             {
@@ -1432,14 +1491,354 @@
               "descriptionsource": "local"
             },
             {
-              "pageid": 36338717,
+              "pageid": 13517898,
               "ns": 0,
-              "title": "Athens A",
-              "index": 7,
-              "description": "Parliamentary constituency of Greece",
+              "title": "Classical Athens",
+              "index": 8,
+              "coordinates": [
+                {
+                  "lat": 37.97,
+                  "lon": 23.72,
+                  "primary": true,
+                  "globe": "earth"
+                }
+              ],
+              "description": "City-state in ancient Greece",
               "descriptionsource": "local"
             }
           ]
+        }
+      }
+    },
+    {
+      "url": "https://en.wikipedia.org/api/rest_v1/page/summary/Propylaea_(Acropolis_of_Athens)",
+      "status": 200,
+      "body": {
+        "type": "standard",
+        "title": "Propylaea (Acropolis of Athens)",
+        "displaytitle": "<span lang=\"en\" dir=\"ltr\"><span class=\"mw-page-title-main\">Propylaea (Acropolis of Athens)</span></span>",
+        "namespace": {
+          "id": 0,
+          "text": ""
+        },
+        "wikibase_item": "Q3407649",
+        "titles": {
+          "canonical": "Propylaea_(Acropolis_of_Athens)",
+          "normalized": "Propylaea (Acropolis of Athens)",
+          "display": "<span lang=\"en\" dir=\"ltr\"><span class=\"mw-page-title-main\">Propylaea (Acropolis of Athens)</span></span>"
+        },
+        "pageid": 62610589,
+        "thumbnail": {
+          "source": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f6/East_Facade_of_the_Propylaea_on_July_23%2C_2019.jpg/330px-East_Facade_of_the_Propylaea_on_July_23%2C_2019.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail",
+          "width": 330,
+          "height": 220
+        },
+        "originalimage": {
+          "source": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f6/East_Facade_of_the_Propylaea_on_July_23%2C_2019.jpg/3840px-East_Facade_of_the_Propylaea_on_July_23%2C_2019.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail",
+          "width": 6000,
+          "height": 4000
+        },
+        "lang": "en",
+        "dir": "ltr",
+        "revision": "1333642648",
+        "tid": "cf2c32a3-f4c5-11f0-92d5-60ea25879693",
+        "timestamp": "2026-01-18T23:31:27Z",
+        "description": "Monumental gateway to the Acropolis of Athens",
+        "description_source": "local",
+        "coordinates": {
+          "lat": 37.97169,
+          "lon": 23.72511
+        },
+        "content_urls": {
+          "desktop": {
+            "page": "https://en.wikipedia.org/wiki/Propylaea_(Acropolis_of_Athens)",
+            "revisions": "https://en.wikipedia.org/wiki/Propylaea_(Acropolis_of_Athens)?action=history",
+            "edit": "https://en.wikipedia.org/wiki/Propylaea_(Acropolis_of_Athens)?action=edit",
+            "talk": "https://en.wikipedia.org/wiki/Talk:Propylaea_(Acropolis_of_Athens)"
+          },
+          "mobile": {
+            "page": "https://en.wikipedia.org/wiki/Propylaea_(Acropolis_of_Athens)",
+            "revisions": "https://en.wikipedia.org/wiki/Special:History/Propylaea_(Acropolis_of_Athens)",
+            "edit": "https://en.wikipedia.org/wiki/Propylaea_(Acropolis_of_Athens)?action=edit",
+            "talk": "https://en.wikipedia.org/wiki/Talk:Propylaea_(Acropolis_of_Athens)"
+          }
+        },
+        "extract": "The Propylaea or Propylaia is the classical Greek Doric building complex that functioned as the monumental ceremonial gateway to the Acropolis of Athens. Built between 437 and 432 BC as a part of the Periklean Building Program, it was the last in a series of gatehouses built on the citadel. Its architect was Mnesikles, the architect of the Erechtheion, as identified by Plutarch. It is evident from traces left on the extant building that the plan for the Propylaea evolved considerably during its construction, and that the project was ultimately abandoned in an unfinished state.",
+        "extract_html": "<p>The <b>Propylaea</b> or <b>Propylaia</b> is the classical Greek Doric building complex that functioned as the monumental ceremonial gateway to the Acropolis of Athens. Built between 437 and 432 BC as a part of the Periklean Building Program, it was the last in a series of gatehouses built on the citadel. Its architect was Mnesikles, the architect of the Erechtheion, as identified by Plutarch. It is evident from traces left on the extant building that the plan for the Propylaea evolved considerably during its construction, and that the project was ultimately abandoned in an unfinished state.</p>"
+      }
+    },
+    {
+      "url": "https://www.wikidata.org/w/api.php?action=wbgetentities&ids=Q3407649&props=claims&format=json&origin=*",
+      "status": 200,
+      "body": {
+        "entities": {
+          "Q3407649": {
+            "type": "item",
+            "id": "Q3407649",
+            "claims": {
+              "P31": [
+                {
+                  "mainsnak": {
+                    "snaktype": "value",
+                    "property": "P31",
+                    "hash": "90c564c19f1b1363ec8b897cb94348f707fa87bd",
+                    "datavalue": {
+                      "value": {
+                        "entity-type": "item",
+                        "numeric-id": 275136,
+                        "id": "Q275136"
+                      },
+                      "type": "wikibase-entityid"
+                    },
+                    "datatype": "wikibase-item"
+                  },
+                  "type": "statement",
+                  "id": "Q3407649$5f723e3f-4c9b-31ab-e013-8f6a383100f6",
+                  "rank": "normal"
+                },
+                {
+                  "mainsnak": {
+                    "snaktype": "value",
+                    "property": "P31",
+                    "hash": "4441c653c09b7127b7d39c2f526a738ab5fbd6a9",
+                    "datavalue": {
+                      "value": {
+                        "entity-type": "item",
+                        "numeric-id": 839954,
+                        "id": "Q839954"
+                      },
+                      "type": "wikibase-entityid"
+                    },
+                    "datatype": "wikibase-item"
+                  },
+                  "type": "statement",
+                  "id": "Q3407649$DF9A6859-0CA8-4691-8B33-86EE56C2AB66",
+                  "rank": "normal"
+                }
+              ],
+              "P625": [
+                {
+                  "mainsnak": {
+                    "snaktype": "value",
+                    "property": "P625",
+                    "hash": "a327f00992ae826c4f6500a3a75c637ecaa10221",
+                    "datavalue": {
+                      "value": {
+                        "latitude": 37.971694444444445,
+                        "longitude": 23.72511111111111,
+                        "altitude": null,
+                        "precision": 0.00002777777777777778,
+                        "globe": "http://www.wikidata.org/entity/Q2"
+                      },
+                      "type": "globecoordinate"
+                    },
+                    "datatype": "globe-coordinate"
+                  },
+                  "type": "statement",
+                  "id": "q3407649$C5D2855E-2163-4681-8CF5-0F67FA388A47",
+                  "rank": "normal"
+                }
+              ],
+              "P361": [
+                {
+                  "mainsnak": {
+                    "snaktype": "value",
+                    "property": "P361",
+                    "hash": "80060c594af185885a34b790ce3deb3d9dac81bc",
+                    "datavalue": {
+                      "value": {
+                        "entity-type": "item",
+                        "numeric-id": 131013,
+                        "id": "Q131013"
+                      },
+                      "type": "wikibase-entityid"
+                    },
+                    "datatype": "wikibase-item"
+                  },
+                  "type": "statement",
+                  "id": "Q3407649$da53cf69-4d83-e579-8ca6-94ade919a9e8",
+                  "rank": "normal"
+                }
+              ],
+              "P18": [
+                {
+                  "mainsnak": {
+                    "snaktype": "value",
+                    "property": "P18",
+                    "hash": "b74e659f5a37e2decc30244cc2ece12c0e2ff801",
+                    "datavalue": {
+                      "value": "Propylaea-athens.jpg",
+                      "type": "string"
+                    },
+                    "datatype": "commonsMedia"
+                  },
+                  "type": "statement",
+                  "id": "Q3407649$5E7A82F4-37EB-4768-BA14-E6A7EF1A80CA",
+                  "rank": "normal"
+                }
+              ],
+              "P571": [
+                {
+                  "mainsnak": {
+                    "snaktype": "value",
+                    "property": "P571",
+                    "hash": "9bb58d0a717402b444e57b1216ec8a32eeca3e30",
+                    "datavalue": {
+                      "value": {
+                        "time": "-0437-00-00T00:00:00Z",
+                        "timezone": 0,
+                        "before": 0,
+                        "after": 0,
+                        "precision": 9,
+                        "calendarmodel": "http://www.wikidata.org/entity/Q1985786"
+                      },
+                      "type": "time"
+                    },
+                    "datatype": "time"
+                  },
+                  "type": "statement",
+                  "id": "Q3407649$c0626f37-4167-7581-e100-e8e12f8f8e75",
+                  "rank": "normal"
+                }
+              ],
+              "P276": [
+                {
+                  "mainsnak": {
+                    "snaktype": "value",
+                    "property": "P276",
+                    "hash": "9dd01e203be196d5be2d19835fe4a8e8308f86cf",
+                    "datavalue": {
+                      "value": {
+                        "entity-type": "item",
+                        "numeric-id": 131013,
+                        "id": "Q131013"
+                      },
+                      "type": "wikibase-entityid"
+                    },
+                    "datatype": "wikibase-item"
+                  },
+                  "type": "statement",
+                  "id": "Q3407649$16be43c2-4e38-1271-2ea9-05fe1882f6fc",
+                  "rank": "normal"
+                }
+              ]
+            }
+          }
+        },
+        "success": 1
+      }
+    },
+    {
+      "url": "https://commons.wikimedia.org/w/api.php?action=query&format=json&origin=*&titles=File%3APropylaea-athens.jpg&prop=imageinfo&iiprop=url%7Cextmetadata%7Cmime&iiurlwidth=640",
+      "status": 200,
+      "body": {
+        "batchcomplete": "",
+        "query": {
+          "pages": {
+            "2258685": {
+              "pageid": 2258685,
+              "ns": 6,
+              "title": "File:Propylaea-athens.jpg",
+              "imagerepository": "local",
+              "imageinfo": [
+                {
+                  "thumburl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/5b/Propylaea-athens.jpg/960px-Propylaea-athens.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+                  "thumbwidth": 640,
+                  "thumbheight": 285,
+                  "responsiveUrls": {
+                    "2": "https://upload.wikimedia.org/wikipedia/commons/5/5b/Propylaea-athens.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled"
+                  },
+                  "thumbattribs": {
+                    "src": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/5b/Propylaea-athens.jpg/960px-Propylaea-athens.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+                    "decoding": "async",
+                    "loading": "lazy",
+                    "width": 640,
+                    "height": 285,
+                    "srcset": "https://upload.wikimedia.org/wikipedia/commons/5/5b/Propylaea-athens.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled 2x"
+                  },
+                  "url": "https://upload.wikimedia.org/wikipedia/commons/5/5b/Propylaea-athens.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+                  "descriptionurl": "https://commons.wikimedia.org/wiki/File:Propylaea-athens.jpg",
+                  "descriptionshorturl": "https://commons.wikimedia.org/w/index.php?curid=2258685",
+                  "extmetadata": {
+                    "DateTime": {
+                      "value": "2007-06-17 23:38:44",
+                      "source": "mediawiki-metadata",
+                      "hidden": ""
+                    },
+                    "ObjectName": {
+                      "value": "Propylaea-athens",
+                      "source": "mediawiki-metadata"
+                    },
+                    "CommonsMetadataExtension": {
+                      "value": 1.2,
+                      "source": "extension",
+                      "hidden": ""
+                    },
+                    "Categories": {
+                      "value": "GFDL|License migration redundant|Self-published work|Photographs by Ricardo André Frantz|The Propylaea in 2005|Western side of the Propylaea of Athens",
+                      "source": "commons-categories",
+                      "hidden": ""
+                    },
+                    "Assessments": {
+                      "value": "",
+                      "source": "commons-categories",
+                      "hidden": ""
+                    },
+                    "ImageDescription": {
+                      "value": "<a href=\"//commons.wikimedia.org/w/index.php?title=Propylaea&amp;action=edit&amp;redlink=1\" class=\"new\" title=\"Propylaea (page does not exist)\">Propylaea</a>, <a href=\"//commons.wikimedia.org/w/index.php?title=Acropolis&amp;action=edit&amp;redlink=1\" class=\"new\" title=\"Acropolis (page does not exist)\">Acropolis</a>, <a href=\"//commons.wikimedia.org/wiki/Athens\" title=\"Athens\">Athens</a>.",
+                      "source": "commons-desc-page"
+                    },
+                    "DateTimeOriginal": {
+                      "value": "2005",
+                      "source": "commons-desc-page"
+                    },
+                    "Credit": {
+                      "value": "taken by Ricardo André Frantz",
+                      "source": "commons-desc-page"
+                    },
+                    "Artist": {
+                      "value": "Ricardo André Frantz (<a href=\"//commons.wikimedia.org/wiki/User:Tetraktys\" title=\"User:Tetraktys\">User:Tetraktys</a>)",
+                      "source": "commons-desc-page"
+                    },
+                    "LicenseShortName": {
+                      "value": "CC BY-SA 3.0",
+                      "source": "commons-desc-page",
+                      "hidden": ""
+                    },
+                    "UsageTerms": {
+                      "value": "Creative Commons Attribution-Share Alike 3.0",
+                      "source": "commons-desc-page"
+                    },
+                    "AttributionRequired": {
+                      "value": "true",
+                      "source": "commons-desc-page",
+                      "hidden": ""
+                    },
+                    "LicenseUrl": {
+                      "value": "https://creativecommons.org/licenses/by-sa/3.0",
+                      "source": "commons-desc-page"
+                    },
+                    "Copyrighted": {
+                      "value": "True",
+                      "source": "commons-desc-page",
+                      "hidden": ""
+                    },
+                    "Restrictions": {
+                      "value": "",
+                      "source": "commons-desc-page",
+                      "hidden": ""
+                    },
+                    "License": {
+                      "value": "cc-by-sa-3.0",
+                      "source": "commons-templates",
+                      "hidden": ""
+                    }
+                  },
+                  "mime": "image/jpeg"
+                }
+              ]
+            }
+          }
         }
       }
     }

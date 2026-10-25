@@ -9,7 +9,7 @@ Bob's one inbox idea was "I want to be able to edit more stuff manually, includi
 - **The schema path moves up one.** v11 regimes, alliances and campaign routes (Phase 5, one release); v12 economies; v13 institutions and reception; v14 kinds of border, walls and forces. `docs/vision.md` and the later phases are renumbered.
 - **Phase 5 needs no new prototype.** Phase 0's polity (d) and war (c) prototypes, with Bob's picks of 2026-10-17 in `docs/design.md`, are the targets. Its tickets: regimes; the power-structure diagram (built from roles and links, for Phase 5c's schools too); alliances, with a league as its leader's reach; border morph and editing borders over time; campaigns and battles; one AI ticket drafting borders, alliance members and routes. Paused tickets 3–6, 18 and 20 are folded in; paused ticket 2 (a detailed Aegean coast) is any time.
 - **Known limits** gain S6's two gaps (a laptop with a panel open gets the phone's lane list; clusters and glyphs left the timeline with level 2).
-- The live eval run of `highlight@7` still waits for Bob's say-so.
+- The live eval run of `highlight@7` passed on 2026-10-25 (five cases at 100%; Laurion at 89%, its pin lost to Wikipedia's rate limit, not the prompt) and is the new baseline.
 
 ## 2026-10-25 — One timeline: the overview, with lanes that open in place
 Bob asked for the overview to replace the regular timeline, and for a polity's lanes to unfurl under it without zooming in on it alone. This supersedes the three zoom levels in "Phase 3 checkpoint" and `docs/vision.md`:
