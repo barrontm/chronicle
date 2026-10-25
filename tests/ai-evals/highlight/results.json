@@ -4,32 +4,38 @@
     "tribute-building-programme": {
       "score": 1,
       "model": "claude-opus-5-5",
-      "prompt": "highlight@3",
-      "date": "2026-10-17"
+      "prompt": "highlight@7",
+      "date": "2026-10-25"
     },
     "decelea-and-the-mines": {
       "score": 1,
       "model": "claude-opus-5-5",
-      "prompt": "highlight@3",
-      "date": "2026-10-17"
+      "prompt": "highlight@7",
+      "date": "2026-10-25"
     },
     "plague-of-athens": {
       "score": 1,
       "model": "claude-opus-5-5",
-      "prompt": "highlight@3",
-      "date": "2026-10-17"
+      "prompt": "highlight@7",
+      "date": "2026-10-25"
     },
     "treasury-moved-to-athens": {
       "score": 1,
       "model": "claude-opus-5-5",
-      "prompt": "highlight@3",
-      "date": "2026-10-17"
+      "prompt": "highlight@7",
+      "date": "2026-10-25"
     },
     "themistocles-naval-law": {
-      "score": 0.875,
+      "score": 1,
       "model": "claude-opus-5-5",
-      "prompt": "highlight@3",
-      "date": "2026-10-17"
+      "prompt": "highlight@7",
+      "date": "2026-10-25"
+    },
+    "laurion-silver": {
+      "score": 0.8888888888888888,
+      "model": "claude-opus-5-5",
+      "prompt": "highlight@7",
+      "date": "2026-10-25"
     }
   }
 }
