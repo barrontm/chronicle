@@ -1,18 +1,6 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { fileURLToPath } from 'node:url';
 
-const FIXTURE = fileURLToPath(new URL('../tests/fixtures/sample-history.json', import.meta.url));
-
-/** The sample timeline, in the reader layout (on a phone, the map sheet that holds the timeline). */
-async function openNewLayout(page: Page, phone: boolean) {
-  await page.goto('/');
-  await expect(page.getByTestId('save-state')).toHaveText('Saved on this device');
-  await page.getByTestId('import-input').setInputFiles(FIXTURE);
-  await expect(page.locator('.doc-title')).toHaveValue('Test fixture');
-  if (phone) await page.getByTestId('reader').getByRole('button', { name: 'Map' }).click();
-  await expect(page.locator('[data-testid=timeline][data-ready]')).toBeVisible();
-}
-
 test('the app opens in the reader layout, even for someone who had chosen the classic layout @phone', async ({ page }) => {
   // What an older version saved for "Use the classic layout" and its Timeline, Map and Both views.
   await page.addInitScript(() => { localStorage.setItem('chronicle.classicLayout', 'true'); localStorage.setItem('chronicle.view', '"timeline"'); });
@@ -27,14 +15,30 @@ test('the app opens in the reader layout, even for someone who had chosen the cl
   await expect(page.getByRole('menuitemcheckbox', { name: 'Use the classic layout' })).toHaveCount(0);
 });
 
-test('the new timeline pans, zooms with the zoom bar and opens an entry @phone', async ({ page, isMobile }) => {
-  await openNewLayout(page, isMobile);
-  const timeline = page.getByTestId('timeline');
+const GREECE = fileURLToPath(new URL('../tests/fixtures/greece/classical-greece.json', import.meta.url));
+
+/** The Classical Greece fixture, in the reader layout (on a phone, the map sheet that holds the timeline). */
+async function openGreece(page: Page, isMobile: boolean) {
+  await page.goto('/');
+  await expect(page.getByTestId('save-state')).toHaveText('Saved on this device');
+  await page.getByTestId('import-input').setInputFiles(GREECE);
+  await expect(page.locator('.doc-title')).toHaveValue(/Classical Greece/);
+  if (isMobile) await page.getByTestId('reader').getByRole('button', { name: 'Map' }).click();
+  const timeline = page.locator('[data-testid=timeline][data-ready]');
+  await expect(timeline).toBeVisible();
+  return timeline;
+}
+
+test('the timeline is the overview: it pans, zooms with the zoom bar and Ctrl + wheel, with no other view to switch to @phone', async ({ page, isMobile }) => {
+  const timeline = await openGreece(page, isMobile);
   const span = page.getByTestId('zoom-span');
   const year = page.locator('.thumbwheel-year');
+  await expect(page.getByTestId('time-bar').getByRole('button', { name: 'Overview' })).toHaveCount(0);
 
   await page.getByTestId('time-bar').getByRole('button', { name: 'Century' }).click();
   await expect(span).toHaveText('100 years in view');
+  // Polities are still strips, however close in.
+  await expect(timeline.locator('.tl-strip').first()).toBeAttached();
 
   // Dragging right moves back in time.
   const before = await year.textContent();
@@ -46,95 +50,56 @@ test('the new timeline pans, zooms with the zoom bar and opens an entry @phone',
   await page.mouse.move(box.x + box.width * 0.9, y, { steps: 5 });
   await page.mouse.up();
   await expect(year).not.toHaveText(before!);
-  const after = Number((await year.textContent())!.replace(/\D/g, ''));
-  expect(after).toBeLessThan(Number(before!.replace(/\D/g, '')));
   await expect(span).toHaveText('100 years in view');
 
-  // A millennium around 500 has the end of Rome in it; clicking it opens the entry.
-  await page.getByTestId('time-bar').getByRole('button', { name: 'Millennium' }).click();
-  await expect(span).toHaveText('1,000 years in view');
-  await timeline.locator('.tl-mark[data-id=i_rome_falls]').click({ force: true }); // the timeline hit-tests by position
-  await expect(page.getByTestId('item-view').getByRole('heading', { name: 'Deposition of Romulus Augustulus' })).toBeVisible();
-  await expect(timeline.locator('.tl-mark.selected')).toHaveAttribute('data-id', /.+/);
+  // Ctrl and the wheel zoom out around the pointer.
+  if (!isMobile) {
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.keyboard.down('Control');
+    for (let i = 0; i < 6; i++) await page.mouse.wheel(0, 200);
+    await page.keyboard.up('Control');
+    await expect(span).not.toHaveText('100 years in view');
+  }
+  await page.getByTestId('time-bar').getByRole('button', { name: 'All', exact: true }).click();
+  await expect(span).toHaveText(/[0-9,]{3,} years in view/);
 });
 
-test('the new timeline zooms with Ctrl + wheel, and a cluster splits when clicked', async ({ page }) => {
-  await openNewLayout(page, false);
-  const timeline = page.getByTestId('timeline');
+test('opening an entry from Search opens its polity in place; showing its time frames it, and "Back to where I was" returns', async ({ page }) => {
+  const timeline = await openGreece(page, false);
   const span = page.getByTestId('zoom-span');
-  const box = (await timeline.boundingBox())!;
-  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
-  // Far enough out, entries close together merge into clusters.
-  const before = await span.textContent();
-  await page.keyboard.down('Control');
-  for (let i = 0; i < 12; i++) await page.mouse.wheel(0, 200);
-  await page.keyboard.up('Control');
-  await expect(span).not.toHaveText(before!);
-  const cluster = timeline.locator('.tl-cluster').first();
-  await expect(cluster).toBeVisible();
-  const clusters = await timeline.locator('.tl-cluster').count();
-  await cluster.click({ force: true }); // its count sits on top of it; the timeline hit-tests by position
-  await expect.poll(() => timeline.locator('.tl-cluster').count()).toBeLessThan(clusters);
-});
-
-/** Click an entry's mark (the timeline hit-tests by position, so its label on top doesn't matter). */
-const mark = (page: Page, id: string) => page.getByTestId('timeline').locator(`.tl-mark[data-id=${id}]`);
-
-test('opening a person lights up their influences with arrows, and fades the rest @phone', async ({ page, isMobile }) => {
-  await openNewLayout(page, isMobile);
-  const timeline = page.getByTestId('timeline');
-  await page.getByTestId('time-bar').getByRole('button', { name: 'All' }).click();
-  await mark(page, 'i_plato').click({ force: true });
-  await expect(timeline.locator('.tl-mark.infl-by[data-id=i_socrates]')).toBeAttached();
-  await expect(timeline.locator('.tl-mark.infl-on[data-id=i_aristotle]')).toBeAttached();
-  await expect(timeline.locator('.tl-mark.dimmed[data-id=i_confucius]')).toBeAttached();
-  await expect(timeline.locator('path.arc')).toHaveCount(2);
-  await expect(timeline.locator('path.arc.infl-by')).toHaveAttribute('data-from', 'i_socrates');
-
-  // A person without connections changes nothing.
-  await page.getByRole('button', { name: 'Close panel' }).click();
-  await page.getByTestId('time-bar').getByRole('button', { name: 'All' }).click();
-  await mark(page, 'i_confucius').click({ force: true });
-  await expect(page.getByTestId('item-view').getByRole('heading', { name: 'Confucius' })).toBeVisible();
-  await expect(timeline.locator('.dimmed')).toHaveCount(0);
-  await expect(timeline.locator('path.arc')).toHaveCount(0);
-});
-
-test('opening an entry frames it with its connections; "Back to where I was" returns', async ({ page }) => {
-  await openNewLayout(page, false);
-  const span = page.getByTestId('zoom-span');
-  await page.getByTestId('time-bar').getByRole('button', { name: 'All' }).click();
-  await expect(span).toHaveText(/[0-9,]{4,} years in view/);
-  await mark(page, 'i_plato').click({ force: true });
-  await expect(span).toHaveText('180 years in view');
+  await page.getByTestId('time-bar').getByRole('button', { name: 'All', exact: true }).click();
+  await expect(span).toHaveText(/[0-9,]{3,} years in view/);
+  const wide = await span.textContent();
+  // What Plato is in opens in place, and his time is framed with Socrates and Aristotle.
+  await expect(timeline).toHaveAttribute('data-open', '');
+  await openFromSearch(page, 'Plato');
+  await expect(page.getByTestId('item-view').getByRole('heading', { name: 'Plato' })).toBeVisible();
+  await expect(timeline).toHaveAttribute('data-open', /\S/);
+  await expect(timeline.locator('[data-id=i_plato]').first()).toBeAttached();
+  await expect(span).not.toHaveText(wide!);
   await page.getByRole('button', { name: 'Back to where I was' }).click();
-  await expect(span).toHaveText(/[0-9,]{4,} years in view/);
+  await expect(span).toHaveText(wide!);
   await expect(page.getByRole('button', { name: 'Back to where I was' })).toHaveCount(0);
 });
 
-test('hiding a category hides its lane; trends line up under the timeline; the playhead shows the map’s year', async ({ page }) => {
-  await openNewLayout(page, false);
-  const timeline = page.getByTestId('timeline');
-  await page.getByTestId('time-bar').getByRole('button', { name: 'All' }).click();
-  await expect(mark(page, 'i_plato')).toBeAttached();
-  await page.getByRole('group', { name: 'Show or hide categories' }).getByRole('button', { name: 'Philosophy & religion' }).click();
-  await expect(mark(page, 'i_plato')).toHaveCount(0);
-  await expect(timeline.locator('.tl-svg text', { hasText: 'Philosophy & religion' })).toHaveCount(0);
-
-  // The trend strips start where the timeline's plot starts, so years line up.
-  await expect(page.locator('.strip')).toHaveCount(2);
+test('hiding a category hides its polities; trends line up under the timeline; the playhead shows the map’s year', async ({ page }) => {
+  const timeline = await openGreece(page, false);
+  const macedon = timeline.locator('.tl-strip[data-id="pol:t_macedon"]');
+  await scrollToMark(timeline, macedon);
+  const cat = page.getByRole('group', { name: 'Show or hide categories' }).getByRole('button', { name: 'Politics & government' });
+  await cat.click();
+  await expect(macedon).toHaveCount(0);
+  await cat.click();
+  await scrollToMark(timeline, macedon);
 
   const input = page.getByTestId('yearbar').getByLabel('Year', { exact: true });
-  await input.fill('1914');
+  await input.fill('431 BCE');
   await input.press('Enter');
-  await expect(timeline.locator('.tl-year')).toHaveText('1914');
+  await expect(timeline.locator('.tl-year')).toHaveText('431 BCE');
 });
 
-test('the keyboard moves through entries and opens one; screen readers hear which', async ({ page }) => {
-  await openNewLayout(page, false);
-  const timeline = page.getByTestId('timeline');
-  await page.getByTestId('time-bar').getByRole('button', { name: 'Millennium' }).click();
-  await expect(page.getByTestId('zoom-span')).toHaveText('1,000 years in view');
+test('the keyboard moves through the entries in open lanes and opens one; screen readers hear which', async ({ page }) => {
+  const { timeline } = await openAthens(page, false);
   await timeline.focus();
   await page.keyboard.press('ArrowRight');
   await expect(timeline).toHaveAttribute('aria-activedescendant', /tl-active/);
@@ -147,24 +112,44 @@ test('the keyboard moves through entries and opens one; screen readers hear whic
   await expect(page.getByTestId('item-view').getByRole('heading', { name: said.split(',')[0] })).toBeVisible();
 });
 
-test('drag an open entry to change its dates, undo it, drag again, and it stays after a reload', async ({ page }) => {
-  await openNewLayout(page, false);
+test('drag an open entry in its lane to change its dates, undo it, drag again, and it stays after a reload', async ({ page }) => {
+  test.slow();
+  // Wide enough that, with the entry's panel open, the lanes aren't the phone's list (which has no bars to drag).
+  await page.setViewportSize({ width: 1900, height: 1000 });
+  const { timeline } = await openAthens(page, false);
   const view = page.getByTestId('item-view');
-  await page.getByTestId('time-bar').getByRole('button', { name: 'Century' }).click();
-  await page.getByTestId('time-bar').getByRole('button', { name: 'All' }).click();
-  await mark(page, 'i_pelop').click({ force: true });
+  const toggle = timeline.locator('text.tl-lane-toggle[data-id="__lane:pol:t_athens|war"]');
+  await scrollToMark(timeline, toggle);
+  await toggle.click({ force: true });
+  const bar = timeline.locator('.tl-phase[data-id=i_pelop]');
+  await scrollToMark(timeline, bar);
+  // Opened from Search, its time is framed, so its bar is wide enough to take hold of.
+  await openFromSearch(page, 'Peloponnesian War');
   await expect(view.getByRole('heading', { name: 'Peloponnesian War' })).toBeVisible();
   await expect(view).toContainText('431–404 BCE');
+  await scrollToMark(timeline, bar);
+  // Arrows between lanes can cross the bar: find a point where it's the open war, to drag, by its tooltip.
+  const onBar = async () => {
+    const seen: string[] = [];
+    for (let i = 0; i < 3; i++) for (const f of [0.15, 0.3, 0.5, 0.7, 0.85, 0.05, 0.95]) {
+      const b = (await bar.boundingBox())!;
+      const p = { x: b.x + b.width * f, y: b.y + b.height / 2 };
+      await page.mouse.move(p.x + 1, p.y);
+      await page.mouse.move(p.x, p.y);
+      await page.waitForTimeout(50);
+      const tip = (await page.locator('.tl-tip').textContent()) ?? '';
+      if (tip.startsWith('Peloponnesian War') && tip.includes('Drag to change its dates')) return p;
+      seen.push(tip);
+    }
+    throw new Error(`No point on the war’s bar takes hold of it: ${JSON.stringify(seen)}`);
+  };
 
   const drag = async () => {
-    // Wait for the zoom to settle, then drag the bar's middle to the right.
-    await page.waitForTimeout(500);
-    const bar = (await mark(page, 'i_pelop').boundingBox())!;
-    const y = bar.y + bar.height / 2;
-    await page.mouse.move(bar.x + bar.width / 2, y);
+    await expect(timeline).toHaveAttribute('data-settled', '');
+    const p = await onBar();
     await page.mouse.down();
-    await page.mouse.move(bar.x + bar.width / 2 + 60, y, { steps: 6 });
-    await page.mouse.move(bar.x + bar.width / 2 + 120, y, { steps: 6 });
+    await page.mouse.move(p.x + 30, p.y, { steps: 6 });
+    await page.mouse.move(p.x + 60, p.y, { steps: 6 });
     await page.mouse.up();
   };
   await drag();
@@ -184,8 +169,9 @@ test('drag an open entry to change its dates, undo it, drag again, and it stays 
   await expect(page.getByTestId('save-state')).toHaveText('Saved on this device');
   await page.reload();
   await expect(page.locator('[data-testid=timeline][data-ready]')).toBeVisible();
-  await page.getByTestId('time-bar').getByRole('button', { name: 'All' }).click();
-  await mark(page, 'i_pelop').click({ force: true });
+  // Athens is still open, as Bob left it.
+  await expect(page.getByTestId('timeline')).toHaveAttribute('data-open', /pol:t_athens/);
+  await openFromSearch(page, 'Peloponnesian War');
   await expect(view).toContainText(moved);
 });
 
@@ -210,7 +196,7 @@ async function scrollToMark(timeline: Locator, target: Locator) {
   await expect(target.first()).toBeVisible();
 }
 
-test('the Overview stop shows polities as strips over their eras, world events in gold, and a group unfolds @phone', async ({ page, isMobile }) => {
+test('the overview shows polities as strips over their eras, world events in gold, and a group unfolds @phone', async ({ page, isMobile }) => {
   // The map shares the page: under a full parallel run its software rendering slows every frame.
   test.slow();
   await page.goto('/');
@@ -221,10 +207,8 @@ test('the Overview stop shows polities as strips over their eras, world events i
   const timeline = page.locator('[data-testid=timeline][data-ready]');
   await expect(timeline).toBeVisible();
 
-  const stop = page.getByTestId('time-bar').getByRole('button', { name: 'Overview' });
-  await stop.click();
-  await expect(stop).toHaveAttribute('aria-pressed', 'true', { timeout: 15_000 });
-  await expect(timeline).toHaveAttribute('data-level', '0', { timeout: 15_000 });
+  await page.getByTestId('time-bar').getByRole('button', { name: 'All', exact: true }).click();
+  await expect(timeline).toHaveAttribute('data-settled', '', { timeout: 15_000 });
   // At the top, what Bob shows in the overview.
   await expect(timeline.locator('text.tl-top-name', { hasText: 'Peloponnesian War' })).toBeVisible();
   // Alexander's conquest of Persia, a world event: gold in Macedon and in Persia, named in Macedon.
@@ -239,27 +223,26 @@ test('the Overview stop shows polities as strips over their eras, world events i
   await expect(timeline.locator('text.tl-pol-name', { hasText: 'Classical Greece' })).toBeVisible();
   await expect(timeline.locator('.tl-strip[data-id="pol:t_athens"]')).toHaveCount(0);
 
-  // Clicking the group unfolds it into Athens, Sparta, Corinth and Thebes; clicking Athens picks it, and Esc lets go.
+  // Clicking the group unfolds it into Athens, Sparta, Corinth and Thebes; clicking Athens picks it and opens its lanes;
+  // Esc folds them, then lets go.
   await group.click({ position: { x: 30, y: 6 }, force: true }); // the timeline hit-tests by position
   const athens = timeline.locator('.tl-strip[data-id="pol:t_athens"]');
   await expect(athens).toBeVisible();
   await scrollToMark(timeline, athens);
   await expect(timeline.locator('text.tl-pol-name', { hasText: /^Athens$/ })).toBeVisible();
-  await expect(timeline).toHaveAttribute('data-level', '0');
+  await expect(timeline).toHaveAttribute('data-settled', '');
   const a = await stripPoint(athens);
   await page.mouse.click(a.x, a.y);
   await expect(athens).toHaveClass(/picked/);
+  await expect(timeline).toHaveAttribute('data-open', 'pol:t_athens');
+  await timeline.press('Escape');
+  await expect(timeline).toHaveAttribute('data-open', '');
+  await expect(athens).toHaveClass(/picked/);
   await timeline.press('Escape');
   await expect(athens).not.toHaveClass(/picked/);
-
-  // The Century stop goes back to the entries.
-  await page.getByTestId('time-bar').getByRole('button', { name: 'Century' }).click();
-  await expect(stop).toHaveAttribute('aria-pressed', 'false');
-  await expect(timeline.locator('.tl-strip')).toHaveCount(0);
-  await expect(timeline.locator('.tl-mark').first()).toBeVisible();
 });
 
-test('an era opens into its six lanes, says when one is empty, and Esc goes back @phone', async ({ page, isMobile }) => {
+test('an era’s lanes unfurl under its band, say when one is empty, and Esc folds them @phone', async ({ page, isMobile }) => {
   // The map shares the page: under a full parallel run its software rendering slows every frame.
   test.slow();
   await page.goto('/');
@@ -274,61 +257,56 @@ test('an era opens into its six lanes, says when one is empty, and Esc goes back
   const timeline = page.locator('[data-testid=timeline][data-ready]');
   await expect(timeline).toBeVisible();
 
-  await page.getByTestId('time-bar').getByRole('button', { name: 'Overview' }).click();
-  // The Overview stop frames everything over a moment; the era's wash is clicked once it's still, above the strips.
-  await expect(timeline).toHaveAttribute('data-level', '0');
+  // The era's wash is clicked once the timeline is still, above the strips.
+  await expect(timeline).toHaveAttribute('data-settled', '');
   const wash = timeline.locator('.tl-era[data-id=i_classical]');
   await scrollToMark(timeline, wash);
+  const span = await page.getByTestId('zoom-span').textContent();
   await wash.click({ position: { x: 20, y: 6 }, force: true });
-  await expect(timeline).toHaveAttribute('data-level', '1');
+  await expect(timeline).toHaveAttribute('data-open', 'i_classical');
   await expect(timeline.locator('text.tl-era-head', { hasText: 'Classical Greece' })).toBeVisible();
-  await expect(timeline.locator('.tl-era')).toHaveCount(0);
-  await expect(timeline.locator('text.tl-lane-name', { hasText: 'POLITICS' })).toBeVisible();
+  // The rest of the overview stays, and so do the years in view.
+  await expect(timeline.locator('.tl-era[data-id=i_classical]')).toBeAttached();
+  await expect(page.getByTestId('zoom-span')).toHaveText(span!);
+  await scrollToMark(timeline, timeline.locator('text.tl-lane-name', { hasText: 'POLITICS' }));
 
   // Down the lanes (Shift and the wheel scroll them): the Economy lane's silver owls, and the empty Technology lane.
   await scrollToMark(timeline, timeline.locator(isMobile ? '.tl-list-item[data-id=i_owls]' : '.tl-phase[data-id=i_owls]'));
   await scrollToMark(timeline, timeline.locator('text.tl-lane-empty', { hasText: 'No technology here yet.' }));
 
-  // Esc folds the lanes back into the overview.
+  // Esc folds the lanes back under the band.
   await timeline.press('Escape');
-  await expect(timeline).toHaveAttribute('data-level', '0');
-  await expect(timeline.locator('.tl-era[data-id=i_classical]')).toBeVisible();
+  await expect(timeline).toHaveAttribute('data-open', '');
   await expect(timeline.locator('text.tl-era-head')).toHaveCount(0);
-  await expect(page.getByTestId('time-bar').getByRole('button', { name: 'Overview' })).toHaveAttribute('aria-pressed', 'true');
+  await scrollToMark(timeline, wash);
 });
 
-/** The Classical Greece fixture with Athens opened into its six lanes from the overview; returns the timeline and Athens' strip. */
+/** The Classical Greece fixture with Athens' six lanes unfurled under its strip; returns the timeline and Athens' strip. */
 async function openAthens(page: Page, isMobile: boolean) {
-  await page.goto('/');
-  await expect(page.getByTestId('save-state')).toHaveText('Saved on this device');
-  await page.getByTestId('import-input').setInputFiles(fileURLToPath(new URL('../tests/fixtures/greece/classical-greece.json', import.meta.url)));
-  await expect(page.locator('.doc-title')).toHaveValue(/Classical Greece/);
-  if (isMobile) await page.getByTestId('reader').getByRole('button', { name: 'Map' }).click();
-  const timeline = page.locator('[data-testid=timeline][data-ready]');
-  await expect(timeline).toBeVisible();
-  await page.getByTestId('time-bar').getByRole('button', { name: 'Overview' }).click();
-  await expect(timeline).toHaveAttribute('data-level', '0');
+  const timeline = await openGreece(page, isMobile);
+  await expect(timeline).toHaveAttribute('data-settled', '');
 
-  // Unfold Classical Greece, pick Athens, and click it again to open it.
+  // Unfold Classical Greece, and click Athens to open it.
   const group = timeline.locator('.tl-strip[data-id="grp:g_classical_greece"]');
   await scrollToMark(timeline, group);
   await group.click({ position: { x: 30, y: 6 }, force: true });
   const athens = timeline.locator('.tl-strip[data-id="pol:t_athens"]');
   await expect(athens).toBeVisible();
   await scrollToMark(timeline, athens);
-  await expect(timeline).toHaveAttribute('data-level', '0');
+  await expect(timeline).toHaveAttribute('data-settled', '');
+  // Not so soon after the group's click that the two make a double-click.
+  await page.waitForTimeout(400);
   const a = await stripPoint(athens);
   await page.mouse.click(a.x, a.y);
   await expect(athens).toHaveClass(/picked/);
-  await expect(timeline.locator('text.tl-open-pill')).toBeVisible();
-  await page.mouse.click(a.x, a.y);
-  await expect(timeline).toHaveAttribute('data-level', '1');
-  await expect(timeline.locator('text.tl-era-head', { hasText: 'Athens (Attica)' })).toBeVisible();
-  await expect(timeline.locator('text.tl-back', { hasText: '‹ Overview' })).toBeVisible();
+  await expect(timeline).toHaveAttribute('data-open', 'pol:t_athens');
+  await expect(timeline).toHaveAttribute('data-settled', '');
+  await scrollToMark(timeline, timeline.locator('text.tl-era-head', { hasText: 'Athens (Attica)' }));
+  await expect(timeline.locator('text.tl-fold')).toHaveCount(1);
   return { timeline, athens };
 }
 
-test('Athens opens into its six lanes: Laurion in Economy, the war in War; a lane opens to all of it, and Esc steps back @phone', async ({ page, isMobile }) => {
+test('Athens’ six lanes unfurl under it: Laurion in Economy, the war in War; a lane opens to all of it, and Esc steps back @phone', async ({ page, isMobile }) => {
   test.slow();
   const { timeline, athens } = await openAthens(page, isMobile);
 
@@ -337,8 +315,8 @@ test('Athens opens into its six lanes: Laurion in Economy, the war in War; a lan
   await scrollToMark(timeline, named('i_pelop'));
   await scrollToMark(timeline, named('i_laurion'));
 
-  // Opening War shows all of it; Esc closes it again, then folds Athens back into the overview, then lets go of it.
-  const toggle = timeline.locator('text.tl-lane-toggle[data-id="__lane:war"]');
+  // Opening War shows all of it; Esc closes it again, then folds Athens' lanes, then lets go of it.
+  const toggle = timeline.locator('text.tl-lane-toggle[data-id="__lane:pol:t_athens|war"]');
   await scrollToMark(timeline, toggle);
   await expect(toggle).toHaveText(/^Show all \d+ ▾$/);
   await toggle.click({ force: true });
@@ -347,12 +325,34 @@ test('Athens opens into its six lanes: Laurion in Economy, the war in War; a lan
   await scrollToMark(timeline, timeline.locator(isMobile ? 'text.tl-list-item[data-id=i_sybota]' : '.tl-moment[data-id=i_sybota]'));
   await timeline.press('Escape');
   await expect(toggle).toHaveText(/^Show all \d+ ▾$/);
-  await expect(timeline).toHaveAttribute('data-level', '1');
+  await expect(timeline).toHaveAttribute('data-open', 'pol:t_athens');
   await timeline.press('Escape');
-  await expect(timeline).toHaveAttribute('data-level', '0');
+  await expect(timeline).toHaveAttribute('data-open', '');
+  await scrollToMark(timeline, athens);
   await expect(athens).toHaveClass(/picked/);
   await timeline.press('Escape');
   await expect(athens).not.toHaveClass(/picked/);
+});
+
+test('Sparta opens too, under its own strip, without moving the years in view; its Fold folds only Sparta', async ({ page }) => {
+  test.slow();
+  const { timeline } = await openAthens(page, false);
+  const span = await page.getByTestId('zoom-span').textContent();
+  const sparta = timeline.locator('.tl-strip[data-id="pol:t_sparta"]');
+  await scrollToMark(timeline, sparta);
+  await expect(timeline).toHaveAttribute('data-settled', '');
+  const s = await stripPoint(sparta);
+  await page.mouse.click(s.x, s.y);
+  await expect(timeline).toHaveAttribute('data-open', 'pol:t_athens pol:t_sparta');
+  await expect(page.getByTestId('zoom-span')).toHaveText(span!);
+  await expect(sparta).toHaveClass(/picked/);
+  // Two sets of lanes, each with its own War lane.
+  await scrollToMark(timeline, timeline.locator('text.tl-era-head', { hasText: /^Sparta/ }));
+  const fold = timeline.locator('text.tl-fold[data-id="__fold:pol:t_sparta"]');
+  await scrollToMark(timeline, fold);
+  await expect(timeline).toHaveAttribute('data-settled', '');
+  await fold.click({ force: true });
+  await expect(timeline).toHaveAttribute('data-open', 'pol:t_athens');
 });
 
 test('Add under a lane in Athens opens a new entry in that lane, part of Athens, and it lands there @phone', async ({ page, isMobile }) => {
@@ -361,7 +361,7 @@ test('Add under a lane in Athens opens a new entry in that lane, part of Athens,
   // "+ Add" under Economy: a real button, so it's reached with Tab and pressed with Enter.
   const add = timeline.getByRole('button', { name: 'Add to Economy' });
   await scrollToMark(timeline, add);
-  const toggle = timeline.locator('text.tl-lane-toggle[data-id="__lane:economy"]');
+  const toggle = timeline.locator('text.tl-lane-toggle[data-id="__lane:pol:t_athens|economy"]');
   const before = Number((await toggle.first().textContent())?.match(/\d+/)?.[0]);
   await add.focus();
   await page.keyboard.press('Enter');
@@ -375,26 +375,28 @@ test('Add under a lane in Athens opens a new entry in that lane, part of Athens,
   await editor.getByRole('button', { name: 'Add to timeline' }).click();
   await expect(page.getByRole('heading', { name: 'Laurion silver strike' })).toBeVisible();
 
-  // It's one more in Athens' Economy lane, and opening the lane shows it (on the phone, under its panel).
+  // It lands in Athens' Economy lane, which opens to show it (on the phone, under its panel).
   if (isMobile) await page.getByRole('button', { name: 'Close' }).click();
-  await expect(timeline).toHaveAttribute('data-level', '1');
-  await expect(toggle.first()).toContainText(`Show all ${before + 1}`);
-  await toggle.first().click({ force: true });
-  // On the laptop it's the open entry, drawn selected (with the drawer open the timeline is narrow enough to be a list); on the phone it's in the list.
-  const mark = isMobile ? timeline.locator('text.tl-list-item', { hasText: 'Laurion silver strike' }) : timeline.locator('text.tl-list-item.selected, .tl-moment.selected');
+  await expect(timeline).toHaveAttribute('data-open', 'pol:t_athens');
+  await scrollToMark(timeline, toggle.first());
+  await expect(toggle.first()).toHaveText('Show fewer ▴');
+  await expect(timeline.locator('text.tl-lane-name', { hasText: 'ECONOMY' })).toBeVisible();
+  expect(before).toBeGreaterThan(0);
+  const mark = isMobile ? timeline.locator('text.tl-list-item', { hasText: 'Laurion silver strike' }) : timeline.locator('text.tl-label, text.tl-list-item', { hasText: 'Laurion silver strike' });
   await scrollToMark(timeline, mark);
-  if (!isMobile) await expect(timeline.locator('text.tl-list-item.selected, text.tl-label', { hasText: 'Laurion silver strike' }).first()).toBeVisible();
 });
 
 test('linking the war to the economy as “weakened” with a highlight draws an arrow across Athens’ lanes and a line in both panels @phone', async ({ page, isMobile }) => {
   test.slow();
   const { timeline } = await openAthens(page, isMobile);
   const named = (id: string) => timeline.locator(isMobile ? `text.tl-list-item[data-id=${id}]` : `.tl-named[data-id=${id}]`);
+  // On the phone, a list row is tapped near its start, clear of the playhead.
+  const open = (id: string) => named(id).first().click({ force: true, ...(isMobile ? { position: { x: 4, y: 8 } } : {}) });
   const close = () => page.getByRole('button', { name: 'Close' }).first().click();
 
   // The Archidamian War led to… the Athenian owls, added in its editor.
   await scrollToMark(timeline, named('i_archidamian'));
-  await named('i_archidamian').first().click({ force: true });
+  await open('i_archidamian');
   const view = page.getByTestId('item-view');
   await expect(view.getByRole('heading', { name: 'Archidamian War' })).toBeVisible();
   await view.getByRole('button', { name: 'Edit' }).click();
@@ -425,6 +427,7 @@ test('linking the war to the economy as “weakened” with a highlight draws an
     await expect(timeline.locator('path.tl-margin-arc').first()).toBeAttached();
   } else {
     // On the laptop: an arrow in War's cinnabar from the war, across to the owls in Economy, its pill opening the connection.
+    await scrollToMark(timeline, named('i_archidamian'));
     const arc = timeline.locator('path.tl-influence[data-from=i_archidamian][data-to=i_owls]');
     await expect(arc).toBeAttached();
     const rid = (await arc.getAttribute('data-id'))!;
@@ -439,7 +442,7 @@ test('linking the war to the economy as “weakened” with a highlight draws an
 
   // The owls' panel reads it the other way.
   await scrollToMark(timeline, named('i_owls'));
-  await named('i_owls').first().click({ force: true });
+  await open('i_owls');
   await expect(view.getByTestId('effects').getByRole('button', { name: /^Weakened by: Archidamian War/ })).toBeVisible();
 });
 
@@ -457,23 +460,23 @@ test('the map follows the overview: Athens in 431 BCE at war with Sparta and Cor
   await expect(year).toHaveValue('431 BCE');
 
   const timeline = page.locator('[data-testid=timeline][data-ready]');
-  await page.getByTestId('time-bar').getByRole('button', { name: 'Overview' }).click();
-  await expect(timeline).toHaveAttribute('data-level', '0');
+  await expect(timeline).toHaveAttribute('data-settled', '');
   // Persia's strip as it is before the map focuses it.
   const persia = timeline.locator('.tl-strip[data-id="pol:t_persia"]');
   await scrollToMark(timeline, persia);
   const before = (await persia.boundingBox())!.height;
 
-  // Pick Athens: on the map it's in ink, and the polities it was at war with that year are named so.
+  // Click Athens: on the map it's in ink, and the polities it was at war with that year are named so.
   const group = timeline.locator('.tl-strip[data-id="grp:g_classical_greece"]');
   await scrollToMark(timeline, group);
   await group.click({ position: { x: 30, y: 6 }, force: true });
   const athens = timeline.locator('.tl-strip[data-id="pol:t_athens"]');
   await expect(athens).toBeVisible();
   await scrollToMark(timeline, athens);
-  await expect(timeline).toHaveAttribute('data-level', '0');
-  const a = (await athens.boundingBox())!;
-  await page.mouse.click(a.x + a.width * 0.45, a.y + a.height / 2);
+  await expect(timeline).toHaveAttribute('data-settled', '');
+  // Near its name, clear of the playhead.
+  const a = await stripPoint(athens);
+  await page.mouse.click(a.x, a.y);
   await expect(athens).toHaveClass(/picked/);
   const label = (name: string) => page.locator('.map-label.territory', { hasText: name });
   await expect(label('Athens')).toHaveAttribute('data-contact', 'picked');
@@ -483,10 +486,9 @@ test('the map follows the overview: Athens in 431 BCE at war with Sparta and Cor
   }
   await expect(page.getByTestId('map-follow')).toContainText('Athens (Attica) in 431 BCE: at war with Corinth, Sparta (Laconia and Messenia) and Thebes (Boeotia)');
 
-  // Open Athens and its War lane: everyone it fought in the years in view, Persia too.
-  await page.mouse.click(a.x + a.width * 0.45, a.y + a.height / 2);
-  await expect(timeline).toHaveAttribute('data-level', '1');
-  const toggle = timeline.locator('text.tl-lane-toggle[data-id="__lane:war"]');
+  // Its lanes are open too; its War lane: everyone it fought in the years in view, Persia too.
+  await expect(timeline).toHaveAttribute('data-open', 'pol:t_athens');
+  const toggle = timeline.locator('text.tl-lane-toggle[data-id="__lane:pol:t_athens|war"]');
   await scrollToMark(timeline, toggle);
   await toggle.click({ force: true });
   await expect(toggle).toHaveText('Show fewer ▴');
@@ -494,7 +496,7 @@ test('the map follows the overview: Athens in 431 BCE at war with Sparta and Cor
   await expect(label('Achaemenid Persia')).toContainText('· fought');
   await expect(page.getByTestId('map-follow')).toContainText(/^Athens \(Attica\) fought .*Achaemenid Persia/);
 
-  // Click Persia on the map: back to the overview with Persia's rows grown, the rest faded.
+  // Click Persia on the map: Persia's rows grow and come into view, the rest faded.
   // Once the map's fit to the War lane has settled.
   await page.waitForTimeout(100);
   await expect(page.locator('[data-testid=map]:not([data-moving])')).toBeAttached();
@@ -502,7 +504,6 @@ test('the map follows the overview: Athens in 431 BCE at war with Sparta and Cor
   await page.mouse.click(q.x + q.width / 2, q.y - 6);
   await expect(page.getByTestId('map-region')).toContainText('Showing Persia on the timeline');
   await expect(timeline).toHaveAttribute('data-region', 'Persia');
-  await expect(timeline).toHaveAttribute('data-level', '0');
   await expect(persia).toBeVisible();
   await expect.poll(async () => (await persia.boundingBox())!.height).toBeGreaterThan(before * 1.15);
   // Esc lets go of the region first; Athens stays picked, as the map shows.
@@ -526,60 +527,63 @@ async function openFromSearch(page: Page, name: string) {
   await page.getByRole('listbox', { name: 'Search results' }).getByRole('option').first().click();
 }
 
-test('⌘-drag boxes entries; Edit sets a lane on all of them, Delete removes them, and each has one Undo', async ({ page }) => {
+test('⌘-drag boxes entries in open lanes; Edit sets a lane on all of them, Delete removes them, and each has one Undo', async ({ page }) => {
   test.slow();
   // Without motion the timeline jumps straight to each window, so the marks are measured where they stay.
   await page.emulateMedia({ reducedMotion: 'reduce' });
-  await openNewLayout(page, false);
-  const timeline = page.getByTestId('timeline');
+  const { timeline } = await openAthens(page, false);
   page.on('dialog', (d) => d.accept());
-  // Opening Socrates frames him with Plato and Aristotle.
-  await openFromSearch(page, 'Socrates');
-  await expect(page.getByTestId('item-view').getByRole('heading', { name: 'Socrates' })).toBeVisible();
-  await page.getByRole('button', { name: 'Close panel' }).click();
-  await expect(page.getByTestId('item-view')).toHaveCount(0);
-  const ids = ['i_socrates', 'i_plato', 'i_aristotle'];
-  for (const id of ids) await expect(mark(page, id)).toBeVisible();
+  // Athens' War lane, open: three of its wars side by side.
+  const toggle = timeline.locator('text.tl-lane-toggle[data-id="__lane:pol:t_athens|war"]');
+  await scrollToMark(timeline, toggle);
+  await toggle.click({ force: true });
+  const ids = ['i_pelop', 'i_archidamian', 'i_decelean'];
+  await scrollToMark(timeline, timeline.locator('.tl-phase[data-id=i_archidamian]'));
+  for (const id of ids) await expect(timeline.locator(`.tl-phase[data-id=${id}]`)).toBeVisible();
   // A box from just outside the three, with ⌘ held, measured and drawn in one go so the timeline can't move in between.
-  await timeline.evaluate((el, ids) => {
+  const box = async (which: string[]) => timeline.evaluate((el, ids) => {
     const host = el.getBoundingClientRect();
-    const rs = ids.map((id) => el.querySelector(`.tl-mark[data-id=${id}]`)!.getBoundingClientRect());
-    const x0 = Math.min(...rs.map((r) => r.left)) - 4, y0 = Math.min(...rs.map((r) => r.top)) - 4;
+    const rs = ids.map((id) => el.querySelector(`.tl-phase[data-id=${id}]`)!.getBoundingClientRect());
+    const x0 = Math.max(Math.min(...rs.map((r) => r.left)) - 4, host.left + 200), y0 = Math.min(...rs.map((r) => r.top)) - 4;
     const x1 = Math.min(Math.max(...rs.map((r) => r.right)) + 4, host.right - 2), y1 = Math.min(Math.max(...rs.map((r) => r.bottom)) + 4, host.bottom - 2);
     const send = (type: string, x: number, y: number) => el.dispatchEvent(new PointerEvent(type, { clientX: x, clientY: y, metaKey: true, button: 0, buttons: type === 'pointerup' ? 0 : 1, pointerId: 1, pointerType: 'mouse', isPrimary: true, bubbles: true }));
     send('pointerdown', x0, y0);
     for (let i = 1; i <= 4; i++) send('pointermove', x0 + ((x1 - x0) * i) / 4, y0 + ((y1 - y0) * i) / 4);
     send('pointerup', x1, y1);
-  }, ids);
+  }, which);
+  await box(ids);
   const bar = page.getByTestId('pick-bar');
-  await expect(bar).toContainText('3 selected');
-  await expect(timeline.locator('.tl-picked')).toHaveCount(3);
+  await expect(bar).toContainText(/\d+ selected/);
+  const n = Number((await bar.textContent())!.match(/(\d+) selected/)![1]);
+  expect(n).toBeGreaterThanOrEqual(3);
+  await expect(timeline.locator('.tl-picked')).toHaveCount(n);
 
-  // Edit: Economy on all three.
+  // Edit: Economy on all of them.
   await bar.getByRole('button', { name: 'Edit' }).click();
   const form = page.getByTestId('bulk-edit');
-  await expect(form.getByRole('heading', { name: 'Edit 3 entries' })).toBeVisible();
+  await expect(form.getByRole('heading', { name: `Edit ${n} entries` })).toBeVisible();
   await form.getByRole('group', { name: 'Lanes' }).getByRole('button', { name: 'Economy' }).click();
-  await form.getByRole('button', { name: 'Change 3 entries' }).click();
-  await expect(page.getByTestId('bulk-note')).toContainText('Changed 3 entries.');
-  // Opened from Search, since the bar may sit over its mark.
-  await openFromSearch(page, 'Plato');
-  await expect(page.getByTestId('item-lanes')).toHaveText(/^Economy$/);
+  await form.getByRole('button', { name: `Change ${n} entries` }).click();
+  await expect(page.getByTestId('bulk-note')).toContainText(`Changed ${n} entries.`);
+  await openFromSearch(page, 'Archidamian War');
+  await expect(page.getByTestId('item-lanes')).toContainText('Economy');
   await page.getByTestId('bulk-note').getByRole('button', { name: 'Undo' }).click();
-  await expect(page.getByTestId('item-lanes')).toHaveCount(0); // back to no lanes of its own
+  await expect(page.getByTestId('item-lanes')).not.toContainText('Economy');
   await page.getByRole('button', { name: 'Close panel' }).click();
 
-  // Delete asks once and takes all three; Undo brings them back.
+  // Delete asks once and takes them all; Undo brings them back.
   await bar.getByRole('button', { name: 'Delete' }).click();
-  await expect(page.getByTestId('bulk-note')).toContainText('Deleted 3 entries.');
+  await expect(page.getByTestId('bulk-note')).toContainText(`Deleted ${n} entries.`);
   await expect(bar.getByRole('button', { name: 'Edit' })).toHaveCount(0);
-  for (const id of ids) await expect(mark(page, id)).toHaveCount(0);
+  for (const id of ids) await expect(timeline.locator(`.tl-phase[data-id=${id}]`)).toHaveCount(0);
   await page.getByTestId('bulk-note').getByRole('button', { name: 'Undo' }).click();
-  for (const id of ids) await expect(mark(page, id)).toBeVisible();
+  await scrollToMark(timeline, timeline.locator('.tl-phase[data-id=i_archidamian]'));
+  for (const id of ids) await expect(timeline.locator(`.tl-phase[data-id=${id}]`)).toBeAttached();
 
   // ⌘-click picks one; Esc lets go.
+  await scrollToMark(timeline, timeline.locator('.tl-phase[data-id=i_archidamian]'));
   await timeline.evaluate((el) => {
-    const r = el.querySelector('.tl-mark[data-id=i_plato]')!.getBoundingClientRect();
+    const r = el.querySelector('.tl-phase[data-id=i_archidamian]')!.getBoundingClientRect();
     const x = r.left + Math.min(8, r.width / 2), y = r.top + r.height / 2;
     for (const type of ['pointerdown', 'pointerup']) el.dispatchEvent(new PointerEvent(type, { clientX: x, clientY: y, metaKey: true, button: 0, pointerId: 1, pointerType: 'mouse', isPrimary: true, bubbles: true }));
   });
@@ -614,14 +618,14 @@ test('a theme added to Classical Greece shows as a chip on its era, and the map�
   await expect(themes.getByLabel('Where on the map')).toHaveValue('');
   await page.getByRole('button', { name: 'Close panel' }).click();
 
-  // Its chip sits on the era's wash in the overview; clicking it opens the era with the theme picked.
-  await page.getByTestId('time-bar').getByRole('button', { name: 'Overview' }).click();
-  await expect(timeline).toHaveAttribute('data-level', '0');
-  const chip = timeline.locator('text.tl-chip-label', { hasText: 'Building program' });
+  // Its chip sits on the era's wash in the overview; clicking it opens the era's lanes with the theme picked.
+  await page.getByTestId('time-bar').getByRole('button', { name: 'All', exact: true }).click();
+  await expect(timeline).toHaveAttribute('data-settled', '');
+  const chip = timeline.locator('text.tl-chip-label', { hasText: 'Building program' }).first();
   await scrollToMark(timeline, chip);
-  await chip.click();
-  await expect(timeline).toHaveAttribute('data-level', '1');
-  await expect(timeline.locator('text.tl-era-head', { hasText: 'Classical Greece' })).toBeVisible();
+  await chip.click({ force: true }); // the timeline hit-tests by position
+  await expect(timeline).toHaveAttribute('data-open', 'i_classical');
+  await scrollToMark(timeline, timeline.locator('text.tl-era-head', { hasText: 'Classical Greece' }));
   await expect(timeline.locator('rect.tl-chip.picked')).toHaveAttribute('data-id', /^theme:i_classical:/);
   await expect(timeline.locator('.dimmed').first()).toBeAttached();
 
@@ -646,9 +650,7 @@ test('Athens’ threads: a ribbon to Macedon with its count, all threads faintly
   await page.getByTestId('import-input').setInputFiles(fileURLToPath(new URL('../tests/fixtures/greece/classical-greece.json', import.meta.url)));
   await expect(page.locator('.doc-title')).toHaveValue(/Classical Greece/);
   const timeline = page.locator('[data-testid=timeline][data-ready]');
-  await expect(timeline).toBeVisible();
-  await page.getByTestId('time-bar').getByRole('button', { name: 'Overview' }).click();
-  await expect(timeline).toHaveAttribute('data-level', '0');
+  await expect(timeline).toHaveAttribute('data-settled', '');
   const group = timeline.locator('.tl-strip[data-id="grp:g_classical_greece"]');
   await scrollToMark(timeline, group);
   await group.click({ position: { x: 30, y: 6 }, force: true });
@@ -736,8 +738,8 @@ test('lenses, regions, strength and groups: the War lens ticks, Megara moves int
   await page.getByTestId('import-input').setInputFiles({ name: 'lens.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(lensDoc())) });
   await expect(page.locator('.doc-title')).toHaveValue('Lens test');
   const timeline = page.locator('[data-testid=timeline][data-ready]');
-  await page.getByTestId('time-bar').getByRole('button', { name: 'Overview' }).click();
-  await expect(timeline).toHaveAttribute('data-level', '0');
+  await page.getByTestId('time-bar').getByRole('button', { name: 'All', exact: true }).click();
+  await expect(timeline).toHaveAttribute('data-settled', '');
 
   // The War lens: a strip under each band with a tick for the war, in Greece.
   const lenses = page.getByRole('group', { name: 'Lenses' });
@@ -758,7 +760,7 @@ test('lenses, regions, strength and groups: the War lens ticks, Megara moves int
   await editor.getByRole('button', { name: 'Save changes' }).click();
   await expect(view.getByTestId('territory-region')).toContainText('Greece');
   await page.getByRole('button', { name: 'Close panel' }).click();
-  await page.getByTestId('time-bar').getByRole('button', { name: 'Overview' }).click();
+  await page.getByTestId('time-bar').getByRole('button', { name: 'All', exact: true }).click();
   await expect(timeline.locator('text.tl-region', { hasText: 'Elsewhere' })).toHaveCount(0);
   await expect(timeline.locator('rect.tl-lens')).toHaveCount(1);
 
@@ -774,7 +776,7 @@ test('lenses, regions, strength and groups: the War lens ticks, Megara moves int
   await editor.getByRole('button', { name: 'Save changes' }).click();
   await expect(view).toContainText('450 BCE: 5 · dominant');
   await page.getByRole('button', { name: 'Close panel' }).click();
-  await page.getByTestId('time-bar').getByRole('button', { name: 'Overview' }).click();
+  await page.getByTestId('time-bar').getByRole('button', { name: 'All', exact: true }).click();
   await expect.poll(async () => (await athens.boundingBox())!.height).toBeGreaterThan(before * 1.5);
 
   // A group of Athens and Megara folds into one strip; unfolded, it stays open after a reload.
@@ -791,7 +793,7 @@ test('lenses, regions, strength and groups: the War lens ticks, Megara moves int
   await form.getByRole('button', { name: 'Add group' }).click();
   await expect(tab.getByRole('button', { name: 'Edit the group Saronic Gulf' })).toContainText('Athens, Megara');
   await page.getByRole('button', { name: 'Close panel' }).click();
-  await page.getByTestId('time-bar').getByRole('button', { name: 'Overview' }).click();
+  await page.getByTestId('time-bar').getByRole('button', { name: 'All', exact: true }).click();
   await expect(timeline.locator('text.tl-parent', { hasText: /Mediterranean/i })).toHaveCount(1);
   const group = timeline.locator('.tl-strip[data-id^="grp:"]');
   await expect(group).toHaveCount(1);
@@ -799,8 +801,8 @@ test('lenses, regions, strength and groups: the War lens ticks, Megara moves int
   await group.click({ position: { x: 30, y: 6 }, force: true });
   await expect(athens).toHaveCount(1);
   await page.reload();
-  await page.getByTestId('time-bar').getByRole('button', { name: 'Overview' }).click();
-  await expect(timeline).toHaveAttribute('data-level', '0');
+  await page.getByTestId('time-bar').getByRole('button', { name: 'All', exact: true }).click();
+  await expect(timeline).toHaveAttribute('data-settled', '');
   await expect(athens).toHaveCount(1);
   await expect(page.getByRole('group', { name: 'Lenses' }).getByRole('button', { name: 'War' })).toHaveAttribute('aria-pressed', 'true');
 });

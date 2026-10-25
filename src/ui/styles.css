@@ -446,8 +446,6 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .tl-host:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
 .tl-svg { display: block; }
 .tl-svg text { font-variant-numeric: lining-nums; }
-.tl-svg .tl-thumb { clip-path: inset(0 round 3px); }
-.tl-svg .tl-thumb.round { clip-path: circle(50%); }
 .tl-tip {
   position: absolute; left: 0; top: 0; z-index: 3; pointer-events: none; max-width: 32ch;
   display: flex; flex-direction: column; gap: 1px; padding: 5px 8px;

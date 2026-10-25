@@ -4,28 +4,26 @@ import type { LensMarks } from '../../model/lenses';
 import type { OGroup, OPolity, Overview } from '../../model/overview';
 import { areaWeight, strengthAt, strengthKnown, stripShare, UNKNOWN_SHARE } from '../../model/strength';
 import { describeEffect, laneInfluences, type LaneInfluence } from '../../model/doc';
-import { LANES, type DatedItem, type Lane, type Relation, type TimelineItem } from '../../model/types';
+import { LANES, type DatedItem, type Lane, type Relation } from '../../model/types';
 import { anchors, arcCurve, loopCurve, type Box as Edges } from '../influenceLinks';
-import { makerOf, markOf, representationOf, warOf, type Representation } from '../representations';
+import { markOf, representationOf, type Representation } from '../representations';
 import { chipLines, chipPrims, CHIP_LINE, innerPrims, packChips, themeKey, washPrims, type ChipBox } from '../representations/era';
 import { ARROW, arrowPrims, RIBBON, ribbonPrims, type ArrowIn, type RibbonIn } from '../representations/influence';
 import { threadLabel, threadsAround, type Thread } from '../../model/threads';
 import { stripPrims, type StripLook } from '../representations/polity';
 import type { YearWindow } from '../timeNav';
 import { LANE_LABEL, PIGMENT } from '../util';
-import { tint, type Box, type Cluster, type Link, type MarkKind, type Measure, type Prim, type Scene, type Target } from './scene';
+import { tint, type Box, type Link, type MarkKind, type Measure, type Prim, type Scene, type Target } from './scene';
 
 /**
- * The new timeline's layout: pure. `prepare` runs once per data change (lanes, rows, sorted
- * indexes); `layout` runs every frame and returns only what is visible.
+ * The timeline's layout: pure. `prepare` runs once per data change (sorted indexes, bands);
+ * `layout` runs every frame and returns only what is visible.
  *
- * Level 0 is the overview: a band per region with its polities as strips (`representations/polity.ts`)
- * over its eras (`representations/era.ts`), world events in gold, and the entries Bob shows at the
- * top. Level 1 is one era opened into its six lanes (`eraLanes`). Level 2 is single entries in
- * category lanes.
+ * The timeline is the overview: a band per region with its polities as strips
+ * (`representations/polity.ts`) over its eras (`representations/era.ts`), world events in gold, and
+ * the entries Bob shows at the top. Opening a polity, a world event or an era unfurls its six lanes
+ * (`polityLanes`, `eraLanes`) right under it, in the same years; several can be open at once.
  */
-
-export type Level = 0 | 1 | 2;
 
 export const AXIS_H = 44;
 /** Every row is a hit target at least this tall (spans and points need 24 px to tap). */
@@ -33,21 +31,15 @@ export const ROW_H = 28;
 export const MIN_HIT = 24;
 /** A moment drawn as its kind's glyph is this many px across. */
 export const GLYPH = 16;
-/** Moments closer than this many px merge into a cluster. */
-export const CLUSTER_PX = 16;
-/** Spans narrower than this many px, this close together, merge into a cluster. */
-export const TINY_PX = 4;
-/** A lane stacks its moments in up to this many rows before they have to share. */
-export const MOMENT_ROWS = 3;
 /** The open entry's ends can be dragged within this many px of them. */
 export const GRIP_PX = 8;
-const PAD_TOP = 6;
 const PAD_BOTTOM = 8;
 const LANE_MIN = 44;
 /** Labels shorter than this are hidden rather than cut short (docs/design.md, Density). */
 const MIN_LABEL = 48;
 const UMBER = 'var(--pig-umber)';
 
+/** A category shown: entries in a hidden one leave the timeline. */
 export interface LaneInput { id: string; label: string; color: string }
 
 export interface PItem {
@@ -68,43 +60,11 @@ export interface PItem {
   open: boolean;
   /** Claude's draft, waiting for Bob: a dashed umber ghost that can't be opened or moved. */
   draft: boolean;
-  lane: number;
-  /** Spans: the row inside the lane. */
-  row: number;
-  /** Spans: where the next span in the same row starts (Infinity if none), so a label can sit after this one. */
-  nextS: number;
-  thumb?: string;
-  /** A battle drawn as a tick on this war's bar instead of a point of its own. */
-  war?: string;
-  /** A war: its battles' ticks, earliest first. */
-  ticks?: PItem[];
-  /** A work: the lifeline it's joined to. */
-  maker?: string;
   /** A world event (gold on the overview). */
   world?: boolean;
 }
 
-export interface PLane {
-  id: string;
-  label: string;
-  color: string;
-  /** Moments sorted by date, with their dates for binary search. */
-  events: PItem[];
-  ES: Float64Array;
-  /** Spans and lives sorted by start, with starts and the running maximum of ends. */
-  spans: PItem[];
-  S: Float64Array;
-  PM: Float64Array;
-  /** Every entry (not drafts) by start, the order the arrow keys go in. */
-  order: PItem[];
-  spanRows: number;
-  momentRows: number;
-  /** Offset from the top of the lanes, and height, in px. */
-  top: number;
-  height: number;
-}
-
-/** An era: the row it sits in inside its region (level 1 opens it from there). */
+/** An era: the row it sits in inside its region. */
 export interface PEra extends Era { row: number }
 export interface PRegion {
   name: string;
@@ -115,14 +75,14 @@ export interface PRegion {
   rows: number;
 }
 
-/** Level 0: a polity, whether anything is known of its strength, and which of its tone's two shades it takes. */
+/** A polity, whether anything is known of its strength, and which of its tone's two shades it takes. */
 export interface PPolity extends OPolity { unknown: boolean; alt: boolean }
-/** Level 0: a group of city-states, folded into one strip until it's clicked. */
+/** A group of city-states, folded into one strip until it's clicked. */
 export interface PGroup extends Omit<OGroup, 'members'> { members: PPolity[]; alt: boolean }
 export type Slot = { pol: PPolity; group?: undefined } | { group: PGroup; pol?: undefined };
 /** A world event gilding a band: named there if it's its home. */
 export interface PWorld { it: PItem; home: boolean }
-/** Level 0: a region's band. */
+/** A region's band. */
 export interface PBand {
   name: string;
   label: string;
@@ -141,23 +101,19 @@ export interface PBand {
   lens: ReadonlyMap<Lane, PItem[]>;
 }
 export interface Prepared {
-  lanes: PLane[];
   byId: Map<string, PItem>;
-  contentH: number;
   prominence: (id: string) => number;
-  /** From the earliest start to the latest end, for "Show everything". */
-  extent?: YearWindow;
-  /** Level 1: regions with their eras. */
+  /** Regions with their eras. */
   regions: PRegion[];
-  /** Level 0: bands in their order, the top row, and the years they cover. */
+  /** Bands in their order, the top row, and the years they cover. */
   bands: PBand[];
   top: PItem[];
   polById: Map<string, PPolity>;
   groupById: Map<string, PGroup>;
   overviewExtent?: YearWindow;
-  /** Every connection, for level 1's influences between lanes. */
+  /** Every connection, for the influences between lanes. */
   relations: readonly Relation[];
-  /** Level 0: connections rolled up by polity or era (`threads`), heaviest first. */
+  /** Connections rolled up by polity or era (`threads`), heaviest first. */
   threads: readonly Thread[];
 }
 
@@ -165,94 +121,39 @@ export interface PrepareOptions {
   /** Where lives without an end stop: today, as a decimal year. */
   now: number;
   prominence?: (id: string) => number;
-  thumbFor?: (item: TimelineItem) => string | undefined;
-  /** Claude's drafts waiting for Bob, drawn as ghosts in their lanes. */
+  /** Claude's drafts waiting for Bob, drawn as ghosts in the lanes they'd sit in. */
   drafts?: DatedItem[];
-  /** Connections, for a war's battles (ticks on its bar) and a work's maker (the lifeline it's joined to). */
   relations?: Relation[];
-  /** Level 0's eras and level 1's: the eras in their regions (`eraRegions`). */
+  /** The eras in their regions (`eraRegions`). */
   eras?: EraRegion[];
-  /** Level 0: the overview (`overview` in `src/model/overview.ts`). */
+  /** The overview (`overview` in `src/model/overview.ts`). */
   overview?: Overview;
-  /** Level 0: threads between polities and eras (`threads` in `src/model/threads.ts`). */
+  /** Threads between polities and eras (`threads` in `src/model/threads.ts`). */
   threads?: readonly Thread[];
-  /** Level 0: each region's entries per lane, for the lenses (`lensMarks` in `src/model/lenses.ts`). */
+  /** Each region's entries per lane, for the lenses (`lensMarks` in `src/model/lenses.ts`). */
   lenses?: LensMarks;
 }
 
-export function prepare(items: DatedItem[], lanes: LaneInput[], o: PrepareOptions): Prepared {
+export function prepare(items: DatedItem[], shown: LaneInput[], o: PrepareOptions): Prepared {
   const byId = new Map<string, PItem>();
-  const laneIx = new Map(lanes.map((l, i) => [l.id, i]));
-  const per: PItem[][] = lanes.map(() => []);
-  const refs = new Map<string, DatedItem>();
-  let lo = Infinity, hi = -Infinity;
+  const cats = new Set(shown.map((l) => l.id));
   const add = (ref: DatedItem, draft: boolean) => {
-    const li = laneIx.get(ref.categoryId);
-    if (li === undefined || byId.has(ref.id)) return;
+    if (!cats.has(ref.categoryId) || byId.has(ref.id)) return;
     const s = toDecimalYear(ref.start);
     // A living person, or a place still there, has no end; draw them up to today.
     const e = ref.kind === 'event' ? s : ref.end ? toDecimalYear(ref.end) : o.now;
-    const p: PItem = {
+    byId.set(ref.id, {
       id: ref.id, kind: markOf(ref), rep: representationOf(ref), title: ref.title, when: formatRange(ref.start, ref.end),
       dates: formatRange({ ...ref.start, approx: undefined }, ref.end && { ...ref.end, approx: undefined }),
       s, e: Math.max(e, s), approx: !!ref.start.approx, endApprox: !!ref.end?.approx, open: ref.kind !== 'event' && !ref.end, draft,
-      lane: li, row: 0, nextS: Infinity, thumb: draft ? undefined : o.thumbFor?.(ref), world: ref.overview === 'world' || undefined,
-    };
-    byId.set(p.id, p);
-    if (!draft) refs.set(p.id, ref);
+      world: ref.overview === 'world' || undefined,
+    });
   };
   for (const ref of items) add(ref, false);
   for (const ref of o.drafts ?? []) add(ref, true);
-  // A battle that is part of a war in view is a tick on the war's bar, in the war's lane.
-  const rels = o.relations ?? [];
-  for (const [bid, wid] of warOf([...refs.values()], rels)) {
-    const b = byId.get(bid)!, w = byId.get(wid)!;
-    b.war = wid;
-    b.lane = w.lane;
-    (w.ticks ??= []).push(b);
-  }
-  for (const w of byId.values()) w.ticks?.sort((a, b) => a.s - b.s || a.id.localeCompare(b.id));
-  const dated = [...refs.values()].map((r) => ({ ...r, s: byId.get(r.id)!.s, e: byId.get(r.id)!.e }));
-  for (const [wid, pid] of makerOf(dated, rels)) byId.get(wid)!.maker = pid;
-  for (const p of byId.values()) {
-    per[p.lane].push(p);
-    if (p.draft) continue;
-    lo = Math.min(lo, p.s);
-    hi = Math.max(hi, p.e);
-  }
-  let top = 0;
-  const out = lanes.map((l, li): PLane => {
-    const events = per[li].filter((i) => i.kind === 'event' && !i.war).sort((a, b) => a.s - b.s || a.id.localeCompare(b.id));
-    const spans = per[li].filter((i) => i.kind !== 'event').sort((a, b) => a.s - b.s || b.e - a.e || a.id.localeCompare(b.id));
-    // Pack into rows by time only, so rows stay put while zooming: periods first, then lives,
-    // so each row holds one kind and slivers of it can merge into one cluster.
-    const rowEnd: number[] = [];
-    const rowLast: PItem[] = [];
-    for (const kind of ['span', 'person'] as const) {
-      const first = rowEnd.length;
-      for (const it of spans) {
-        if (it.kind !== kind) continue;
-        let r = rowEnd.findIndex((end, i) => i >= first && end <= it.s);
-        if (r < 0) r = rowEnd.length;
-        if (rowLast[r]) rowLast[r].nextS = it.s;
-        rowEnd[r] = it.e;
-        rowLast[r] = it;
-        it.row = r;
-      }
-    }
-    const S = new Float64Array(spans.length), PM = new Float64Array(spans.length);
-    let mx = -Infinity;
-    spans.forEach((it, i) => { S[i] = it.s; mx = Math.max(mx, it.e); PM[i] = mx; });
-    const momentRows = Math.min(MOMENT_ROWS, events.length);
-    const height = Math.max(LANE_MIN, PAD_TOP + (momentRows + rowEnd.length) * ROW_H + PAD_BOTTOM);
-    const order = per[li].filter((i) => !i.draft).sort((a, b) => a.s - b.s || a.e - b.e || a.id.localeCompare(b.id));
-    const lane: PLane = { ...l, events, ES: Float64Array.from(events, (e) => e.s), spans, S, PM, order, spanRows: rowEnd.length, momentRows, top, height };
-    top += height;
-    return lane;
-  });
   const prominence = o.prominence ?? (() => 0);
   const eras = prepareEras(o.eras ?? [], byId);
-  return { lanes: out, byId, contentH: top, prominence, extent: lo <= hi ? { start: lo, end: hi } : undefined, relations: rels, threads: o.threads ?? [], ...eras, ...prepareOverview(o.overview, eras.regions, byId, o.lenses) };
+  return { byId, prominence, relations: o.relations ?? [], threads: o.threads ?? [], ...eras, ...prepareOverview(o.overview, eras.regions, byId, o.lenses) };
 }
 
 /** The eras in each region. Inside one, eras pack into rows by time only, outer eras above the eras inside them. */
@@ -281,7 +182,7 @@ function prepareEras(input: EraRegion[], byId: Map<string, PItem>): Pick<Prepare
 }
 
 /**
- * Level 0's bands, in the overview's order. Inside a band, polities (and folded groups) pack
+ * The bands, in the overview's order. Inside a band, polities (and folded groups) pack
  * into sub-rows by time only, so a succession shares one and rows stay put while zooming.
  */
 function prepareOverview(O: Overview | undefined, regions: PRegion[], byId: Map<string, PItem>, lenses?: LensMarks): Pick<Prepared, 'bands' | 'top' | 'polById' | 'groupById' | 'overviewExtent'> {
@@ -324,7 +225,7 @@ function prepareOverview(O: Overview | undefined, regions: PRegion[], byId: Map<
   return { bands, top, polById, groupById, overviewExtent: lo <= hi ? { start: lo, end: hi } : undefined };
 }
 
-/* ---------- level 0 geometry ---------- */
+/* ---------- the overview's geometry ---------- */
 
 /** Below this width levels 0 and 1 have no gutter: each region's name sits on its band. */
 export const PHONE_W = 600;
@@ -351,10 +252,14 @@ const REGION_FADE = 0.4;
 
 /** A sub-row on screen: what's in it, how tall and how faded (a group's members while it unfolds), and the group whose members it holds. */
 interface SubGeo { slots: Slot[]; y: number; h: number; a: number; group?: PGroup; folding?: number }
-interface BandGeo { B: PBand; top: number; bottom: number; empty: boolean; headY: number; worldY: number; subs: SubGeo[]; chips: ChipBox[]; chipY: number; lensY: number }
-/** What level 0's geometry needs of the screen: band heights depend on how many lines their theme chips take. */
+/** Lanes unfurled in place: what's open (`key`), where they start, how tall they are now and once open, and how far open. */
+interface BlockGeo { key: string; EL: EraLanes; y: number; h: number; full: number; t: number }
+interface BandGeo { B: PBand; top: number; bottom: number; empty: boolean; headY: number; worldY: number; subs: SubGeo[]; blocks: BlockGeo[]; chips: ChipBox[]; chipY: number; lensY: number }
+/** What the geometry needs of the screen: band heights depend on how many lines their theme chips take. */
 export type Fit = Pick<Env, 'w' | 'gutter' | 'measure'>
-interface Geo { topH: number; bands: BandGeo[]; H: number }
+/** What the geometry needs of the view. */
+export type GeoView = Pick<View, 'win' | 'unfolded' | 'region' | 'lenses' | 'opened' | 'openT' | 'openFade' | 'theme'>;
+interface Geo { topH: number; topBlocks: BlockGeo[]; bands: BandGeo[]; H: number }
 
 const inWin = (x: { s: number; e: number }, win: YearWindow) => x.e >= win.start && x.s <= win.end;
 const unfoldOf = (V: Pick<View, 'unfolded'>, id: string) => V.unfolded?.get(id) ?? 0;
@@ -376,12 +281,28 @@ function bandChips(B: PBand, win: YearWindow, F: Fit): ChipBox[] {
   return out;
 }
 
-/** Where every band and sub-row sits, in px from the top of the content (under the axis). */
-function overviewGeo(D: Prepared, V: Pick<View, 'win' | 'unfolded' | 'region' | 'lenses'>, F: Fit): Geo {
+/** Open lanes: their head (name, dates, theme chips), the lanes, and a little room under them. */
+const BLOCK_PAD = 8;
+export const blockH = (EL: EraLanes, F: Fit, picked?: string) => head1H(EL, F, picked) + lanesH(EL, F.w < PHONE_W) + BLOCK_PAD;
+
+/** Where every band, sub-row and open set of lanes sits, in px from the top of the content (under the axis). */
+function overviewGeo(D: Prepared, V: GeoView, F: Fit): Geo {
   const phone = F.w < PHONE_W;
   const base = phone ? SUB_H_PHONE : SUB_H;
   const topH = D.top.length ? TOP_PAD * 2 + Math.min(TOP_ROWS, D.top.length) * TOP_ROW_H : 0;
   let y = topH;
+  /** Lanes open for `key` go here, pushing what's under them down as they unfurl. */
+  const block = (out: BlockGeo[], key: string) => {
+    const EL = V.opened?.get(key);
+    if (!EL) return;
+    const t = V.openT?.get(key) ?? 1, full = blockH(EL, F, V.theme?.key);
+    const h = V.openFade ? full : full * t;
+    out.push({ key, EL, y, h, full, t });
+    y += h;
+  };
+  // A world event no polity places opens under the top row.
+  const topBlocks: BlockGeo[] = [];
+  for (const it of D.top) if (it.world && !D.bands.some((B) => B.worlds.some((w) => w.home && w.it.id === it.id))) block(topBlocks, it.id);
   const bands = D.bands.map((B): BandGeo => {
     // The region Bob clicked on the map: its rows grow.
     const sub = B.name === V.region ? base * REGION_GROW : base;
@@ -394,21 +315,33 @@ function overviewGeo(D: Prepared, V: Pick<View, 'win' | 'unfolded' | 'region' | 
     y += chipLines(chips) * CHIP_LINE;
     const worldY = y + 12;
     if (B.named) y += WORLD_LINE;
+    // An era or a world event at home here opens under the band's head.
+    const blocks: BlockGeo[] = [];
+    for (const e of B.eras) block(blocks, e.id);
+    for (const w of B.worlds) if (w.home) block(blocks, w.it.id);
     // A band with no polities in the years in view is one thin row that says so.
     const empty = !B.subs.some((row) => row.some((x) => inWin(x.pol ?? x.group, V.win)));
     const subs: SubGeo[] = [];
-    if (empty) y += EMPTY_H;
-    else for (const row of B.subs) {
+    if (empty) {
+      y += EMPTY_H;
+      for (const row of B.subs) for (const x of row) for (const p of x.pol ? [x.pol] : x.group.members) block(blocks, `pol:${p.id}`);
+    } else for (const row of B.subs) {
       const groups = row.flatMap((x) => (x.group ? [x.group] : []));
       const most = Math.max(0, ...groups.map((g) => unfoldOf(V, g.id)));
       // A row of folded groups only gives way to their members as they unfold.
       const h = groups.length === row.length ? sub * (1 - most) : sub;
       subs.push({ slots: row, y, h, a: 1 });
       y += h;
+      // A polity's lanes open right under its strip; a member's under its own row once its group unfolds.
+      for (const x of row) if (x.pol) block(blocks, `pol:${x.pol.id}`);
       for (const g of groups) {
         const f = unfoldOf(V, g.id);
-        if (f <= 0) continue;
-        for (const m of g.members) { subs.push({ slots: [{ pol: m }], y, h: sub * f, a: f, group: g, folding: f }); y += sub * f; }
+        if (f <= 0) { for (const m of g.members) block(blocks, `pol:${m.id}`); continue; }
+        for (const m of g.members) {
+          subs.push({ slots: [{ pol: m }], y, h: sub * f, a: f, group: g, folding: f });
+          y += sub * f;
+          block(blocks, `pol:${m.id}`);
+        }
       }
     }
     // Lenses: a thin strip each under the rows; they never move what's above them.
@@ -417,24 +350,53 @@ function overviewGeo(D: Prepared, V: Pick<View, 'win' | 'unfolded' | 'region' | 
     y += BAND_PAD;
     const bottom = y;
     y += BAND_GAP;
-    return { B, top, bottom, empty, headY, worldY, subs, chips, chipY, lensY };
+    return { B, top, bottom, empty, headY, worldY, subs, blocks, chips, chipY, lensY };
   });
-  return { topH, bands, H: y };
+  return { topH, topBlocks, bands, H: y };
 }
 
-/** How far down level 0 an era's band is, in px from the top of the content. */
-export function eraSpan(D: Prepared, V: Pick<View, 'win' | 'unfolded' | 'region' | 'lenses'>, id: string, F: Fit): [number, number] | undefined {
+/** Every set of open lanes, top to bottom. */
+const blocksOf = (G: Geo) => [...G.topBlocks, ...G.bands.flatMap((g) => g.blocks)];
+
+/** How far down an era's band is, in px from the top of the content. */
+export function eraSpan(D: Prepared, V: GeoView, id: string, F: Fit): [number, number] | undefined {
   const g = overviewGeo(D, V, F).bands.find((b) => b.B.eras.some((e) => e.id === id));
   return g && [g.top, g.bottom];
 }
 
-/** How far down level 0 a region's band is, in px from the top of the content. */
-export function regionSpan(D: Prepared, V: Pick<View, 'win' | 'unfolded' | 'region' | 'lenses'>, name: string, F: Fit): [number, number] | undefined {
+/** How far down a region's band is, in px from the top of the content. */
+export function regionSpan(D: Prepared, V: GeoView, name: string, F: Fit): [number, number] | undefined {
   const g = overviewGeo(D, V, F).bands.find((b) => b.B.name === name);
   return g && [g.top - (g.B.parentHead ? PARENT_H : 0), g.bottom];
 }
 
-/** The arrow keys at level 0: ←/→ the era before or after in its region, ↑/↓ the nearest in time in the region above or below. */
+/** How far down a polity's strip is (its folded group's while folded), in px from the top of the content. */
+export function stripSpan(D: Prepared, V: GeoView, polId: string, F: Fit): [number, number] | undefined {
+  for (const g of overviewGeo(D, { ...V, openT: undefined }, F).bands) for (const sg of g.subs) {
+    if (sg.h < 2) continue;
+    if (sg.slots.some((x) => x.pol?.id === polId || (x.group && unfoldOf(V, x.group.id) < 0.5 && x.group.members.some((m) => m.id === polId)))) return [sg.y, sg.y + sg.h];
+  }
+  return undefined;
+}
+
+/** How far down the open lanes for `key` are once open, in px from the top of the content. */
+export function blockSpan(D: Prepared, V: GeoView, key: string, F: Fit): [number, number] | undefined {
+  const b = blocksOf(overviewGeo(D, { ...V, openT: undefined }, F)).find((x) => x.key === key);
+  return b && [b.y, b.y + b.full];
+}
+
+/** Where an entry sits in the open lanes (the first set that has it), in px from the top of the content, as drawn once open. */
+export function openSpan(D: Prepared, V: GeoView, id: string, F: Fit): [number, number] | undefined {
+  for (const b of blocksOf(overviewGeo(D, { ...V, openT: undefined }, F))) {
+    const ys = lane1Span(b.EL, id, F.w < PHONE_W);
+    if (!ys) continue;
+    const off = b.y + head1H(b.EL, F, V.theme?.key);
+    return [off + ys[0], off + ys[1]];
+  }
+  return undefined;
+}
+
+/** The arrow keys on the overview's eras: ←/→ the era before or after in its region, ↑/↓ the nearest in time in the region above or below. */
 export function stepEra(D: Prepared, activeId: string | undefined, key: StepKey, win: YearWindow): string | undefined {
   const nearest = (list: PEra[], y: number) => list.reduce<PEra | undefined>((b, e) => (!b || Math.abs(e.s - y) < Math.abs(b.s - y) ? e : b), undefined);
   const ri = D.regions.findIndex((R) => R.eras.some((e) => e.id === activeId));
@@ -464,39 +426,9 @@ export function describeEra(D: Prepared, id: string): string {
   return '';
 }
 
-/* ---------- binary search ---------- */
-
-export function lowerBound(a: Float64Array, x: number): number {
-  let lo = 0, hi = a.length;
-  while (lo < hi) { const m = (lo + hi) >> 1; if (a[m] < x) lo = m + 1; else hi = m; }
-  return lo;
-}
-export function upperBound(a: Float64Array, x: number): number {
-  let lo = 0, hi = a.length;
-  while (lo < hi) { const m = (lo + hi) >> 1; if (a[m] <= x) lo = m + 1; else hi = m; }
-  return lo;
-}
-
-/** The member that leads a cluster: the most prominent, the earliest on a tie. */
-export function pickLead(members: PItem[], prominence: (id: string) => number): PItem {
-  let best = members[0], bp = prominence(best.id);
-  for (const m of members) { const p = prominence(m.id); if (p > bp) { best = m; bp = p; } }
-  return best;
-}
-
 /* ---------- the arrow keys ---------- */
 
 export type StepKey = 'ArrowLeft' | 'ArrowRight' | 'ArrowUp' | 'ArrowDown' | 'Home' | 'End';
-
-/**
- * Where the arrow keys go from `activeId`: ←/→ the previous or next entry in its lane, ↑/↓ the
- * entry nearest in time in the next lane up or down that has any, Home/End the lane's first or
- * last. With nothing active yet, any key starts at the entry nearest the middle of the window.
- */
-export function stepActive(D: Prepared, activeId: string | undefined, key: StepKey, win: YearWindow): string | undefined {
-  const cur = activeId ? D.byId.get(activeId) : undefined;
-  return stepThrough(D.lanes.map((l) => l.order), cur && !cur.draft ? cur.lane : undefined, activeId, key, win);
-}
 
 /** The arrow keys through lanes of entries, each in time order; `li` is the active entry's lane. */
 function stepThrough(lanes: PItem[][], li: number | undefined, activeId: string | undefined, key: StepKey, win: YearWindow): string | undefined {
@@ -520,24 +452,6 @@ function stepThrough(lanes: PItem[][], li: number | undefined, activeId: string 
   }
 }
 
-/** How far down the lanes an entry's row is, in px from the top of the first lane: a moment can be in any of its lane's moment rows. */
-export function rowSpan(D: Prepared, it: PItem): [number, number] {
-  if (it.war) return rowSpan(D, D.byId.get(it.war)!);
-  const L = D.lanes[it.lane];
-  const moments = PAD_TOP + L.momentRows * ROW_H;
-  if (it.kind === 'event') return [L.top, L.top + moments];
-  const top = L.top + moments + it.row * ROW_H;
-  return [top, top + ROW_H];
-}
-
-/** What a screen reader says for an entry: "Plato, 428–348 BCE, Ideas, 3 of 12". */
-export function describeEntry(D: Prepared, id: string): string {
-  const it = D.byId.get(id);
-  if (!it) return '';
-  const L = D.lanes[it.lane];
-  return `${it.title}, ${it.when}, ${L.label}, ${L.order.indexOf(it) + 1} of ${L.order.length}`;
-}
-
 /* ---------- the frame ---------- */
 
 export interface View {
@@ -555,32 +469,34 @@ export interface View {
   links?: Link[];
   /** The open entry's dates can be dragged. */
   editable?: boolean;
-  /** The open entry while it's dragged: where it would go, and its new dates in words. */
-  drag?: { id: string; s: number; e: number; label: string; y: number };
+  /** The open entry while it's dragged: where it would go, its new dates in words, the top of its row and its lane's color. */
+  drag?: { id: string; s: number; e: number; label: string; y: number; color: string };
   /** The entry the arrow keys are on, and whether to ring it (only while the timeline has keyboard focus). */
   active?: string;
   ring?: boolean;
-  /** Level 1: the open era's lanes. */
-  era?: EraLanes;
-  /** While an era opens or closes: how far open it is (0 to 1), whether it only fades (reduced motion), and level 0's scroll. */
-  zoom?: { t: number; fade: boolean; scroll0: number };
+  /** What's unfurled in place (`pol:<territory>`, a world event's id or an era's id), in the order opened. */
+  opened?: ReadonlyMap<string, EraLanes>;
+  /** How far each is open (0 to 1) while it unfurls or folds; 1 when missing. */
+  openT?: ReadonlyMap<string, number>;
+  /** With reduced motion lanes only fade in and out, already at their full height. */
+  openFade?: boolean;
   /** Entries box-selected for bulk edit, each ringed. */
   picked?: ReadonlySet<string>;
-  /** Level 0: the strip or world event picked (`pol:<territory>`, or a world event's id), outlined in ink. */
+  /** The strip or world event picked (`pol:<territory>`, or a world event's id), outlined in ink. */
   pick?: string;
-  /** Level 0: how far open each group is (0 folded, 1 open), while it unfolds and after. */
+  /** How far open each group is (0 folded, 1 open), while it unfolds and after. */
   unfolded?: ReadonlyMap<string, number>;
   /** The box Bob is drawing with ⌘ or Ctrl held, in px. */
   box?: Box;
-  /** Level 0: the region Bob clicked on the map; its rows grow and the other bands fade. */
+  /** The region Bob clicked on the map; its rows grow and the other bands fade. */
   region?: string;
-  /** Level 1: the theme chip picked (`<era>:<theme>`) and what's in it; everything else fades. */
+  /** The theme chip picked in open lanes (`<era>:<theme>`) and what's in it; everything else fades. */
   theme?: { key: string; ids: ReadonlySet<string> };
-  /** Level 0: the strip, group or era hovered for its threads (it stays while the pointer moves onto them). */
+  /** The strip, group or era hovered for its threads (it stays while the pointer moves onto them). */
   threadHover?: string;
-  /** Level 0: "Show all threads", every ribbon faintly (laptop only). */
+  /** "Show all threads", every ribbon faintly (laptop only). */
   allThreads?: boolean;
-  /** Level 0: the lenses on, in pigment order: a strip of each lane's ticks under every band. */
+  /** The lenses on, in pigment order: a strip of each lane's ticks under every band. */
   lenses?: readonly Lane[];
 }
 
@@ -597,12 +513,10 @@ interface Ctx { D: Prepared; V: View; E: Env; S: Scene; X: (y: number) => number
 /** A screen `w` px wide with no gutter, measuring about 7 px a character: for callers that only know the width. */
 const roughFit = (w: number): Fit => ({ w, gutter: 0, measure: (_, t) => t.length * 7 });
 
-/** How far the lanes (or, at level 0, the bands; at level 1, the open era's lanes) can scroll. `V` is the view, for level 0's and 1's. */
-export function maxScroll(D: Prepared, h: number, level: Level = 2, fit: Fit | number = Infinity, V?: Pick<View, 'win' | 'unfolded' | 'era' | 'region' | 'theme' | 'lenses'>): number {
+/** How far the overview (with whatever lanes are open) can scroll. */
+export function maxScroll(D: Prepared, h: number, fit: Fit | number, V: GeoView): number {
   const F = typeof fit === 'number' ? roughFit(fit) : fit;
-  if (level === 1 && V?.era) return Math.max(0, lanesH(V.era, F.w < PHONE_W) - (h - AXIS_H - head1H(V.era, F, V.theme?.key)) + 8);
-  const content = level === 0 && V ? overviewGeo(D, V, F).H : D.contentH;
-  return Math.max(0, content - (h - AXIS_H) + 8);
+  return Math.max(0, overviewGeo(D, V, F).H - (h - AXIS_H) + 8);
 }
 
 /** Text cut short with an ellipsis to fit `avail` px, or '' when even that won't fit. */
@@ -621,7 +535,6 @@ function placeLabel(M: Measure, font: Parameters<Measure>[0], s: string, room: n
   return room >= MIN_LABEL ? fit(M, font, s, room) : '';
 }
 
-const badgeR = (n: number) => 9 + Math.max(0, String(n).length - 2) * 3;
 /** A draft's name says it's waiting for Bob. */
 const titleOf = (it: PItem) => (it.draft ? `${it.title} ?` : it.title);
 
@@ -635,55 +548,30 @@ function roleOf(V: View, it: PItem): string {
 /** The outline that lights up an influence: amber for who influenced, blue for whom. */
 const ROLE_STROKE: Record<string, string> = { 'infl-by': 'var(--glow-by)', 'infl-on': 'var(--glow-on)', linked: 'var(--muted)' };
 
-export function layout(D: Prepared, V: View, E: Env, level: Level = 2): Scene {
+export function layout(D: Prepared, V: View, E: Env): Scene {
   const x0 = E.gutter, x1 = E.w;
   const S: Scene = {
-    z: [[], [], [], []], gutter: [], axis: [], targets: [], clusters: [], boxes: new Map(), laneBoxes: new Map(),
+    z: [[], [], [], []], gutter: [], axis: [], targets: [], boxes: new Map(), laneBoxes: new Map(),
     plot: { x: x0, y: AXIS_H, w: Math.max(0, x1 - x0), h: Math.max(0, E.h - AXIS_H) },
     gutterBox: { x: 0, y: AXIS_H, w: x0, h: Math.max(0, E.h - AXIS_H) },
-    contentH: level === 0 ? overviewGeo(D, V, E).H : level === 1 && V.era ? lanesH(V.era, E.w < PHONE_W) : D.contentH,
+    contentH: overviewGeo(D, V, E).H,
     adds: [],
   };
   const span = V.win.end - V.win.start;
   const ppy = (x1 - x0) / span;
   const X = (y: number) => x0 + (y - V.win.start) * ppy;
   const c: Ctx = { D, V, E, S, X, x0, x1, top: AXIS_H, bottom: E.h };
-
-  if (level === 0) {
-    overviewRows(c);
-    arrows(c);
-    picks(c);
-    focusRing(c);
-    axis(c, level);
-    return S;
-  }
-  if (level === 1 && V.era) {
-    eraLevel(c, V.era);
-    // An influence between lanes is drawn as its own arrow, not again as the open entry's connection.
-    if (!V.zoom) arrows(c, false, new Set(V.era.influences.map((x) => `${x.r.fromId}>${x.r.toId}`)));
-    if (!V.zoom) picks(c);
-    focusRing(c);
-    axis(c, level);
-    return S;
-  }
-  for (const L of D.lanes) {
-    const laneTop = AXIS_H + L.top - V.scrollY;
-    const laneBot = laneTop + L.height;
-    if (laneBot < AXIS_H || laneTop > E.h) continue;
-    laneFrame(c, L, laneTop, laneBot);
-    moments(c, L, laneTop + PAD_TOP);
-    spans(c, L, laneTop + PAD_TOP + L.momentRows * ROW_H);
-  }
-  ties(c);
-  arrows(c);
+  overviewRows(c);
+  // An influence between lanes is drawn as its own arrow, not again as the open entry's connection.
+  arrows(c, new Set([...(V.opened?.values() ?? [])].flatMap((EL) => EL.influences.map((x) => `${x.r.fromId}>${x.r.toId}`))));
   picks(c);
   focusRing(c);
   dragPreview(c);
-  axis(c, level);
+  axis(c);
   return S;
 }
 
-/* ---------- level 0: the overview ---------- */
+/* ---------- the overview ---------- */
 
 /** A world event's gold: a bar along the band's top (thinner away from home), or a dot for a moment. */
 function gold(c: Ctx, w: PItem, y: number, home: boolean, k: string, h = home ? 7 : 3) {
@@ -701,8 +589,8 @@ function overviewRows(c: Ctx) {
   const { D, V, E, S, x0, x1 } = c;
   if (!D.bands.length && !D.top.length) {
     const cx = (x0 + x1) / 2, cy = AXIS_H + Math.min(120, (E.h - AXIS_H) / 3);
-    S.z[2].push({ t: 2, k: 'empty', a: 1, cls: 'tl-empty', x: cx, y: cy, s: 'Nothing in the overview yet', f: 'era', fill: 'var(--ink-2)', anchor: 'middle' });
-    S.z[2].push({ t: 2, k: 'empty2', a: 1, cls: 'tl-empty', x: cx, y: cy + 22, s: 'Polities and periods you add show here, in a band for each region.', f: 'ui', fill: 'var(--muted)', anchor: 'middle' });
+    S.z[2].push({ t: 2, k: 'empty', a: 1, cls: 'tl-empty', x: cx, y: cy, s: 'Nothing on the timeline yet', f: 'era', fill: 'var(--ink-2)', anchor: 'middle' });
+    S.z[2].push({ t: 2, k: 'empty2', a: 1, cls: 'tl-empty', x: cx, y: cy + 22, s: 'Polities and periods you add show here, in a band for each region. Open one to see what’s in it.', f: 'ui', fill: 'var(--muted)', anchor: 'middle' });
     return;
   }
   const phone = E.w < PHONE_W;
@@ -720,6 +608,7 @@ function overviewRows(c: Ctx) {
   }
   const shareOf = (p: PPolity) => (p.unknown ? () => UNKNOWN_SHARE : (y: number) => stripShare(strengthAt(p.t, y), widest));
   if (G.topH) topRow(c, base, G.topH);
+  for (const b of G.topBlocks) inlineBlock(c, b, base);
   const ribbons = threadRibbons(c, G, base);
   if (ribbons.involved) c.involved = ribbons.involved;
   const focus = V.region && D.bands.some((B) => B.name === V.region) ? V.region : undefined;
@@ -730,6 +619,7 @@ function overviewRows(c: Ctx) {
     // Every band but the focused region's fades, still there to read.
     const from = [...S.z.map((z) => z.length), S.gutter.length];
     band(c, g, base, phone, shareOf);
+    for (const b of g.blocks) inlineBlock(c, b, base);
     if (focus && g.B.name !== focus) {
       S.z.forEach((z, i) => { for (let k = from[i]; k < z.length; k++) z[k] = { ...z[k], a: z[k].a * REGION_FADE }; });
       for (let k = from[4]; k < S.gutter.length; k++) S.gutter[k] = { ...S.gutter[k], a: S.gutter[k].a * REGION_FADE };
@@ -770,7 +660,7 @@ export function hasThreads(D: Prepared, id: string | undefined): boolean {
 }
 
 /**
- * Level 0's threads (docs/design.md, Long range: Threads): the focused strip's connections to other
+ * The threads (docs/design.md, Long range: Threads): the focused strip's connections to other
  * polities and eras, one ribbon per pair of rows as drawn (a folded group is one row), and with "Show
  * all threads" every ribbon faintly. The focus is the strip, group or era hovered, else the one picked.
  */
@@ -853,7 +743,8 @@ function band(c: Ctx, g: BandGeo, base: number, phone: boolean, shareOf: (p: PPo
     S.z[2].push({ t: 2, k: `rn${B.name}`, a: 1, cls: 'tl-region', x: x0 + 12, y: headY, s: name, f: 'region', fill: 'var(--ink)' });
     after = x0 + 12 + M('region', name) + 14;
   } else {
-    const ny = Math.min(Math.max(headY, AXIS_H + 18), bottom - 6);
+    // It stays in view only down to the first lanes open in the band, which name themselves.
+    const ny = Math.min(Math.max(headY, AXIS_H + 18), (g.blocks.length ? base + g.blocks[0].y : bottom) - 6);
     S.gutter.push({ t: 2, k: `rn${B.name}`, a: 1, cls: 'tl-region', x: 14, y: ny, s: fit(M, 'region', B.label, E.gutter - 24), f: 'region', fill: 'var(--ink)' });
     const gy = bottom + BAND_GAP / 2 - 0.5;
     S.gutter.push({ t: 3, k: `gr${B.name}`, a: 1, x1: 0, y1: gy, x2: E.gutter, y2: gy, stroke: 'var(--rule-soft)' });
@@ -898,7 +789,6 @@ function band(c: Ctx, g: BandGeo, base: number, phone: boolean, shareOf: (p: PPo
     named.push([lx - 4, lx + w + 10]);
     S.z[2].push({ t: 2, k: `wn${B.name}:${it.id}`, a: 1, cls: `tl-world-name${roleOf(V, it)}`, id: it.id, x: lx, y: base + g.worldY, s: it.title, f: 'world', fill: 'var(--gold-text)' });
     S.targets.push({ id: it.id, x: lx - 2, y: base + g.worldY - 13, w: w + 4, h: 17 });
-    if (V.pick === it.id) openPill(c, Math.min(lx + w + 10, x1 - M('ui', OPEN_LABEL) - 24), base + g.worldY - 4.5);
   }
   // Polities: strips in their sub-rows.
   const tone = `var(--tone-${(B.tone % 3) + 1}`;
@@ -934,12 +824,6 @@ function band(c: Ctx, g: BandGeo, base: number, phone: boolean, shareOf: (p: PPo
       S.z[2].push(...text);
       // The whole row is its hit area, so a sliver can still be picked.
       if (fold > 0.5) S.targets.push({ id: tid, x: X(a), y: y + 2, w: Math.max(4, X(b) - X(a)), h: Math.max(4, sg.h - 4) });
-      // Picked: "Open ▾" after its name, or at the right while its name is hidden.
-      if (x.pol && V.pick === tid && fold > 0.5) {
-        const named = text.find((p) => p.t === 2 && p.k === `pn${tid}`);
-        const after = named?.t === 2 ? named.x + M('pol', named.s) + 10 : Math.max(X(a), x0) + 8;
-        openPill(c, Math.min(after, x1 - M('ui', OPEN_LABEL) - 24), cy);
-      }
     }
     // The bracket that folds a group back, along its members' rows.
     if (sg.group && sg.group.members[0] === sg.slots[0].pol) {
@@ -974,17 +858,6 @@ function lensStrips(c: Ctx, g: BandGeo, base: number, phone: boolean) {
       S.targets.push({ id: it.id, x: xa - 3, y, w: Math.max(6, Math.min(xb, x1) - xa + 6), h });
     }
   });
-}
-
-const OPEN_LABEL = 'Open ▾';
-
-/** The pill on what's picked that opens it into its six lanes. */
-function openPill(c: Ctx, x: number, cy: number) {
-  const { V, E, S } = c;
-  const w = E.measure('ui', OPEN_LABEL) + 16, h = 20, hot = V.hover === OPEN_PICK;
-  S.z[3].push({ t: 0, k: 'open', a: 1, cls: 'tl-open-pill', x, y: cy - h / 2, w, h, r: h / 2, fill: hot ? 'var(--ink)' : 'var(--panel)', stroke: 'var(--ink)', sw: 1 });
-  S.z[3].push({ t: 2, k: 'opent', a: 1, cls: 'tl-open-pill', x: x + 8, y: cy + 4, s: OPEN_LABEL, f: 'ui', fill: hot ? 'var(--panel)' : 'var(--ink)' });
-  S.targets.push({ id: OPEN_PICK, x: x - 2, y: cy - Math.max(h, MIN_HIT) / 2, w: w + 4, h: Math.max(h, MIN_HIT) });
 }
 
 /** A folded group is as thick as its members together: each adds its share, overlapping a little. */
@@ -1026,27 +899,35 @@ function topRow(c: Ctx, base: number, h: number) {
   }
 }
 
-/* ---------- level 1: an era opened into six lanes ---------- */
+/* ---------- six lanes, unfurled in place under a polity, a world event or an era ---------- */
 
 /** The lane under the six for entries in no lane yet. */
 export const NO_LANE = 'none';
-/** Level 1's "All eras", in the header row. */
-export const ERAS_BACK = '__eras';
-/** The header row itself, so a tap on it lands on nothing under it. */
-export const HEAD_ROW = '__head';
-/** Level 1 in a polity: a lane's name (or a closed lane), which opens or closes it; followed by the lane's id. */
+/** Open lanes' background, so a tap on empty space there lands on nothing under it (an era's wash). */
+export const INERT = '__inert';
+/**
+ * Inside open lanes: a lane's name (or a closed lane), which opens or closes it, as
+ * `__lane:<open key>|<lane>`. The layout draws each set of lanes with the bare `__lane:<lane>`.
+ */
 export const LANE_TOGGLE = '__lane:';
-/** Level 0: the "Open ▾" pill on the picked strip or world event. */
-export const OPEN_PICK = '__open';
-/** The row above the lanes with the era's name and dates (its theme chips join it in Phase 4). */
+/** The head's "Fold", as `__fold:<open key>`. */
+export const FOLD = '__fold:';
+/** The row above the lanes with the name and dates. */
 export const HEAD1_H = 38;
 
-/** Level 1's "+3 more" and "Show fewer" chip. */
-export const THEMES_MORE = '__themes_more';
+/** The head's "+3 more" and "Show fewer" chip, as `__themes_more:<open key>`. */
+export const THEMES_MORE = '__themes_more:';
+
+/** A lane toggle's open key and lane: `__lane:pol:athens|war` → `['pol:athens', 'war']`. */
+export function parseToggle(id: string): [string, string] | undefined {
+  if (!id.startsWith(LANE_TOGGLE)) return undefined;
+  const rest = id.slice(LANE_TOGGLE.length), bar = rest.lastIndexOf('|');
+  return bar < 0 ? undefined : [rest.slice(0, bar), rest.slice(bar + 1)];
+}
 const MORE_PAD = 16;
 
 /**
- * Level 1's theme chips, packed under the name across the whole width: one line, ending in
+ * The theme chips in open lanes' head, packed under the name across the whole width: one line, ending in
  * "+3 more" when there are more, unless Bob opened them all (or the theme picked is past the line).
  */
 function headChips(EL: EraLanes, F: Fit, picked?: string): { chips: ChipBox[]; more?: { x: number; w: number; line: number; label: string } } {
@@ -1068,7 +949,7 @@ function headChips(EL: EraLanes, F: Fit, picked?: string): { chips: ChipBox[]; m
     first.pop();
   }
 }
-/** Level 1's head: the name's line, then a line for each line of theme chips. */
+/** The head of open lanes: the name's line, then a line for each line of theme chips. */
 export function head1H(EL: EraLanes, F: Fit, picked?: string): number {
   const { chips, more } = headChips(EL, F, picked);
   const n = Math.max(chipLines(chips), more ? more.line + 1 : 0);
@@ -1101,22 +982,19 @@ export interface Lane1 {
   rows: number;
 }
 
-/** What level 1 has open: an era, or a polity or world event picked on the overview. */
+/** What's open: an era, a polity or a world event. */
 export interface Head1 {
   /** The era's id, or the overview's pick (`pol:<territory>`, or a world event's id). */
   id: string;
   title: string;
-  /** Its years, washed behind the lanes, and the years to frame when it opens. */
+  /** Its years, washed behind the lanes. */
   s: number;
   e: number;
-  fit: { s: number; e: number };
   when: string;
   /** After its dates: "38 highlights", "49 entries". */
   sub: string;
   /** The entry its name opens, if any. */
   opens?: string;
-  /** "‹ All eras", or "‹ Overview". */
-  back: string;
 }
 
 export interface EraLanes {
@@ -1144,7 +1022,8 @@ export interface EraLanes {
 
 /** Entries by start into the six lanes, in pigment order, then "No lane yet" when anything has none. An entry is in each of its lanes. */
 function buildLanes(D: Prepared, ids: Iterable<string>, lanesOf: ReadonlyMap<string, readonly Lane[]>, count: (l: Lane1['id'], n: number) => [number, string]): Pick<EraLanes, 'lanes' | 'laneOf' | 'rowOf' | 'nextOf' | 'influences' | 'effLines'> {
-  const items = [...new Set(ids)].map((id) => D.byId.get(id)).filter((p): p is PItem => !!p && !p.draft)
+  // Claude's drafts are in it too, as ghosts.
+  const items = [...new Set(ids)].map((id) => D.byId.get(id)).filter((p): p is PItem => !!p)
     .sort((a, b) => a.s - b.s || b.e - a.e || a.id.localeCompare(b.id));
   const defs = [
     ...LANES.map((d) => ({ id: d as Lane1['id'], label: LANE_LABEL[d], color: `var(--pig-${PIGMENT[d]})` })),
@@ -1165,7 +1044,7 @@ function buildLanes(D: Prepared, ids: Iterable<string>, lanesOf: ReadonlyMap<str
       rowLast[r] = it;
       rowOf.set(`${l.id}:${it.id}`, r);
     }
-    const [n, countLabel] = count(l.id, mine.length);
+    const [n, countLabel] = count(l.id, mine.filter((it) => !it.draft).length);
     const ranked = [...mine].sort((a, b) => D.prominence(b.id) - D.prominence(a.id) || a.s - b.s);
     return { ...l, count: n, countLabel, spans, moments: mine.filter((it) => it.kind === 'event'), order: mine, ranked, rows: rowEnd.length };
   });
@@ -1178,7 +1057,7 @@ function buildLanes(D: Prepared, ids: Iterable<string>, lanesOf: ReadonlyMap<str
 }
 
 /**
- * An era's six lanes. What's in it is what level 0 counts (`eraRegions`): its members and its
+ * An era's six lanes. What's in it is what the overview counts (`eraRegions`): its members and its
  * inner eras' members, plus the inner eras themselves. `lanesOf` is each entry's lanes
  * (`entryLanes`); an entry in several is drawn in each.
  */
@@ -1201,13 +1080,13 @@ export function eraLanes(D: Prepared, eraId: string, lanesOf: ReadonlyMap<string
     const n = l === NO_LANE ? era.noLane : era.mix[l];
     return [n, n ? highlightsN(n) : ''];
   });
-  const head: Head1 = { id: era.id, title: era.title, s: era.s, e: era.e, fit: era, when: era.when, sub: highlightsN(era.highlights), opens: era.id, back: '‹ All eras' };
+  const head: Head1 = { id: era.id, title: era.title, s: era.s, e: era.e, when: era.when, sub: highlightsN(era.highlights), opens: era.id };
   const themes = R.eras.filter(inside).sort((a, b) => Number(b.id === eraId) - Number(a.id === eraId) || a.s - b.s).flatMap((e) => e.themes.map((theme) => ({ era: e.id, theme })));
   return { head, era, compact: false, ...built, themes };
 }
 
 /**
- * A polity's or world event's six lanes (`pick` as level 0 has it: `pol:<territory>`, or the
+ * A polity's or world event's six lanes (`pick` as the overview has it: `pol:<territory>`, or the
  * world event's id), holding `members` (`polityMembers`, `worldMembers`). Each lane starts closed.
  */
 export function polityLanes(D: Prepared, pick: string, members: readonly string[], lanesOf: ReadonlyMap<string, readonly Lane[]>): EraLanes | undefined {
@@ -1216,15 +1095,11 @@ export function polityLanes(D: Prepared, pick: string, members: readonly string[
   if (!pol && !world?.world) return undefined;
   const own = pol?.itemId ?? world?.id;
   const built = buildLanes(D, members.filter((id) => id !== own), lanesOf, (_, n) => [n, entriesN(n)]);
-  const all = built.lanes.flatMap((l) => l.order);
   const s = pol ? pol.s : world!.s, e = pol ? pol.e : world!.e;
-  // Framed on what's in it (and a world event's own years); its life when nothing is.
-  const ends = [...all, ...(world ? [world] : [])];
-  const lo = ends.length ? Math.min(...ends.map((x) => x.s)) : s, hi = ends.length ? Math.max(...ends.map((x) => x.e)) : e;
-  const n = new Set(all.map((x) => x.id)).size;
+  const n = new Set(built.lanes.flatMap((l) => l.order).filter((x) => !x.draft).map((x) => x.id)).size;
   const head: Head1 = {
-    id: pick, title: pol ? pol.fullTitle : world!.title, s, e, fit: hi - lo < 10 ? { s: lo - 5, e: hi + 5 } : { s: lo, e: hi },
-    when: pol ? pol.when : world!.when, sub: `${pol ? '' : 'World event · '}${entriesN(n)}`, opens: own && D.byId.has(own) ? own : undefined, back: '‹ Overview',
+    id: pick, title: pol ? pol.fullTitle : world!.title, s, e,
+    when: pol ? pol.when : world!.when, sub: `${pol ? '' : 'World event · '}${entriesN(n)}`, opens: own && D.byId.has(own) ? own : undefined,
   };
   // A polity's chips are its region's eras' while it lived, outer eras first.
   const themes = pol ? D.regions.filter((R) => R.name === pol.region).flatMap((R) => R.eras.filter((x) => x.e > s && x.s < e).sort((a, b) => Number(!!a.parent) - Number(!!b.parent) || a.s - b.s)).flatMap((x) => x.themes.map((theme) => ({ era: x.id, theme }))) : [];
@@ -1241,10 +1116,10 @@ const P_EFF = 22;
 
 /** An entry's effect lines in a lane. */
 const effOf = (EL: EraLanes, L: Lane1, id: string) => EL.effLines.get(`${L.id}:${id}`) ?? [];
-/** A closed lane names its entries at an end of an arrow, then its `n` most prominent others, most prominent first. */
+/** A closed lane names Claude's drafts and its entries at an end of an arrow, then its `n` most prominent others, most prominent first. */
 function namedOf(EL: EraLanes, L: Lane1, n: number): PItem[] {
-  const ends = L.ranked.filter((it) => effOf(EL, L, it.id).length);
-  return [...ends, ...L.ranked.filter((it) => !effOf(EL, L, it.id).length).slice(0, n)];
+  const always = (it: PItem) => it.draft || effOf(EL, L, it.id).length > 0;
+  return [...L.ranked.filter(always), ...L.ranked.filter((it) => !always(it)).slice(0, n)];
 }
 /** What a phone's lane lists: all of it, or (closed) its named entries in time order. */
 const phoneList = (EL: EraLanes, L: Lane1) => (isOpen(EL, L) ? L.order : namedOf(EL, L, P_CLOSED_LIST).sort((a, b) => a.s - b.s));
@@ -1275,9 +1150,10 @@ export function laneTop(EL: EraLanes, id: Lane1['id'], phone: boolean): number {
 
 /** How far down the lanes (under the header row) an entry's row is, in px: on a phone, its line in the list. */
 export function lane1Span(EL: EraLanes, id: string, phone: boolean): [number, number] | undefined {
-  const li = EL.laneOf.get(id);
-  if (li === undefined) return undefined;
-  const L = EL.lanes[li];
+  if (!EL.laneOf.has(id)) return undefined;
+  // An entry in several lanes: where it's drawn in full, else where it's named, else its first.
+  const mine = EL.lanes.filter((l) => l.order.some((it) => it.id === id));
+  const L = mine.find((l) => isOpen(EL, l)) ?? mine.find((l) => namedOf(EL, l, CLOSED_NAMES).some((it) => it.id === id)) ?? mine[0];
   const top = laneTop(EL, L.id, phone);
   if (!isOpen(EL, L)) return [top, top + laneH(EL, L, phone)];
   if (phone) {
@@ -1289,12 +1165,38 @@ export function lane1Span(EL: EraLanes, id: string, phone: boolean): [number, nu
   return row === undefined ? [top + PAD1, top + PAD1 + MOMENT_ROW] : [rows + row * ROW_H, rows + (row + 1) * ROW_H];
 }
 
-/** The arrow keys at level 1: ←/→ through a lane in time order, ↑/↓ the nearest in time in the next lane with anything. */
-export function stepLane1(EL: EraLanes, activeId: string | undefined, key: StepKey, win: YearWindow): string | undefined {
-  return stepThrough(EL.lanes.map((l) => l.order), activeId ? EL.laneOf.get(activeId) : undefined, activeId, key, win);
+/**
+ * The arrow keys in open lanes: ←/→ through what a lane draws in time order (a closed lane, its named
+ * entries), ↑/↓ the nearest in time in the next lane with anything, down through every set of lanes
+ * open (`ELs`, top to bottom). Drafts are skipped.
+ */
+export function stepLane1(ELs: readonly EraLanes[], activeId: string | undefined, key: StepKey, win: YearWindow): string | undefined {
+  const drawn = (EL: EraLanes, L: Lane1) => (isOpen(EL, L) ? L.order : namedOf(EL, L, CLOSED_NAMES).sort((a, b) => a.s - b.s));
+  const lanes = ELs.flatMap((EL) => EL.lanes.map((l) => drawn(EL, l).filter((it) => !it.draft)));
+  let li: number | undefined, base = 0;
+  for (const EL of ELs) {
+    const i = activeId ? EL.laneOf.get(activeId) : undefined;
+    if (i !== undefined && lanes[base + i].some((it) => it.id === activeId)) { li = base + i; break; }
+    base += EL.lanes.length;
+  }
+  return stepThrough(lanes, li, activeId, key, win);
 }
 
-/** What a screen reader says for an entry at level 1: "Athenian silver “owls”, c. 510 BCE – 322 BCE, Economic, 1 of 4". */
+/**
+ * Make sure open lanes draw an entry: in a polity a closed lane only names a few, so the lane it's
+ * in opens unless it's named already. Whether it's in these lanes at all.
+ */
+export function revealIn(EL: EraLanes, id: string): boolean {
+  const li = EL.laneOf.get(id);
+  if (li === undefined) return false;
+  // An entry in several lanes is drawn in each: any one that shows it will do.
+  const mine = EL.lanes.filter((L) => L.order.some((it) => it.id === id));
+  const drawn = mine.some((L) => isOpen(EL, L) || namedOf(EL, L, CLOSED_NAMES).some((it) => it.id === id));
+  if (!drawn) EL.open = EL.lanes[li].id;
+  return true;
+}
+
+/** What a screen reader says for an entry in open lanes: "Athenian silver “owls”, c. 510 BCE – 322 BCE, Economic, 1 of 4". */
 export function describeLane1(EL: EraLanes, id: string): string {
   const li = EL.laneOf.get(id);
   if (li === undefined) return '';
@@ -1307,7 +1209,7 @@ const entriesN = (n: number) => `${n} ${n === 1 ? 'entry' : 'entries'}`;
 
 const highlightsN = (n: number) => `${n} ${n === 1 ? 'highlight' : 'highlights'}`;
 const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
-const blank = (S: Scene): Scene => ({ ...S, z: [[], [], [], []], gutter: [], axis: [], targets: [], clusters: [], boxes: new Map(), laneBoxes: new Map(), adds: [] });
+const blank = (S: Scene): Scene => ({ ...S, z: [[], [], [], []], gutter: [], axis: [], targets: [], boxes: new Map(), laneBoxes: new Map(), adds: [] });
 
 /** A primitive moved by `Y` and faded: marks by `ma`, words and glyphs by `ta`. Arrows and shapes wait until it's open. */
 function squash(p: Prim, Y: (y: number) => number, ma: number, ta: number): Prim | undefined {
@@ -1321,66 +1223,82 @@ function squash(p: Prim, Y: (y: number) => number, ma: number, ta: number): Prim
   }
 }
 
-/** Where what's open sat on level 0, in px from the top of the content: the lanes grow out of it. */
-function headSpan(D: Prepared, V: View, EL: EraLanes, F: Fit): [number, number] | undefined {
-  if (EL.era) return eraSpan(D, V, EL.era.id, F);
-  const G = overviewGeo(D, V, F);
-  const id = EL.head.id;
-  if (id.startsWith('pol:')) {
-    const pid = id.slice(4);
-    for (const g of G.bands) for (const sg of g.subs) {
-      if (sg.h < 2) continue;
-      if (sg.slots.some((x) => x.pol?.id === pid || x.group?.members.some((m) => m.id === pid))) return [sg.y, sg.y + sg.h];
-    }
-    return undefined;
-  }
-  const g = G.bands.find((b) => b.B.worlds.some((w) => w.home && w.it.id === id));
-  return g ? [g.top, g.top + GOLD_H + HEAD_LINE] : undefined;
+/** Inside one set of open lanes, the head's "Fold" and "+3 more" are drawn with these, then made that set's own. */
+const LOCAL_FOLD = '__fold';
+const LOCAL_MORE = '__more';
+/** An id drawn inside a set of open lanes, made that set's own (`key`), so two sets open don't answer for each other. */
+function ownId(id: string | undefined, key: string): string | undefined {
+  if (!id) return id;
+  if (id === LOCAL_FOLD) return FOLD + key;
+  if (id === LOCAL_MORE) return THEMES_MORE + key;
+  if (id.startsWith(LANE_TOGGLE) && !id.includes('|')) return `${LANE_TOGGLE}${key}|${id.slice(LANE_TOGGLE.length)}`;
+  return id;
+}
+/** What's hovered, as the set of open lanes `key` draws it. */
+function localHover(h: string | undefined, key: string): string | undefined {
+  if (!h) return h;
+  if (h === FOLD + key) return LOCAL_FOLD;
+  if (h === THEMES_MORE + key) return LOCAL_MORE;
+  const t = parseToggle(h);
+  if (t) return t[0] === key ? LANE_TOGGLE + t[1] : undefined;
+  return h;
 }
 
-function eraLevel(c: Ctx, EL: EraLanes) {
-  const { D, V, E, S } = c;
+/**
+ * A polity's, world event's or era's six lanes, unfurled under it on the same time scale: a head
+ * with its name, dates and theme chips, then the lanes. While it unfurls the lanes grow down out of
+ * its top and what's under it moves down with them; with reduced motion they fade in at full height.
+ */
+function inlineBlock(c: Ctx, b: BlockGeo, base: number) {
+  const { V, E, S, x0, x1 } = c;
+  const top = base + b.y, bottom = top + b.full;
+  if (b.h < 1 || top + b.h < AXIS_H || top > E.h) return;
   const phone = E.w < PHONE_W;
-  const z = V.zoom;
-  if (!z || z.t >= 1) { lanes1(c, EL, phone); return; }
-  // Opening or closing: the other rows fade while the lanes grow out of the era's band (or the
-  // polity's strip), on the same time scale. With reduced motion the lanes only fade in where they'll be.
-  const t = z.t;
-  const c0: Ctx = { ...c, V: { ...V, scrollY: z.scroll0, hover: undefined, selected: undefined }, S: blank(S) };
-  overviewRows(c0);
-  for (let i = 0; i < 4; i++) for (const p of c0.S.z[i]) S.z[i].push({ ...p, a: p.a * (1 - t) });
-  for (const p of c0.S.gutter) S.gutter.push({ ...p, a: p.a * (1 - t) });
-  const c1: Ctx = { ...c, S: blank(S) };
-  lanes1(c1, EL, phone);
-  const band = headSpan(D, { ...V, scrollY: z.scroll0 }, EL, E);
-  const by = band ? AXIS_H + band[0] - z.scroll0 : AXIS_H, bh = band ? band[1] - band[0] : 60;
-  const visH = Math.max(1, Math.min(head1H(EL, E, V.theme?.key) + lanesH(EL, phone) - V.scrollY, E.h - AXIS_H));
-  const Y = z.fade ? (y: number) => y : (y: number) => { const shut = by + clamp01((y - AXIS_H) / visH) * bh; return shut + (y - shut) * t; };
-  const ma = z.fade ? t : Math.min(1, t * 1.6), ta = z.fade ? t : clamp01((t - 0.45) / 0.55);
-  for (let i = 0; i < 4; i++) for (const p of c1.S.z[i]) { const q = squash(p, Y, ma, ta); if (q) S.z[i].push(q); }
-  for (const p of c1.S.gutter) { const q = squash(p, Y, ma, ta); if (q) S.gutter.push(q); }
-  // Taps wait until it's open: nothing is a target in between.
+  const EL = b.EL;
+  const headH = head1H(EL, E, V.theme?.key);
+  const sub = blank(S);
+  const cb: Ctx = { ...c, V: { ...V, hover: localHover(V.hover, b.key) }, S: sub, top: Math.max(AXIS_H, top + headH), bottom: Math.min(E.h, bottom) };
+  // Its own ground over the band's washes, ruled along its top and foot.
+  sub.z[0].push({ t: 0, k: 'kbg', a: 1, cls: 'tl-open-lanes', x: x0, y: top, w: x1 - x0, h: b.full, fill: 'var(--panel)' });
+  if (E.gutter) sub.gutter.push({ t: 0, k: 'kgbg', a: 1, x: 0, y: top, w: E.gutter, h: b.full, fill: 'var(--panel)' });
+  for (const [k, y] of [['kt', top + 0.5], ['kf', bottom - 0.5]] as const) {
+    sub.z[0].push({ t: 3, k, a: 1, x1: x0, y1: y, x2: x1, y2: y, stroke: 'var(--rule)' });
+    if (E.gutter) sub.gutter.push({ t: 3, k: `g${k}`, a: 1, x1: 0, y1: y, x2: E.gutter, y2: y, stroke: 'var(--rule)' });
+  }
+  sub.targets.push({ id: INERT, x: x0, y: top, w: x1 - x0, h: b.full });
+  lanesInline(cb, EL, top + headH, phone);
+  blockHead(cb, EL, top, phone);
+  const t = b.t, fade = !!V.openFade;
+  const Y = fade ? (y: number) => y : (y: number) => top + (y - top) * t;
+  const ma = fade ? t : Math.min(1, t * 1.6), ta = fade ? t : clamp01((t - 0.45) / 0.55);
+  const own = (p: Prim): Prim | undefined => {
+    const q = { ...p, k: `${b.key}|${p.k}`, id: ownId(p.id, b.key) } as Prim;
+    return t >= 1 ? q : squash(q, Y, ma, ta);
+  };
+  for (let i = 0; i < 4; i++) for (const p of sub.z[i]) { const q = own(p); if (q) S.z[i].push(q); }
+  for (const p of sub.gutter) { const q = own(p); if (q) S.gutter.push(q); }
+  // Taps wait until it's open: nothing in it is a target in between.
+  if (t < 1) return;
+  for (const tg of sub.targets) S.targets.push({ ...tg, id: ownId(tg.id, b.key)! });
+  for (const [id, box] of sub.boxes) S.boxes.set(id, box);
+  for (const a of sub.adds) S.adds.push({ ...a, block: b.key });
 }
 
-function lanes1(c: Ctx, EL: EraLanes, phone: boolean) {
-  const { V, E } = c;
-  const lanesTop = AXIS_H + head1H(EL, E, V.theme?.key);
-  const cl: Ctx = { ...c, top: lanesTop };
-  let top = lanesTop - V.scrollY;
+function lanesInline(c: Ctx, EL: EraLanes, lanesTop: number, phone: boolean) {
+  let top = lanesTop;
   for (const L of EL.lanes) {
     const h = laneH(EL, L, phone);
-    if (top + h >= lanesTop && top <= E.h) (phone ? phoneLane : lane1)(cl, EL, L, top, h);
+    if (top + h >= c.top && top <= c.bottom) (phone ? phoneLane : lane1)(c, EL, L, top, h);
     else if (!phone && EL.influences.length) {
       // Scrolled out of view: only where its entries would be, so an arrow to one runs off the edge toward it.
-      const ghost: Ctx = { ...cl, top: -Infinity, bottom: Infinity, S: blank(c.S) };
+      const ghost: Ctx = { ...c, top: -Infinity, bottom: Infinity, S: blank(c.S) };
       lane1(ghost, EL, L, top, h);
       for (const [k, b] of ghost.S.laneBoxes) c.S.laneBoxes.set(k, b);
     }
     top += h;
   }
-  if (phone) marginArcs(cl, EL, lanesTop - V.scrollY);
-  else influences1(cl, EL);
-  head1(c, EL, phone);
+  if (phone) marginArcs(c, EL, lanesTop);
+  else influences1(c, EL);
 }
 
 /** An entry's name in the scene, as a box, so an effect's pill can keep off it. */
@@ -1412,10 +1330,12 @@ function influences1(c: Ctx, EL: EraLanes) {
       label: describeEffect(x.r, 'out').toLowerCase(), color: `var(--pig-${PIGMENT[x.from]})`, focus: on, faded: !!focus && !on,
     });
   }
-  const taken = [...S.z[2].flatMap((p) => textBox(E.measure, p) ?? []), ...[...S.laneBoxes.values()].filter((b) => b.w <= 16)];
+  // Pills keep off entries' names and marks, bars included, so they never take an entry's clicks.
+  const taken = [...S.z[2].flatMap((p) => textBox(E.measure, p) ?? []), ...S.laneBoxes.values()];
   const drawn = arrowPrims(arrows, X, E.measure, taken, { top: c.top, bottom: c.bottom });
   S.z[3].push(...drawn.marks, ...drawn.labels);
-  S.targets.push(...drawn.targets);
+  S.targets.splice(S.targets.findIndex((t) => t.id === INERT) + 1, 0, ...drawn.targets.filter((t) => t.lane === 'under'));
+  S.targets.push(...drawn.targets.filter((t) => t.lane !== 'under'));
   // In focus, the named entries it doesn't touch fade (while an entry is open its connections already light up).
   if (focus && !V.roles) {
     const near = new Set(EL.influences.filter((x) => touches(x, focus)).flatMap((x) => [x.r.fromId, x.r.toId]));
@@ -1508,21 +1428,25 @@ function closedLane(c: Ctx, EL: EraLanes, L: Lane1, top: number, h: number) {
     // Its name runs until the next one on its row.
     const next = named.slice(i + 1).find((_, j) => (i + 1 + j) % R === row);
     const room = Math.min(x1 - 6, next ? X(next.s) - D1 - 4 : Infinity) - lx;
-    const label = fit(M, 'ui', titleOf(it), room);
+    const label = fit(M, it.draft ? 'spanI' : 'ui', titleOf(it), room);
     const sel = V.selected === it.id, hot = sel || V.hover === it.id;
     const role = roleOf(V, it);
     const lit = ROLE_STROKE[role.trim()];
+    const color = it.draft ? UMBER : L.color;
     const xb = Math.min(X(it.e), x1 + 2);
     const span = it.kind !== 'event' && xb - x > 2;
-    if (span) S.z[1].push({ t: 0, k: `qnb${L.id}${it.id}`, a: 1, cls: `tl-named-bar${role}`, id: it.id, x, y: cy + 6, w: xb - x, h: 3, r: 1.5, fill: tint(L.color, hot ? 75 : 50) });
+    if (span) S.z[1].push({ t: 0, k: `qnb${L.id}${it.id}`, a: 1, cls: `tl-named-bar${role}`, id: it.id, x, y: cy + 6, w: xb - x, h: 3, r: 1.5, fill: tint(color, hot ? 75 : 50) });
     if (hot || lit) S.z[1].push({ t: 1, k: `qnh${L.id}${it.id}`, a: 1, cls: role.trim() || undefined, x, y: cy, r: D1 / 2 + 3, fill: 'var(--panel)', stroke: lit ?? 'var(--ink)', sw: lit ? 2.5 : 1.5 });
-    S.z[1].push({ t: 6, k: `qn${L.id}${it.id}`, a: 1, cls: `tl-mark tl-named${sel ? ' selected' : ''}${role}`, id: it.id, x: x - D1 / 2, y: cy - D1 / 2, w: D1, g: it.approx ? 'diamond-approx' : 'diamond', color: L.color });
-    if (label) S.z[2].push({ t: 2, k: `qnt${L.id}${it.id}`, a: 1, cls: `tl-label${role}`, id: it.id, x: lx, y: cy + 4, s: label, f: 'ui', fill: hot ? 'var(--ink)' : 'var(--ink-2)' });
+    S.z[1].push({ t: 6, k: `qn${L.id}${it.id}`, a: 1, cls: `${it.draft ? 'tl-draft' : 'tl-mark'} tl-named${sel ? ' selected' : ''}${role}`, id: it.id, x: x - D1 / 2, y: cy - D1 / 2, w: D1, g: it.approx || it.draft ? 'diamond-approx' : 'diamond', color });
+    if (label) S.z[2].push({ t: 2, k: `qnt${L.id}${it.id}`, a: 1, cls: `tl-label${role}`, id: it.id, x: lx, y: cy + 4, s: label, f: it.draft ? 'spanI' : 'ui', fill: it.draft ? UMBER : hot ? 'var(--ink)' : 'var(--ink-2)' });
     const box = span ? { x: x - D1 / 2, y: cy - D1 / 2, w: xb - x + D1 / 2, h: D1 + 4 } : { x: x - D1 / 2, y: cy - D1 / 2, w: D1, h: D1 };
     S.boxes.set(it.id, box);
     S.laneBoxes.set(`${L.id}:${it.id}`, box);
     const right = label ? lx + M('ui', label) + 4 : x + D1 / 2 + 4;
-    S.targets.push({ id: it.id, lane: L.id, x: x - D1 / 2 - 4, y: cy - CLOSED_ROW / 2, w: Math.max(MIN_HIT, right - x + D1 / 2 + 4), h: CLOSED_ROW });
+    // At least 24 px to tap, but never over the next one on its row.
+    const stop = next ? Math.max(X(next.s), x0 + D1 / 2 + 2) - D1 / 2 - 1 : Infinity;
+    const tx = x - D1 / 2 - 4;
+    S.targets.push({ id: it.id, lane: L.id, x: tx, y: cy - CLOSED_ROW / 2, w: Math.min(Math.max(MIN_HIT, right - tx), stop - tx), h: CLOSED_ROW, grip: sel && V.editable && !it.draft ? 'body' : undefined });
   });
 }
 
@@ -1542,7 +1466,7 @@ function moments1(c: Ctx, L: Lane1, rowTop: number) {
     const lit = ROLE_STROKE[role.trim()];
     const w = sel ? DIAMOND + 4 : DIAMOND;
     if (hot || lit) S.z[1].push({ t: 1, k: `qmh${L.id}${it.id}`, a: 1, cls: role.trim() || undefined, x, y: cy, r: w / 2 + 3, fill: 'var(--panel)', stroke: lit ?? 'var(--ink)', sw: lit ? 2.5 : 1.5 });
-    S.z[1].push({ t: 6, k: `qm${L.id}${it.id}`, a: 1, cls: `tl-mark tl-moment${sel ? ' selected' : ''}${role}`, id: it.id, x: x - w / 2, y: cy - w / 2, w, g: it.approx ? 'diamond-approx' : 'diamond', color: L.color });
+    S.z[1].push({ t: 6, k: `qm${L.id}${it.id}`, a: 1, cls: `${it.draft ? 'tl-draft' : 'tl-mark'} tl-moment${sel ? ' selected' : ''}${role}`, id: it.id, x: x - w / 2, y: cy - w / 2, w, g: it.approx || it.draft ? 'diamond-approx' : 'diamond', color: it.draft ? UMBER : L.color });
     S.boxes.set(it.id, { x: x - w / 2, y: cy - w / 2, w, h: w });
     S.laneBoxes.set(`${L.id}:${it.id}`, S.boxes.get(it.id)!);
     const hx = x - MIN_HIT / 2;
@@ -1550,14 +1474,15 @@ function moments1(c: Ctx, L: Lane1, rowTop: number) {
     if (x - DIAMOND / 2 - 4 > right) {
       const next = i + 1 < xs.length ? xs[i + 1] - DIAMOND : Infinity;
       const lx = x + DIAMOND / 2 + 5;
-      const label = placeLabel(M, 'ui', it.title, Math.min(next, x1 - 4) - lx);
+      const label = placeLabel(M, it.draft ? 'spanI' : 'ui', titleOf(it), Math.min(next, x1 - 4) - lx);
       if (label) {
-        S.z[2].push({ t: 2, k: `qmt${L.id}${it.id}`, a: 1, cls: `tl-label${role}`, id: it.id, x: lx, y: cy + 4, s: label, f: 'ui', fill: hot ? 'var(--ink)' : 'var(--ink-2)' });
+        S.z[2].push({ t: 2, k: `qmt${L.id}${it.id}`, a: 1, cls: `tl-label${role}`, id: it.id, x: lx, y: cy + 4, s: label, f: it.draft ? 'spanI' : 'ui', fill: it.draft ? UMBER : hot ? 'var(--ink)' : 'var(--ink-2)' });
         right = lx + M('ui', label);
         hw = right + 4 - hx;
       } else right = x + DIAMOND / 2;
     }
-    S.targets.push({ id: it.id, lane: L.id, x: hx, y: rowTop, w: hw, h: MOMENT_ROW });
+    // The open entry can be dragged to new dates.
+    S.targets.push({ id: it.id, lane: L.id, x: hx, y: rowTop, w: hw, h: MOMENT_ROW, grip: sel && V.editable && !it.draft ? 'body' : undefined });
   });
 }
 
@@ -1574,31 +1499,45 @@ function phase(c: Ctx, EL: EraLanes, L: Lane1, it: PItem, rowTop: number) {
   const role = roleOf(V, it);
   const lit = ROLE_STROKE[role.trim()];
   const k = `${L.id}${it.id}`;
+  // Claude's draft is a dashed umber ghost.
+  const color = it.draft ? UMBER : L.color;
   S.z[1].push({
-    t: 0, k: `qb${k}`, a: 1, cls: `tl-mark tl-phase${sel ? ' selected' : ''}${role}`, id: it.id, x: rx, y: by, w: rw, h: bh, r: 2, fill: tint(L.color, hot ? 28 : 16),
-    stroke: lit ?? (sel ? 'var(--ink)' : `color-mix(in srgb, ${L.color} 60%, transparent)`), sw: lit ? 2.5 : sel ? 2 : 1, dash: !lit && !sel && (it.approx || it.endApprox),
+    t: 0, k: `qb${k}`, a: 1, cls: `${it.draft ? 'tl-draft' : 'tl-mark'} tl-phase${sel ? ' selected' : ''}${role}`, id: it.id, x: rx, y: by, w: rw, h: bh, r: 2, fill: it.draft ? 'var(--panel)' : tint(color, hot ? 28 : 16),
+    stroke: lit ?? (sel ? 'var(--ink)' : `color-mix(in srgb, ${color} 60%, transparent)`), sw: lit ? 2.5 : sel ? 2 : 1, dash: it.draft || (!lit && !sel && (it.approx || it.endApprox)),
   });
   S.boxes.set(it.id, { x: rx, y: by, w: rw, h: bh });
   S.laneBoxes.set(`${L.id}:${it.id}`, S.boxes.get(it.id)!);
   let hx = rx, hw = rw;
   if (hw < MIN_HIT) { hx = rx + rw / 2 - MIN_HIT / 2; hw = MIN_HIT; }
   // Its name: inside, else just after it when there's room before the next in its row, else cut short, else hidden.
-  const lw = M('span', it.title);
+  const title = titleOf(it), font = it.draft ? 'spanI' : 'span', ink = it.draft ? UMBER : 'var(--ink)';
+  const lw = M(font, title);
   const ty = by + bh / 2 + 4.5;
   if (vw >= 3 && lw + 14 <= vw) {
-    S.z[2].push({ t: 2, k: `qbt${k}`, a: 1, cls: `tl-label${role}`, id: it.id, x: va + 7, y: ty, s: it.title, f: 'span', fill: 'var(--ink)' });
+    S.z[2].push({ t: 2, k: `qbt${k}`, a: 1, cls: `tl-label${role}`, id: it.id, x: va + 7, y: ty, s: title, f: font, fill: ink });
   } else if (vw >= 3) {
     const next = EL.nextOf.get(`${L.id}:${it.id}`);
     const room = (next === undefined ? Infinity : X(next)) - xb - 12;
     if (lw <= room && xb + 6 + lw <= x1) {
-      S.z[2].push({ t: 2, k: `qbt${k}`, a: 1, cls: `tl-label${role} out`, id: it.id, x: xb + 6, y: ty, s: it.title, f: 'span', fill: 'var(--ink-2)' });
+      S.z[2].push({ t: 2, k: `qbt${k}`, a: 1, cls: `tl-label${role} out`, id: it.id, x: xb + 6, y: ty, s: title, f: font, fill: it.draft ? UMBER : 'var(--ink-2)' });
       hw = Math.max(hw, xb + 6 + lw - hx);
     } else {
-      const s = vw >= MIN_LABEL ? fit(M, 'span', it.title, vw - 14) : '';
-      if (s) S.z[2].push({ t: 2, k: `qbt${k}`, a: 1, cls: `tl-label${role}`, id: it.id, x: va + 7, y: ty, s, f: 'span', fill: 'var(--ink)' });
+      const s = vw >= MIN_LABEL ? fit(M, font, title, vw - 14) : '';
+      if (s) S.z[2].push({ t: 2, k: `qbt${k}`, a: 1, cls: `tl-label${role}`, id: it.id, x: va + 7, y: ty, s, f: font, fill: ink });
     }
   }
-  S.targets.push({ id: it.id, lane: L.id, x: hx, y: rowTop, w: hw, h: ROW_H });
+  const target: Target = { id: it.id, lane: L.id, x: hx, y: rowTop, w: hw, h: ROW_H };
+  S.targets.push(target);
+  if (!sel || !V.editable || it.draft) return;
+  // The open entry can be dragged: its body moves both dates, an end (when the bar is wide enough to tell them apart) only that one.
+  target.grip = 'body';
+  if (rw < GRIP_PX * 4) return;
+  const grip = (part: 'start' | 'end', x: number) => {
+    S.z[2].push({ t: 0, k: `bg${part}${k}`, a: 1, cls: 'tl-grip', x: x - 2, y: by + 4, w: 4, h: bh - 8, r: 2, fill: 'var(--ink)' });
+    S.targets.push({ id: it.id, grip: part, lane: L.id, x: x - GRIP_PX, y: rowTop, w: GRIP_PX * 2, h: ROW_H });
+  };
+  if (xa >= x0) grip('start', xa + 1);
+  if (!it.open && xb <= x1) grip('end', xb - 1);
 }
 
 /**
@@ -1668,7 +1607,7 @@ function phoneLane(c: Ctx, EL: EraLanes, L: Lane1, top: number, h: number) {
       S.z[2].push({ t: 6, k: `qld${k}`, a: 1, cls: role.trim() || undefined, x: tx, y: ry + P_ITEM / 2 - 4.5, w: 9, g: it.approx ? 'diamond-approx' : 'diamond', color: L.color });
       tx += 15;
     }
-    S.z[2].push({ t: 2, k: `qlt${k}`, a: 1, cls: `tl-list-item${sel ? ' selected' : ''}${role}`, id: it.id, x: tx, y: ry + 19.5, s: fit(M, 'item', it.title, x1 - 12 - tx), f: 'item', fill: 'var(--ink)' });
+    S.z[2].push({ t: 2, k: `qlt${k}`, a: 1, cls: `${it.draft ? 'tl-draft ' : ''}tl-list-item${sel ? ' selected' : ''}${role}`, id: it.id, x: tx, y: ry + 19.5, s: fit(M, 'item', titleOf(it), x1 - 12 - tx), f: 'item', fill: it.draft ? UMBER : 'var(--ink)' });
     S.boxes.set(it.id, { x: x0 + 4, y: ry + 1, w: x1 - x0 - 8, h: P_ITEM - 2 });
     S.targets.push({ id: it.id, lane: L.id, x: x0, y: ry, w: x1 - x0, h: P_ITEM });
   });
@@ -1748,368 +1687,58 @@ function marginArcs(c: Ctx, EL: EraLanes, top: number) {
   }
 }
 
-/** The row above the lanes: "‹ All eras" (or "‹ Overview"), then the era's or polity's name (which opens its entry), dates and count. */
-function head1(c: Ctx, EL: EraLanes, phone: boolean) {
+/** The head of open lanes: "▴ Fold" (in the gutter on a laptop), then the name (which opens its entry), dates and count. */
+function blockHead(c: Ctx, EL: EraLanes, top: number, phone: boolean) {
   const { V, E, S, X, x0, x1 } = c;
   const M = E.measure;
-  const H = EL.head, y = AXIS_H, h = HEAD1_H, ty = y + 24;
-  const back = H.back;
-  S.targets.push({ id: HEAD_ROW, x: x0, y, w: x1 - x0, h });
-  S.z[3].push({ t: 0, k: 'qhbg', a: 1, x: x0, y, w: x1 - x0, h, fill: 'var(--panel)' });
-  S.z[3].push({ t: 3, k: 'qhr', a: 1, x1: x0, y1: y + h - 0.5, x2: x1, y2: y + h - 0.5, stroke: 'var(--rule)' });
-  const hotBack = V.hover === ERAS_BACK;
+  const H = EL.head, h = HEAD1_H, ty = top + 24;
+  const fold = '▴ Fold', hotFold = V.hover === LOCAL_FOLD;
+  const foldInk = hotFold ? 'var(--ink)' : 'var(--ink-2)';
   let nx: number;
   if (phone) {
-    S.z[3].push({ t: 2, k: 'qback', a: 1, cls: 'tl-back', x: x0 + 12, y: ty, s: back, f: 'ui', fill: hotBack ? 'var(--ink)' : 'var(--ink-2)' });
-    S.targets.push({ id: ERAS_BACK, x: x0, y, w: M('ui', back) + 24, h });
-    nx = x0 + 12 + M('ui', back) + 16;
+    S.z[2].push({ t: 2, k: 'qfold', a: 1, cls: 'tl-fold', id: LOCAL_FOLD, x: x0 + 12, y: ty, s: fold, f: 'ui', fill: foldInk });
+    S.targets.push({ id: LOCAL_FOLD, x: x0, y: top, w: M('ui', fold) + 24, h });
+    nx = x0 + 12 + M('ui', fold) + 16;
   } else {
-    S.gutter.push({ t: 0, k: 'qgbg', a: 1, x: 0, y, w: E.gutter, h, fill: 'var(--panel)' });
-    S.gutter.push({ t: 3, k: 'qghr', a: 1, x1: 0, y1: y + h - 0.5, x2: E.gutter, y2: y + h - 0.5, stroke: 'var(--rule)' });
-    S.gutter.push({ t: 2, k: 'qback', a: 1, cls: 'tl-back', x: 14, y: ty, s: back, f: 'ui', fill: hotBack ? 'var(--ink)' : 'var(--ink-2)' });
-    S.targets.push({ id: ERAS_BACK, gutter: true, x: 0, y, w: Math.min(E.gutter, M('ui', back) + 28), h });
+    S.gutter.push({ t: 2, k: 'qfold', a: 1, cls: 'tl-fold', id: LOCAL_FOLD, x: 14, y: ty, s: fold, f: 'ui', fill: foldInk });
+    S.targets.push({ id: LOCAL_FOLD, gutter: true, x: 0, y: top, w: Math.min(E.gutter, M('ui', fold) + 28), h });
     // The name sits at the start, and stays in view while that scrolls off to the left.
     nx = Math.max(X(H.s), x0) + 12;
   }
   const name = fit(M, 'era', H.title, x1 - nx - 12);
-  if (!name) return;
-  const nw = M('era', name);
-  const sel = !!H.opens && V.selected === H.opens, hot = sel || (!!H.opens && V.hover === H.opens);
-  S.z[3].push({ t: 2, k: 'qhn', a: 1, cls: `tl-era-head${sel ? ' selected' : ''}`, id: H.opens ?? H.id, x: nx, y: ty, s: name, f: 'era', fill: 'var(--ink)' });
-  if (hot) S.z[3].push({ t: 3, k: 'qhu', a: 1, x1: nx, y1: ty + 4, x2: nx + nw, y2: ty + 4, stroke: sel ? 'var(--ink)' : 'var(--ink-2)', sw: sel ? 1.5 : 1 });
-  if (H.opens) S.targets.push({ id: H.opens, x: nx - 4, y, w: nw + 8, h });
-  const rest = `${H.when} · ${H.sub}`;
-  if (nx + nw + 12 + M('eraDates', rest) <= x1 - 8) S.z[3].push({ t: 2, k: 'qhd', a: 1, x: nx + nw + 12, y: ty, s: rest, f: 'eraDates', fill: 'var(--muted)' });
-  themeRow(c, EL, y + HEAD1_H - 4);
+  if (name) {
+    const nw = M('era', name);
+    const sel = !!H.opens && V.selected === H.opens, hot = sel || (!!H.opens && V.hover === H.opens);
+    S.z[2].push({ t: 2, k: 'qhn', a: 1, cls: `tl-era-head${sel ? ' selected' : ''}`, id: H.opens ?? H.id, x: nx, y: ty, s: name, f: 'era', fill: 'var(--ink)' });
+    if (hot) S.z[2].push({ t: 3, k: 'qhu', a: 1, x1: nx, y1: ty + 4, x2: nx + nw, y2: ty + 4, stroke: sel ? 'var(--ink)' : 'var(--ink-2)', sw: sel ? 1.5 : 1 });
+    // Tagged, so a tap on an era's name opens the era rather than folding its lanes.
+    if (H.opens) S.targets.push({ id: H.opens, lane: 'head', x: nx - 4, y: top, w: nw + 8, h });
+    const rest = `${H.when} · ${H.sub}`;
+    if (nx + nw + 12 + M('eraDates', rest) <= x1 - 8) S.z[2].push({ t: 2, k: 'qhd', a: 1, x: nx + nw + 12, y: ty, s: rest, f: 'eraDates', fill: 'var(--muted)' });
+  }
+  themeRow(c, EL, top + HEAD1_H - 4);
 }
 
-/** Level 1's theme chips under the name; picking one fades everything outside it. */
+/** The theme chips under the name; picking one fades everything outside it. */
 function themeRow(c: Ctx, EL: EraLanes, top: number) {
   const { V, E, S } = c;
   const { chips, more } = headChips(EL, E, V.theme?.key);
   if (!chips.length && !more) return;
   const h = head1H(EL, E, V.theme?.key) - HEAD1_H;
-  S.z[3].push({ t: 0, k: 'qtbg', a: 1, x: c.x0, y: top + 4, w: c.x1 - c.x0, h, fill: 'var(--panel)' });
-  S.z[3].push({ t: 3, k: 'qtr', a: 1, x1: c.x0, y1: top + 4 + h - 0.5, x2: c.x1, y2: top + 4 + h - 0.5, stroke: 'var(--rule)' });
+  S.z[2].push({ t: 0, k: 'qtbg', a: 1, x: c.x0, y: top + 4, w: c.x1 - c.x0, h, fill: 'var(--panel)' });
+  S.z[2].push({ t: 3, k: 'qtr', a: 1, x1: c.x0, y1: top + 4 + h - 0.5, x2: c.x1, y2: top + 4 + h - 0.5, stroke: 'var(--rule)' });
   if (E.gutter) S.gutter.push({ t: 0, k: 'qtgbg', a: 1, x: 0, y: top + 4, w: E.gutter, h, fill: 'var(--panel)' });
   for (const b of chips) {
     const y = top + 4 + b.line * CHIP_LINE, key = `${b.era}:${b.theme.id}`, id = themeKey(b.era, b.theme.id);
-    S.z[3].push(...chipPrims(b, y, { hot: V.hover === id, picked: V.theme?.key === key, a: V.theme && V.theme.key !== key ? 0.55 : 1 }));
+    S.z[2].push(...chipPrims(b, y, { hot: V.hover === id, picked: V.theme?.key === key, a: V.theme && V.theme.key !== key ? 0.55 : 1 }));
     S.targets.push({ id, x: b.x, y, w: b.w, h: CHIP_LINE - 4 });
   }
   if (more) {
-    const y = top + 4 + more.line * CHIP_LINE, hot = V.hover === THEMES_MORE;
-    S.z[3].push({ t: 0, k: 'qtm', a: 1, cls: 'tl-chip-more', id: THEMES_MORE, x: more.x, y, w: more.w, h: CHIP_LINE - 4, r: 3, fill: 'var(--panel)', stroke: hot ? 'var(--ink-2)' : 'var(--rule)', sw: 1 });
-    S.z[3].push({ t: 2, k: 'qtmt', a: 1, cls: 'tl-chip-more-label', id: THEMES_MORE, x: more.x + more.w / 2, y: y + 12, s: more.label, f: 'chipN', fill: hot ? 'var(--ink)' : 'var(--muted)', anchor: 'middle' });
-    S.targets.push({ id: THEMES_MORE, x: more.x, y, w: more.w, h: CHIP_LINE - 4 });
+    const y = top + 4 + more.line * CHIP_LINE, hot = V.hover === LOCAL_MORE;
+    S.z[2].push({ t: 0, k: 'qtm', a: 1, cls: 'tl-chip-more', id: LOCAL_MORE, x: more.x, y, w: more.w, h: CHIP_LINE - 4, r: 3, fill: 'var(--panel)', stroke: hot ? 'var(--ink-2)' : 'var(--rule)', sw: 1 });
+    S.z[2].push({ t: 2, k: 'qtmt', a: 1, cls: 'tl-chip-more-label', id: LOCAL_MORE, x: more.x + more.w / 2, y: y + 12, s: more.label, f: 'chipN', fill: hot ? 'var(--ink)' : 'var(--muted)', anchor: 'middle' });
+    S.targets.push({ id: LOCAL_MORE, x: more.x, y, w: more.w, h: CHIP_LINE - 4 });
   }
-}
-
-function laneFrame(c: Ctx, L: PLane, top: number, bot: number) {
-  const { S, E, x1 } = c;
-  S.z[0].push({ t: 3, k: `lr${L.id}`, a: 1, x1: 0, y1: bot - 0.5, x2: x1, y2: bot - 0.5, stroke: 'var(--rule-soft)' });
-  S.gutter.push({ t: 3, k: `gr${L.id}`, a: 1, x1: 0, y1: bot - 0.5, x2: E.gutter, y2: bot - 0.5, stroke: 'var(--rule-soft)' });
-  // The name stays in view while its lane scrolls past.
-  const ny = Math.min(Math.max(top + 9, AXIS_H + 9), bot - 31);
-  S.gutter.push({ t: 0, k: `gs${L.id}`, a: 1, x: 12, y: ny, w: 10, h: 22, r: 2, fill: L.color });
-  const name = fit(E.measure, 'lane', L.label, E.gutter - 30 - 8);
-  S.gutter.push({ t: 2, k: `gn${L.id}`, a: 1, x: 30, y: ny + 15.5, s: name, f: 'lane', fill: 'var(--ink)' });
-}
-
-/* ---------- moments: dots in up to three rows; dots that would overlap become clusters ---------- */
-
-interface Mark { members: PItem[]; x: number; last: number; r: number; lead: PItem; lw: number; row: number; room: number; before: number }
-
-function moments(c: Ctx, L: PLane, rowsTop: number) {
-  const { D, V, E, S, X, x0, x1 } = c;
-  if (!L.events.length) return;
-  const M = E.measure;
-  const ppy = (x1 - x0) / (V.win.end - V.win.start);
-  // Moments a little left of the window still draw: their labels reach into view.
-  const lo = lowerBound(L.ES, V.win.start - 320 / ppy), hi = upperBound(L.ES, V.win.end + 16 / ppy);
-  const marks: Mark[] = [];
-  let cur: Mark | null = null;
-  for (let i = lo; i < hi; i++) {
-    const it = L.events[i];
-    const x = X(it.s);
-    // Drafts and the open entry never hide in a cluster.
-    const alone = (p: PItem) => p.draft || p.id === V.selected;
-    if (cur && x - cur.x < CLUSTER_PX && !alone(it) && !alone(cur.members[0])) { cur.members.push(it); cur.last = x; continue; }
-    cur = { members: [it], x, last: x, r: it.rep.point === 'glyph' ? GLYPH / 2 : 5, lead: it, lw: 0, row: 0, room: Infinity, before: -Infinity };
-    marks.push(cur);
-  }
-  // Each mark takes the first row its dot and label fit in; failing that, the row that frees up
-  // soonest, and the label before it there is cut short.
-  const rightOf = new Array<number>(L.momentRows).fill(-Infinity);
-  const lastIn = new Array<Mark | null>(L.momentRows).fill(null);
-  for (const m of marks) {
-    if (m.members.length > 1) { m.lead = pickLead(m.members, D.prominence); m.r = badgeR(m.members.length); }
-    m.lw = M('ui', titleOf(m.lead));
-    const left = m.x - m.r - 4;
-    let r = rightOf.findIndex((v) => v <= left);
-    if (r < 0) {
-      r = rightOf.indexOf(Math.min(...rightOf));
-      const p = lastIn[r]!;
-      p.room = Math.min(p.room, left - (p.x + p.r + 6) - 6);
-    }
-    m.row = r;
-    m.before = rightOf[r];
-    rightOf[r] = m.x + m.r + 6 + m.lw + 8;
-    lastIn[r] = m;
-  }
-  for (const m of marks) {
-    const rowTop = rowsTop + m.row * ROW_H;
-    if (rowTop + ROW_H < c.top || rowTop > c.bottom) continue;
-    const y = rowTop + ROW_H / 2;
-    const it = m.lead;
-    // At the right edge a label that won't fit flips to the left of its dot, when nothing is there.
-    const edge = x1 - (m.x + m.r + 6) - 4;
-    const flip = m.lw > edge && m.lw <= m.room && m.x - m.r - 6 - m.lw > Math.max(x0, m.before + 6);
-    const label = placeLabel(M, 'ui', titleOf(it), flip ? m.lw : Math.min(m.room, edge));
-    const lw = label ? M('ui', label) : 0;
-    const lx = flip ? m.x - m.r - 6 : m.x + m.r + 6;
-    const anchor = flip ? 'end' as const : undefined;
-    const hx = flip ? lx - lw - 4 : m.x - 12;
-    const hitW = label ? (flip ? m.x + 12 - hx : lx + lw + 4 - hx) : 24;
-    const box = { x: m.x - m.r, y: y - m.r, w: m.r * 2, h: m.r * 2 };
-    if (m.members.length > 1) {
-      const cl: Cluster = { kind: 'event', count: m.members.length, members: m.members.map((x) => x.id), lead: it.id, lane: L.id, s: m.members[0].s, e: m.members[m.members.length - 1].s };
-      S.clusters.push(cl);
-      for (const id of cl.members) S.boxes.set(id, box);
-      const hot = V.hover === `cluster:${it.id}`;
-      const dim = V.roles && !m.members.some((x) => V.roles!.has(x.id)) ? ' dimmed' : '';
-      S.z[1].push({ t: 1, k: `mc${it.id}`, a: 1, cls: `tl-cluster${dim}`, x: m.x, y, r: m.r, fill: L.color, stroke: hot ? 'var(--ink)' : 'var(--panel)', sw: hot ? 2 : 1.5 });
-      S.z[2].push({ t: 2, k: `mn${it.id}`, a: 1, cls: dim.trim() || undefined, x: m.x, y: y + 4, s: String(cl.count), f: 'count', fill: 'var(--panel)', anchor: 'middle' });
-      if (label) S.z[2].push({ t: 2, k: `mt${it.id}`, a: 1, cls: `tl-label${dim}`, x: lx, y: y + 4, s: label, f: 'ui', fill: 'var(--ink-2)', anchor });
-      S.targets.push({ id: 'cluster', cluster: cl, lane: L.id, x: hx, y: rowTop, w: hitW, h: ROW_H });
-      continue;
-    }
-    S.boxes.set(it.id, box);
-    const sel = V.selected === it.id, hot = sel || V.hover === it.id;
-    const role = roleOf(V, it);
-    const lit = ROLE_STROKE[role.trim()];
-    const color = it.draft ? UMBER : L.color;
-    const cls = `${it.draft ? 'tl-draft' : 'tl-mark'}${sel ? ' selected' : ''}${role}`;
-    if (it.rep.point === 'glyph') {
-      // The kind's glyph on a disc of the panel's colour; the disc's edge says open, hovered or approximate.
-      const ring = lit ?? (hot ? 'var(--ink)' : it.approx || it.draft ? color : undefined);
-      S.z[1].push({ t: 1, k: `m${it.id}`, a: 1, cls, id: it.id, x: m.x, y, r: GLYPH / 2 + 2, fill: 'var(--panel)', stroke: ring, sw: lit ? 2.5 : sel ? 2 : 1.25, dash: !lit && !hot && (it.approx || it.draft) });
-      const g = sel ? GLYPH + 2 : GLYPH - 2;
-      S.z[1].push({ t: 6, k: `mg${it.id}`, a: 1, cls: `tl-glyph${role}`, id: it.id, x: m.x - g / 2, y: y - g / 2, w: g, g: it.rep.kind, color });
-    } else {
-      S.z[1].push({
-        t: 1, k: `m${it.id}`, a: 1, cls, id: it.id, x: m.x, y, r: sel ? 6 : 5,
-        fill: it.approx || it.draft ? 'var(--panel)' : color, stroke: lit ?? (hot ? 'var(--ink)' : color), sw: lit ? 2.5 : sel ? 2 : 1.25, dash: it.approx || it.draft,
-      });
-    }
-    if (label) S.z[2].push({ t: 2, k: `mt${it.id}`, a: 1, cls: `tl-label${role}`, id: it.id, x: lx, y: y + 4, s: label, f: it.draft ? 'spanI' : 'ui', fill: it.draft ? UMBER : 'var(--ink)', anchor });
-    const target: Target = { id: it.id, lane: L.id, x: hx, y: rowTop, w: hitW, h: ROW_H };
-    if (sel && V.editable) target.grip = 'body';
-    S.targets.push(target);
-  }
-}
-
-/* ---------- spans and lives: bars in their rows; slivers that would overlap become clusters ---------- */
-
-interface Sliver { kind: MarkKind; members: PItem[]; left: number; right: number }
-
-function spans(c: Ctx, L: PLane, rowsTop: number) {
-  const { V } = c;
-  if (!L.spans.length) return;
-  const hi = upperBound(L.S, V.win.end), lo = lowerBound(L.PM, V.win.start);
-  const pending = new Array<Sliver | null>(L.spanRows).fill(null);
-  const flush = (row: number) => {
-    const g = pending[row];
-    pending[row] = null;
-    if (!g) return;
-    if (g.members.length === 1) bar(c, L, g.members[0], g.left, Math.max(g.right, g.left + 3), rowsTop);
-    else sliverCluster(c, L, g, rowsTop);
-  };
-  for (let i = lo; i < hi; i++) {
-    const it = L.spans[i];
-    if (it.e < V.win.start) continue;
-    const rowTop = rowsTop + it.row * ROW_H;
-    if (rowTop + ROW_H < c.top || rowTop > c.bottom) continue;
-    const xa = c.X(it.s), xb = c.X(it.e);
-    if (xb - xa < TINY_PX && !it.draft && it.id !== V.selected) {
-      const g = pending[it.row];
-      if (g && g.kind === it.kind && xa - g.right < TINY_PX) { g.members.push(it); g.right = Math.max(g.right, xb); continue; }
-      flush(it.row);
-      pending[it.row] = { kind: it.kind, members: [it], left: xa, right: xb };
-      continue;
-    }
-    flush(it.row);
-    bar(c, L, it, xa, Math.max(xb, xa + 3), rowsTop);
-  }
-  for (let r = 0; r < pending.length; r++) flush(r);
-}
-
-function bar(c: Ctx, L: PLane, it: PItem, xa: number, xb: number, rowsTop: number) {
-  const { V, E, S, x0, x1 } = c;
-  const M = E.measure;
-  const rowTop = rowsTop + it.row * ROW_H;
-  const look = it.rep.bar;
-  const person = it.kind === 'person';
-  // Threads and ground lines are thin, with their name above; the rest are bars with it inside.
-  const thin = look === 'thread' || look === 'ground';
-  const bh = person ? 20 : 22;
-  const by = rowTop + (ROW_H - bh) / 2;
-  const ly = rowTop + 21.5;
-  const rx = Math.max(xa, x0 - 4), rr = Math.min(xb, x1 + 4), rw = Math.max(3, rr - rx);
-  const va = Math.max(xa, x0), vb = Math.min(xb, x1), vw = vb - va;
-  const sel = V.selected === it.id, hot = sel || V.hover === it.id;
-  const role = roleOf(V, it);
-  const lit = ROLE_STROKE[role.trim()];
-  const cls = `${it.draft ? 'tl-draft' : 'tl-mark'}${sel ? ' selected' : ''}${role}`;
-  const rcls = role.trim() || undefined;
-  const color = it.draft ? UMBER : L.color;
-  S.boxes.set(it.id, thin ? { x: rx, y: rowTop + 4, w: rw, h: ROW_H - 6 } : { x: rx, y: by, w: rw, h: bh });
-  if (it.draft && !thin) {
-    S.z[1].push({ t: 0, k: `b${it.id}`, a: 1, cls, id: it.id, x: rx, y: by, w: rw, h: bh, r: person ? bh / 2 : 2, fill: tint(UMBER, 10), stroke: UMBER, sw: 1.5, dash: true });
-  } else if (person) {
-    S.z[1].push({ t: 0, k: `b${it.id}`, a: 1, cls, id: it.id, x: rx, y: by, w: rw, h: bh, r: bh / 2, fill: hot ? tint(L.color, 12) : 'var(--panel)', stroke: lit ?? (hot ? 'var(--ink)' : tint(L.color, 60)), sw: lit ? 2.5 : sel ? 2 : 1, dash: it.approx || it.endApprox });
-  } else if (thin) {
-    // A thread (an idea) or a ground line (a place): a line along the bottom of the row, dashed
-    // where a date is approximate, under a hit area as tall as the row.
-    const sw = look === 'ground' ? 5 : hot ? 3.5 : 2.5;
-    const stroke = lit ?? (look === 'ground' ? tint(color, sel ? 90 : hot ? 70 : 45) : hot && !it.draft ? 'var(--ink)' : color);
-    S.z[1].push({ t: 0, k: `b${it.id}`, a: 1, cls, id: it.id, x: rx, y: rowTop + 4, w: rw, h: ROW_H - 6, fill: 'transparent' });
-    const cut = Math.min(24, (xb - xa) / 3);
-    const pieces: [number, number, boolean][] = [];
-    const a0 = it.approx ? xa + cut : xa, b0 = it.endApprox ? xb - cut : xb;
-    if (it.approx || it.draft) pieces.push([xa, it.draft ? xb : a0, true]);
-    if (!it.draft) pieces.push([a0, b0, false]);
-    if (it.endApprox && !it.draft) pieces.push([b0, xb, true]);
-    pieces.forEach(([p, q, dash], n) => {
-      const pa = Math.max(p, x0 - 8), pb = Math.min(q, x1 + 8);
-      if (pb > pa) S.z[1].push({ t: 3, k: `bl${n}${it.id}`, a: 1, cls: rcls, x1: pa, y1: ly, x2: pb, y2: ly, stroke, sw, dash });
-    });
-  } else if (look === 'arrow' && xb <= x1 + 4 && xb - xa > 14) {
-    // A migration: the bar ends in an arrow point.
-    const tip = Math.min(10, (xb - xa) / 3);
-    S.z[1].push({ t: 7, k: `b${it.id}`, a: 1, cls, id: it.id, d: `M${rx} ${by}H${xb - tip}L${xb} ${by + bh / 2}L${xb - tip} ${by + bh}H${rx}Z`, fill: tint(L.color, hot ? 30 : 16), stroke: lit ?? (sel ? 'var(--ink)' : undefined), sw: lit ? 2.5 : 2 });
-  } else {
-    S.z[1].push({ t: 0, k: `b${it.id}`, a: 1, cls, id: it.id, x: rx, y: by, w: rw, h: bh, r: 2, fill: tint(L.color, hot ? 30 : 16), stroke: lit ?? (sel ? 'var(--ink)' : undefined), sw: lit ? 2.5 : 2 });
-  }
-  if (!thin && !person && !it.draft) {
-    // The start is a solid edge in the lane's pigment, dashed when it's approximate; so is an approximate end.
-    if (xa >= x0 - 3) S.z[1].push({ t: 3, k: `ba${it.id}`, a: 1, cls: rcls, x1: xa + 1.5, y1: by, x2: xa + 1.5, y2: by + bh, stroke: L.color, sw: 3, dash: it.approx });
-    if (it.endApprox && xb <= x1 + 3) S.z[1].push({ t: 3, k: `bz${it.id}`, a: 1, cls: rcls, x1: xb - 1, y1: by, x2: xb - 1, y2: by + bh, stroke: L.color, sw: 2, dash: true });
-  }
-  // Its kind's glyph: at the start of a bar that has one, where a thread starts, or standing on a ground line.
-  let pad = 8, gx = 0;
-  if (thin && xa >= x0 - GLYPH) {
-    const g = look === 'ground' ? 18 : 15;
-    gx = xa;
-    const gy = look === 'ground' ? ly - g + 1 : ly - g / 2;
-    if (look === 'thread') S.z[1].push({ t: 1, k: `bd${it.id}`, a: 1, cls: rcls, x: xa, y: ly, r: g / 2 + 1, fill: 'var(--panel)' });
-    S.z[1].push({ t: 6, k: `bg${it.id}`, a: 1, cls: `tl-glyph${role}`, id: it.id, x: xa - g / 2, y: gy, w: g, g: it.rep.kind, color });
-  } else if (it.rep.badge && vw >= 24) {
-    S.z[1].push({ t: 6, k: `bg${it.id}`, a: 1, cls: `tl-glyph${role}`, id: it.id, x: va + 6, y: by + (bh - 14) / 2, w: 14, g: it.rep.kind, color });
-    pad = 24;
-  }
-  // Hit target: the bar, at least 24 px wide, and its label when that sits after it.
-  let hx = rx, hw = rw;
-  if (hw < MIN_HIT) { hx = rx + rw / 2 - MIN_HIT / 2; hw = MIN_HIT; }
-  // Label: inside (above a thin line), else just after if there's room before the next bar in the row, else cut short, else hidden.
-  if (vw >= 3) {
-    const title = titleOf(it);
-    const thumb = !thin && it.thumb && vw >= 64 + pad - 8 ? it.thumb : undefined;
-    if (thumb) {
-      S.z[1].push({ t: 4, k: `bi${it.id}`, a: 1, cls: `${person ? 'tl-thumb round' : 'tl-thumb'}${role}`, x: va + pad - 4 + (person ? -2 : 0), y: by + (bh - 18) / 2, w: 18, h: 18, href: thumb });
-      pad += 18;
-    }
-    if (thin) pad = gx && va <= gx + 1 ? 12 : 4;
-    const lw = M('span', title);
-    const ty = thin ? rowTop + 15 : by + bh / 2 + 4.5;
-    const ink = it.draft ? UMBER : 'var(--ink)';
-    const lcls = `tl-label${role}`;
-    if (lw + pad + 6 <= vw) {
-      S.z[2].push({ t: 2, k: `bt${it.id}`, a: 1, cls: lcls, id: it.id, x: va + pad, y: ty, s: title, f: it.draft ? 'spanI' : 'span', fill: ink });
-    } else {
-      const room = (it.nextS === Infinity ? Infinity : c.X(it.nextS)) - xb - 12;
-      const after = M('spanI', title);
-      if (xb + 6 + after <= x1 && after <= room) {
-        S.z[2].push({ t: 2, k: `bt${it.id}`, a: 1, cls: `${lcls} out`, id: it.id, x: xb + 6, y: ty, s: title, f: 'spanI', fill: it.draft ? UMBER : 'var(--ink-2)' });
-        hw = Math.max(hw, xb + 6 + after - hx);
-      } else {
-        const s = vw >= MIN_LABEL ? fit(M, 'span', title, vw - pad - 6) : '';
-        if (s) S.z[2].push({ t: 2, k: `bt${it.id}`, a: 1, cls: lcls, id: it.id, x: va + pad, y: ty, s, f: 'span', fill: ink });
-      }
-    }
-  }
-  const target: Target = { id: it.id, lane: L.id, x: hx, y: rowTop, w: hw, h: ROW_H };
-  S.targets.push(target);
-  if (look === 'war') ticks(c, L, it, by, bh, rowTop);
-  if (!sel || !V.editable || it.draft) return;
-  // The open entry can be dragged: its body moves both dates, an end (when the bar is wide enough to tell them apart) only that one.
-  target.grip = 'body';
-  if (rw < GRIP_PX * 4) return;
-  const grip = (part: 'start' | 'end', x: number) => {
-    S.z[2].push({ t: 0, k: `bg${part}${it.id}`, a: 1, cls: 'tl-grip', x: x - 2, y: by + 4, w: 4, h: bh - 8, r: 2, fill: 'var(--ink)' });
-    S.targets.push({ id: it.id, grip: part, lane: L.id, x: x - GRIP_PX, y: rowTop, w: GRIP_PX * 2, h: ROW_H });
-  };
-  if (xa >= x0) grip('start', xa + 1);
-  if (!it.open && xb <= x1) grip('end', xb - 1);
-}
-
-/** A war's battles: a tick each across its bar, a target 24 px wide on top of the bar's. */
-function ticks(c: Ctx, L: PLane, w: PItem, by: number, bh: number, rowTop: number) {
-  const { V, S, X, x0, x1 } = c;
-  for (const b of w.ticks ?? []) {
-    const x = X(b.s);
-    if (x < x0 - 2 || x > x1 + 2) continue;
-    const sel = V.selected === b.id, hot = sel || V.hover === b.id;
-    const role = roleOf(V, b);
-    const lit = ROLE_STROKE[role.trim()];
-    S.z[2].push({ t: 3, k: `tk${b.id}`, a: 1, cls: `tl-mark tl-tick-mark${sel ? ' selected' : ''}${role}`, id: b.id, x1: x, y1: by - (hot ? 3 : 1), x2: x, y2: by + bh + (hot ? 3 : 1), stroke: lit ?? 'var(--ink)', sw: hot ? 4 : 2.5, dash: b.approx });
-    S.boxes.set(b.id, { x: x - 2, y: by, w: 4, h: bh });
-    const t: Target = { id: b.id, lane: L.id, x: x - MIN_HIT / 2, y: rowTop, w: MIN_HIT, h: ROW_H };
-    if (sel && V.editable) t.grip = 'body';
-    S.targets.push(t);
-  }
-}
-
-/** A work's point joined to its maker's lifeline by a thin line, when both are drawn. */
-function ties(c: Ctx) {
-  const { D, S } = c;
-  for (const L of D.lanes) for (const w of L.events) {
-    if (!w.maker) continue;
-    const a = S.boxes.get(w.id), b = S.boxes.get(w.maker);
-    if (!a || !b) continue;
-    const x = a.x + a.w / 2;
-    if (x < b.x || x > b.x + b.w) continue;
-    const down = b.y > a.y;
-    const y1 = down ? a.y + a.h : a.y, y2 = down ? b.y : b.y + b.h;
-    const color = D.lanes[D.byId.get(w.maker)!.lane].color;
-    S.z[0].push({ t: 3, k: `tie${w.id}`, a: 1, cls: 'tl-tie', x1: x, y1, x2: x, y2, stroke: tint(color, 70), sw: 1.25 });
-    S.z[0].push({ t: 1, k: `tied${w.id}`, a: 1, cls: 'tl-tie', x, y: y2, r: 2, fill: color });
-  }
-}
-
-function sliverCluster(c: Ctx, L: PLane, g: Sliver, rowsTop: number) {
-  const { D, V, E, S } = c;
-  const lead = pickLead(g.members, D.prominence);
-  const rowTop = rowsTop + lead.row * ROW_H;
-  const cl: Cluster = { kind: g.kind, count: g.members.length, members: g.members.map((m) => m.id), lead: lead.id, lane: L.id, s: g.members[0].s, e: Math.max(...g.members.map((m) => m.e)) };
-  S.clusters.push(cl);
-  const n = String(cl.count);
-  const w = Math.max(g.right - g.left, E.measure('count', n) + 12);
-  const hot = V.hover === `cluster:${lead.id}`;
-  const by = rowTop + 4;
-  const dim = V.roles && !g.members.some((x) => V.roles!.has(x.id)) ? ' dimmed' : '';
-  for (const id of cl.members) S.boxes.set(id, { x: g.left, y: by, w, h: 20 });
-  S.z[1].push({ t: 0, k: `sc${lead.id}`, a: 1, cls: `tl-cluster${dim}`, x: g.left, y: by, w, h: 20, r: g.kind === 'person' ? 10 : 3, fill: L.color, stroke: hot ? 'var(--ink)' : undefined, sw: 2 });
-  S.z[2].push({ t: 2, k: `sn${lead.id}`, a: 1, cls: dim.trim() || undefined, x: g.left + w / 2, y: by + 14, s: n, f: 'count', fill: 'var(--panel)', anchor: 'middle' });
-  const last = g.members[g.members.length - 1];
-  const room = Math.min(last.nextS === Infinity ? Infinity : c.X(last.nextS) - 12, c.x1 - 4) - (g.left + w) - 6;
-  const label = placeLabel(E.measure, 'spanI', lead.title, room);
-  let hw = Math.max(w, MIN_HIT);
-  if (label) {
-    S.z[2].push({ t: 2, k: `st${lead.id}`, a: 1, cls: `tl-label${dim}`, x: g.left + w + 6, y: by + 14.5, s: label, f: 'spanI', fill: 'var(--ink-2)' });
-    hw = w + 6 + E.measure('spanI', label);
-  }
-  S.targets.push({ id: 'cluster', cluster: cl, lane: L.id, x: g.left, y: rowTop, w: hw, h: ROW_H });
 }
 
 /* ---------- arrows, the keyboard's ring and the dragged entry ---------- */
@@ -2117,28 +1746,12 @@ function sliverCluster(c: Ctx, L: PLane, g: Sliver, rowsTop: number) {
 const edges = (b: Box): Edges => ({ left: b.x, right: b.x + b.w, top: b.y, bottom: b.y + b.h });
 const ARC_STROKE: Record<string, string> = { ...ROLE_STROKE, draft: UMBER };
 
-/**
- * Where an entry would be drawn when it's in the window's time but scrolled out of view above or
- * below, so an arrow to it runs off that edge toward it (the plot's clip cuts it there).
- */
-function offscreen(c: Ctx, id: string): Box | undefined {
-  const { D, V, X } = c;
-  const it = D.byId.get(id);
-  if (!it || it.e < V.win.start || it.s > V.win.end) return undefined;
-  const [top, bottom] = rowSpan(D, it);
-  const y0 = AXIS_H + top - V.scrollY, y1 = AXIS_H + bottom - V.scrollY;
-  if (y1 > c.top && y0 < c.bottom) return undefined;
-  if (it.kind === 'event') return { x: X(it.s) - 5, y: y0 + PAD_TOP + ROW_H / 2 - 5, w: 10, h: 10 };
-  return { x: X(it.s), y: y0 + 3, w: Math.max(3, X(it.e) - X(it.s)), h: 22 };
-}
-
-function arrows(c: Ctx, offscreenToo = true, skip?: ReadonlySet<string>) {
+/** The open entry's connections, as arrows between where both ends are drawn. */
+function arrows(c: Ctx, skip?: ReadonlySet<string>) {
   const { V, S } = c;
-  const off = (id: string) => (offscreenToo ? offscreen(c, id) : undefined);
   for (const l of V.links ?? []) {
     if (skip?.has(`${l.fromId}>${l.toId}`)) continue;
-    const from = S.boxes.get(l.fromId) ?? off(l.fromId), to = S.boxes.get(l.toId) ?? off(l.toId);
-    // Both ends must be in the window's time (one may be scrolled out of view), and not in the same cluster.
+    const from = S.boxes.get(l.fromId), to = S.boxes.get(l.toId);
     if (!from || !to || from === to) continue;
     const { a, b } = anchors(edges(from), edges(to));
     const curve = Math.abs(a.x - b.x) < 6 ? loopCurve(a, b) : arcCurve(a, b);
@@ -2161,7 +1774,7 @@ function focusRing(c: Ctx) {
   S.z[3].push({ t: 0, k: 'ring', a: 1, cls: 'tl-ring', x: b.x - 4, y: b.y - 4, w: b.w + 8, h: b.h + 8, r: 6, stroke: 'var(--focus)', sw: 2 });
 }
 
-/** A ring round each picked entry (a cluster's members share one), and the box being drawn. */
+/** A ring round each picked entry, and the box being drawn. */
 function picks(c: Ctx) {
   const { V, S } = c;
   const seen = new Set<Box>();
@@ -2183,16 +1796,13 @@ function dragPreview(c: Ctx) {
   const { V, D, E, S, X } = c;
   const g = V.drag && D.byId.get(V.drag.id);
   if (!V.drag || !g) return;
-  const { s, e, label, y } = V.drag;
-  const L = D.lanes[g.lane];
+  const { s, e, label, y, color } = V.drag;
   const xa = X(s), xb = Math.max(X(e), xa + 3);
-  for (const p of [...S.z[1], ...S.z[2]]) if (p.id === g.id) p.a = 0.35;
+  for (const z of [S.z[1], S.z[2]]) for (let i = 0; i < z.length; i++) if (z[i].id === g.id) z[i] = { ...z[i], a: 0.35 };
   if (g.kind === 'event') {
-    S.z[3].push({ t: 1, k: 'dragm', a: 1, cls: 'tl-dragged', x: xa, y: y + ROW_H / 2, r: 6, fill: L.color, stroke: 'var(--ink)', sw: 2 });
+    S.z[3].push({ t: 6, k: 'dragm', a: 1, cls: 'tl-dragged', x: xa - 8, y: y + MOMENT_ROW / 2 - 8, w: 16, g: 'diamond', color });
   } else {
-    const bh = g.kind === 'person' ? 20 : 22;
-    const by = y + (ROW_H - bh) / 2;
-    S.z[3].push({ t: 0, k: 'dragb', a: 1, cls: 'tl-dragged', x: xa, y: by, w: xb - xa, h: bh, r: g.kind === 'person' ? bh / 2 : 2, fill: tint(L.color, 30), stroke: 'var(--ink)', sw: 2 });
+    S.z[3].push({ t: 0, k: 'dragb', a: 1, cls: 'tl-dragged', x: xa, y: y + 4, w: xb - xa, h: 20, r: 2, fill: tint(color, 30), stroke: 'var(--ink)', sw: 2 });
   }
   const w = E.measure('play', label) + 14;
   const cx = Math.min(Math.max((xa + xb) / 2, c.x0 + w / 2), c.x1 - w / 2);
@@ -2202,10 +1812,10 @@ function dragPreview(c: Ctx) {
 
 /* ---------- axis, today and the playhead ---------- */
 
-function axis(c: Ctx, level: Level) {
+function axis(c: Ctx) {
   const { V, E, S, X, x0, x1 } = c;
-  // Level 0's axis keeps Spectral's old-style numerals.
-  const [minor, major] = level === 0 ? ['tick0', 'tick0B'] as const : ['tick', 'tickB'] as const;
+  // The axis keeps Spectral's old-style numerals.
+  const [minor, major] = ['tick0', 'tick0B'] as const;
   const ts = axisTicks(V.win.start, V.win.end, x1 - x0, 78);
   S.axis.unshift({ t: 0, k: 'abg', a: 1, x: x0, y: 0, w: x1 - x0, h: AXIS_H, fill: 'var(--panel)' }, { t: 3, k: 'arule', a: 1, x1: x0, y1: AXIS_H - 0.5, x2: x1, y2: AXIS_H - 0.5, stroke: 'var(--rule)' });
   const ax: Prim[] = [];
@@ -2259,7 +1869,7 @@ export function hitTest(S: Scene, x: number, y: number): Target | undefined {
   return undefined;
 }
 
-/** The entries a box touches (drawn in any direction), inside the plot: not Claude's drafts, and a cluster's members all together. */
+/** The entries a box touches (drawn in any direction), inside the plot: not Claude's drafts. */
 export function hitBox(S: Scene, D: Prepared, box: Box): string[] {
   const r = norm(box);
   const x0 = Math.max(r.x, S.plot.x), y0 = Math.max(r.y, S.plot.y);
@@ -2274,10 +1884,4 @@ export function hitBox(S: Scene, D: Prepared, box: Box): string[] {
   return ids;
 }
 
-/** The lane at a height on screen, for adding an entry where Bob double-clicked. */
-export function laneAt(D: Prepared, scrollY: number, y: number): PLane | undefined {
-  const cy = y - AXIS_H + scrollY;
-  return D.lanes.find((l) => cy >= l.top && cy < l.top + l.height);
-}
-
-export type { Prim, Scene, Target, Cluster };
+export type { Prim, Scene, Target };

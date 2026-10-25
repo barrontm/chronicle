@@ -4,7 +4,7 @@ import { formatRange, toDecimalYear } from '../model/dates';
 import { applyUndo, bulkRemove, type Undo } from '../model/bulk';
 import { mergeDocs, parseDoc, serializeDoc, upsert } from '../model/doc';
 import { prominence as prominenceOf } from '../model/prominence';
-import type { HistDate, Lane, MediaRef, TimelineDoc, TimelineItem } from '../model/types';
+import type { HistDate, Lane, TimelineDoc, TimelineItem } from '../model/types';
 import { sortLanes } from '../model/lanes';
 import { LaneChips } from './LaneChips';
 import type { Area } from '../data/geo';
@@ -67,7 +67,7 @@ const NO_FLOWS: TimelineDoc['flows'] = [];
 const SAVE_LABEL = { loading: 'Opening…', saving: 'Saving…', saved: 'Saved on this device', error: 'Couldn’t save. Export a backup now.' } as const;
 
 function Workspace() {
-  const { doc, update, replace, saveState, mediaUrl, readOnly, flush } = useDoc();
+  const { doc, update, replace, saveState, readOnly, flush } = useDoc();
   const updateReady = useUpdateReady();
   const [stack, setStack] = useState<Panel[]>([]);
   const [hidden, setHidden] = useState<Set<string>>(new Set());
@@ -196,6 +196,7 @@ function Workspace() {
   const [allThreads, setAllThreads] = useStored<boolean>('chronicle.allThreads', () => false);
   const [lenses, setLenses] = useStored<Lane[]>('chronicle.lenses', () => []);
   const [unfolded, setUnfolded] = useStored<string[]>('chronicle.unfoldedGroups', () => []);
+  const [openLanes, setOpenLanes] = useStored<string[]>('chronicle.openLanes', () => []);
   const [mapOptions, setMapOptions] = useStored<MapOptions>('chronicle.mapOptions', () => ({ backdrop: false, keepPast: false, connections: false }));
   const [mapCamera, setMapCamera] = useStored<MapCamera>('chronicle.mapView', () => ({ center: [20, 35], zoom: 1.6 }));
   const [dataSeriesId, setDataSeriesId] = useStored<string | null>('chronicle.mapData', () => null);
@@ -295,7 +296,6 @@ function Workspace() {
   };
   const categories = useMemo(() => doc.categories.filter((c) => !hidden.has(c.id)), [doc.categories, hidden]);
   const prominence = useMemo(() => prominenceOf({ items: doc.items ?? [], highlights: doc.highlights ?? [], relations: doc.relations ?? [], notes: doc.notes ?? [] }), [doc.items, doc.highlights, doc.relations, doc.notes]);
-  const thumbFor = useCallback((m: MediaRef) => mediaUrl(m, true), [mediaUrl]);
   const selectedId = panel?.type === 'item' ? panel.id : undefined;
 
   const selectFromTimeline = (id: string | undefined) => {
@@ -484,7 +484,7 @@ function Workspace() {
             <p className="empty-strip" data-testid="empty-state">Your map and timeline fill in as you add what you read.</p>
           )}
           {canGoBackInTime && <button className="btn small focus-chip" onClick={() => timeline.current?.back()}>Back to where I was</button>}
-          {win?.level === 0 && (
+          {win && (
             <div className="lens-bar">
               <span className="lens-bar-label" aria-hidden="true">Lenses</span>
               <LaneChips label="Lenses" value={lenses} onToggle={(l) => setLenses(sortLanes(lenses.includes(l) ? lenses.filter((x) => x !== l) : [...lenses, l]))} />
@@ -496,9 +496,8 @@ function Workspace() {
             relations={doc.relations}
             categories={categories}
             selectedId={selectedId}
-            thumbFor={thumbFor}
             onSelect={selectFromTimeline}
-            onAddAt={(year, categoryId) => setStack([{ type: 'new-item', year, categoryId }])}
+            onAddAt={(year) => setStack([{ type: 'new-item', year }])}
             onAddIn={(lane, year, partOf) => setStack([{ type: 'new-item', year, lane, partOf }])}
             onOpenRelation={(id) => setStack([{ type: 'relation', id }])}
             onOpenThread={(t) => setStack([{ type: 'thread', ...t }])}
@@ -506,6 +505,8 @@ function Workspace() {
             lenses={lenses}
             unfolded={unfolded}
             onUnfold={setUnfolded}
+            opened={openLanes}
+            onOpen={setOpenLanes}
             onWindow={setWin}
             onCanGoBack={setCanGoBackInTime}
             year={year}

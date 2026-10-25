@@ -13,16 +13,13 @@ const INTERRUPTS = ['pointerdown', 'wheel', 'keydown'] as const;
 
 /**
  * Under the timeline: a thumbwheel to spin through time, and a zoom bar with
- * stops from a year to a millennium (and, on the new timeline, the overview).
+ * stops from a year to a millennium.
  */
 export function TimeBar({ win, control, allThreads, onAllThreads }: { win: VisibleWindow; control: RefObject<TimelineControl | null>; allThreads?: boolean; onAllThreads?: (all: boolean) => void }) {
   const span = win.end - win.start;
   const center = (win.start + win.end) / 2;
   const stop = currentStop(span);
-  const eras = win.level === 0;
-  /** The stops show the entries; at the overview, or inside an era, they come back to them first. */
-  const entries = () => { if (win.level !== undefined && win.level !== 2) control.current?.setLevel?.(2); };
-  const zoomTo = (years: number) => { entries(); control.current?.setWindow(windowAround(center, years), true); };
+  const zoomTo = (years: number) => control.current?.setWindow(windowAround(center, years), true);
 
   return (
     <div className="time-bar" data-testid="time-bar">
@@ -40,12 +37,11 @@ export function TimeBar({ win, control, allThreads, onAllThreads }: { win: Visib
         />
         <button className="btn small quiet" aria-label="Zoom the timeline in" onClick={() => control.current?.zoomBy(0.5)}>+</button>
         <div className="zoom-stops">
-          {win.level !== undefined && <button className="chip" aria-pressed={eras} onClick={() => control.current?.setLevel?.(0)}>Overview</button>}
           {ZOOM_STOPS.map((s) => (
-            <button key={s.label} className="chip" aria-pressed={!eras && stop === s.label} onClick={() => zoomTo(s.years)}>{s.label}</button>
+            <button key={s.label} className="chip" aria-pressed={stop === s.label} onClick={() => zoomTo(s.years)}>{s.label}</button>
           ))}
-          <button className="chip" aria-pressed={false} onClick={() => { entries(); control.current?.fit(); }}>All</button>
-          {eras && onAllThreads && <button className="chip threads-toggle" aria-pressed={!!allThreads} onClick={() => onAllThreads(!allThreads)}>Show all threads</button>}
+          <button className="chip" aria-pressed={false} onClick={() => control.current?.fit()}>All</button>
+          {onAllThreads && <button className="chip threads-toggle" aria-pressed={!!allThreads} onClick={() => onAllThreads(!allThreads)}>Show all threads</button>}
         </div>
         <span className="zoom-span" data-testid="zoom-span">{spanLabel(span)} in view</span>
       </div>

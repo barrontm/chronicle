@@ -2,6 +2,14 @@
 
 A log of choices that shouldn't be re-litigated every session. Newest first. To change a decision, add a new entry that supersedes the old one.
 
+## 2026-10-25 — One timeline: the overview, with lanes that open in place
+Bob asked for the overview to replace the regular timeline, and for a polity's lanes to unfurl under it without zooming in on it alone. This supersedes the three zoom levels in "Phase 3 checkpoint" and `docs/vision.md`:
+- **No level 2.** Bob's category lanes of single entries are gone; categories stay filters. The zoom stops (Year to Millennium, All) only zoom. The "Overview" stop is gone.
+- **Lanes open in place.** Clicking a polity's strip, a world event or an era's wash picks it and unfurls its six lanes right under it (an era's under its band's head), on the same years; nothing else moves but what's below. Several can be open at once, each with its own Fold; what's open is remembered per device (`chronicle.openLanes`).
+- **Entries in no polity, world event or era are not on the timeline** (Bob's choice); Search and the Library find them. Opening an entry from elsewhere opens what it's in (the polity Bob made most of, else a world event, else its innermost era) and its lane if closed.
+- **Dragging dates and Claude's drafts moved into the lanes** (Bob's choice). A draft sits in the polity its place or drafted connections put it in; in none, it's in the reader and on the map only.
+- Lost with level 2, on purpose: clusters, and each kind's own glyph on the timeline (lanes draw bars and diamonds; the tray, Search and the map keep the glyphs).
+
 ## 2026-10-21 — Influences between lanes: arrows, with an open vocabulary
 Phase 4b's prototype (`docs/prototypes/influences.html`) showed Athens, 500–400 BCE, on the Greece fixture plus the cases in `next.json` → `influences` (the war and the economy, the plague and religion, silver and tribute paying for building). Bob chose:
 - **A · arrows** between level-1 lanes, coloured by the cause's lane, labelled with the effect, the evidence one tap away. Not chosen: B · a six-by-six "what drove what" grid that opened into the arrows.
