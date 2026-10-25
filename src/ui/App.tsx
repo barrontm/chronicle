@@ -256,8 +256,9 @@ function Workspace() {
   const revealMap = () => { if (narrow) setMapSheet(true); };
 
   const panel = stack.at(-1);
-  // A territory's form that's open draws its borders as they stand in the form.
-  const mapTerritories = useMemo(() => (preview && panel ? [...doc.territories.filter((t) => t.id !== preview.id), preview] : doc.territories), [doc.territories, preview, panel]);
+  // A territory's form that's open draws its borders as they stand in the form (only while the form is the panel shown).
+  const formOpen = panel?.type === 'territory-import' || (panel?.type === 'territory' && !!panel.edit);
+  const mapTerritories = useMemo(() => (preview && formOpen ? [...doc.territories.filter((t) => t.id !== preview.id), preview] : doc.territories), [doc.territories, preview, formOpen]);
   const nav: Nav = useMemo(() => ({
     open: (p) => setStack((s) => [...s, p]),
     replace: (p) => setStack((s) => [...s.slice(0, -1), p]),
