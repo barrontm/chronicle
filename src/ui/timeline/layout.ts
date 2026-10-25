@@ -258,7 +258,7 @@ interface BandGeo { B: PBand; top: number; bottom: number; empty: boolean; headY
 /** What the geometry needs of the screen: band heights depend on how many lines their theme chips take. */
 export type Fit = Pick<Env, 'w' | 'gutter' | 'measure'>
 /** What the geometry needs of the view. */
-export type GeoView = Pick<View, 'win' | 'unfolded' | 'region' | 'lenses' | 'opened' | 'openT' | 'openFade' | 'theme'>;
+export type GeoView = Pick<View, 'win' | 'unfolded' | 'region' | 'lenses' | 'opened' | 'openT' | 'openFade' | 'theme' | 'bandShift'>;
 interface Geo { topH: number; topBlocks: BlockGeo[]; bands: BandGeo[]; H: number }
 
 const inWin = (x: { s: number; e: number }, win: YearWindow) => x.e >= win.start && x.s <= win.end;
@@ -350,9 +350,30 @@ function overviewGeo(D: Prepared, V: GeoView, F: Fit): Geo {
     y += BAND_PAD;
     const bottom = y;
     y += BAND_GAP;
-    return { B, top, bottom, empty, headY, worldY, subs, blocks, chips, chipY, lensY };
+    const g: BandGeo = { B, top, bottom, empty, headY, worldY, subs, blocks, chips, chipY, lensY };
+    const d = V.bandShift?.get(B.name);
+    return d ? shiftBand(g, d) : g;
   });
   return { topH, topBlocks, bands, H: y };
+}
+
+/** A band drawn `d` px from its place, everything in it with it. */
+const shiftBand = (g: BandGeo, d: number): BandGeo => ({
+  ...g, top: g.top + d, bottom: g.bottom + d, headY: g.headY + d, worldY: g.worldY + d, chipY: g.chipY + d, lensY: g.lensY + d,
+  subs: g.subs.map((x) => ({ ...x, y: x.y + d })), blocks: g.blocks.map((x) => ({ ...x, y: x.y + d })),
+});
+
+/** Where each band is, in px from the top of the content, as drawn now (shifted while dragged). */
+export function bandSpans(D: Prepared, V: GeoView, F: Fit): Map<string, [number, number]> {
+  return new Map(overviewGeo(D, V, F).bands.map((g) => [g.B.name, [g.top, g.bottom]]));
+}
+
+/** The bands in another order (a drag's preview), each larger area's name over its first band. */
+export function withBandOrder(D: Prepared, names: readonly string[]): Prepared {
+  const byName = new Map(D.bands.map((B) => [B.name, B]));
+  const bands = names.flatMap((n) => (byName.has(n) ? [byName.get(n)!] : []));
+  if (bands.length !== D.bands.length) return D;
+  return { ...D, bands: bands.map((B, i) => ({ ...B, parentHead: !!B.parent && (i === 0 || bands[i - 1].parent !== B.parent) })) };
 }
 
 /** Every set of open lanes, top to bottom. */
@@ -498,6 +519,10 @@ export interface View {
   allThreads?: boolean;
   /** The lenses on, in pigment order: a strip of each lane's ticks under every band. */
   lenses?: readonly Lane[];
+  /** While Bob drags a band's name: how far each band is drawn from its place, in px (the dragged ones follow the pointer, the others make room). */
+  bandShift?: ReadonlyMap<string, number>;
+  /** The bands being dragged, drawn lifted. */
+  dragging?: ReadonlySet<string>;
 }
 
 export interface Env {
@@ -556,6 +581,7 @@ export function layout(D: Prepared, V: View, E: Env): Scene {
     gutterBox: { x: 0, y: AXIS_H, w: x0, h: Math.max(0, E.h - AXIS_H) },
     contentH: overviewGeo(D, V, E).H,
     adds: [],
+    heads: [],
   };
   const span = V.win.end - V.win.start;
   const ppy = (x1 - x0) / span;
@@ -612,7 +638,9 @@ function overviewRows(c: Ctx) {
   const ribbons = threadRibbons(c, G, base);
   if (ribbons.involved) c.involved = ribbons.involved;
   const focus = V.region && D.bands.some((B) => B.name === V.region) ? V.region : undefined;
-  for (const g of G.bands) {
+  // A band Bob drags is drawn last, over the ones making room for it.
+  const lifted = (g: BandGeo) => (V.dragging?.has(g.B.name) ? 1 : 0);
+  for (const g of V.dragging?.size ? [...G.bands].sort((a, b) => lifted(a) - lifted(b)) : G.bands) {
     const top = base + g.top, bottom = base + g.bottom;
     if (g.B.parentHead) parentRule(c, g.B, top - PARENT_H, phone);
     if (bottom < AXIS_H || top > E.h) continue;
@@ -735,17 +763,21 @@ function band(c: Ctx, g: BandGeo, base: number, phone: boolean, shareOf: (p: PPo
   const M = E.measure;
   const B = g.B;
   const top = base + g.top, bottom = base + g.bottom, headY = base + g.headY;
-  S.z[0].push({ t: 0, k: `bb${B.name}`, a: 1, cls: 'tl-band', x: x0, y: top, w: x1 - x0, h: bottom - top, fill: 'var(--band)' });
+  const lifted = !!V.dragging?.has(B.name);
+  S.z[0].push({ t: 0, k: `bb${B.name}`, a: 1, cls: `tl-band${lifted ? ' lifted' : ''}`, x: x0, y: top, w: x1 - x0, h: bottom - top, fill: 'var(--band)', ...(lifted ? { stroke: 'var(--ink-2)', sw: 1 } : {}) });
   // The region's name: on the band on a phone, in the gutter (staying in view while it scrolls past) otherwise.
   let after = x0 + 6;
   if (phone) {
     const name = fit(M, 'region', B.label, x1 - x0 - 24);
     S.z[2].push({ t: 2, k: `rn${B.name}`, a: 1, cls: 'tl-region', x: x0 + 12, y: headY, s: name, f: 'region', fill: 'var(--ink)' });
     after = x0 + 12 + M('region', name) + 14;
+    if (B.name !== ELSEWHERE && name && headY > AXIS_H) S.heads.push({ region: B.name, label: B.label, x: x0 + 6, y: headY - 16, w: M('region', name) + 12, h: 22 });
   } else {
     // It stays in view only down to the first lanes open in the band, which name themselves.
     const ny = Math.min(Math.max(headY, AXIS_H + 18), (g.blocks.length ? base + g.blocks[0].y : bottom) - 6);
-    S.gutter.push({ t: 2, k: `rn${B.name}`, a: 1, cls: 'tl-region', x: 14, y: ny, s: fit(M, 'region', B.label, E.gutter - 24), f: 'region', fill: 'var(--ink)' });
+    const name = fit(M, 'region', B.label, E.gutter - 24);
+    S.gutter.push({ t: 2, k: `rn${B.name}`, a: 1, cls: 'tl-region', x: 14, y: ny, s: name, f: 'region', fill: 'var(--ink)' });
+    if (B.name !== ELSEWHERE && name && ny > AXIS_H) S.heads.push({ region: B.name, label: B.label, x: 8, y: ny - 16, w: Math.min(E.gutter - 12, M('region', name) + 12), h: 22 });
     const gy = bottom + BAND_GAP / 2 - 0.5;
     S.gutter.push({ t: 3, k: `gr${B.name}`, a: 1, x1: 0, y1: gy, x2: E.gutter, y2: gy, stroke: 'var(--rule-soft)' });
   }
@@ -1209,7 +1241,7 @@ const entriesN = (n: number) => `${n} ${n === 1 ? 'entry' : 'entries'}`;
 
 const highlightsN = (n: number) => `${n} ${n === 1 ? 'highlight' : 'highlights'}`;
 const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
-const blank = (S: Scene): Scene => ({ ...S, z: [[], [], [], []], gutter: [], axis: [], targets: [], boxes: new Map(), laneBoxes: new Map(), adds: [] });
+const blank = (S: Scene): Scene => ({ ...S, z: [[], [], [], []], gutter: [], axis: [], targets: [], boxes: new Map(), laneBoxes: new Map(), adds: [], heads: [] });
 
 /** A primitive moved by `Y` and faded: marks by `ma`, words and glyphs by `ta`. Arrows and shapes wait until it's open. */
 function squash(p: Prim, Y: (y: number) => number, ma: number, ta: number): Prim | undefined {

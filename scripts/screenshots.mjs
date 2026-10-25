@@ -307,6 +307,32 @@ if (any('desktop-lanes')) await lanes(await page('desktop-lanes', desktop), 'des
 if (any('dark-lanes')) await lanes(await page('dark-lanes', { ...desktop, colorScheme: 'dark' }), 'dark');
 if (any('phone-lanes')) await lanes(await page('phone-lanes', { viewport: { width: 412, height: 860 }, isMobile: true, hasTouch: true }), 'phone');
 
+/** A region's menu, opened from its band's name; on a laptop, a band halfway through a drag. */
+async function regionMenu(p, prefix) {
+  await withFixture(p);
+  const names = p.locator('.tl-band-name');
+  await names.first().waitFor();
+  await p.locator('[data-testid=timeline][data-settled]').waitFor();
+  if (prefix !== 'phone' && (await names.count()) > 1) {
+    const b = await names.nth(1).boundingBox();
+    await p.mouse.move(b.x + 20, b.y + b.height / 2);
+    await p.mouse.down();
+    await p.mouse.move(b.x + 20, b.y - 30, { steps: 10 });
+    await p.waitForTimeout(450);
+    await shot(p, `${prefix}-region-drag`);
+    await p.keyboard.press('Escape');
+    await p.mouse.up();
+    await p.waitForTimeout(450);
+  }
+  await p.locator('[data-testid=timeline][data-settled]').waitFor();
+  await names.first().click();
+  await p.getByTestId('region-menu').waitFor();
+  await shot(p, `${prefix}-region-menu`);
+}
+if (any('desktop-region')) await regionMenu(await page('desktop-region', desktop), 'desktop');
+if (any('dark-region')) await regionMenu(await page('dark-region', { ...desktop, colorScheme: 'dark' }), 'dark');
+if (any('phone-region')) await regionMenu(await page('phone-region', { viewport: { width: 412, height: 860 }, isMobile: true, hasTouch: true }), 'phone');
+
 // The overview on the Classical Greece fixture, then Classical Greece unfolded with Athens open.
 const GREECE = fileURLToPath(new URL('../tests/fixtures/greece/classical-greece.json', import.meta.url));
 async function overview(p, prefix) {

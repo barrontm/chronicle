@@ -3,6 +3,7 @@ import { describeEffect } from '../../model/doc';
 import type { EraRegion } from '../../model/eras';
 import type { LensMarks } from '../../model/lenses';
 import type { Overview } from '../../model/overview';
+import { bandBlocks, dropBand } from '../../model/bandOrder';
 import type { DatedItem, HistDate, Lane, Relation } from '../../model/types';
 import { bandSummary, chipSummary, parseThemeKey } from '../representations/era';
 import { ARROW, RIBBON } from '../representations/influence';
@@ -12,7 +13,7 @@ import { DEEP_LIMITS, panBy, windowAround, zoomAround, type YearWindow } from '.
 import { attachGestures } from './gestures';
 import {
   AXIS_H, blockSpan, describeEra, describeLane1, eraLanes, eraSpan, FOLD, hasThreads, hitBox, hitTest, INERT, layout, maxScroll, openSpan, parseToggle,
-  PHONE_W, polityLanes, prepare, regionSpan, revealIn, stripSpan, stepEra, stepLane1, THEMES_MORE, type EraLanes, type LaneInput, type PEra, type Prepared, type StepKey, type View,
+  bandSpans, PHONE_W, polityLanes, prepare, regionSpan, withBandOrder, revealIn, stripSpan, stepEra, stepLane1, THEMES_MORE, type EraLanes, type LaneInput, type PEra, type Prepared, type StepKey, type View,
 } from './layout';
 import { svgPainter } from './paint';
 import { FONTS, SPACING, type FontKey, type Link, type Measure, type Scene, type Target } from './scene';
@@ -73,6 +74,12 @@ export interface TimelineCallbacks {
   onUnfold?: (ids: string[]) => void;
   /** Bob opened or folded lanes in place: what's open now (`pol:<territory>`, world events' and eras' ids), to remember. */
   onOpen?: (keys: string[]) => void;
+  /** Bob clicked a band's name: its region's menu, beside `anchor` (the name's box on screen). */
+  onRegionHead?: (region: string, anchor: DOMRect) => void;
+  /** Bob dragged a band (laptop) to make `order`; `moved` is the band, or its larger area's bands. Without it bands don't drag. */
+  onOrderRegions?: (order: string[], moved: string[]) => void;
+  /** Bob pressed ↑ or ↓ on a band's name. */
+  onMoveRegion?: (region: string, dir: -1 | 1) => void;
 }
 
 /** What the overview has picked (`pol:<territory>` or a world event's id), whether its lanes are open, and its open lane with what's in it. */
@@ -108,6 +115,8 @@ export interface TimelineHandle {
 }
 
 const MOVE_MS = 400;
+/** How far down a band its name is held when it's dragged, in px from its top. */
+const HEAD_GRIP = 20;
 /** Room kept above open lanes for the strip they opened from. */
 const STRIP_ROOM = 48;
 /** How long the pointer rests on a strip before its threads take over from the ones lit. */
@@ -306,6 +315,148 @@ export function createTimeline(host: HTMLElement, cb: TimelineCallbacks, initial
     }
   };
 
+  /* ---------- band names: a menu, and moving bands ---------- */
+  // Each band's name is a real button over the drawing: a click opens its region's menu,
+  // ↑ and ↓ move the band, and on a laptop it drags up and down, snapping between bands.
+  const heads = document.createElement('div');
+  heads.className = 'tl-band-names';
+  host.append(heads);
+  const headButtons = new Map<string, HTMLButtonElement>();
+  for (const type of ['pointerdown', 'pointermove', 'pointerup', 'click', 'dblclick', 'keydown'] as const) heads.addEventListener(type, (e) => e.stopPropagation());
+  /** A band being dragged: from where, the order it started in, what moves (the band or its larger area's run), and the order shown now. */
+  let drag: { region: string; pointer: number; y0: number; started: boolean; base: Prepared; order: string[]; spans: Map<string, [number, number]>; unit: string[]; preview: string[] } | null = null;
+  /** The other bands making room: how far from their new places they started, and when. */
+  const room = new Map<string, { from: number; t0: number | null }>();
+  const bandShift = new Map<string, number>();
+  const lifted = new Set<string>();
+  V.bandShift = bandShift;
+  V.dragging = lifted;
+  const parentOfBand = (r: string) => D.bands.find((B) => B.name === r)?.parent;
+  const headDown = (e: PointerEvent, region: string) => {
+    if (!cb.onOrderRegions || e.button !== 0 || size.w < PHONE_W || tween || unfurls.size || folds.size) return;
+    const order = D.bands.map((B) => B.name);
+    drag = { region, pointer: e.pointerId, y0: e.clientY, started: false, base: D, order, spans: bandSpans(D, V, env()), unit: [region], preview: order };
+  };
+  const headMove = (e: PointerEvent, b: HTMLButtonElement) => {
+    if (!drag || e.pointerId !== drag.pointer) return;
+    const dy = e.clientY - drag.y0;
+    if (!drag.started) {
+      if (Math.abs(dy) < 5) return;
+      drag.started = true;
+      b.setPointerCapture(e.pointerId);
+      host.dataset.dragging = drag.region;
+      tip.hidden = true;
+      window.addEventListener('keydown', escDrag, true);
+    }
+    // Where the pointer holds the band's name: it passes a band (or a run) once the name crosses
+    // that one's middle. Past another run, its larger area's whole run moves; else just the band, among its run.
+    const { spans, order, region } = drag;
+    const mid = (r: string) => (spans.get(r)![0] + spans.get(r)![1]) / 2;
+    const runMid = (b: string[]) => (spans.get(b[0])![0] + spans.get(b[b.length - 1])![1]) / 2;
+    const blocks = bandBlocks(order, parentOfBand);
+    const block = blocks.find((b) => b.includes(region))!;
+    const at = spans.get(region)![0] + HEAD_GRIP + dy;
+    const runSlot = blocks.filter((x) => x !== block && runMid(x) < at).length;
+    const [unit, slot] = block.length === 1 || runSlot !== blocks.indexOf(block)
+      ? [block, runSlot]
+      : [[region], block.filter((r) => r !== region && mid(r) < at).length];
+    const preview = dropBand(order, unit, slot, parentOfBand);
+    if (preview.join('\u0000') !== drag.preview.join('\u0000')) {
+      // The others slide to their new places from where they're drawn now.
+      const was = bandSpans(D, V, env());
+      D = withBandOrder(drag.base, preview);
+      const now = bandSpans(D, { ...V, bandShift: undefined }, env());
+      for (const [r, [t]] of now) {
+        if (unit.includes(r)) continue;
+        const from = was.get(r)![0] - t;
+        if (reducedMotion() || Math.abs(from) < 0.5) room.delete(r); else room.set(r, { from, t0: null });
+        if (reducedMotion()) bandShift.delete(r); else bandShift.set(r, from);
+      }
+      drag.preview = preview;
+    }
+    // The dragged band (or run) follows the pointer from where it started.
+    lifted.clear();
+    const placed = bandSpans(D, { ...V, bandShift: undefined }, env());
+    for (const r of unit) { lifted.add(r); room.delete(r); bandShift.set(r, spans.get(r)![0] + dy - placed.get(r)![0]); }
+    for (const r of drag.unit) if (!unit.includes(r)) { const from = bandShift.get(r) ?? 0; lifted.delete(r); if (reducedMotion()) bandShift.delete(r); else room.set(r, { from, t0: null }); }
+    drag.unit = unit;
+    schedule();
+  };
+  /** The dragged band settles into its place (or back, when Bob lets go where it started or presses Esc). */
+  const escDrag = (e: KeyboardEvent) => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); endDrag(false); } };
+  const endDrag = (keep: boolean) => {
+    window.removeEventListener('keydown', escDrag, true);
+    if (!drag) return;
+    const d = drag;
+    drag = null;
+    delete host.dataset.dragging;
+    if (!d.started) return;
+    // The click that comes with letting go isn't one.
+    const held = headButtons.get(d.region);
+    if (held) held.dataset.dragged = '';
+    const changed = keep && d.preview.some((r, i) => r !== d.order[i]);
+    // Every band eases from where it's drawn to its place.
+    const drawn = bandSpans(D, V, env());
+    if (!changed) D = d.base;
+    lifted.clear();
+    bandShift.clear();
+    room.clear();
+    if (!reducedMotion()) {
+      for (const [r, [t]] of bandSpans(D, V, env())) {
+        const from = drawn.get(r)![0] - t;
+        if (Math.abs(from) >= 0.5) { room.set(r, { from, t0: null }); bandShift.set(r, from); }
+      }
+    }
+    schedule();
+    if (changed) cb.onOrderRegions?.(d.preview, d.unit);
+  };
+  const placeHeads = (S: Scene) => {
+    const spots = cb.onRegionHead || cb.onOrderRegions ? S.heads : [];
+    const canDrag = !!cb.onOrderRegions && size.w >= PHONE_W;
+    for (const h of spots) {
+      let b = headButtons.get(h.region);
+      if (!b) {
+        const region = h.region;
+        const btn = b = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'tl-band-name';
+        btn.dataset.region = region;
+        btn.setAttribute('aria-haspopup', 'menu');
+        btn.addEventListener('pointerdown', (e) => { delete btn.dataset.dragged; headDown(e, region); });
+        btn.addEventListener('pointermove', (e) => headMove(e, btn));
+        btn.addEventListener('pointerup', () => endDrag(true));
+        btn.addEventListener('pointercancel', () => endDrag(false));
+        btn.addEventListener('lostpointercapture', () => { if (drag?.started) endDrag(true); });
+        btn.addEventListener('click', () => {
+          // The click that ends a drag isn't one.
+          if (btn.dataset.dragged !== undefined) { delete btn.dataset.dragged; return; }
+          cb.onRegionHead?.(region, btn.getBoundingClientRect());
+        });
+        btn.addEventListener('keydown', (e) => {
+          if ((e.key !== 'ArrowUp' && e.key !== 'ArrowDown') || e.altKey || e.metaKey || e.ctrlKey || !cb.onMoveRegion) return;
+          e.preventDefault();
+          cb.onMoveRegion(region, e.key === 'ArrowUp' ? -1 : 1);
+        });
+        headButtons.set(region, btn);
+      }
+      b.setAttribute('aria-label', `${h.label}: the region’s menu${cb.onMoveRegion ? '. Up and down arrows move its band' : ''}`);
+      b.title = canDrag ? `${h.label}: click for its menu, drag to move its band` : `${h.label}: click for its menu`;
+      b.classList.toggle('draggable', canDrag);
+      b.style.transform = `translate(${size.left + h.x}px, ${h.y}px)`;
+      b.style.width = `${h.w}px`;
+      b.style.height = `${h.h}px`;
+    }
+    // In band order, so Tab goes down the bands; those scrolled out of view leave. Not while one is
+    // dragged: taking the held button out of the page would let go of the pointer.
+    if (drag?.started) return;
+    const order = spots.map((h) => headButtons.get(h.region)!);
+    if (order.length !== heads.children.length || order.some((b, i) => heads.children[i] !== b)) {
+      const focused = [...headButtons.values()].find((b) => b === document.activeElement);
+      heads.replaceChildren(...order);
+      focused?.focus({ preventScroll: true });
+    }
+  };
+
   /** On a phone there's no gutter: names sit above their rows. */
   const gut = () => (size.w < PHONE_W ? 0 : size.gutter);
   const env = () => ({ w: size.w, h: size.h, gutter: gut(), measure });
@@ -318,6 +469,7 @@ export function createTimeline(host: HTMLElement, cb: TimelineCallbacks, initial
     scene = layout(D, V, env());
     painter.draw(scene);
     placeAdds(scene);
+    placeHeads(scene);
     const w = { start: V.win.start, end: V.win.end, left: size.left + gut(), width: size.w - gut() };
     if (!reported || !sameWin(reported, w) || reported.left !== w.left || reported.width !== w.width) {
       reported = w;
@@ -327,7 +479,7 @@ export function createTimeline(host: HTMLElement, cb: TimelineCallbacks, initial
     reportFocus();
     // What's open, and whether anything is moving (tests wait for it to settle before tapping).
     host.dataset.open = openKeys().join(' ');
-    if (!tween && !folds.size && !unfurls.size) host.dataset.settled = '';
+    if (!tween && !folds.size && !unfurls.size && !room.size) host.dataset.settled = '';
     else delete host.dataset.settled;
   };
   /** Groups folding or unfolding on the overview. */
@@ -361,8 +513,14 @@ export function createTimeline(host: HTMLElement, cb: TimelineCallbacks, initial
       V.win = { start: tween.from.start + (tween.to.start - tween.from.start) * e, end: tween.from.end + (tween.to.end - tween.from.end) * e };
       if (p >= 1) tween = null;
     }
+    for (const [r, f] of room) {
+      if (f.t0 === null) f.t0 = now;
+      const p = clamp((now - f.t0) / MOVE_MS, 0, 1);
+      bandShift.set(r, f.from * (1 - ease(p)));
+      if (p >= 1) { room.delete(r); bandShift.delete(r); }
+    }
     render();
-    if (tween || folds.size || unfurls.size) schedule();
+    if (tween || folds.size || unfurls.size || room.size) schedule();
   };
   const schedule = () => { if (!raf) raf = requestAnimationFrame(frame); };
 
@@ -764,6 +922,8 @@ export function createTimeline(host: HTMLElement, cb: TimelineCallbacks, initial
 
   return {
     setData(d) {
+      // New data mid-drag: the drag lets go, the bands in their new order.
+      if (drag) { window.removeEventListener('keydown', escDrag, true); drag = null; delete host.dataset.dragging; lifted.clear(); bandShift.clear(); room.clear(); }
       D = prepare(d.items, d.lanes, { now: V.now, prominence: d.prominence, drafts: d.drafts, relations: d.relations, eras: d.eras, overview: d.overview, threads: d.threads, lenses: d.lenses });
       // A pick whose strip or world event has gone lets go.
       if (V.pick && !D.polById.has(V.pick.slice(4)) && !D.byId.get(V.pick)?.world) V.pick = undefined;
@@ -859,6 +1019,7 @@ export function createTimeline(host: HTMLElement, cb: TimelineCallbacks, initial
       tip.remove();
       option.remove();
       adds.remove();
+      heads.remove();
       host.removeAttribute('role');
       delete host.dataset.open;
       delete host.dataset.settled;

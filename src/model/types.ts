@@ -378,7 +378,7 @@ export interface Region {
   name: string;
   /** The larger area it's in, such as Mediterranean: Bob's word, not another record. */
   parent?: string;
-  /** Its place among the bands when Bob has moved it (S8). Unused until then. */
+  /** Its place among the bands (an index, Elsewhere aside) when Bob moved it; the rest order themselves around it (`withBobsOrder`). */
   order?: number;
   /** Where it is on the map (S9): some of Bob's territories, or a drawn shape. Unused until then. */
   outline?: { territoryIds?: string[]; geometry?: Polygon | MultiPolygon };

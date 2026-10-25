@@ -829,3 +829,78 @@ test('Bob renames a region in the Library and its band takes the new name, then 
   await expect(page.getByTestId('regions-tab').getByRole('listitem', { name: 'Macedon' })).toBeVisible();
   await expect(page.getByTestId('regions-tab').getByRole('listitem', { name: 'Macedonia' })).toHaveCount(0);
 });
+
+test('Bob moves the bands himself: from a band’s menu, by dragging its name and with the arrow keys, kept after a reload, then back to automatic order', async ({ page }) => {
+  test.slow();
+  await page.setViewportSize({ width: 1400, height: 1800 });
+  const timeline = await openGreece(page, false);
+  await page.getByTestId('time-bar').getByRole('button', { name: 'All', exact: true }).click();
+  const names = timeline.locator('.tl-band-name');
+  const order = () => names.evaluateAll((bs) => bs.map((b) => (b as HTMLElement).dataset.region));
+  const head = (r: string) => timeline.locator(`.tl-band-name[data-region="${r}"]`);
+  const menu = page.getByTestId('region-menu');
+  await expect.poll(order).toEqual(['Italy', 'Macedon', 'Greece']);
+
+  // The menu, right on the band's name.
+  await head('Macedon').click();
+  await expect(menu.getByRole('menuitem', { name: 'Rename' })).toBeFocused();
+  await expect(menu.getByRole('menuitem', { name: 'Back to automatic order' })).toHaveCount(0);
+  await menu.getByRole('menuitem', { name: 'Move up' }).click();
+  await expect(menu).toHaveCount(0);
+  await expect.poll(order).toEqual(['Macedon', 'Italy', 'Greece']);
+  await expect(page.getByTestId('bulk-note')).toHaveText(/Moved Macedon\./);
+
+  // The arrow keys on its name.
+  await head('Macedon').focus();
+  await page.keyboard.press('ArrowDown');
+  await expect.poll(order).toEqual(['Italy', 'Macedon', 'Greece']);
+  await expect(head('Macedon')).toBeFocused();
+
+  // Dragging a name up past the others; they make room, and it snaps into place.
+  await expect(timeline).toHaveAttribute('data-settled', '');
+  const from = (await head('Greece').boundingBox())!, to = (await head('Italy').boundingBox())!;
+  await page.mouse.move(from.x + 20, from.y + from.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(from.x + 20, from.y - 10, { steps: 4 });
+  await page.mouse.move(from.x + 20, to.y - 30, { steps: 12 });
+  await expect(timeline).toHaveAttribute('data-dragging', 'Greece');
+  await page.mouse.up();
+  await expect.poll(order).toEqual(['Greece', 'Italy', 'Macedon']);
+  await expect(menu).toHaveCount(0);
+
+  // Esc mid-drag puts the band back, and letting go opens no menu.
+  await expect(timeline).toHaveAttribute('data-settled', '');
+  const it = (await head('Italy').boundingBox())!;
+  await page.mouse.move(it.x + 20, it.y + it.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(it.x + 20, it.y - 80, { steps: 10 });
+  await expect(timeline).toHaveAttribute('data-dragging', 'Italy');
+  await page.keyboard.press('Escape');
+  await page.mouse.up();
+  await expect(menu).toHaveCount(0);
+  await expect.poll(order).toEqual(['Greece', 'Italy', 'Macedon']);
+
+  // Kept after a reload.
+  await expect(page.getByTestId('save-state')).toHaveText('Saved on this device');
+  await page.reload();
+  await expect(page.locator('[data-testid=timeline][data-ready]')).toBeVisible();
+  await expect.poll(order).toEqual(['Greece', 'Italy', 'Macedon']);
+
+  // Rename from the menu, with Undo.
+  await head('Italy').click();
+  await menu.getByRole('menuitem', { name: 'Rename' }).click();
+  await menu.getByLabel('New name for Italy').fill('Magna Graecia');
+  await menu.getByRole('button', { name: 'Rename' }).click();
+  await expect.poll(order).toEqual(['Greece', 'Magna Graecia', 'Macedon']);
+  await page.getByTestId('bulk-note').getByRole('button', { name: 'Undo' }).click();
+  await expect.poll(order).toEqual(['Greece', 'Italy', 'Macedon']);
+
+  // Esc closes the menu; Back to automatic order puts every band back.
+  await head('Greece').click();
+  await page.keyboard.press('Escape');
+  await expect(menu).toHaveCount(0);
+  await expect(head('Greece')).toBeFocused();
+  await head('Greece').click();
+  await menu.getByRole('menuitem', { name: 'Back to automatic order' }).click();
+  await expect.poll(order).toEqual(['Italy', 'Macedon', 'Greece']);
+});
