@@ -385,6 +385,7 @@ function OwnBorders({ year, nav }: { year: number; nav: Nav }) {
       snapshots: [{ ...snapshotOf(shape.geometry, from.d!), ...(to.d ? { to: to.d } : {}) }],
       source: { name: shape.source }, updatedAt: 0,
     };
+    nav.preview(null); // in the same render as the saved one, so the map never draws both
     update((d) => upsert(d, 'territories', territory));
     nav.replace({ type: 'territory', id: territory.id });
     nav.showOnMap(toDecimalYear(from.d!));
