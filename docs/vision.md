@@ -3,15 +3,30 @@
 Where Chronicle is heading (planned 2026-10-16). A living doc: change it at a phase checkpoint and log why in `decisions.md`. Tickets live in `ROADMAP.md`.
 
 ## The two big changes
-1. **Reading is how you add.** Bob reads Wikipedia (later other sources) inside the app, highlights what matters, and the app turns highlights into records on the map and timeline. It recognizes what the subject is and draws each kind of thing in its own way. Code does the work where facts are structured (Wikidata); AI only where they aren't (the highlighted prose). No Add button, no kind buttons.
+1. **Reading is how you add.** Bob reads Wikipedia (later other sources) inside the app. One **Add to Chronicle** button on each article puts its subject and what the article describes on the map and timeline at once, as unchecked drafts with one Undo (Bob, 2026-10-25: adding by hand was unwieldy). Highlighting adds what the button missed. The app recognizes what the subject is and draws each kind of thing in its own way. Code does the work where facts are structured (Wikidata); AI only where they aren't (the article's prose). No kind buttons.
 2. **Visuals with zoom levels.** Zoomed out: the polities and world events Bob has read about, each polity a strip as thick as its power, over a faint backdrop of eras (Bob, 2026-10-18; it was era bands until the Phase 3 checkpoint). Opening a polity or a world event: how it changed in six lanes (politics, war, economy, philosophy and religion, technology, nature), with the map following. Simple animations: technology spreading, migrations, wars, borders and governments changing.
 
-Nothing appears until Bob has read and highlighted it. The app still ships no content.
+Nothing appears until Bob has read it and pressed Add, or highlighted it. The app still ships no content.
 
 ## Reader and highlights
 - **Reader pane:** Wikipedia article HTML (Parsoid REST, `/api/rest_v1/page/html/{title}`, CORS-open), sanitized and set in Chronicle's type. Laptop: beside the map and timeline. Phone: full-screen reader with a capture tray. It works equally on both. Wiki links open in the reader and build a reading trail.
 - **Highlight** is a record: `{ id, sourceId, text, anchor: { revisionId, section, exact, prefix, suffix }, dimension?, subjectQid?, usedBy, updatedAt }`. Anchors follow the W3C TextQuoteSelector idea, so highlights survive article edits. Every record can point at the highlights that justify it; today's single `excerpt` migrates into one.
 - Articles are cached for offline rereading in IndexedDB, outside the doc.
+
+## Add to Chronicle: a whole article at once
+Bob's choice (2026-10-25): one tap, then Undo; the subject plus what the article describes.
+- **Code first.** The subject from Wikidata: its kind, its dates with their uncertainty, its places, region, lanes and `part of`; a polity's Seshat borders, or the polity a place was in; connections to what Bob already has; the article as a source and its lead as a highlight. This works without a Claude key.
+- **AI second** (`article` feature): the main events, people and actors the article describes (about 20 at most), with lanes, uncertain or competing dates, gradual starts and ends, places by name, and connections with an effect, a date and a certainty. Every record carries the quote behind it, which becomes an anchored highlight. Quotes must be in the article, places come from gazetteers, and nothing Bob has is added twice.
+- **Unchecked, not hidden.** Everything lands at once, dashed, with one Undo for the whole article. Bob checks records as he reads them (one at a time or all at once), and any edit checks one. Pressing Add again updates the article without duplicating.
+
+## Uncertain time
+Beginnings and ends in history are rarely points. A date keeps its best guess (`y`, so everything sorts and lays out as before) and may add how far it could be off (`earliest`, `latest`), how precise it is (a decade, a century, a millennium) and a qualifier (before, after, by). An entry can hold competing dates, each with its source, and the one Bob chose is drawn solid with the others as ticks. A beginning or end can take time (`transition`): the fall of Rome, the Industrial Revolution and a religion's spread start and end as ramps, not edges. One thing can become another (`transformed-into`): the Roman Republic's strip carries on as the Empire's. Eras belong to a named periodization, and the backdrop shows one at a time, because periodizing is itself an argument.
+
+## Actors, not only states
+History is made by more than territorial states. A strip on the timeline can be any actor: a polity, a people, a movement, a religion, a class, a network such as the Hanseatic League, a company. An actor's thickness comes from Bob's strength points or a trend he picks; land area is only a polity's fallback. Where an actor is can be a territory, its places, a region, or nowhere in particular. Ground can be held in several ways (core, claimed, tributary, influence, contested), by more than one actor at once. Places can be uncertain (a soft circle) and change names over time. Rows group by region by default, or by alliance or network, lane, or Bob's own groups. A seventh lane, **Society**, holds class, gender, family, labour, slavery, demography and everyday life.
+
+## Arguments
+History is learned as questions as much as facts. A `Question` ("Why did the Western Roman Empire fall?") holds positions, each with who argued it, its evidence and the records it relies on, and sits as a chip on the eras and polities it concerns. Connections carry a certainty (established, argued, speculative). Add to Chronicle drafts questions from an article's historiography sections.
 
 ## Recognition: code first, AI second
 - `src/model/subjects.ts` (pure, tested): page → Wikidata QID → P31/P279 class chain → `person | polity | period | war | battle | event | movement/idea | technology | economy | work | place | migration`. Facts: P580/P582/P585 dates, P625 coordinates, P361 part of, P155/P156 follows/followed by, P710 participants, P276 location, P122 form of government.
@@ -70,11 +85,11 @@ A connection can carry an `effect` (weakened, funded, legitimised, …) and the 
 Bob's direction at the Phase 3 checkpoint (2026-10-18). Phase 4's prototype settles the look.
 
 - **What's at the top.** Polities (nations, empires, republics, leagues of city-states) and world events: the Reformation, the split of the Roman Empire, the spread of Christianity, Islam and Judaism, world-changing inventions such as the steam engine. World events are gold, which marks their weight, and need no row or category of their own. Bob can mark any entry "Show in the overview", and any entry as a world event (`overview: 'shown' | 'world'`, v9).
-- **Thickness is power.** A polity's strip is as thick as its power, reach and population in each year. Athens starts as a sliver, grows as its power does, and thins as Macedon comes to dominate. By default it follows the area of the territory's borders in that year (`areaKm2`). Bob can set a relative strength (1 to 5) at any date, citing a highlight, and that wins. A polity with neither is one even width.
+- **Thickness is power.** An actor's strip is as thick as its power, reach and population in each year. Athens starts as a sliver, grows as its power does, and thins as Macedon comes to dominate. Bob's relative strength (1 to 5, at any date, citing a highlight) wins; else a trend he picks for it (population, adherents, ships); else, for a polity only, the area of its borders that year (`areaKm2`), which flatters land empires over sea and trading powers (Phase 4c). An actor with none of these is one even width.
 - **Related polities sit together.** Rows are ordered by geography and history: by default (Bob can move a band himself and rename, merge and outline regions: small tickets S7 to S9) Classical Greece beside Macedon and Persia, the Chinese dynasties far off. Region parents group them (Mediterranean › Greece), and a group of city-states can fold into one row (Classical Greece) and open into Athens, Sparta and Corinth.
 - **Eras are the backdrop.** Each region's eras are a faint labelled wash behind its strips, so "Classical" still reads at a glance; theme chips sit on the wash.
 - **Opening a polity or world event** drops its six lanes beneath its strip, each a sub-timeline of changes. Before a lane is opened it already shows its most important changes (by `prominence`); opening it shows all of them, and how they relate to the other lanes (influences, Phase 4b). The lanes don't appear at the top; only under what is open.
-- **The six lanes** (Bob's): **Politics** (constitutions, laws, leaders, movements), **War**, **Economy** (production, and how goods were distributed: the state, markets, kinship…), **Philosophy and religion** (leaders, texts, schisms), **Technology** (inventions, tools, techniques, discoveries), **Nature** (climate, disasters, disease, the land and its resources). No People lane: notable people sit in each lane they belong to. An entry can be in several (the Reformation is religious and political). Lanes are sorted automatically from what a thing is and its highlights, and what Bob sets always wins.
+- **The six lanes** (Bob's): **Politics** (constitutions, laws, leaders, movements), **War**, **Economy** (production, and how goods were distributed: the state, markets, kinship…), **Philosophy and religion** (leaders, texts, schisms), **Technology** (inventions, tools, techniques, discoveries), **Nature** (climate, disasters, disease, the land and its resources). Phase 4c adds a seventh, **Society** (class, gender, family, labour, slavery, demography, everyday life), which v9 had left to the automatic sort. No People lane: notable people sit in each lane they belong to. An entry can be in several (the Reformation is religious and political). Lanes are sorted automatically from what a thing is and its highlights, and what Bob sets always wins.
 - **The map follows.**
   - Picking a polity shows it and the polities it dealt with at the year shown (trade, war, crusades, alliances), each marked with how.
   - An open lane shows its layer: **War** highlights every participant in its wars (with today's zoom to a category), **Economy** shows production sites and flows of goods, **Philosophy and religion** shows where thinkers were born, their schools and traditions, religious leaders and movements, **Technology** shows where inventions appeared and how they spread, **Nature** shows disasters, epidemics and climate over the areas they touched, **Politics** shows political change as the year plays. Each later phase's map layer is also its lane's layer.
@@ -101,10 +116,13 @@ Bob will add thousands of things across millennia. Zoomed out, the timeline shou
 - v8: places may have no start or no end (done, Phase 3 ticket 4).
 - v9: `lanes` on entries and highlights (filled from `dimension`), the overview mark, `strength` and `region` on territories, region parents, polity groups, territories as connection ends (with a side).
 - v10: regions as records (`Region`: name, larger area, place in the band order, outline on the map), filled from the region names in use and `regionParents`.
-- v11: `regimes` on territories, alliances, and campaign routes on wars.
-- v12: `economies` (with `distribution`), plus `Flow.subject` and `goods`.
-- v13: `institutions` with `structures`, `reception` on ideas and works, `Flow.subject: 'ideas'`.
-- v14: kinds of border (`edge` on territory snapshots), walls, forces on wars and battles.
+- v11: uncertain dates (`earliest`, `latest`, `precision`, `qualifier`), competing dates and `transition` on entries, `unchecked` drafts, `when` and `certainty` and new types on connections, the Society lane.
+- v12: actors that aren't territories (`group`), holds on territory snapshots, uncertain places and names over time.
+- v13: questions with positions, periodizations.
+- v14: `regimes` on actors, alliances, and campaign routes on wars.
+- v15: `economies` (with `distribution`), plus `Flow.subject` and `goods`.
+- v16: `institutions` with `structures`, `reception` on ideas and works, `Flow.subject: 'ideas'`.
+- v17: kinds of border (`edge` on territory snapshots), walls, forces on wars and battles.
 
 Each bump that adds a record also makes it a valid connection endpoint.
 
@@ -121,10 +139,11 @@ Each phase ships something usable, behind a "Try the new layout" setting (`ui.ne
    - Small tickets after it: add from a lane; borders from Seshat (Cliopatria); the polity a place was in
    - 4b. Themes, influences between lanes, threads; eras on the map; lenses, regions and groups in the app
    - Small tickets after it: the overview is the timeline (lanes open in place); regions Bob edits (v10): rename, merge, his own band order, edits on the timeline, outlines on the map
-5. Polities and wars: regimes (v11), border morph, alliances, campaigns, battles
-   - 5b. Economy, with distribution (v12)
-   - 5c. Ideas, schools and spread (v13)
-   - 5d. Living map: kinds of border and walls, war technology, disasters, discoveries, the look of ideas and religion (v14)
+   - 4c. Whole articles, uncertainty and actors: Add to Chronicle, uncertain dates and the Society lane (v11), actors and softer geography (v12), questions and periodizations (v13)
+5. Polities and wars: regimes (v14), border morph, alliances, campaigns, battles
+   - 5b. Economy, with distribution (v15)
+   - 5c. Ideas, schools and spread (v16)
+   - 5d. Living map: kinds of border and walls, war technology, disasters, discoveries, the look of ideas and religion (v17)
 6. Other sources: Worker proxy with Readability, bookmarklet / share target, PDFs and EPUBs Bob uploads
 
 A checkpoint session closes each phase. It triages the ideas inbox, reorders what's left and logs changes.
