@@ -169,7 +169,7 @@ async function drawBorder(p, prefix) {
   await p.getByTestId('own-borders').getByRole('button', { name: 'Draw on the map' }).click();
   const box = await p.getByTestId('map').boundingBox();
   const canvas = p.locator('[data-testid=map] canvas');
-  for (const [dx, dy] of [[-60, -10], [40, -40], [70, 30], [0, 70]]) await canvas.click({ position: { x: box.width / 2 + dx, y: box.height / 2 + dy } });
+  for (const [dx, dy] of [[-60, -10], [40, -40], [70, 30], [0, 70]]) await canvas.click({ position: { x: box.width / 2 + dx, y: box.height * 0.5 + dy * 0.7 } });
   await p.waitForTimeout(300);
   await shot(p, `${prefix}-draw`);
   await p.getByTestId('draw-toolbar').getByRole('button', { name: 'Done' }).click();
@@ -332,6 +332,30 @@ async function regionMenu(p, prefix) {
 if (any('desktop-region')) await regionMenu(await page('desktop-region', desktop), 'desktop');
 if (any('dark-region')) await regionMenu(await page('dark-region', { ...desktop, colorScheme: 'dark' }), 'dark');
 if (any('phone-region')) await regionMenu(await page('phone-region', { viewport: { width: 412, height: 860 }, isMobile: true, hasTouch: true }), 'phone');
+
+/** A region's outline (S9): "Where on the map…" in its menu, then drawn and focused, edged in ink on the map. */
+async function regionOutline(p, prefix) {
+  await withFixture(p);
+  const names = p.locator('.tl-band-name');
+  await names.first().waitFor();
+  await p.locator('[data-testid=timeline][data-settled]').waitFor();
+  await names.last().click();
+  const menu = p.getByTestId('region-menu');
+  await menu.getByRole('menuitem', { name: 'Where on the map…' }).click();
+  await shot(p, `${prefix}-region-where`);
+  await menu.getByRole('button', { name: 'Draw it' }).click();
+  const canvas = p.locator('[data-testid=map] canvas');
+  const box = await p.getByTestId('map').boundingBox();
+  const r = Math.min(box.width, box.height) / 6;
+  for (const [dx, dy] of [[-r, -r * 0.7], [r * 0.8, -r], [r, r * 0.6], [-r * 0.6, r * 0.8]]) await canvas.click({ position: { x: box.width / 2 + dx, y: box.height * 0.5 + dy * 0.7 } });
+  await p.getByTestId('draw-toolbar').getByRole('button', { name: 'Done' }).click();
+  await p.locator('[data-testid=map][data-region-edge]:not([data-region-edge=""])').waitFor();
+  await p.waitForTimeout(900);
+  await shot(p, `${prefix}-region-edge`);
+}
+if (any('desktop-region-where', 'desktop-region-edge')) await regionOutline(await page('desktop-region-outline', desktop), 'desktop');
+if (any('dark-region-where', 'dark-region-edge')) await regionOutline(await page('dark-region-outline', { ...desktop, colorScheme: 'dark' }), 'dark');
+if (any('phone-region-where', 'phone-region-edge')) await regionOutline(await page('phone-region-outline', { viewport: { width: 412, height: 860 }, isMobile: true, hasTouch: true }), 'phone');
 
 // The overview on the Classical Greece fixture, then Classical Greece unfolded with Athens open.
 const GREECE = fileURLToPath(new URL('../tests/fixtures/greece/classical-greece.json', import.meta.url));

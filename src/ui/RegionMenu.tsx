@@ -1,16 +1,17 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { undoFor, type Undo } from '../model/bulk';
-import { ensureRegion, hasRegionOrder, mergeRegions, regionNamed, renameRegion, setRegionOrders, setRegionParent } from '../model/doc';
+import { ensureRegion, hasRegionOrder, mergeRegions, regionNamed, renameRegion, setRegionOrders, setRegionOutline, setRegionParent } from '../model/doc';
 import { allRegions } from '../model/subjects';
 import type { TimelineDoc } from '../model/types';
 import { useDoc } from './DocContext';
+import { outlineInWords, RegionWhere } from './RegionWhere';
 
 /**
  * A region's menu, right where Bob clicked its name on the timeline: Rename, Part of…, Merge
- * into…, Move up, Move down, Open in Library, and Back to automatic order. Each change has one
- * Undo in the bar under the timeline.
+ * into…, Where on the map…, Move up, Move down, Show on the map, Open in Library, and Back to
+ * automatic order. Each change has one Undo in the bar under the timeline.
  */
-export function RegionMenu({ region, anchor, moves, onMove, onLibrary, onDone, onClose }: {
+export function RegionMenu({ region, anchor, moves, onMove, onLibrary, onShow, onDraw, onDone, onClose }: {
   region: string;
   /** The band's name on screen. */
   anchor: DOMRect;
@@ -18,16 +19,21 @@ export function RegionMenu({ region, anchor, moves, onMove, onLibrary, onDone, o
   moves: { up?: string; down?: string };
   onMove: (dir: -1 | 1) => void;
   onLibrary: () => void;
+  /** Focus the region on the map: its outline edged and fitted. */
+  onShow: () => void;
+  /** Draw the region's outline on the map. */
+  onDraw: () => void;
   onDone: (undo: Undo, msg: string) => void;
   onClose: () => void;
 }) {
   const { doc, update, readOnly } = useDoc();
-  const [mode, setMode] = useState<'menu' | 'rename' | 'parent' | 'merge'>('menu');
+  const [mode, setMode] = useState<'menu' | 'rename' | 'parent' | 'merge' | 'where'>('menu');
   const box = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState({ left: anchor.left, top: anchor.bottom + 4 });
   const others = [...new Set([...(doc.regions ?? []).map((r) => r.name), ...allRegions(doc)])].filter((r) => r !== region).sort((a, b) => a.localeCompare(b));
   const parents = [...new Set((doc.regions ?? []).flatMap((r) => (r.parent?.trim() ? [r.parent.trim()] : [])))].sort((a, b) => a.localeCompare(b));
   const parent = regionNamed(doc, region)?.parent ?? '';
+  const outline = regionNamed(doc, region)?.outline;
   const [name, setName] = useState(region);
   const [into, setInto] = useState('');
   const [area, setArea] = useState(parent);
@@ -82,6 +88,7 @@ export function RegionMenu({ region, anchor, moves, onMove, onLibrary, onDone, o
           <button role="menuitem" disabled={off} onClick={() => { setName(region); setMode('rename'); }}>Rename</button>
           <button role="menuitem" disabled={off} onClick={() => { setArea(parent); setMode('parent'); }}>Part of…</button>
           <button role="menuitem" disabled={off || !others.length} onClick={() => { setInto(''); setMode('merge'); }}>Merge into…</button>
+          <button role="menuitem" disabled={off} onClick={() => setMode('where')}>Where on the map…</button>
           <hr />
           <button role="menuitem" disabled={off || !moves.up} onClick={() => { onMove(-1); close(); }}>{moves.up && moves.up !== region ? `Move ${moves.up} up` : 'Move up'}</button>
           <button role="menuitem" disabled={off || !moves.down} onClick={() => { onMove(1); close(); }}>{moves.down && moves.down !== region ? `Move ${moves.down} down` : 'Move down'}</button>
@@ -89,6 +96,7 @@ export function RegionMenu({ region, anchor, moves, onMove, onLibrary, onDone, o
             <button role="menuitem" disabled={off} onClick={() => change((d, _id, now) => setRegionOrders(d, new Map(), now), 'Bands back in the automatic order.')}>Back to automatic order</button>
           )}
           <hr />
+          <button role="menuitem" onClick={() => { close(); onShow(); }}>Show on the map</button>
           <button role="menuitem" onClick={() => { onClose(); onLibrary(); }}>Open in Library</button>
         </>
       )}
@@ -123,6 +131,21 @@ export function RegionMenu({ region, anchor, moves, onMove, onLibrary, onDone, o
             <button type="button" className="btn small" onClick={() => setMode('menu')}>Cancel</button>
           </div>
         </form>
+      )}
+      {mode === 'where' && (
+        <div className="region-menu-form">
+          <strong>Where {region} is on the map</strong>
+          {outlineInWords(outline, doc.territories) && <small className="hint">Now: {outlineInWords(outline, doc.territories)}.</small>}
+          <RegionWhere
+            region={region}
+            outline={outline}
+            territories={doc.territories}
+            disabled={off}
+            onSave={(o) => change((d) => setRegionOutline(d, region, o), o ? `${region} is now where you picked on the map.` : `${region} is where its territories are again.`)}
+            onDraw={() => { onClose(); onDraw(); }}
+            onCancel={() => setMode('menu')}
+          />
+        </div>
       )}
       {mode === 'merge' && (
         <form className="region-menu-form" aria-label={`Merge ${region}`} onSubmit={(e) => {

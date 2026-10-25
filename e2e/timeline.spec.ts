@@ -904,3 +904,57 @@ test('Bob moves the bands himself: from a band’s menu, by dragging its name an
   await menu.getByRole('menuitem', { name: 'Back to automatic order' }).click();
   await expect.poll(order).toEqual(['Italy', 'Macedon', 'Greece']);
 });
+
+test('Bob draws where Greece is: focusing it edges its outline on the map, and a territory drawn inside it lands in Greece', async ({ page }) => {
+  test.slow();
+  await page.setViewportSize({ width: 1400, height: 1400 });
+  const timeline = await openGreece(page, false);
+  await page.getByTestId('time-bar').getByRole('button', { name: 'All', exact: true }).click();
+  const map = page.locator('[data-testid=map][data-ready]');
+  await expect(map).toBeVisible();
+  const menu = page.getByTestId('region-menu');
+  const canvas = page.locator('[data-testid=map] canvas');
+  const box = (await page.getByTestId('map').boundingBox())!;
+  const at = (dx: number, dy: number) => ({ position: { x: box.width / 2 + dx, y: box.height / 2 + dy } });
+  const toolbar = page.getByTestId('draw-toolbar');
+
+  // From Greece's menu on the timeline: Where on the map… → Draw it.
+  await timeline.locator('.tl-band-name[data-region="Greece"]').click();
+  await menu.getByRole('menuitem', { name: 'Where on the map…' }).click();
+  await menu.getByRole('button', { name: 'Draw it' }).click();
+  await expect(menu).toHaveCount(0);
+  for (const [dx, dy] of [[-120, -90], [120, -90], [120, 90], [-120, 90]]) await canvas.click(at(dx, dy));
+  await toolbar.getByRole('button', { name: 'Done' }).click();
+  await expect(toolbar).toHaveCount(0);
+
+  // Drawn, it's focused: its edge is on the map.
+  await expect(page.getByTestId('bulk-note')).toHaveText(/Drew Greece on the map\./);
+  await expect(page.getByTestId('map-region')).toContainText('Showing Greece');
+  await expect(map).toHaveAttribute('data-region-edge', 'Greece');
+  await page.getByRole('button', { name: 'Stop showing Greece' }).click();
+  await expect(map).toHaveAttribute('data-region-edge', '');
+  // Show on the map, from its menu, edges it again.
+  await timeline.locator('.tl-band-name[data-region="Greece"]').click();
+  await menu.getByRole('menuitem', { name: 'Show on the map' }).click();
+  await expect(map).toHaveAttribute('data-region-edge', 'Greece');
+
+  // A territory drawn inside the outline starts in Greece, not Elsewhere.
+  await page.getByRole('button', { name: 'Add a territory' }).click();
+  await page.getByTestId('own-borders').getByRole('button', { name: 'Draw on the map' }).click();
+  const mid = (await page.getByTestId('map').boundingBox())!;
+  const inner = (dx: number, dy: number) => ({ position: { x: mid.width / 2 + dx, y: mid.height / 2 + dy } });
+  for (const [dx, dy] of [[-20, -15], [20, -15], [0, 20]]) await canvas.click(inner(dx, dy));
+  await toolbar.getByRole('button', { name: 'Done' }).click();
+  const form = page.getByTestId('own-borders');
+  await expect(form.getByLabel('Region')).toHaveValue('Greece');
+  await form.getByLabel('Name').fill('Megara');
+  await form.getByRole('button', { name: 'Add to map' }).click();
+  await expect(page.getByTestId('territory-region')).toContainText('Region on the overview: Greece');
+
+  // The Library says where Greece is.
+  await page.getByRole('button', { name: 'Close panel' }).click();
+  await timeline.locator('.tl-band-name[data-region="Greece"]').click();
+  await menu.getByRole('menuitem', { name: 'Open in Library' }).click();
+  await page.getByTestId('library').getByRole('tab', { name: 'Regions and groups' }).click();
+  await expect(page.getByTestId('regions-tab').getByRole('listitem', { name: 'Greece' })).toContainText('On the map: a shape you drew');
+});

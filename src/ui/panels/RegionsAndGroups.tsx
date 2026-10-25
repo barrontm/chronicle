@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { undoFor, type Undo } from '../../model/bulk';
-import { ensureRegion, hasRegionOrder, mergeRegions, newId, regionCount, regionNamed, remove, removeRegion, renameRegion, setRegionOrders, setRegionParent, upsert } from '../../model/doc';
+import { ensureRegion, hasRegionOrder, mergeRegions, newId, regionCount, regionNamed, remove, removeRegion, renameRegion, setRegionOrders, setRegionOutline, setRegionParent, upsert } from '../../model/doc';
 import { polityRegion } from '../../model/overview';
 import { allRegions } from '../../model/subjects';
-import type { PolityGroup, TimelineDoc } from '../../model/types';
+import type { PolityGroup, Region, Territory, TimelineDoc } from '../../model/types';
 import { useDoc } from '../DocContext';
 import { Field } from '../fields';
 import type { Nav } from '../nav';
+import { outlineInWords, RegionWhere } from '../RegionWhere';
 
 /**
  * The Library's Regions tab: Bob's regions with the larger areas they're in (Greece →
@@ -44,7 +45,11 @@ export function RegionsAndGroups({ nav, onDone }: { nav: Nav; onDone: (undo: Und
             others={regions.filter((x) => x !== r)}
             holds={regionCount(doc, r)}
             parent={regionNamed(doc, r)?.parent ?? ''}
+            outline={regionNamed(doc, r)?.outline}
+            territories={doc.territories}
             disabled={!!readOnly}
+            onOutline={(o) => change(r, (d) => setRegionOutline(d, r, o), o ? `${r} is now where you picked on the map.` : `${r} is where its territories are again.`)}
+            onDraw={() => nav.draw((g) => change(r, (d) => setRegionOutline(d, r, { geometry: g }), `Drew ${r} on the map.`))}
             onParent={(p) => update((d) => setRegionParent(d, r, p || undefined))}
             onRename={(name) => change(r, (d, id, now) => renameRegion(d, id, name, now), regions.includes(name) ? `Merged ${r} into ${name}.` : `Renamed ${r} to ${name}.`)}
             onMerge={(into) => change(r, (d, id, now) => { const e = ensureRegion(d, into, now); return mergeRegions(e.doc, id, e.region.id, now); }, `Merged ${r} into ${into}.`)}
@@ -101,13 +106,19 @@ export function RegionsAndGroups({ nav, onDone }: { nav: Nav; onDone: (undo: Und
 const holdsInWords = ({ items, territories }: { items: number; territories: number }) =>
   [items && `${items} ${items === 1 ? 'entry' : 'entries'}`, territories && `${territories} ${territories === 1 ? 'territory' : 'territories'}`].filter(Boolean).join(' and ') || 'Nothing in it yet';
 
-/** A region: what it holds, its larger area (saved when Bob leaves the field or presses Enter), and Rename, Merge into… and Delete. */
-function RegionRow({ region, others, holds, parent, disabled, onParent, onRename, onMerge, onDelete }: {
-  region: string; others: string[]; holds: { items: number; territories: number }; parent: string; disabled: boolean;
+/**
+ * A region: what it holds and where it is on the map, its larger area (saved when Bob leaves the
+ * field or presses Enter), and Rename, Merge into…, Where on the map and Delete.
+ */
+function RegionRow({ region, others, holds, parent, outline, territories, disabled, onParent, onRename, onMerge, onDelete, onOutline, onDraw }: {
+  region: string; others: string[]; holds: { items: number; territories: number }; parent: string;
+  outline: Region['outline']; territories: readonly Territory[]; disabled: boolean;
   onParent: (p: string) => void; onRename: (name: string) => void; onMerge: (into: string) => void; onDelete: () => void;
+  onOutline: (o: Region['outline']) => void; onDraw: () => void;
 }) {
   const [v, setV] = useState(parent);
-  const [mode, setMode] = useState<'rename' | 'merge' | null>(null);
+  const [mode, setMode] = useState<'rename' | 'merge' | 'where' | null>(null);
+  const where = outlineInWords(outline, territories);
   const [name, setName] = useState(region);
   const [into, setInto] = useState('');
   const commit = () => { if (v.trim() !== parent) onParent(v.trim()); };
@@ -123,11 +134,23 @@ function RegionRow({ region, others, holds, parent, disabled, onParent, onRename
           <span className="region-actions">
             <button type="button" className="btn small quiet" disabled={disabled} onClick={() => { setName(region); setMode('rename'); }} aria-label={`Rename ${region}`}>Rename</button>
             <button type="button" className="btn small quiet" disabled={disabled || !others.length} onClick={() => { setInto(''); setMode('merge'); }} aria-label={`Merge ${region} into another region`}>Merge into…</button>
+            <button type="button" className="btn small quiet" disabled={disabled} onClick={() => setMode('where')} aria-label={`Where ${region} is on the map`}>Where on the map</button>
             <button type="button" className="btn small quiet danger" disabled={disabled} onClick={del} aria-label={`Delete ${region}`}>Delete</button>
           </span>
         )}
       </div>
-      <small className="region-holds">{holdsInWords(holds)}</small>
+      <small className="region-holds">{holdsInWords(holds)} · {where ? `On the map: ${where}` : 'On the map where its territories are'}</small>
+      {mode === 'where' && (
+        <RegionWhere
+          region={region}
+          outline={outline}
+          territories={territories}
+          disabled={disabled}
+          onSave={(o) => { onOutline(o); setMode(null); }}
+          onDraw={() => { setMode(null); onDraw(); }}
+          onCancel={() => setMode(null)}
+        />
+      )}
       {mode === 'rename' && (
         <form className="editor-row" aria-label={`Rename ${region}`} onSubmit={(e) => { e.preventDefault(); if (name.trim() && name.trim() !== region) onRename(name.trim()); setMode(null); }}>
           <input className="grow" value={name} autoFocus aria-label={`New name for ${region}`} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => { if (e.key === 'Escape') setMode(null); }} />

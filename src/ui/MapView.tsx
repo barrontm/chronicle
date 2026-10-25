@@ -133,6 +133,7 @@ function buildStyle(c: Colors): StyleSpecification {
       pins: { type: 'geojson', data: EMPTY },
       follow: { type: 'geojson', data: EMPTY },
       'follow-pins': { type: 'geojson', data: EMPTY },
+      'region-edge': { type: 'geojson', data: EMPTY },
       draft: { type: 'geojson', data: EMPTY },
     },
     layers: [
@@ -157,6 +158,8 @@ function buildStyle(c: Colors): StyleSpecification {
       { id: 'follow-fill', type: 'fill', source: 'follow', paint: { 'fill-color': ['get', 'color'], 'fill-opacity': ['get', 'fill'] } },
       { id: 'follow-line', type: 'line', source: 'follow', filter: ['!', ['get', 'dashed']], paint: { 'line-color': ['get', 'color'], 'line-width': ['get', 'width'] } },
       { id: 'follow-dash', type: 'line', source: 'follow', filter: ['get', 'dashed'], paint: { 'line-color': ['get', 'color'], 'line-width': ['get', 'width'], 'line-dasharray': [3, 2] } },
+      // A focused region's outline: a faint ink edge, no fill.
+      { id: 'region-edge', type: 'line', source: 'region-edge', layout: { 'line-join': 'round' }, paint: { 'line-color': c.ink, 'line-opacity': 0.45, 'line-width': 1.4 } },
       // Threads: arcs that draw in from the year their connection happened, then settle to a faint trace.
       { id: 'threads', type: 'line', source: 'threads', layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': ['get', 'color'], 'line-opacity': ['get', 'opacity'], 'line-width': ['get', 'width'] } },
       {
@@ -216,6 +219,7 @@ function applyColors(map: maplibregl.Map, c: Colors) {
   map.setPaintProperty('eras-fill', 'fill-color', c.era);
   map.setPaintProperty('pins', 'circle-stroke-color', ['case', ['get', 'selected'], c.ink, c.panel]);
   map.setPaintProperty('follow-pins', 'circle-stroke-color', c.panel);
+  map.setPaintProperty('region-edge', 'line-color', c.ink);
   map.setPaintProperty('draft-fill', 'fill-color', c.ink);
   map.setPaintProperty('draft-line', 'line-color', c.ink);
   map.setPaintProperty('draft-points', 'circle-color', c.panel);
@@ -469,6 +473,10 @@ export default function MapView(props: Props) {
     const pins = follow?.pins ?? (EMPTY as FollowAt['pins']);
     (map.getSource('follow-pins') as GeoJSONSource).setData({ ...pins, features: pins.features.map((f) => ({ ...f, properties: { ...f.properties, color: colors.resolve(f.properties.color) } })) });
     host.current?.setAttribute('data-follow-pins', String(pins.features.length));
+    const edge = follow?.regionEdge ?? (EMPTY as FollowAt['regionEdge']);
+    (map.getSource('region-edge') as GeoJSONSource).setData(edge);
+    // The region edged, if any (for tests).
+    host.current?.setAttribute('data-region-edge', edge.features.map((f) => f.properties.name).join(' | '));
   }, [follow, colors, ready]);
   // The map fits what's picked when the pick changes, and a region when Bob clicks one.
   const pickFitKey = follow?.pickFit?.key;

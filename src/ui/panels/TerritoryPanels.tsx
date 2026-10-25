@@ -2,13 +2,14 @@ import type { FeatureCollection } from 'geojson';
 import { useMemo, useRef, useState } from 'react';
 import { BASEMAP_YEARS, basemapFor, BASEMAPS_CREDIT, fetchBasemap, polityNames, seshatBordersFor, snapshotsFor, type BasemapYear, type FoundBorders } from '../../data/basemaps';
 import { isCliopatria } from '../../data/cliopatria';
-import { areaKm2, FINE, parseGeoJsonAreas, simplifyArea, type Area } from '../../data/geo';
+import { areaKm2, FINE, labelPoint, parseGeoJsonAreas, simplifyArea, type Area } from '../../data/geo';
 import { compareHistDate, formatRange, formatYear, toDecimalYear } from '../../model/dates';
 import { highlightsFor, newId, notesFor, remove, upsert } from '../../model/doc';
 import { polityRegion } from '../../model/overview';
 import { allRegions } from '../../model/subjects';
 import type { Highlight, HistDate, StrengthPoint, Territory, TerritorySnapshot, TimelineDoc } from '../../model/types';
 import { useDoc } from '../DocContext';
+import { regionAt } from '../mapData';
 import { DateField, Field, RecordPicker } from '../fields';
 import type { Nav } from '../nav';
 import { useOnline } from '../useAi';
@@ -337,7 +338,15 @@ function GeoJsonFile({ onPick }: { onPick: (a: { name?: string; geometry: Area; 
 /** A territory from Bob's own borders: drawn on the map or brought from a file. */
 function OwnBorders({ year, nav }: { year: number; nav: Nav }) {
   const { doc, update } = useDoc();
-  const [shape, setShape] = useState<{ geometry: Area; source: string } | null>(null);
+  const [shape, setShapeOnly] = useState<{ geometry: Area; source: string } | null>(null);
+  const [region, setRegion] = useState('');
+  /** The borders, and the region they're inside on Bob's outlines (else Elsewhere, as before). */
+  const setShape = (s: { geometry: Area; source: string } | null) => {
+    setShapeOnly(s);
+    if (!s) return;
+    const at = labelPoint(s.geometry);
+    setRegion(regionAt(at.lon, at.lat, doc.regions, doc.territories, year) ?? '');
+  };
   const [title, setTitle] = useState('');
   const [categoryId, setCategoryId] = useState(doc.categories.find((c) => c.id === 'politics')?.id ?? doc.categories[0]?.id ?? '');
   const [itemId, setItemId] = useState<string | undefined>();
@@ -350,6 +359,7 @@ function OwnBorders({ year, nav }: { year: number; nav: Nav }) {
     if (!valid) return;
     const territory: Territory = {
       id: newId('t'), title: title.trim(), categoryId, itemId,
+      ...(region.trim() ? { region: region.trim() } : {}),
       snapshots: [{ ...snapshotOf(shape.geometry, from.d!), ...(to.d ? { to: to.d } : {}) }],
       source: { name: shape.source }, updatedAt: 0,
     };
@@ -386,6 +396,10 @@ function OwnBorders({ year, nav }: { year: number; nav: Nav }) {
       </div>
       {backwards && <div className="notice bad" role="alert">“Until” needs to come after “From”.</div>}
       <LinkedEntry value={itemId} onChange={setItemId} />
+      <Field label="Region" hint="The band it sits in on the overview, such as Greece; filled in when it’s inside one you’ve outlined. Empty: Elsewhere.">
+        <input value={region} onChange={(e) => setRegion(e.target.value)} list="own-borders-regions" />
+      </Field>
+      <datalist id="own-borders-regions">{allRegions(doc).map((r) => <option key={r} value={r} />)}</datalist>
       <div className="actions">
         <button className="btn primary" disabled={!valid}>Add to map</button>
         <button type="button" className="btn" onClick={() => setShape(null)}>Start over</button>

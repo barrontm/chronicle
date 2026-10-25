@@ -2,7 +2,7 @@ import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } fro
 import { docYearRange, presenceAt } from '../model/atYear';
 import { formatRange, toDecimalYear } from '../model/dates';
 import { applyUndo, bulkRemove, undoFor, type Undo } from '../model/bulk';
-import { mergeDocs, parseDoc, serializeDoc, setRegionOrders, upsert } from '../model/doc';
+import { mergeDocs, parseDoc, serializeDoc, setRegionOrders, setRegionOutline, upsert } from '../model/doc';
 import { prominence as prominenceOf } from '../model/prominence';
 import type { HistDate, Lane, TimelineDoc, TimelineItem } from '../model/types';
 import { sortLanes } from '../model/lanes';
@@ -285,6 +285,15 @@ function Workspace() {
     },
   }), [stack.length, narrow, trail]);
 
+  /** Draw a region's outline on the map; once drawn, it's focused there, with one Undo. */
+  const drawRegion = (name: string) => nav.draw((g) => {
+    const now = Date.now();
+    const run = (d: TimelineDoc) => setRegionOutline(d, name, { geometry: g }, now);
+    setBulkDone({ undo: undoFor(doc, run(doc)), msg: `Drew ${name} on the map.` });
+    update(run);
+    setRegion({ name });
+  });
+
   // A search result: open it, and bring the timeline, the year and the map to it.
   const [mapFit, setMapFit] = useState<MapFit | undefined>();
   const pickResult = (hit: SearchHit) => {
@@ -475,6 +484,7 @@ function Workspace() {
             focus={overviewFocus}
             window={followWindow}
             region={region}
+            regions={doc.regions}
             onRegion={setRegion}
             allThreads={allThreads}
           />
@@ -545,6 +555,8 @@ function Workspace() {
               moves={timeline.current?.regionMoves(regionMenu.region) ?? {}}
               onMove={(dir) => timeline.current?.moveRegion(regionMenu.region, dir)}
               onLibrary={() => setStack([{ type: 'library', tab: 'regions' }])}
+              onShow={() => { setRegion({ name: regionMenu.region }); revealMap(); }}
+              onDraw={() => drawRegion(regionMenu.region)}
               onDone={(undo, msg) => setBulkDone({ undo, msg })}
               onClose={closeRegionMenu}
             />
