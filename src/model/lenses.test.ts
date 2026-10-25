@@ -12,7 +12,7 @@ import type { Lane } from './types';
 const doc = parseDoc(readFileSync(new URL('../../tests/fixtures/greece/classical-greece.json', import.meta.url), 'utf8'));
 const items = doc.items.filter(isDated);
 const eras = eraRegions(doc.items, doc.highlights, doc.relations, 2026).flatMap((r) => r.eras);
-const O = overview({ items, territories: doc.territories, relations: doc.relations, highlights: doc.highlights, groups: doc.groups, regionParents: doc.regionParents, prominence: () => 0, now: 2026 });
+const O = overview({ items, territories: doc.territories, relations: doc.relations, highlights: doc.highlights, groups: doc.groups, regions: doc.regions, prominence: () => 0, now: 2026 });
 const M = lensMarks({
   entries: items.map((i) => ({ id: i.id, s: toDecimalYear(i.start) })),
   polities: polityMembers(doc),

@@ -368,7 +368,24 @@ export interface PolityGroup {
   updatedAt: number;
 }
 
-export const SCHEMA_VERSION = 9;
+/**
+ * A region (v10): one band on the overview, such as Greece. Entries and territories still name
+ * their region in Bob's words (`region`); this record is what he renames, merges and deletes,
+ * and where its larger area lives.
+ */
+export interface Region {
+  id: string;
+  name: string;
+  /** The larger area it's in, such as Mediterranean: Bob's word, not another record. */
+  parent?: string;
+  /** Its place among the bands when Bob has moved it (S8). Unused until then. */
+  order?: number;
+  /** Where it is on the map (S9): some of Bob's territories, or a drawn shape. Unused until then. */
+  outline?: { territoryIds?: string[]; geometry?: Polygon | MultiPolygon };
+  updatedAt: number;
+}
+
+export const SCHEMA_VERSION = 10;
 
 export interface TimelineDoc {
   schemaVersion: number;
@@ -385,8 +402,8 @@ export interface TimelineDoc {
   highlights: Highlight[];
   /** Polity groups (v9). Missing on docs made before v9. */
   groups?: PolityGroup[];
-  /** Region → its parent (v9), such as "Greece" → "Mediterranean". Both are Bob's words. */
-  regionParents?: Record<string, string>;
+  /** Regions (v10). Missing on docs made before v10; v9's `regionParents` became their `parent`. */
+  regions?: Region[];
   /** id → epoch ms when deleted. Lets a merge know a missing item was deleted, not new. */
   deleted: Record<string, number>;
   updatedAt: number;

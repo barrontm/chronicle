@@ -1,7 +1,7 @@
 import type { MultiPolygon, Polygon } from 'geojson';
 import { formatRange, toDecimalYear } from './dates';
 import { ELSEWHERE, isEra } from './eras';
-import type { DatedItem, HistDate, Highlight, PolityGroup, Relation, Territory } from './types';
+import type { DatedItem, HistDate, Highlight, PolityGroup, Region, Relation, Territory } from './types';
 
 /**
  * What the overview (the timeline's level 0) draws, decided from Bob's doc (docs/design.md,
@@ -69,7 +69,8 @@ export interface OverviewInput {
   relations: Relation[];
   highlights: Highlight[];
   groups?: PolityGroup[];
-  regionParents?: Record<string, string>;
+  /** Bob's regions (v10), for their larger areas. */
+  regions?: readonly Region[];
   prominence: (id: string) => number;
   /** Today, as a decimal year: where a polity still there stops. */
   now: number;
@@ -253,7 +254,8 @@ export function overview(o: OverviewInput): Overview {
   const centres = new Map<string, Centre[]>();
   for (const p of polities) { const c = centreOf(p.t); if (c) centres.set(p.region, [...(centres.get(p.region) ?? []), c]); }
   const centre = new Map([...centres].map(([r, cs]) => [r, [cs.reduce((a, c) => a + c[0], 0) / cs.length, cs.reduce((a, c) => a + c[1], 0) / cs.length] as Centre]));
-  const parentOf = (r: string) => (r === ELSEWHERE ? undefined : o.regionParents?.[r]?.trim() || undefined);
+  const parents = new Map((o.regions ?? []).map((r) => [r.name, r.parent?.trim() || undefined]));
+  const parentOf = (r: string) => (r === ELSEWHERE ? undefined : parents.get(r));
   const order = orderRegions([...names], centre, parentOf, link);
   const parentsInOrder = [...new Set(order.map((r) => parentOf(r) ?? `\u0000${r}`))];
   const regions = order.map((name): ORegion => ({ name, label: name === ELSEWHERE ? 'Elsewhere' : name, parent: parentOf(name), tone: parentsInOrder.indexOf(parentOf(name) ?? `\u0000${name}`) }));

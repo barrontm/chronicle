@@ -1,5 +1,5 @@
 {
- "schemaVersion": 9,
+ "schemaVersion": 10,
  "id": "doc_classical_greece",
  "title": "Classical Greece (test fixture)",
  "updatedAt": 1760000000000,
@@ -8138,10 +8138,30 @@
    "updatedAt": 1760000000000
   }
  ],
- "regionParents": {
-  "Greece": "Mediterranean",
-  "Macedon": "Mediterranean",
-  "Italy": "Mediterranean",
-  "Persia": "Near East"
- }
+ "regions": [
+  {
+   "id": "rg_greece",
+   "name": "Greece",
+   "parent": "Mediterranean",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "rg_italy",
+   "name": "Italy",
+   "parent": "Mediterranean",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "rg_macedon",
+   "name": "Macedon",
+   "parent": "Mediterranean",
+   "updatedAt": 1760000000000
+  },
+  {
+   "id": "rg_persia",
+   "name": "Persia",
+   "parent": "Near East",
+   "updatedAt": 1760000000000
+  }
+ ]
 }

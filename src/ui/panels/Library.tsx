@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { waiting } from '../../ai/draft';
 import { formatYear } from '../../model/dates';
+import type { Undo } from '../../model/bulk';
 import { describeRelation } from '../../model/doc';
 import { useDoc } from '../DocContext';
 import type { Nav } from '../nav';
@@ -12,7 +13,7 @@ import { RegionsAndGroups } from './RegionsAndGroups';
 type Tab = 'notes' | 'highlights' | 'sources' | 'trends' | 'territories' | 'regions' | 'migration';
 
 /** Everything that isn't on the timeline itself: your notes, your bibliography, your trends. */
-export function Library({ tab: initial, nav }: { tab: Tab; nav: Nav }) {
+export function Library({ tab: initial, nav, onRegionChange }: { tab: Tab; nav: Nav; onRegionChange: (undo: Undo, msg: string) => void }) {
   const { doc } = useDoc();
   const drafts = useHighlightDrafts();
   const [tab, setTab] = useState<Tab>(initial);
@@ -147,7 +148,7 @@ export function Library({ tab: initial, nav }: { tab: Tab; nav: Nav }) {
           </ul>
         </>
       )}
-      {tab === 'regions' && <RegionsAndGroups nav={nav} />}
+      {tab === 'regions' && <RegionsAndGroups nav={nav} onDone={onRegionChange} />}
       {tab === 'migration' && (
         <>
           <button className="btn small" onClick={() => nav.open({ type: 'new-flow' })}>New migration</button>

@@ -592,6 +592,14 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .editor-list { display: grid; gap: 6px; margin-bottom: 8px; }
 .editor-row { display: flex; gap: 6px; align-items: center; }
 .editor-row > .grow { flex: 1; min-width: 0; }
+.region-list { list-style: none; margin: 0 0 8px; padding: 0; }
+.region-row { display: grid; gap: 4px; padding: 8px 0; border-top: 1px solid var(--rule-soft); }
+.region-row:first-child { border-top: 0; }
+.region-head { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
+.region-head > .grow { flex: 1; min-width: 8em; }
+.region-holds { color: var(--muted); margin-top: -4px; }
+.region-parent > span { color: var(--muted); font-size: 13px; white-space: nowrap; }
+.region-actions { display: flex; gap: 2px; }
 .thumbs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
 .thumb { position: relative; width: 84px; }
 .thumb img { width: 84px; height: 84px; object-fit: cover; border-radius: var(--radius-s); display: block; background: var(--rule-soft); }

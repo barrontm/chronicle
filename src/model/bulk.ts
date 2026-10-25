@@ -63,7 +63,8 @@ export function bulkRemove(doc: TimelineDoc, ids: readonly string[], now = Date.
   return { doc: next, undo: undoFor(doc, next), removed };
 }
 
-const COLLECTIONS: Collection[] = ['items', 'series', 'territories', 'flows', 'notes', 'sources', 'relations', 'highlights', 'groups'];
+// Regions first, so a record Undo brings back is in place before the entries that name it.
+const COLLECTIONS: Collection[] = ['regions', 'items', 'series', 'territories', 'flows', 'notes', 'sources', 'relations', 'highlights', 'groups'];
 
 /** Every record of `before` that `after` replaced or removed. Records are immutable, so a new object means it changed. */
 export function undoFor(before: TimelineDoc, after: TimelineDoc): Undo {

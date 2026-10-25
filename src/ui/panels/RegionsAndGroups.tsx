@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { newId, remove, setRegionParent, upsert } from '../../model/doc';
+import { undoFor, type Undo } from '../../model/bulk';
+import { ensureRegion, mergeRegions, newId, regionCount, regionNamed, remove, removeRegion, renameRegion, setRegionParent, upsert } from '../../model/doc';
 import { polityRegion } from '../../model/overview';
 import { allRegions } from '../../model/subjects';
-import type { PolityGroup } from '../../model/types';
+import type { PolityGroup, TimelineDoc } from '../../model/types';
 import { useDoc } from '../DocContext';
 import { Field } from '../fields';
 import type { Nav } from '../nav';
@@ -11,11 +12,20 @@ import type { Nav } from '../nav';
  * The Library's Regions tab: Bob's regions with the larger areas they're in (Greece →
  * Mediterranean), and his groups of city-states that fold into one strip on the overview.
  */
-export function RegionsAndGroups({ nav }: { nav: Nav }) {
+export function RegionsAndGroups({ nav, onDone }: { nav: Nav; onDone: (undo: Undo, msg: string) => void }) {
   const { doc, update, readOnly } = useDoc();
   const [editing, setEditing] = useState<string | null>(null);
-  const regions = allRegions(doc);
-  const parents = [...new Set(Object.values(doc.regionParents ?? {}))].sort((a, b) => a.localeCompare(b));
+  // Every region with a record or in use, so one typed some other way can still be edited.
+  const regions = [...new Set([...(doc.regions ?? []).map((r) => r.name), ...allRegions(doc)])].sort((a, b) => a.localeCompare(b));
+  const parents = [...new Set((doc.regions ?? []).flatMap((r) => (r.parent?.trim() ? [r.parent.trim()] : [])))].sort((a, b) => a.localeCompare(b));
+  /** One change to a region, with one Undo in the bar under the timeline. */
+  const change = (name: string, fn: (d: TimelineDoc, id: string, now: number) => TimelineDoc, msg: string) => {
+    const now = Date.now();
+    const run = (d: TimelineDoc) => { const e = ensureRegion(d, name, now); return fn(e.doc, e.region.id, now); };
+    const undo = undoFor(doc, run(doc));
+    update(run);
+    onDone(undo, msg);
+  };
   const itemById = new Map(doc.items.map((i) => [i.id, i]));
   const regionOf = (id: string) => { const t = doc.territories.find((x) => x.id === id); return t ? polityRegion(t, t.itemId ? itemById.get(t.itemId) : undefined) : ''; };
   const elsewhere = doc.territories.filter((t) => !regionOf(t.id)).sort((a, b) => a.title.localeCompare(b.title));
@@ -24,13 +34,24 @@ export function RegionsAndGroups({ nav }: { nav: Nav }) {
   return (
     <div data-testid="regions-tab">
       <h3>Regions</h3>
-      <p className="lede">Each region is a band on the overview. Put it in a larger area, such as Mediterranean, and its neighbours sit together under that name.</p>
+      <p className="lede">Each region is a band on the overview. Put it in a larger area, such as Mediterranean, and its neighbours sit together under that name. Rename a region, merge it into another, or delete it, and everything in it follows.</p>
       {regions.length === 0 && <p className="hint" style={{ color: 'var(--muted)' }}>No regions yet. Give a period or a territory a region, such as Greece.</p>}
-      <div className="editor-list">
+      <ul className="region-list">
         {regions.map((r) => (
-          <RegionRow key={r} region={r} parent={doc.regionParents?.[r] ?? ''} disabled={!!readOnly} onCommit={(p) => update((d) => setRegionParent(d, r, p || undefined))} />
+          <RegionRow
+            key={r}
+            region={r}
+            others={regions.filter((x) => x !== r)}
+            holds={regionCount(doc, r)}
+            parent={regionNamed(doc, r)?.parent ?? ''}
+            disabled={!!readOnly}
+            onParent={(p) => update((d) => setRegionParent(d, r, p || undefined))}
+            onRename={(name) => change(r, (d, id, now) => renameRegion(d, id, name, now), regions.includes(name) ? `Merged ${r} into ${name}.` : `Renamed ${r} to ${name}.`)}
+            onMerge={(into) => change(r, (d, id, now) => { const e = ensureRegion(d, into, now); return mergeRegions(e.doc, id, e.region.id, now); }, `Merged ${r} into ${into}.`)}
+            onDelete={() => change(r, (d, id, now) => removeRegion(d, id, now), `Deleted ${r}; what it held is in Elsewhere.`)}
+          />
         ))}
-      </div>
+      </ul>
       <datalist id="region-parents">{parents.map((p) => <option key={p} value={p} />)}</datalist>
       {elsewhere.length > 0 && (
         <>
@@ -65,23 +86,69 @@ export function RegionsAndGroups({ nav }: { nav: Nav }) {
   );
 }
 
-/** A region's larger area, saved when Bob leaves the field or presses Enter. */
-function RegionRow({ region, parent, disabled, onCommit }: { region: string; parent: string; disabled: boolean; onCommit: (p: string) => void }) {
+const holdsInWords = ({ items, territories }: { items: number; territories: number }) =>
+  [items && `${items} ${items === 1 ? 'entry' : 'entries'}`, territories && `${territories} ${territories === 1 ? 'territory' : 'territories'}`].filter(Boolean).join(' and ') || 'Nothing in it yet';
+
+/** A region: what it holds, its larger area (saved when Bob leaves the field or presses Enter), and Rename, Merge into… and Delete. */
+function RegionRow({ region, others, holds, parent, disabled, onParent, onRename, onMerge, onDelete }: {
+  region: string; others: string[]; holds: { items: number; territories: number }; parent: string; disabled: boolean;
+  onParent: (p: string) => void; onRename: (name: string) => void; onMerge: (into: string) => void; onDelete: () => void;
+}) {
   const [v, setV] = useState(parent);
-  const commit = () => { if (v.trim() !== parent) onCommit(v.trim()); };
+  const [mode, setMode] = useState<'rename' | 'merge' | null>(null);
+  const [name, setName] = useState(region);
+  const [into, setInto] = useState('');
+  const commit = () => { if (v.trim() !== parent) onParent(v.trim()); };
+  const n = holds.items + holds.territories;
+  const del = () => {
+    if (confirm(n ? `Delete the region ${region}? Its ${holdsInWords(holds)} move to Elsewhere.` : `Delete the region ${region}?`)) onDelete();
+  };
   return (
-    <Field label={region}>
-      <input
-        value={v}
-        placeholder="Part of…"
-        list="region-parents"
-        disabled={disabled}
-        aria-label={`${region} is part of`}
-        onChange={(e) => setV(e.target.value)}
-        onBlur={commit}
-        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); commit(); } }}
-      />
-    </Field>
+    <li className="region-row" data-testid="region-row" aria-label={region}>
+      <div className="region-head">
+        <strong className="grow">{region}</strong>
+        {!mode && (
+          <span className="region-actions">
+            <button type="button" className="btn small quiet" disabled={disabled} onClick={() => { setName(region); setMode('rename'); }} aria-label={`Rename ${region}`}>Rename</button>
+            <button type="button" className="btn small quiet" disabled={disabled || !others.length} onClick={() => { setInto(''); setMode('merge'); }} aria-label={`Merge ${region} into another region`}>Merge into…</button>
+            <button type="button" className="btn small quiet danger" disabled={disabled} onClick={del} aria-label={`Delete ${region}`}>Delete</button>
+          </span>
+        )}
+      </div>
+      <small className="region-holds">{holdsInWords(holds)}</small>
+      {mode === 'rename' && (
+        <form className="editor-row" aria-label={`Rename ${region}`} onSubmit={(e) => { e.preventDefault(); if (name.trim() && name.trim() !== region) onRename(name.trim()); setMode(null); }}>
+          <input className="grow" value={name} autoFocus aria-label={`New name for ${region}`} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => { if (e.key === 'Escape') setMode(null); }} />
+          <button className="btn small primary" disabled={!name.trim() || name.trim() === region}>{others.includes(name.trim()) ? 'Merge' : 'Rename'}</button>
+          <button type="button" className="btn small" onClick={() => setMode(null)}>Cancel</button>
+        </form>
+      )}
+      {mode === 'rename' && others.includes(name.trim()) && <small className="hint">{name.trim()} is already a region: {region} merges into it.</small>}
+      {mode === 'merge' && (
+        <form className="editor-row" aria-label={`Merge ${region}`} onSubmit={(e) => { e.preventDefault(); if (into) onMerge(into); setMode(null); }}>
+          <select className="grow" value={into} autoFocus aria-label={`Merge ${region} into`} onChange={(e) => setInto(e.target.value)}>
+            <option value="">Merge into…</option>
+            {others.map((o) => <option key={o} value={o}>{o}</option>)}
+          </select>
+          <button className="btn small primary" disabled={!into}>Merge</button>
+          <button type="button" className="btn small" onClick={() => setMode(null)}>Cancel</button>
+        </form>
+      )}
+      <label className="editor-row region-parent">
+        <span>Part of</span>
+        <input
+          className="grow"
+          value={v}
+          placeholder="A larger area, such as Mediterranean"
+          list="region-parents"
+          disabled={disabled}
+          aria-label={`${region} is part of`}
+          onChange={(e) => setV(e.target.value)}
+          onBlur={commit}
+          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); commit(); } }}
+        />
+      </label>
+    </li>
   );
 }
 

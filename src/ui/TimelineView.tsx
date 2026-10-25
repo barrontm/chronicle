@@ -6,7 +6,7 @@ import { lensMarks } from '../model/lenses';
 import { overview } from '../model/overview';
 import { polityMembers, worldMembers } from '../model/polities';
 import { threads as rollThreads } from '../model/threads';
-import type { Category, DatedItem, Highlight, Lane, PolityGroup, Relation, Territory, TimelineItem } from '../model/types';
+import type { Category, DatedItem, Highlight, Lane, PolityGroup, Region, Relation, Territory, TimelineItem } from '../model/types';
 import { draftArrows, influenceArrows, influenceClasses } from './influenceLinks';
 import { createTimeline, type MovedDates, type OverviewFocus, type TimelineHandle } from './timeline/createTimeline';
 import { focusWindow, type YearWindow } from './timeNav';
@@ -70,7 +70,7 @@ interface Props {
   /** The overview: polities (territories), their groups, and each region's parent. */
   territories?: Territory[];
   groups?: PolityGroup[];
-  regionParents?: Record<string, string>;
+  regions?: Region[];
   /** What the overview has picked or open, for the map to follow. */
   onFocus?: (f: OverviewFocus) => void;
   /** The region Bob clicked on the map: the overview grows its rows. Esc lets go (`onRegion(undefined)`). */
@@ -106,7 +106,7 @@ function focusTarget(id: string, items: DatedItem[], relations: Relation[], show
   return focusWindow(item, items.filter((i) => otherIds.has(i.id) && shown(i.id)));
 }
 
-export const TimelineView = forwardRef<TimelineControl, Props>(function TimelineView({ items: allItems, categories, relations, selectedId, onSelect, onAddAt, onAddIn, onWindow, onCanGoBack, year, onYear, prominence, drafts: allDrafts = NO_DRAFTS, onMove, highlights = NO_HIGHLIGHTS, picked = NO_PICKS, onPick, territories = NO_TERRITORIES, groups, regionParents, onFocus, region, onRegion, onOpenRelation, allThreads = false, onOpenThread, lenses = NO_LANES, unfolded = NO_IDS, onUnfold, opened = NO_IDS, onOpen }, ref) {
+export const TimelineView = forwardRef<TimelineControl, Props>(function TimelineView({ items: allItems, categories, relations, selectedId, onSelect, onAddAt, onAddIn, onWindow, onCanGoBack, year, onYear, prominence, drafts: allDrafts = NO_DRAFTS, onMove, highlights = NO_HIGHLIGHTS, picked = NO_PICKS, onPick, territories = NO_TERRITORIES, groups, regions, onFocus, region, onRegion, onOpenRelation, allThreads = false, onOpenThread, lenses = NO_LANES, unfolded = NO_IDS, onUnfold, opened = NO_IDS, onOpen }, ref) {
   // Only entries with a start date: a place with none is on the map only.
   const items = useMemo(() => allItems.filter(isDated), [allItems]);
   const drafts = useMemo(() => ({ ...allDrafts, items: allDrafts.items.filter(isDated) }), [allDrafts]);
@@ -145,9 +145,9 @@ export const TimelineView = forwardRef<TimelineControl, Props>(function Timeline
     const its = items.filter((i) => shown.has(i.categoryId));
     return {
       eras: eraRegions(its, highlights, relations, now),
-      overviewData: overview({ items: its, territories: territories.filter((t) => shown.has(t.categoryId)), relations, highlights, groups, regionParents, prominence: prominence ?? (() => 0), now }),
+      overviewData: overview({ items: its, territories: territories.filter((t) => shown.has(t.categoryId)), relations, highlights, groups, regions, prominence: prominence ?? (() => 0), now }),
     };
-  }, [items, categories, highlights, relations, territories, groups, regionParents, prominence]);
+  }, [items, categories, highlights, relations, territories, groups, regions, prominence]);
   // Each entry's lanes, for the lanes that open in place (Claude's drafts by what they are).
   const laneMap = useMemo(() => entryLanes([...items, ...drafts.items], highlights), [items, drafts.items, highlights]);
   // What's in each polity, for the threads between them.

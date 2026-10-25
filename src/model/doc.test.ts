@@ -7,6 +7,11 @@ import {
   eraTerritory,
   setEraTerritory,
   setRegionParent,
+  renameRegion,
+  mergeRegions,
+  removeRegion,
+  regionNamed,
+  regionCount,
   DocValidationError,
   influencesOf,
   mergeDocs,
@@ -19,6 +24,7 @@ import {
   upsert,
   validateDoc,
 } from './doc';
+import { applyUndo, undoFor } from './bulk';
 import { SCHEMA_VERSION, type Relation, type TimelineItem } from './types';
 
 const fixtureJson = readFileSync(new URL('../../tests/fixtures/sample-history.json', import.meta.url), 'utf8');
@@ -31,6 +37,7 @@ const fixtureV5Json = readFileSync(new URL('../../tests/fixtures/sample-history-
 const fixtureV6Json = readFileSync(new URL('../../tests/fixtures/sample-history-v6.json', import.meta.url), 'utf8');
 const fixtureV7Json = readFileSync(new URL('../../tests/fixtures/sample-history-v7.json', import.meta.url), 'utf8');
 const fixtureV8Json = readFileSync(new URL('../../tests/fixtures/sample-history-v8.json', import.meta.url), 'utf8');
+const fixtureV9Json = readFileSync(new URL('../../tests/fixtures/sample-history-v9.json', import.meta.url), 'utf8');
 /** Entries as they were before v9 filled in their lanes. */
 const withoutLanes = (items: TimelineItem[]) => items.map(({ lanes: _, ...it }) => it);
 
@@ -217,17 +224,100 @@ describe('mutations', () => {
   });
 });
 
-describe('region parents', () => {
-  it('sets, changes and takes away a region’s parent, stamping the doc', () => {
+describe('regions (v10)', () => {
+  /** Attica and Greece as records, two entries and a territory in Attica, and a group of two Attic polities. */
+  const attica = () => {
+    let d = createEmptyDoc();
+    d = upsert(d, 'items', { id: 'i_a', kind: 'span', subject: 'period', region: 'Attica', title: 'Archaic Athens', start: { y: -700 }, end: { y: -500 }, categoryId: 'politics', updatedAt: 0 }, 1);
+    d = upsert(d, 'items', { id: 'i_b', kind: 'span', subject: 'period', region: ' Attica ', title: 'Classical Athens', start: { y: -500 }, end: { y: -323 }, categoryId: 'politics', updatedAt: 0 }, 1);
+    d = upsert(d, 'items', { id: 'i_c', kind: 'span', subject: 'period', region: 'Greece', title: 'Classical Sparta', start: { y: -500 }, end: { y: -371 }, categoryId: 'politics', updatedAt: 0 }, 1);
+    d = upsert(d, 'territories', { id: 't_athens', title: 'Athens', categoryId: 'politics', region: 'Attica', snapshots: [], updatedAt: 0 }, 1);
+    d = upsert(d, 'territories', { id: 't_eleusis', title: 'Eleusis', categoryId: 'politics', region: 'Attica', snapshots: [], updatedAt: 0 }, 1);
+    d = upsert(d, 'groups', { id: 'g_attic', title: 'Attic towns', territoryIds: ['t_athens', 't_eleusis'], updatedAt: 0 }, 1);
+    d = setRegionParent(d, 'Attica', 'Greece', 1);
+    return setRegionParent(d, 'Greece', 'Mediterranean', 1);
+  };
+
+  it('gives a region typed on an entry or a territory its record when saved, once', () => {
+    const d = attica();
+    expect(d.regions?.map((r) => [r.id, r.name, r.parent])).toEqual([['rg_attica', 'Attica', 'Greece'], ['rg_greece', 'Greece', 'Mediterranean']]);
+    expect(regionCount(d, 'Attica')).toEqual({ items: 2, territories: 2 });
+  });
+
+  it('sets, changes and takes away a region’s larger area on its record', () => {
     const d0 = createEmptyDoc();
     const d1 = setRegionParent(d0, ' Greece ', 'Mediterranean', 5);
-    expect(d1.regionParents).toEqual({ Greece: 'Mediterranean' });
-    expect(d1.updatedAt).toBe(5);
+    expect(regionNamed(d1, 'Greece')).toMatchObject({ name: 'Greece', parent: 'Mediterranean', updatedAt: 5 });
     expect(setRegionParent(d1, 'Greece', 'Mediterranean', 9)).toBe(d1);
-    expect(setRegionParent(d1, 'Greece', 'Aegean', 6).regionParents).toEqual({ Greece: 'Aegean' });
-    expect(setRegionParent(d1, 'Greece', '', 7).regionParents).toEqual({});
-    // A region isn't its own parent.
-    expect(setRegionParent(d1, 'Greece', 'Greece', 8).regionParents).toEqual({});
+    expect(regionNamed(setRegionParent(d1, 'Greece', 'Aegean', 6), 'Greece')?.parent).toBe('Aegean');
+    expect(regionNamed(setRegionParent(d1, 'Greece', '', 7), 'Greece')?.parent).toBeUndefined();
+    // A region isn't its own larger area.
+    expect(regionNamed(setRegionParent(d1, 'Greece', 'Greece', 8), 'Greece')?.parent).toBeUndefined();
+  });
+
+  it('renames a region across its entries, territories and group, and the regions inside it', () => {
+    const d0 = attica();
+    const d = renameRegion(d0, 'rg_attica', 'Athens and Attica', 9);
+    expect(d.items.map((i) => i.region)).toEqual(['Athens and Attica', 'Athens and Attica', 'Greece']);
+    expect(d.territories.map((t) => t.region)).toEqual(['Athens and Attica', 'Athens and Attica']);
+    expect(regionNamed(d, 'Athens and Attica')).toMatchObject({ id: 'rg_attica', parent: 'Greece', updatedAt: 9 });
+    // The group's region is its members', so it moves with them.
+    expect(d.groups?.[0].territoryIds.map((id) => d.territories.find((t) => t.id === id)?.region)).toEqual(['Athens and Attica', 'Athens and Attica']);
+    // Only what changed is restamped.
+    expect(d.items.find((i) => i.id === 'i_c')).toBe(d0.items.find((i) => i.id === 'i_c'));
+    // A larger area renamed is renamed where it's used.
+    expect(regionNamed(renameRegion(d0, 'rg_greece', 'Hellas', 9), 'Attica')?.parent).toBe('Hellas');
+  });
+
+  it('renames Attica to Greece by merging into it, and merges two regions', () => {
+    const d0 = attica();
+    const d = renameRegion(d0, 'rg_attica', 'Greece', 9);
+    expect(d).toEqual(mergeRegions(d0, 'rg_attica', 'rg_greece', 9));
+    expect(d.items.every((i) => i.region === 'Greece')).toBe(true);
+    expect(d.territories.every((t) => t.region === 'Greece')).toBe(true);
+    expect(d.regions?.map((r) => r.name)).toEqual(['Greece']);
+    expect(d.deleted.rg_attica).toBe(9);
+    // Greece keeps its own larger area; it isn't inside itself.
+    expect(regionNamed(d, 'Greece')?.parent).toBe('Mediterranean');
+  });
+
+  it('deletes a region, moving what it holds to Elsewhere, and Undo brings it all back', () => {
+    const d0 = attica();
+    const d = removeRegion(d0, 'rg_greece', 9);
+    expect(d.items.find((i) => i.id === 'i_c')?.region).toBeUndefined();
+    expect(regionNamed(d, 'Greece')).toBeUndefined();
+    expect(regionNamed(d, 'Attica')?.parent).toBeUndefined();
+    const back = applyUndo(d, undoFor(d0, d), 10);
+    expect(back.items.find((i) => i.id === 'i_c')?.region).toBe('Greece');
+    expect(back.regions?.map((r) => [r.id, r.name, r.parent])).toEqual([['rg_attica', 'Attica', 'Greece'], ['rg_greece', 'Greece', 'Mediterranean']]);
+    expect(back.deleted.rg_greece).toBeUndefined();
+  });
+
+  it('upgrades a schema 9 backup, turning its region parents into records', () => {
+    const v9 = JSON.parse(fixtureV9Json);
+    expect(v9.schemaVersion).toBe(9);
+    const doc = parseDoc(fixtureV9Json);
+    expect(doc.schemaVersion).toBe(SCHEMA_VERSION);
+    expect(doc.regions).toEqual([
+      { id: 'rg_britain', name: 'Britain', parent: 'Europe', updatedAt: v9.updatedAt },
+      { id: 'rg_greece', name: 'Greece', parent: 'Mediterranean', updatedAt: v9.updatedAt },
+    ]);
+    expect('regionParents' in doc).toBe(false);
+    // Nothing else is restamped, so two devices upgrading the same timeline merge cleanly.
+    expect(doc.updatedAt).toBe(v9.updatedAt);
+    expect(doc.items).toEqual(v9.items);
+    expect(mergeDocs(doc, parseDoc(fixtureV9Json))).toEqual(doc);
+  });
+
+  it('merges regions per record', () => {
+    const d0 = attica();
+    const a = setRegionParent(d0, 'Attica', 'Aegean', 20);
+    const b = setRegionParent(d0, 'Greece', 'Balkans', 30);
+    const m = mergeDocs(a, b);
+    expect(regionNamed(m, 'Attica')?.parent).toBe('Aegean');
+    expect(regionNamed(m, 'Greece')?.parent).toBe('Balkans');
+    // A region merged away on one device stays gone.
+    expect(regionNamed(mergeDocs(mergeRegions(d0, 'rg_attica', 'rg_greece', 40), a), 'Attica')).toBeUndefined();
   });
 });
 
@@ -310,10 +400,10 @@ describe('lanes, the overview mark and polities (v9)', () => {
     expect(parseDoc(serializeDoc(doc))).toEqual(doc);
     const other = upsert(upsert(doc, 'items', { ...doc.items.find((i) => i.id === 'i_pelop')!, lanes: ['war', 'economy'], overview: 'world' }, 2e12),
       'groups', { id: 'g_new', title: 'Peloponnesian League', territoryIds: [], updatedAt: 0 }, 2e12);
-    const merged = mergeDocs(doc, { ...other, regionParents: { ...other.regionParents, Persia: 'Near East' } });
+    const merged = mergeDocs(doc, setRegionParent(other, 'Persia', 'Near East', 2e12));
     expect(merged.items.find((i) => i.id === 'i_pelop')).toMatchObject({ lanes: ['war', 'economy'], overview: 'world' });
     expect(merged.groups?.map((g) => g.id)).toEqual(['g_fixture', 'g_new']);
-    expect(merged.regionParents).toEqual({ Greece: 'Mediterranean', Britain: 'Europe', Persia: 'Near East' });
+    expect(merged.regions?.map((r) => [r.name, r.parent])).toEqual([['Britain', 'Europe'], ['Greece', 'Mediterranean'], ['Persia', 'Near East']]);
   });
 
   it('rejects unknown lanes, marks, strength levels, sides and groups without a title', () => {
