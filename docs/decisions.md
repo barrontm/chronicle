@@ -2,6 +2,15 @@
 
 A log of choices that shouldn't be re-litigated every session. Newest first. To change a decision, add a new entry that supersedes the old one.
 
+## 2026-10-25 — Phase 4b checkpoint: regions Bob edits, Phase 5 written
+Bob's one inbox idea was "I want to be able to edit more stuff manually, including the geographic areas that occupy the timeline." Asked what he meant, he chose all four things offered: rename, merge and delete regions; order the bands himself; edit a region right on the timeline; and a region's outline on the map.
+- **Regions become records (v10).** A region is a word typed on entries and territories, and its larger area sits in `doc.regionParents`, a map on the doc that merges as one stamp. Renaming, merging, a band's place and an outline all need something to hang on, and per-record merge is how everything else syncs. So `Region { id, name, parent?, order?, outline?, updatedAt }`, filled on upgrade from the names in use and `regionParents`. Entries and territories keep their `region` name, so nothing that reads it changes. Small tickets S7 (records, rename, merge, delete), S8 (band order and the menu on the timeline) and S9 (outlines) come before Phase 5, S7 first.
+- **Band order: automatic, unless Bob moves one.** This revisits "Not chosen: B · rows Bob drags" (2026-10-19) without reversing it: the automatic order stays the default, a band Bob moves keeps its place and the others order themselves around it, and "Back to automatic order" lets go.
+- **The schema path moves up one.** v11 regimes, alliances and campaign routes (Phase 5, one release); v12 economies; v13 institutions and reception; v14 kinds of border, walls and forces. `docs/vision.md` and the later phases are renumbered.
+- **Phase 5 needs no new prototype.** Phase 0's polity (d) and war (c) prototypes, with Bob's picks of 2026-10-17 in `docs/design.md`, are the targets. Its tickets: regimes; the power-structure diagram (built from roles and links, for Phase 5c's schools too); alliances, with a league as its leader's reach; border morph and editing borders over time; campaigns and battles; one AI ticket drafting borders, alliance members and routes. Paused tickets 3–6, 18 and 20 are folded in; paused ticket 2 (a detailed Aegean coast) is any time.
+- **Known limits** gain S6's two gaps (a laptop with a panel open gets the phone's lane list; clusters and glyphs left the timeline with level 2).
+- The live eval run of `highlight@7` still waits for Bob's say-so.
+
 ## 2026-10-25 — One timeline: the overview, with lanes that open in place
 Bob asked for the overview to replace the regular timeline, and for a polity's lanes to unfurl under it without zooming in on it alone. This supersedes the three zoom levels in "Phase 3 checkpoint" and `docs/vision.md`:
 - **No level 2.** Bob's category lanes of single entries are gone; categories stay filters. The zoom stops (Year to Millennium, All) only zoom. The "Overview" stop is gone.

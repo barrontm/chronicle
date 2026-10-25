@@ -71,7 +71,7 @@ Bob's direction at the Phase 3 checkpoint (2026-10-18). Phase 4's prototype sett
 
 - **What's at the top.** Polities (nations, empires, republics, leagues of city-states) and world events: the Reformation, the split of the Roman Empire, the spread of Christianity, Islam and Judaism, world-changing inventions such as the steam engine. World events are gold, which marks their weight, and need no row or category of their own. Bob can mark any entry "Show in the overview", and any entry as a world event (`overview: 'shown' | 'world'`, v9).
 - **Thickness is power.** A polity's strip is as thick as its power, reach and population in each year. Athens starts as a sliver, grows as its power does, and thins as Macedon comes to dominate. By default it follows the area of the territory's borders in that year (`areaKm2`). Bob can set a relative strength (1 to 5) at any date, citing a highlight, and that wins. A polity with neither is one even width.
-- **Related polities sit together.** Rows are ordered by geography and history: Classical Greece beside Macedon and Persia, the Chinese dynasties far off. Region parents group them (Mediterranean › Greece), and a group of city-states can fold into one row (Classical Greece) and open into Athens, Sparta and Corinth.
+- **Related polities sit together.** Rows are ordered by geography and history: by default (Bob can move a band himself and rename, merge and outline regions: small tickets S7 to S9) Classical Greece beside Macedon and Persia, the Chinese dynasties far off. Region parents group them (Mediterranean › Greece), and a group of city-states can fold into one row (Classical Greece) and open into Athens, Sparta and Corinth.
 - **Eras are the backdrop.** Each region's eras are a faint labelled wash behind its strips, so "Classical" still reads at a glance; theme chips sit on the wash.
 - **Opening a polity or world event** drops its six lanes beneath its strip, each a sub-timeline of changes. Before a lane is opened it already shows its most important changes (by `prominence`); opening it shows all of them, and how they relate to the other lanes (influences, Phase 4b). The lanes don't appear at the top; only under what is open.
 - **The six lanes** (Bob's): **Politics** (constitutions, laws, leaders, movements), **War**, **Economy** (production, and how goods were distributed: the state, markets, kinship…), **Philosophy and religion** (leaders, texts, schisms), **Technology** (inventions, tools, techniques, discoveries), **Nature** (climate, disasters, disease, the land and its resources). No People lane: notable people sit in each lane they belong to. An entry can be in several (the Reformation is religious and political). Lanes are sorted automatically from what a thing is and its highlights, and what Bob sets always wins.
@@ -100,10 +100,11 @@ Bob will add thousands of things across millennia. Zoomed out, the timeline shou
 - v7: `subject` and `region` on entries, for the new timeline.
 - v8: places may have no start or no end (done, Phase 3 ticket 4).
 - v9: `lanes` on entries and highlights (filled from `dimension`), the overview mark, `strength` and `region` on territories, region parents, polity groups, territories as connection ends (with a side).
-- v10: `regimes` on territories, and alliances.
-- v11: `economies` (with `distribution`), plus `Flow.subject` and `goods`.
-- v12: `institutions` with `structures`, `reception` on ideas and works, `Flow.subject: 'ideas'`.
-- v13: kinds of border (`edge` on territory snapshots), walls, forces on wars and battles.
+- v10: regions as records (`Region`: name, larger area, place in the band order, outline on the map), filled from the region names in use and `regionParents`.
+- v11: `regimes` on territories, alliances, and campaign routes on wars.
+- v12: `economies` (with `distribution`), plus `Flow.subject` and `goods`.
+- v13: `institutions` with `structures`, `reception` on ideas and works, `Flow.subject: 'ideas'`.
+- v14: kinds of border (`edge` on territory snapshots), walls, forces on wars and battles.
 
 Each bump that adds a record also makes it a valid connection endpoint.
 
@@ -119,10 +120,11 @@ Each phase ships something usable, behind a "Try the new layout" setting (`ui.ne
 4. The overview: lanes (v9), polities from the tray, polity strips and world events, a polity's six lanes, the map following; the classic layout dropped
    - Small tickets after it: add from a lane; borders from Seshat (Cliopatria); the polity a place was in
    - 4b. Themes, influences between lanes, threads; eras on the map; lenses, regions and groups in the app
-5. Polities and wars: regimes (v10), border morph, alliances, campaigns, battles
-   - 5b. Economy, with distribution (v11)
-   - 5c. Ideas, schools and spread (v12)
-   - 5d. Living map: kinds of border and walls, war technology, disasters, discoveries, the look of ideas and religion (v13)
+   - Small tickets after it: the overview is the timeline (lanes open in place); regions Bob edits (v10): rename, merge, his own band order, edits on the timeline, outlines on the map
+5. Polities and wars: regimes (v11), border morph, alliances, campaigns, battles
+   - 5b. Economy, with distribution (v12)
+   - 5c. Ideas, schools and spread (v13)
+   - 5d. Living map: kinds of border and walls, war technology, disasters, discoveries, the look of ideas and religion (v14)
 6. Other sources: Worker proxy with Readability, bookmarklet / share target, PDFs and EPUBs Bob uploads
 
 A checkpoint session closes each phase. It triages the ideas inbox, reorders what's left and logs changes.
