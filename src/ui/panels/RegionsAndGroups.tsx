@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { undoFor, type Undo } from '../../model/bulk';
-import { ensureRegion, mergeRegions, newId, regionCount, regionNamed, remove, removeRegion, renameRegion, setRegionParent, upsert } from '../../model/doc';
+import { ensureRegion, hasRegionOrder, mergeRegions, newId, regionCount, regionNamed, remove, removeRegion, renameRegion, setRegionOrders, setRegionParent, upsert } from '../../model/doc';
 import { polityRegion } from '../../model/overview';
 import { allRegions } from '../../model/subjects';
 import type { PolityGroup, TimelineDoc } from '../../model/types';
@@ -52,6 +52,18 @@ export function RegionsAndGroups({ nav, onDone }: { nav: Nav; onDone: (undo: Und
           />
         ))}
       </ul>
+      {hasRegionOrder(doc) && (
+        <p className="hint region-order">
+          You’ve moved some bands on the timeline; the rest order themselves around them.{' '}
+          <button type="button" className="btn small" disabled={!!readOnly} onClick={() => {
+            const now = Date.now();
+            const run = (d: TimelineDoc) => setRegionOrders(d, new Map(), now);
+            const undo = undoFor(doc, run(doc));
+            update(run);
+            onDone(undo, 'Bands back in the automatic order.');
+          }}>Back to automatic order</button>
+        </p>
+      )}
       <datalist id="region-parents">{parents.map((p) => <option key={p} value={p} />)}</datalist>
       {elsewhere.length > 0 && (
         <>

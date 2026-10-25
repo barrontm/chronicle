@@ -1,8 +1,8 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { docYearRange, presenceAt } from '../model/atYear';
 import { formatRange, toDecimalYear } from '../model/dates';
-import { applyUndo, bulkRemove, type Undo } from '../model/bulk';
-import { mergeDocs, parseDoc, serializeDoc, upsert } from '../model/doc';
+import { applyUndo, bulkRemove, undoFor, type Undo } from '../model/bulk';
+import { mergeDocs, parseDoc, serializeDoc, setRegionOrders, upsert } from '../model/doc';
 import { prominence as prominenceOf } from '../model/prominence';
 import type { HistDate, Lane, TimelineDoc, TimelineItem } from '../model/types';
 import { sortLanes } from '../model/lanes';
@@ -33,6 +33,7 @@ import { downloadText } from './util';
 import { useStored } from './useStored';
 import { Splitter } from './Splitter';
 import { Search } from './Search';
+import { RegionMenu } from './RegionMenu';
 import type { SearchHit } from '../model/search';
 
 export function App({ store }: { store: DocStore }) {
@@ -137,6 +138,16 @@ function Workspace() {
     setStack((s) => s.filter((p) => !(p.type === 'item' && pickedNow.includes(p.id)) && p.type !== 'bulk-edit'));
     setPicked([]);
     setBulkDone({ undo, msg: `Deleted ${n} ${n === 1 ? 'entry' : 'entries'}.` });
+  };
+  // A region's menu, opened from its band's name on the timeline.
+  const [regionMenu, setRegionMenu] = useState<{ region: string; anchor: DOMRect } | null>(null);
+  const closeRegionMenu = useCallback(() => setRegionMenu(null), []);
+  /** Bob moved a band: where the bands he's moved sit now, with one Undo. */
+  const orderRegions = (orders: Map<string, number>, moved: string) => {
+    const now = Date.now();
+    const run = (d: TimelineDoc) => setRegionOrders(d, orders, now);
+    setBulkDone({ undo: undoFor(doc, run(doc)), msg: `Moved ${moved}.` });
+    update(run);
   };
   const undoBulk = () => {
     if (!bulkDone) return;
@@ -523,7 +534,21 @@ function Workspace() {
             onFocus={setOverviewFocus}
             region={region?.name}
             onRegion={(r) => { if (!r) setRegion(undefined); }}
+            onRegionMenu={(r, anchor) => setRegionMenu((m) => (m?.region === r ? null : { region: r, anchor }))}
+            onRegionOrder={readOnly ? undefined : orderRegions}
           />
+          {regionMenu && (
+            <RegionMenu
+              key={regionMenu.region}
+              region={regionMenu.region}
+              anchor={regionMenu.anchor}
+              moves={timeline.current?.regionMoves(regionMenu.region) ?? {}}
+              onMove={(dir) => timeline.current?.moveRegion(regionMenu.region, dir)}
+              onLibrary={() => setStack([{ type: 'library', tab: 'regions' }])}
+              onDone={(undo, msg) => setBulkDone({ undo, msg })}
+              onClose={closeRegionMenu}
+            />
+          )}
           {(pickedNow.length > 0 || bulkDone) && (
             // One bar under the timeline: what's selected, and what the last bulk change did, with Undo.
             <div className="notice moved-note pick-bar" role="region" aria-label="Selected entries" data-testid="pick-bar">

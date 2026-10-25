@@ -856,3 +856,23 @@ export function setRegionParent(doc: TimelineDoc, region: string, parent: string
   const { parent: _p, ...rest } = rec;
   return upsert(next, 'regions', p && p !== r ? { ...rest, parent: p } : rest, now);
 }
+
+/**
+ * Where Bob put the bands he moved on the overview (`bandOrders`): each region named gets that
+ * `order` (its record made if it has none), and every other region's goes, so the empty map is
+ * "Back to automatic order". Only what changes is restamped.
+ */
+export function setRegionOrders(doc: TimelineDoc, orders: ReadonlyMap<string, number>, now = Date.now()): TimelineDoc {
+  let next = doc;
+  for (const name of orders.keys()) if (name.trim()) next = withRegion(next, name, now);
+  for (const r of next.regions ?? []) {
+    const want = orders.get(r.name);
+    if (want === r.order) continue;
+    const { order: _o, ...rest } = r;
+    next = upsert(next, 'regions', want === undefined ? rest : { ...rest, order: want }, now);
+  }
+  return next;
+}
+
+/** Whether Bob has moved any band (so "Back to automatic order" has something to do). */
+export const hasRegionOrder = (doc: Pick<TimelineDoc, 'regions'>) => !!doc.regions?.some((r) => r.order !== undefined);

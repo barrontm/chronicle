@@ -3,6 +3,7 @@ import { isDated, jsDateToDecimalYear, toDecimalYear } from '../model/dates';
 import { eraRegions } from '../model/eras';
 import { entryLanes } from '../model/lanes';
 import { lensMarks } from '../model/lenses';
+import { bandOrders, moveBand } from '../model/bandOrder';
 import { overview } from '../model/overview';
 import { polityMembers, worldMembers } from '../model/polities';
 import { threads as rollThreads } from '../model/threads';
@@ -36,6 +37,10 @@ export interface TimelineControl {
   focus: (id: string) => void;
   /** Go back to the window from before the first focus. */
   back: () => void;
+  /** Move a region's band one place up (-1) or down (1), as ↑ and ↓ on its name do. */
+  moveRegion: (region: string, dir: -1 | 1) => void;
+  /** What moves when a region's band moves up or down (it, or its larger area's name), or nothing at an end. */
+  regionMoves: (region: string) => { up?: string; down?: string };
 }
 
 interface Props {
@@ -87,6 +92,10 @@ interface Props {
   /** What's open in place (`pol:<territory>`, world events' and eras' ids), and Bob opening or folding one (what's open now). */
   opened?: readonly string[];
   onOpen?: (keys: string[]) => void;
+  /** Bob clicked a band's name: its region's menu, beside `anchor`. */
+  onRegionMenu?: (region: string, anchor: DOMRect) => void;
+  /** Bob moved a band: where the bands he's moved now sit (`setRegionOrders`), and what moved in words. Without it bands don't move. */
+  onRegionOrder?: (orders: Map<string, number>, moved: string) => void;
 }
 
 export type { OverviewFocus };
@@ -106,14 +115,14 @@ function focusTarget(id: string, items: DatedItem[], relations: Relation[], show
   return focusWindow(item, items.filter((i) => otherIds.has(i.id) && shown(i.id)));
 }
 
-export const TimelineView = forwardRef<TimelineControl, Props>(function TimelineView({ items: allItems, categories, relations, selectedId, onSelect, onAddAt, onAddIn, onWindow, onCanGoBack, year, onYear, prominence, drafts: allDrafts = NO_DRAFTS, onMove, highlights = NO_HIGHLIGHTS, picked = NO_PICKS, onPick, territories = NO_TERRITORIES, groups, regions, onFocus, region, onRegion, onOpenRelation, allThreads = false, onOpenThread, lenses = NO_LANES, unfolded = NO_IDS, onUnfold, opened = NO_IDS, onOpen }, ref) {
+export const TimelineView = forwardRef<TimelineControl, Props>(function TimelineView({ items: allItems, categories, relations, selectedId, onSelect, onAddAt, onAddIn, onWindow, onCanGoBack, year, onYear, prominence, drafts: allDrafts = NO_DRAFTS, onMove, highlights = NO_HIGHLIGHTS, picked = NO_PICKS, onPick, territories = NO_TERRITORIES, groups, regions, onFocus, region, onRegion, onOpenRelation, allThreads = false, onOpenThread, lenses = NO_LANES, unfolded = NO_IDS, onUnfold, opened = NO_IDS, onOpen, onRegionMenu, onRegionOrder }, ref) {
   // Only entries with a start date: a place with none is on the map only.
   const items = useMemo(() => allItems.filter(isDated), [allItems]);
   const drafts = useMemo(() => ({ ...allDrafts, items: allDrafts.items.filter(isDated) }), [allDrafts]);
   const host = useRef<HTMLDivElement>(null);
   const tl = useRef<TimelineHandle | null>(null);
-  const cb = useRef({ onSelect, onAddAt, onAddIn, onWindow, onYear, onCanGoBack, onMove, onPick, onFocus, onRegion, onOpenRelation, onOpenThread, onUnfold, onOpen });
-  cb.current = { onSelect, onAddAt, onAddIn, onWindow, onYear, onCanGoBack, onMove, onPick, onFocus, onRegion, onOpenRelation, onOpenThread, onUnfold, onOpen };
+  const cb = useRef({ onSelect, onAddAt, onAddIn, onWindow, onYear, onCanGoBack, onMove, onPick, onFocus, onRegion, onOpenRelation, onOpenThread, onUnfold, onOpen, onRegionMenu, onRegionOrder });
+  cb.current = { onSelect, onAddAt, onAddIn, onWindow, onYear, onCanGoBack, onMove, onPick, onFocus, onRegion, onOpenRelation, onOpenThread, onUnfold, onOpen, onRegionMenu, onRegionOrder };
   const latest = useRef({ items, relations, categories });
   latest.current = { items, relations, categories };
   const beforeFocus = useRef<YearWindow | null>(null);
@@ -133,6 +142,10 @@ export const TimelineView = forwardRef<TimelineControl, Props>(function Timeline
       onOpenThread: (t) => cb.current.onOpenThread?.(t),
       onUnfold: (ids) => cb.current.onUnfold?.(ids),
       onOpen: (keys) => cb.current.onOpen?.(keys),
+      // Read when used, so bands stop moving when the doc can't be changed.
+      get onRegionHead() { return cb.current.onRegionMenu && ((r: string, a: DOMRect) => cb.current.onRegionMenu?.(r, a)); },
+      get onOrderRegions() { return cb.current.onRegionOrder && saveOrder; },
+      get onMoveRegion() { return cb.current.onRegionOrder && moveRegion; },
     }, { window: { start: -800, end: 2030 } });
     tl.current = t;
     return () => { t.dispose(); tl.current = null; };
@@ -181,6 +194,27 @@ export const TimelineView = forwardRef<TimelineControl, Props>(function Timeline
     eras: eras.flatMap((r) => r.eras),
     lanesOf: laneMap,
   }), [items, byPolity, territories, overviewData, eras, laneMap]);
+
+  // Moving a band saves where every band Bob has moved now sits, so the rest keep ordering themselves.
+  const latestO = useRef({ overviewData, regions });
+  latestO.current = { overviewData, regions };
+  const parentOfIn = (O: typeof overviewData) => (r: string) => O.regions.find((x) => x.name === r)?.parent;
+  function saveOrder(order: string[], moved: string[]) {
+    const { overviewData: O, regions: rs } = latestO.current;
+    const placed = new Map((rs ?? []).flatMap((r) => (r.order !== undefined ? [[r.name, r.order] as const] : [])));
+    const parentOf = parentOfIn(O);
+    cb.current.onRegionOrder?.(bandOrders(order, O.auto, (r) => placed.get(r), moved, parentOf), moved.length > 1 ? parentOf(moved[0]) ?? moved[0] : moved[0]);
+  }
+  function moveRegion(region: string, dir: -1 | 1) {
+    const O = latestO.current.overviewData;
+    const m = moveBand(O.regions.map((r) => r.name), region, dir, parentOfIn(O));
+    if (m) saveOrder(m.order, m.moved);
+  }
+  const regionMoves = (region: string) => {
+    const O = latestO.current.overviewData, parentOf = parentOfIn(O), names = O.regions.map((r) => r.name);
+    const what = (dir: -1 | 1) => { const m = moveBand(names, region, dir, parentOf); return m && (m.moved.length > 1 ? parentOf(region) ?? region : region); };
+    return { up: what(-1), down: what(1) };
+  };
 
   useEffect(() => {
     tl.current?.setData({
@@ -240,6 +274,8 @@ export const TimelineView = forwardRef<TimelineControl, Props>(function Timeline
       beforeFocus.current = null;
       cb.current.onCanGoBack(false);
     },
+    moveRegion,
+    regionMoves,
   }));
 
   return <div ref={host} className="timeline-host tl-host" data-testid="timeline" tabIndex={0} aria-label="Timeline. Drag or scroll to move through time; Ctrl or ⌘ and scroll, or pinch, to zoom; Ctrl or ⌘ and drag to select several." />;

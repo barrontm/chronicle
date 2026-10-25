@@ -1,5 +1,6 @@
 import type { MultiPolygon, Polygon } from 'geojson';
 import { formatRange, toDecimalYear } from './dates';
+import { withBobsOrder } from './bandOrder';
 import { ELSEWHERE, isEra } from './eras';
 import type { DatedItem, HistDate, Highlight, PolityGroup, Region, Relation, Territory } from './types';
 
@@ -52,7 +53,10 @@ export interface OWorld {
 }
 
 export interface Overview {
+  /** The bands in order: the automatic one, with those Bob moved at their places. */
   regions: ORegion[];
+  /** The automatic order of the bands' names, for saving where Bob moves one. */
+  auto: string[];
   polities: OPolity[];
   groups: OGroup[];
   /** World events placed in their regions. */
@@ -69,7 +73,7 @@ export interface OverviewInput {
   relations: Relation[];
   highlights: Highlight[];
   groups?: PolityGroup[];
-  /** Bob's regions (v10), for their larger areas. */
+  /** Bob's regions (v10), for their larger areas and the places of the bands he moved. */
   regions?: readonly Region[];
   prominence: (id: string) => number;
   /** Today, as a decimal year: where a polity still there stops. */
@@ -256,7 +260,9 @@ export function overview(o: OverviewInput): Overview {
   const centre = new Map([...centres].map(([r, cs]) => [r, [cs.reduce((a, c) => a + c[0], 0) / cs.length, cs.reduce((a, c) => a + c[1], 0) / cs.length] as Centre]));
   const parents = new Map((o.regions ?? []).map((r) => [r.name, r.parent?.trim() || undefined]));
   const parentOf = (r: string) => (r === ELSEWHERE ? undefined : parents.get(r));
-  const order = orderRegions([...names], centre, parentOf, link);
+  const auto = orderRegions([...names], centre, parentOf, link);
+  const placed = new Map((o.regions ?? []).flatMap((r) => (r.order !== undefined ? [[r.name, r.order] as const] : [])));
+  const order = withBobsOrder(auto, (r) => placed.get(r), parentOf);
   const parentsInOrder = [...new Set(order.map((r) => parentOf(r) ?? `\u0000${r}`))];
   const regions = order.map((name): ORegion => ({ name, label: name === ELSEWHERE ? 'Elsewhere' : name, parent: parentOf(name), tone: parentsInOrder.indexOf(parentOf(name) ?? `\u0000${name}`) }));
   const rank = new Map(order.map((r, i) => [r, i]));
@@ -278,5 +284,5 @@ export function overview(o: OverviewInput): Overview {
     worlds.push({ id: i.id, home, touches });
   }
   top.sort((a, b) => o.prominence(b) - o.prominence(a) || toDecimalYear(itemById.get(a)!.start) - toDecimalYear(itemById.get(b)!.start) || a.localeCompare(b));
-  return { regions, polities, groups, worlds, top };
+  return { regions, auto, polities, groups, worlds, top };
 }

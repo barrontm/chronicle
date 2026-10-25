@@ -121,10 +121,14 @@ export interface Scene {
   contentH: number;
   /** Open lanes: each lane's "Add" under its name, drawn as real buttons so the keyboard reaches them. */
   adds: AddSpot[];
+  /** Each band's name (Elsewhere's aside), a real button too: it opens the region's menu, and drags or arrow keys move the band. */
+  heads: HeadSpot[];
   /** Each ribbon's target id, with its connections and the two rows it joins in words. */
   ribbons?: Map<string, { ids: string[]; title: string }>;
 }
 
+/** Where a band's name is, in px from the host's content edge like the gutter. */
+export interface HeadSpot { region: string; label: string; x: number; y: number; w: number; h: number }
 /** Where a lane's "Add" button sits, in px from the plot's top left like everything else, and the open lanes it's in. */
 export interface AddSpot { lane: Lane; label: string; x: number; y: number; w: number; h: number; block?: string }
 
