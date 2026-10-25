@@ -25,21 +25,24 @@ async function openSheet(page: Page) {
 
 /** Open an entry through Search, for one the short timeline beside the reader may have out of view. */
 async function openBySearch(page: Page, q: string, title: string) {
-  await page.locator('.brand').click();
-  await page.keyboard.press('/');
+  // On a phone, Search opens from its magnifier button.
+  if (isPhone(page)) await page.getByRole('button', { name: 'Search Chronicle' }).click();
+  else {
+    await page.locator('.brand').click();
+    await page.keyboard.press('/');
+  }
   await page.getByRole('combobox', { name: 'Search Chronicle' }).fill(q);
   await page.getByRole('listbox', { name: 'Search results' }).getByRole('option', { name: new RegExp(title) }).first().click();
   await expect(page.getByTestId('item-view').getByRole('heading', { name: title })).toBeVisible();
 }
 
-/** A fixture entry's mark on the timeline. Click it with `force`: the timeline hit-tests by position. */
-const mark = (page: Page, id: string) => page.getByTestId('timeline').locator(`.tl-mark[data-id=${id}]`);
-/** An entry's name on the timeline, for entries made during a test. */
-const label = (page: Page, title: string) => page.getByTestId('timeline').locator('.tl-label', { hasText: title });
-
+/**
+ * The sample fixture has no polities or periods, so the timeline (the overview) draws none of its
+ * entries: they're opened from Search, as Bob would.
+ */
 async function importFixture(page: Page) {
   await page.getByTestId('import-input').setInputFiles(FIXTURE);
-  await expect(mark(page, 'i_aristotle')).toBeVisible();
+  await expect(page.locator('.doc-title')).toHaveValue('Test fixture');
 }
 
 /** Double-click an empty part of the timeline to add an entry by hand, and say what it is. */
@@ -86,7 +89,6 @@ test('add an event, reading BCE dates the way people write them', async ({ page 
   const view = page.getByTestId('item-view');
   await expect(view.getByRole('heading', { name: 'Battle of Marathon' })).toBeVisible();
   await expect(view.getByText('490 BCE')).toBeVisible();
-  await expect(label(page, 'Battle of Marathon')).toBeVisible();
   await expect(page.getByTestId('empty-state')).toHaveCount(0);
 });
 
@@ -107,7 +109,7 @@ test('entries survive a reload', async ({ page }) => {
   await addEntry(page, 'Person', 'Hypatia', 'c. 360', '415');
   await page.waitForTimeout(400); // debounce
   await page.reload();
-  await expect(label(page, 'Hypatia')).toBeVisible();
+  await openBySearch(page, 'Hypatia', 'Hypatia');
 });
 
 test('write a note linked to two people, with a cited source', async ({ page }) => {
@@ -221,7 +223,12 @@ test('import a backup, then merge in a copy edited elsewhere', async ({ page }) 
   await page.getByTestId('import-input').setInputFiles(FIXTURE);
   await expect(page.getByTestId('import-choice')).toBeVisible();
   await page.getByRole('button', { name: 'Merge into my timeline' }).click();
-  await expect(mark(page, 'i_aristotle')).toHaveCount(1);
+  // Merged, not doubled: one of each trend, and one Aristotle.
+  await expect(page.locator('.strip')).toHaveCount(2);
+  await page.locator('.brand').click();
+  await page.keyboard.press('/');
+  await page.getByRole('combobox', { name: 'Search Chronicle' }).fill('Aristotle');
+  await expect(page.getByRole('listbox', { name: 'Search results' }).getByRole('option', { name: /^Aristotle\b.*BCE/ })).toHaveCount(1);
 });
 
 test('explains why a bad file cannot be imported', async ({ page }) => {
@@ -238,11 +245,11 @@ test('works offline after the first visit', async ({ page, context }) => {
   await page.reload(); // let the service worker take control
   await context.setOffline(true);
   await page.reload();
-  await expect(label(page, 'Fall of Constantinople')).toBeVisible();
+  await openBySearch(page, 'Constantinople', 'Fall of Constantinople');
   await context.setOffline(false);
 });
 
-test('move through time with the wheel, the thumbwheel and the zoom bar; clicking a person zooms to their time @phone', async ({ page }) => {
+test('move through time with the wheel, the thumbwheel and the zoom bar; opening a person from Search zooms to their time @phone', async ({ page }) => {
   await open(page);
   await importFixture(page);
   const span = page.getByTestId('zoom-span');
@@ -280,13 +287,11 @@ test('move through time with the wheel, the thumbwheel and the zoom bar; clickin
   await wheel.press('ArrowRight');
   await expect.poll(centre).toBeGreaterThan(settled);
 
-  // "All" shows everything; clicking Plato then frames his life with Socrates and Aristotle.
-  await page.getByTestId('time-bar').getByRole('button', { name: 'All' }).click();
-  await expect(span).toHaveText(/[0-9,]{4,} years in view/);
-  await mark(page, 'i_plato').click({ force: true });
+  // Opening Plato from Search frames his life with Socrates and Aristotle.
+  await page.getByTestId('time-bar').getByRole('button', { name: 'Millennium' }).click();
+  await expect(span).toHaveText('1,000 years in view');
+  await openBySearch(page, 'Plato', 'Plato');
   await expect(span).toHaveText('180 years in view');
-  await expect(page.locator('.tl-mark.infl-by[data-id=i_socrates]')).toBeInViewport();
-  await expect(page.locator('.tl-mark.infl-on[data-id=i_aristotle]')).toBeInViewport();
 
   // His bibliography: what notes and connections cite, and what he wrote.
   const bib = page.getByTestId('bibliography');
@@ -296,7 +301,7 @@ test('move through time with the wheel, the thumbwheel and the zoom bar; clickin
   // Back to where I was (on a phone the entry's panel covers the timeline, so close it first).
   if (isPhone(page)) await page.getByRole('button', { name: 'Close panel' }).click();
   await page.getByRole('button', { name: 'Back to where I was' }).click();
-  await expect(span).toHaveText(/[0-9,]{4,} years in view/);
+  await expect(span).toHaveText('1,000 years in view');
   await expect(page.getByRole('button', { name: 'Back to where I was' })).toHaveCount(0);
 });
 
@@ -321,7 +326,7 @@ test('Wikipedia suggests influences: connect one on the timeline, add one that i
   });
   await open(page);
   await importFixture(page);
-  await mark(page, 'i_aristotle').click({ force: true });
+  await openBySearch(page, 'Aristotle', 'Aristotle');
   const view = page.getByTestId('item-view');
   const suggestions = view.getByTestId('influence-suggestions');
   await suggestions.getByRole('button', { name: 'Suggest influences' }).click();
@@ -396,10 +401,9 @@ test('a timeline saved by an older version opens upgraded, with a copy kept', as
   await seedSavedDoc(page, JSON.parse(readFileSync(FIXTURE_V5, 'utf8')));
   await page.reload();
   await expect(page.getByTestId('save-state')).toHaveText('Saved on this device');
-  await expect(mark(page, 'i_aristotle')).toBeVisible();
   await expect.poll(() => savedState(page)).toMatchObject({ schemaVersion: 9, backups: 1 });
   // The v5 excerpt is now a highlight, still shown on its entry.
-  await mark(page, 'i_magna').click({ force: true });
+  await openBySearch(page, 'Magna', 'Magna Carta');
   await expect(page.getByTestId('item-view').getByTestId('excerpt')).toContainText('royal charter of rights');
 });
 
@@ -423,7 +427,7 @@ test('a timeline saved before places could go without dates opens upgraded', asy
   await page.reload();
   await expect(page.getByTestId('save-state')).toHaveText('Saved on this device');
   await expect.poll(() => savedState(page)).toMatchObject({ schemaVersion: 9, backups: 1 });
-  await expect(mark(page, 'i_pelop')).toBeVisible();
+  await openBySearch(page, 'Peloponnesian', 'Peloponnesian War');
 });
 
 test('a timeline saved before lanes opens upgraded, each entry in the lane its dimension became', async ({ page }) => {
@@ -433,7 +437,7 @@ test('a timeline saved before lanes opens upgraded, each entry in the lane its d
   await page.reload();
   await expect(page.getByTestId('save-state')).toHaveText('Saved on this device');
   await expect.poll(() => savedState(page)).toMatchObject({ schemaVersion: 9, backups: 1 });
-  await mark(page, 'i_magna').click({ force: true });
+  await openBySearch(page, 'Magna', 'Magna Carta');
   await expect(page.getByTestId('item-view').getByTestId('item-lanes')).toHaveText('Politics and law');
 });
 
@@ -502,7 +506,7 @@ test('the timeline playhead and the map share one year', async ({ page }) => {
 test('“Show on map” jumps to an entry’s year with the map open', async ({ page }) => {
   await open(page);
   await importFixture(page);
-  await mark(page, 'i_magna').click({ force: true });
+  await openBySearch(page, 'Magna', 'Magna Carta');
   await page.getByTestId('item-view').getByRole('button', { name: 'Show on map' }).click();
   await expect(page.locator('[data-testid=map][data-ready]')).toBeAttached({ timeout: 20_000 });
   await expect(page.getByTestId('yearbar').getByLabel('Year', { exact: true })).toHaveValue('1215');
@@ -906,8 +910,6 @@ test.describe('drafting with AI', () => {
     await expect(marathonToWar).toContainText('Accept the entry first.');
     await expect(marathonToWar.getByRole('button', { name: 'Accept' })).toBeDisabled();
 
-    await expect(label(page, 'Battle of Marathon')).toBeVisible();
-    await expect(label(page, 'Battle of Salamis')).toHaveCount(0);
     await entries.nth(1).getByRole('button', { name: 'Open' }).click();
     await expect(page.getByTestId('item-drafted')).toContainText('Drafted with AI (claude-opus-5-5, entries@1)');
   });

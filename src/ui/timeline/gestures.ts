@@ -11,7 +11,7 @@
 export interface GestureApi {
   panPx(dx: number): void;
   scrollBy(dy: number): void;
-  /** factor 2 = twice as many years in view; x and y in px from the host's top left (over an era, zooming in opens it). */
+  /** factor 2 = twice as many years in view; x and y in px from the host's top left. */
   zoomAt(factor: number, x: number, y: number): void;
   /** `mod`: Ctrl or ⌘ was held, so it adds or removes one from the selection. */
   tap(x: number, y: number, mod?: boolean): void;

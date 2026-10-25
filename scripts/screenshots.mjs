@@ -62,15 +62,37 @@ async function openSheet(p) {
   if (await map.isVisible().catch(() => false)) await map.click();
 }
 
+/** Open an entry from Search: the sample fixture has no polities, so the timeline draws none of its entries. */
+async function openBySearch(p, q) {
+  await p.locator('.brand').click();
+  await p.keyboard.press('/');
+  await p.getByRole('combobox', { name: 'Search Chronicle' }).fill(q);
+  await p.getByRole('listbox', { name: 'Search results' }).getByRole('option').first().click();
+}
+
 async function withFixture(p) {
   await p.getByTestId('import-input').setInputFiles(FIXTURE);
   await openSheet(p);
-  await p.locator('.tl-mark[data-id=i_aristotle]').waitFor({ state: 'attached' });
+  await p.locator('.doc-title').waitFor();
   await p.getByRole('button', { name: 'More' }).click();
   await p.getByRole('menuitem', { name: 'Show everything' }).click();
   await p.waitForTimeout(300);
 }
 
+/** Shift + wheel over the timeline until `sel` is inside it (the timeline scrolls its own rows). */
+async function scrollTo(p, sel) {
+  const tl = await p.getByTestId('timeline').boundingBox();
+  await p.mouse.move(tl.x + tl.width / 2, tl.y + tl.height / 2);
+  await p.keyboard.down('Shift');
+  for (let i = 0; i < 120; i++) {
+    const b = await p.locator(sel).first().boundingBox({ timeout: 300 }).catch(() => null);
+    if (b && b.y > tl.y + 50 && b.y + b.height < tl.y + tl.height - 10) break;
+    await p.mouse.wheel(0, b && b.y < tl.y + 50 ? -80 : 80);
+    await p.waitForTimeout(80);
+  }
+  await p.keyboard.up('Shift');
+  await p.waitForTimeout(150);
+}
 async function showMap(p, year) {
   await openSheet(p);
   await p.locator('[data-testid=map][data-ready]').waitFor({ timeout: 20000 });
@@ -97,7 +119,7 @@ if (any('desktop-timeline', 'desktop-entry', 'desktop-editor', 'desktop-map', 'd
 p = await page('desktop', desktop);
 await withFixture(p);
 await shot(p, 'desktop-timeline');
-await p.locator('.tl-mark[data-id=i_plato]').click({ force: true });
+await openBySearch(p, 'Plato');
 await p.waitForTimeout(600); // the timeline zooms to his time
 await shot(p, 'desktop-entry');
 await p.getByTestId('item-view').getByRole('button', { name: 'Edit' }).click();
@@ -115,7 +137,7 @@ p = await page('dark', { ...desktop, colorScheme: 'dark' });
 await withFixture(p);
 await shot(p, 'desktop-dark');
 if (wanted('desktop-dark-influences')) {
-  await p.locator('.tl-mark[data-id=i_plato]').click({ force: true });
+  await openBySearch(p, 'Plato');
   await p.waitForTimeout(600); // the timeline zooms to his time
   await shot(p, 'desktop-dark-influences');
   await p.getByRole('button', { name: 'Close panel' }).click();
@@ -130,7 +152,7 @@ p = await page('phone', { viewport: { width: 412, height: 860 }, isMobile: true,
 await withFixture(p);
 await shot(p, 'phone-timeline');
 if (wanted('phone-influences')) {
-  await p.locator('.tl-mark[data-id=i_plato]').click({ force: true });
+  await openBySearch(p, 'Plato');
   await p.waitForTimeout(600); // the timeline zooms to his time
   await shot(p, 'phone-influences');
   await p.getByRole('button', { name: 'Close panel' }).click();
@@ -203,7 +225,7 @@ async function places(p, prefix) {
     headers: { 'Access-Control-Allow-Origin': '*' },
   }));
   await withFixture(p);
-  await p.locator('.tl-mark[data-id=i_plato]').click({ force: true });
+  await openBySearch(p, 'Plato');
   await p.waitForTimeout(600); // the timeline zooms to his time
   await p.getByTestId('item-view').getByRole('button', { name: 'Edit' }).click();
   await p.getByRole('button', { name: 'Add a place' }).click();
@@ -267,7 +289,7 @@ if (any('phone-seshat')) await seshat(await page('phone-seshat', { viewport: { w
 // An entry's lanes and overview mark in the editor, then on its panel.
 async function lanes(p, prefix) {
   await withFixture(p);
-  await p.locator('.tl-mark[data-id=i_plato]').click({ force: true });
+  await openBySearch(p, 'Plato');
   await p.waitForTimeout(600); // the timeline zooms to his time
   await p.getByTestId('item-view').getByRole('button', { name: 'Edit' }).click();
   const editor = p.getByTestId('item-editor');
@@ -285,45 +307,13 @@ if (any('desktop-lanes')) await lanes(await page('desktop-lanes', desktop), 'des
 if (any('dark-lanes')) await lanes(await page('dark-lanes', { ...desktop, colorScheme: 'dark' }), 'dark');
 if (any('phone-lanes')) await lanes(await page('phone-lanes', { viewport: { width: 412, height: 860 }, isMobile: true, hasTouch: true }), 'phone');
 
-// The timeline in the reader layout: everything in view, then zoomed out far enough to cluster.
-async function newTimeline(p, prefix) {
-  await p.getByTestId('import-input').setInputFiles(FIXTURE);
-  if (prefix === 'phone') await p.getByTestId('reader').getByRole('button', { name: 'Map' }).click();
-  await p.locator('[data-testid=timeline][data-ready]').waitFor();
-  await p.getByTestId('time-bar').getByRole('button', { name: 'All' }).click();
-  await p.waitForTimeout(600);
-  await shot(p, `${prefix}-new-timeline`);
-  await p.getByTestId('time-bar').getByRole('button', { name: 'Zoom the timeline out' }).click();
-  await p.waitForTimeout(600);
-  await shot(p, `${prefix}-new-timeline-wide`);
-  // Plato open: his influences lit up with arrows, the rest faded.
-  await p.getByTestId('time-bar').getByRole('button', { name: 'All' }).click();
-  await p.waitForTimeout(600);
-  await p.locator('.tl-mark[data-id=i_plato]').click({ force: true });
-  await p.waitForTimeout(700);
-  await shot(p, `${prefix}-new-timeline-plato`);
-}
-// Every kind of thing on the new timeline (tests/fixtures/every-kind.json), framed on the Classical period.
-const KINDS = fileURLToPath(new URL('../tests/fixtures/every-kind.json', import.meta.url));
-async function kinds(p, prefix) {
-  await p.getByTestId('import-input').setInputFiles(KINDS);
-  if (prefix === 'phone') await p.getByTestId('reader').getByRole('button', { name: 'Map' }).click();
-  await p.locator('[data-testid=timeline][data-ready]').waitFor();
-  await p.getByTestId('time-bar').getByRole('button', { name: 'All' }).click();
-  await p.waitForTimeout(400);
-  await p.locator('.tl-mark[data-id=classical]').click({ force: true });
-  await p.getByTestId('item-view').getByRole('button', { name: 'Show its time' }).click();
-  await p.getByRole('button', { name: 'Close panel' }).click();
-  await p.waitForTimeout(700);
-  await shot(p, `${prefix}-kinds`);
-}
-// Level 0 on the Classical Greece fixture: the Overview stop, then Classical Greece unfolded with Athens picked.
+// The overview on the Classical Greece fixture, then Classical Greece unfolded with Athens open.
 const GREECE = fileURLToPath(new URL('../tests/fixtures/greece/classical-greece.json', import.meta.url));
 async function overview(p, prefix) {
   await p.getByTestId('import-input').setInputFiles(GREECE);
   if (prefix === 'phone') await p.getByTestId('reader').getByRole('button', { name: 'Map' }).click();
   await p.locator('[data-testid=timeline][data-ready]').waitFor();
-  await p.getByTestId('time-bar').getByRole('button', { name: 'Overview' }).click();
+  await p.getByTestId('time-bar').getByRole('button', { name: 'All', exact: true }).click();
   await p.waitForTimeout(700);
   await shot(p, `${prefix}-overview`);
   // Shift + wheel scrolls the bands down until Greece's group is in view.
@@ -403,22 +393,25 @@ async function overview(p, prefix) {
   await p.waitForTimeout(1200);
   await shot(p, `${prefix}-thread-map`);
 }
-// Level 1: the Classical period opened into its six lanes. With `era-zoom`, the opening itself as
+// The Classical period's six lanes, unfurled under its band. With `era-zoom`, the unfurling itself as
 // a filmstrip of frames 50 ms apart (the page's clock is paused and stepped, so frames are exact).
 async function eraLanes(p, prefix) {
   await p.getByTestId('import-input').setInputFiles(GREECE);
   if (prefix === 'phone') await p.getByTestId('reader').getByRole('button', { name: 'Map' }).click();
   const timeline = p.locator('[data-testid=timeline][data-ready]');
   await timeline.waitFor();
-  await p.getByTestId('time-bar').getByRole('button', { name: 'Overview' }).click();
+  await p.getByTestId('time-bar').getByRole('button', { name: 'All', exact: true }).click();
   await p.waitForTimeout(700);
+  await scrollTo(p, '.tl-era[data-id=i_classical]');
   const box = await p.locator('.tl-era[data-id=i_classical]').boundingBox();
   const film = wanted(`${prefix}-era-zoom`);
   if (film) {
     await p.clock.install();
     await p.clock.pauseAt(new Date(Date.now() + 1000));
   }
-  await p.mouse.click(box.x + 30, box.y + 12);
+  // Inside the part of the wash that's in view, clear of its chips.
+  const tlb = await timeline.boundingBox();
+  await p.mouse.click(box.x + 20, Math.max(box.y + 6, tlb.y + 60));
   if (film) {
     const frames = [];
     for (let i = 0; i <= 8; i++) {
@@ -450,33 +443,26 @@ if (any('desktop-overview', 'desktop-threads', 'desktop-thread-map', 'desktop-le
 if (any('dark-overview', 'dark-threads', 'dark-thread-map', 'dark-lenses', 'dark-regions')) await overview(await page('dark-overview', { ...desktop, colorScheme: 'dark' }), 'dark');
 if (any('phone-overview', 'phone-threads', 'phone-thread-map', 'phone-lenses', 'phone-regions')) await overview(await page('phone-overview', { viewport: { width: 412, height: 860 }, isMobile: true, hasTouch: true }), 'phone');
 
-// Level 1 in a polity: Athens picked on the overview, then opened into its six lanes (closed), then
-// its War lane opened. With `polity-zoom`, the drop-down as a filmstrip of frames 50 ms apart.
+// A polity's lanes in place: Athens clicked on the overview, its six lanes (closed) unfurled under its
+// strip, then Sparta's too, then Athens' War lane opened. With `polity-zoom`, the unfurling as a
+// filmstrip of frames 50 ms apart.
 async function polityLanes(p, prefix) {
   await p.getByTestId('import-input').setInputFiles(GREECE);
   if (prefix === 'phone') await p.getByTestId('reader').getByRole('button', { name: 'Map' }).click();
   const timeline = p.locator('[data-testid=timeline][data-ready]');
   await timeline.waitFor();
-  await p.getByTestId('time-bar').getByRole('button', { name: 'Overview' }).click();
+  await p.getByTestId('time-bar').getByRole('button', { name: 'All', exact: true }).click();
   await p.waitForTimeout(700);
-  const tl = await timeline.boundingBox();
-  await p.mouse.move(tl.x + tl.width / 2, tl.y + tl.height / 2);
-  await p.keyboard.down('Shift');
-  await p.mouse.wheel(0, 200);
-  await p.keyboard.up('Shift');
-  await p.waitForTimeout(200);
+  await scrollTo(p, '.tl-strip[data-id="grp:g_classical_greece"]');
   await p.locator('.tl-strip[data-id="grp:g_classical_greece"]').click({ force: true });
   await p.waitForTimeout(600);
+  await scrollTo(p, '.tl-strip[data-id="pol:t_athens"]');
   const athens = await p.locator('.tl-strip[data-id="pol:t_athens"]').boundingBox();
-  await p.mouse.click(athens.x + athens.width * 0.6, athens.y + athens.height / 2);
-  await p.waitForTimeout(500);
-  await shot(p, `${prefix}-polity-picked`);
   const film = wanted(`${prefix}-polity-zoom`);
   if (film) {
     await p.clock.install();
     await p.clock.pauseAt(new Date(Date.now() + 1000));
   }
-  // Clicking it again opens it (the pill can sit under the playhead).
   await p.mouse.click(athens.x + athens.width * 0.6, athens.y + athens.height / 2);
   if (film) {
     const frames = [];
@@ -493,15 +479,18 @@ async function polityLanes(p, prefix) {
   }
   await p.waitForTimeout(700);
   await shot(p, `${prefix}-polity`);
-  if (prefix === 'phone') {
-    await p.keyboard.down('Shift');
-    await p.mouse.wheel(0, 170);
-    await p.keyboard.up('Shift');
-    await p.waitForTimeout(200);
-  }
-  await p.locator('text.tl-lane-toggle[data-id="__lane:war"]').click({ force: true });
+  await scrollTo(p, 'text.tl-lane-toggle[data-id="__lane:pol:t_athens|war"]');
+  await p.locator('text.tl-lane-toggle[data-id="__lane:pol:t_athens|war"]').click({ force: true });
   await p.waitForTimeout(400);
   await shot(p, `${prefix}-polity-war`);
+  // Sparta too, under its own strip, further down.
+  await scrollTo(p, '.tl-strip[data-id="pol:t_sparta"]');
+  const sb = await p.locator('.tl-strip[data-id="pol:t_sparta"]').boundingBox();
+  if (sb) {
+    await p.mouse.click(sb.x + sb.width * 0.6, sb.y + sb.height / 2);
+    await p.waitForTimeout(700);
+    await shot(p, `${prefix}-polity-two`);
+  }
 }
 if (any('desktop-polity')) await polityLanes(await page('desktop-polity', desktop), 'desktop');
 if (any('dark-polity')) await polityLanes(await page('dark-polity', { ...desktop, colorScheme: 'dark' }), 'dark');
@@ -519,29 +508,18 @@ async function follow(p, prefix) {
   await year.click();
   await year.fill('431 BCE');
   await year.press('Enter');
-  await p.getByTestId('time-bar').getByRole('button', { name: 'Overview' }).click();
+  await p.getByTestId('time-bar').getByRole('button', { name: 'All', exact: true }).click();
   await p.waitForTimeout(700);
-  const tl = await timeline.boundingBox();
-  await p.mouse.move(tl.x + tl.width / 2, tl.y + tl.height / 2);
-  await p.keyboard.down('Shift');
-  await p.mouse.wheel(0, 200);
-  await p.keyboard.up('Shift');
-  await p.waitForTimeout(200);
+  await scrollTo(p, '.tl-strip[data-id="grp:g_classical_greece"]');
   await p.locator('.tl-strip[data-id="grp:g_classical_greece"]').click({ force: true });
   await p.waitForTimeout(600);
+  await scrollTo(p, '.tl-strip[data-id="pol:t_athens"]');
   const athens = await p.locator('.tl-strip[data-id="pol:t_athens"]').boundingBox();
   await p.mouse.click(athens.x + athens.width * 0.45, athens.y + athens.height / 2);
   await p.waitForTimeout(1200);
   await shot(p, `${prefix}-follow`);
-  await p.mouse.click(athens.x + athens.width * 0.45, athens.y + athens.height / 2);
-  await p.waitForTimeout(700);
-  if (prefix === 'phone') {
-    await p.keyboard.down('Shift');
-    await p.mouse.wheel(0, 170);
-    await p.keyboard.up('Shift');
-    await p.waitForTimeout(200);
-  }
-  await p.locator('text.tl-lane-toggle[data-id="__lane:war"]').click({ force: true });
+  await scrollTo(p, 'text.tl-lane-toggle[data-id="__lane:pol:t_athens|war"]');
+  await p.locator('text.tl-lane-toggle[data-id="__lane:pol:t_athens|war"]').click({ force: true });
   await p.waitForTimeout(1200);
   await shot(p, `${prefix}-follow-war`);
   const persia = await p.locator('.map-label.territory', { hasText: 'Achaemenid Persia' }).boundingBox();
@@ -552,48 +530,6 @@ async function follow(p, prefix) {
 if (any('desktop-follow')) await follow(await page('desktop-follow', desktop), 'desktop');
 if (any('dark-follow')) await follow(await page('dark-follow', { ...desktop, colorScheme: 'dark' }), 'dark');
 if (any('phone-follow')) await follow(await page('phone-follow', { viewport: { width: 412, height: 860 }, isMobile: true, hasTouch: true }), 'phone');
-
-// Tall, so every lane is in view.
-const tall = { ...desktop, viewport: { width: desktop.viewport.width, height: 1500 } };
-if (any('desktop-kinds')) await kinds(await page('desktop-kinds', tall), 'desktop');
-if (any('dark-kinds')) await kinds(await page('dark-kinds', { ...tall, colorScheme: 'dark' }), 'dark');
-if (any('phone-kinds')) await kinds(await page('phone-kinds', { viewport: { width: 412, height: 1500 }, isMobile: true, hasTouch: true }), 'phone');
-
-if (any('desktop-new-timeline')) await newTimeline(await page('desktop-new-timeline', desktop), 'desktop');
-if (any('dark-new-timeline')) await newTimeline(await page('dark-new-timeline', { ...desktop, colorScheme: 'dark' }), 'dark');
-if (any('phone-new-timeline')) await newTimeline(await page('phone-new-timeline', { viewport: { width: 412, height: 860 }, isMobile: true, hasTouch: true }), 'phone');
-
-// Box-select: the box being drawn, the selection with its bar, and Edit's panel (a mouse only, so no phone).
-async function boxSelect(p, prefix) {
-  await p.getByTestId('import-input').setInputFiles(FIXTURE);
-  await p.locator('[data-testid=timeline][data-ready]').waitFor();
-  await p.getByTestId('time-bar').getByRole('button', { name: 'All' }).click();
-  await p.waitForTimeout(600);
-  await p.locator('.tl-mark[data-id=i_socrates]').click({ force: true });
-  await p.waitForTimeout(700);
-  await p.getByRole('button', { name: 'Close panel' }).click();
-  await p.waitForTimeout(500);
-  const boxes = await Promise.all(['i_socrates', 'i_plato', 'i_aristotle'].map(async (id) => p.locator(`.tl-mark[data-id=${id}]`).boundingBox()));
-  const x0 = Math.min(...boxes.map((b) => b.x)) - 6, y0 = Math.min(...boxes.map((b) => b.y)) - 6;
-  // Aristotle runs past the right edge: the box stops inside the window.
-  const x1 = Math.min(Math.max(...boxes.map((b) => b.x + b.width)) + 6, 1430), y1 = Math.max(...boxes.map((b) => b.y + b.height)) + 6;
-  const mod = process.platform === 'darwin' ? 'Meta' : 'Control';
-  await p.mouse.move(x0, y0);
-  await p.keyboard.down(mod);
-  await p.mouse.down();
-  await p.mouse.move(x1, y1, { steps: 6 });
-  await p.waitForTimeout(100);
-  await shot(p, `${prefix}-box-drawing`);
-  await p.mouse.up();
-  await p.keyboard.up(mod);
-  await p.waitForTimeout(200);
-  await shot(p, `${prefix}-box-picked`);
-  await p.getByTestId('pick-bar').getByRole('button', { name: 'Edit' }).click();
-  await p.getByTestId('bulk-edit').getByRole('group', { name: 'Lanes' }).getByRole('button', { name: 'Economy' }).click();
-  await shot(p, `${prefix}-box-edit`);
-}
-if (any('desktop-box')) await boxSelect(await page('desktop-box', desktop), 'desktop');
-if (any('dark-box')) await boxSelect(await page('dark-box', { ...desktop, colorScheme: 'dark' }), 'dark');
 
 // The manual.
 async function help(p, prefix) {

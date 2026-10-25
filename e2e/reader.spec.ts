@@ -536,11 +536,11 @@ test.describe('a polity from the tray', () => {
     await expect.poll(() => savedItem(page, 'Sparta')).toMatchObject({ kind: 'span', subject: 'polity', wikidataId: 'Q5690', start: { y: -899 }, end: { y: -191 } });
     const item = (await savedItem(page, 'Sparta')) as { id: string; places?: unknown };
     expect(item.places).toBeUndefined();
-    const territory = (await savedTerritory(page, 'Sparta')) as { itemId: string; wikidataId: string; snapshots: { from: { y: number } }[]; source: { name: string } };
+    const territory = (await savedTerritory(page, 'Sparta')) as { id: string; itemId: string; wikidataId: string; snapshots: { from: { y: number } }[]; source: { name: string } };
     expect(territory).toMatchObject({ itemId: item.id, wikidataId: 'Q5690', source: { name: expect.stringContaining('historical-basemaps') } });
     expect(territory.snapshots.map((x) => x.from.y)).toEqual([-899, -699, -499, -399, -322, -299, -199]);
 
-    // The map shows it in the year it began, and the timeline draws its lifespan bar with the polity's square.
+    // The map shows it in the year it began, and the timeline draws it as a strip, brought into view.
     await expect(page.locator('[data-testid=map][data-ready]')).toBeVisible();
     await expect(page.locator('.map-label.territory', { hasText: 'Sparta' })).toBeVisible();
     await tray.getByRole('button', { name: 'Open Sparta' }).click();
@@ -548,8 +548,7 @@ test.describe('a polity from the tray', () => {
     await expect(entry.getByRole('heading', { name: 'Sparta' })).toBeVisible();
     await entry.getByRole('button', { name: 'Show its time' }).click();
     const svg = page.locator('.tl-svg');
-    await expect(svg.locator(`rect[data-id="${item.id}"]`)).toBeVisible();
-    await expect(svg.locator(`use[data-id="${item.id}"]`)).toHaveAttribute('href', /-g-polity$/);
+    await expect(svg.locator(`.tl-strip[data-id="pol:${territory.id}"]`)).toBeInViewport();
   });
 
   test('Sparta comes with Seshat’s borders, which change over its life, and the map credits them', async ({ page }) => {
@@ -835,11 +834,8 @@ test('Claude drafts from the tribute passage: a suggested lane, an event on the 
   await expect(funded).toContainText('Delian League funded Decree funding the rebuilding of Athenian temples');
   await expect(funded).toContainText('Accept the entry first.');
   await expect(funded.getByRole('button', { name: 'Accept' })).toBeDisabled();
-  // On the timeline too: the event as a dashed ghost, and the connection as a dashed arrow with its effect.
-  const timeline = page.getByTestId('timeline');
-  await expect(timeline.locator('.tl-draft')).toHaveCount(1);
-  await expect(timeline.locator('path.arc.draft')).toHaveCount(1);
-  await expect(timeline.locator('.tl-arc-label')).toHaveText('funded ?');
+  // This timeline has no polities for it to sit in, so the draft waits in the tray and on the map only.
+  await expect(page.getByTestId('timeline').locator('.tl-draft')).toHaveCount(0);
 
   // Library says the highlight has drafts waiting.
   await page.getByRole('button', { name: 'Library' }).click();
@@ -858,7 +854,7 @@ test('Claude drafts from the tribute passage: a suggested lane, an event on the 
   await funded.getByRole('button', { name: 'Accept' }).click();
   await expect(funded).toContainText('Added');
   await expect(tray.getByRole('button', { name: 'Done' })).toBeVisible();
-  await expect(timeline.locator('.tl-draft, path.arc.draft')).toHaveCount(0);
+  await expect(page.getByTestId('timeline').locator('.tl-draft, path.arc.draft')).toHaveCount(0);
 
   // Both records are under the highlight in Library, and nothing is waiting.
   await page.getByRole('button', { name: 'Library' }).click();
@@ -926,7 +922,7 @@ test('adding a battle connects it to the war already in Chronicle, with the high
   await expect(entry.getByTestId('evidence')).toHaveText(`Evidence: “${quote}”`);
 });
 
-test('a place and a battle draw as what they are: Athens on its ground line with a pin, Salamis a tick on the war’s bar', async ({ page }) => {
+test('a place and a battle are saved as what they are: Athens with its pin on the map, Salamis part of the war', async ({ page }) => {
   test.slow();
   await mockArticles(page);
   Object.assign(QIDS, { Battle_of_Salamis: 'Q178850', Athens: 'Q1524' });
@@ -977,24 +973,17 @@ test('a place and a battle draw as what they are: Athens on its ground line with
   await expect(entry).toContainText('Founded');
   await expect.poll(() => savedItem(page, 'Athens')).toMatchObject({ subject: 'place', places: [expect.objectContaining({ role: 'site' })] });
   const athens = (await savedItem(page, 'Athens')) as { id: string };
-  await entry.getByRole('button', { name: 'Show its time' }).click();
-  const svg = page.locator('.tl-svg');
-  await expect(svg.locator(`use[data-id="${athens.id}"]`)).toHaveAttribute('href', /-g-place$/);
+  expect(athens.id).toBeTruthy();
   await expect(page.locator('.map-label.pin', { hasText: 'Athens' })).toBeVisible();
 
-  // The battle is part of the war already in Chronicle, so it's a tick on the war's bar.
+  // The battle is part of the war already in Chronicle.
   await page.getByRole('button', { name: 'Open an article' }).click();
   await highlightAndAdd('salamis', 'Battle of Salamis', 'turned the war', 'Battle');
   await expect(editor.getByTestId('suggested-connections').getByRole('checkbox', { name: 'Part of Second Persian invasion of Greece' })).toBeChecked();
   await editor.getByRole('button', { name: 'Add to timeline' }).click();
   await expect(entry.getByRole('heading', { name: 'Battle of Salamis' })).toBeVisible();
   await expect.poll(() => savedItem(page, 'Battle of Salamis')).toBeDefined();
-  const salamis = (await savedItem(page, 'Battle of Salamis')) as { id: string };
-  await entry.getByRole('button', { name: 'Show its time' }).click();
-  // A line has no width, so Playwright calls it hidden: it is drawn when it is in the scene.
-  await expect(svg.locator(`line.tl-tick-mark[data-id="${salamis.id}"]`)).toBeAttached();
-  await expect(svg.locator(`circle[data-id="${salamis.id}"]`)).toHaveCount(0);
-  await expect(svg.locator('rect[data-id="invasion"]')).toBeVisible();
+  await expect(entry).toContainText('Second Persian invasion of Greece');
 });
 
 test('the reader and the map resize with their handles, by drag or by keyboard, and keep their sizes after a reload', async ({ page }) => {

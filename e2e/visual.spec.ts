@@ -9,17 +9,18 @@ import { fileURLToPath } from 'node:url';
  */
 test.skip(process.platform !== 'darwin', 'Screenshot baselines are rendered on macOS');
 
-const FIXTURE = fileURLToPath(new URL('../tests/fixtures/sample-history.json', import.meta.url));
+// The Classical Greece fixture: the timeline is the overview, so it needs polities and eras to draw.
+const FIXTURE = fileURLToPath(new URL('../tests/fixtures/greece/classical-greece.json', import.meta.url));
 // SwiftShader can shift a few anti-aliased map pixels between runs.
 const SHOT = { maxDiffPixelRatio: 0.01 };
 
-/** The reader layout with the fixture in view: everything on the timeline, the map at `year` (on a phone, the map sheet). */
+/** The reader layout with the fixture in view: the whole overview on the timeline, the map at `year` (on a phone, the map sheet). */
 async function openWithFixture(page: Page, year: string) {
   await page.goto('/');
   await expect(page.getByTestId('save-state')).toHaveText('Saved on this device');
   await page.getByTestId('import-input').setInputFiles(FIXTURE);
   if (page.viewportSize()!.width <= 860) await page.getByTestId('reader').getByRole('button', { name: 'Map', exact: true }).click();
-  await expect(page.getByTestId('timeline').locator('.tl-mark[data-id=i_aristotle]')).toBeVisible();
+  await expect(page.getByTestId('timeline').locator('.tl-strip').first()).toBeAttached();
   await page.getByRole('button', { name: 'More' }).click();
   await page.getByRole('menuitem', { name: 'Show everything' }).click();
   await expect(page.locator('[data-testid=map][data-ready]')).toBeAttached({ timeout: 20_000 });
@@ -40,7 +41,7 @@ test.describe('looks the same', () => {
     test.use({ colorScheme: 'dark' });
     test('map and timeline beside the reader', async ({ page }) => {
       test.slow();
-      await openWithFixture(page, '1215');
+      await openWithFixture(page, '431 BCE');
       await expect(page).toHaveScreenshot('dark.png', SHOT);
     });
   });

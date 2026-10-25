@@ -152,9 +152,9 @@ export function arrowPrims(arrows: readonly ArrowIn[], X: (y: number) => number,
       labels.push({ t: 2, k: `${k}t`, a: al, cls: 'tl-effect-label', id: ARROW + w.key, x: pill.x + pill.w / 2, y: pill.y + 11, s: w.label, f: 'eff', fill: 'var(--ink)', anchor: 'middle' });
       targets.push({ id: ARROW + w.key, x: pill.x - 2, y: pill.y - 3, w: pill.w + 4, h: pill.h + 6 });
     } else {
-      // No pill: the curve's middle still answers.
+      // No pill: the curve's middle still answers, under any entry it crosses (`lane: 'under'`).
       const p = C.at(0.5);
-      targets.push({ id: ARROW + w.key, x: p.x - 8, y: p.y - 8, w: 16, h: 16 });
+      targets.push({ id: ARROW + w.key, lane: 'under', x: p.x - 8, y: p.y - 8, w: 16, h: 16 });
     }
   }
   return { marks, labels, targets };

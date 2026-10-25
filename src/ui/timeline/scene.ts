@@ -2,7 +2,7 @@ import type { Lane, SubjectKind } from '../../model/types';
 
 /**
  * The scene is the contract between the layout (pure) and the painter. Every frame the layout
- * turns (entries, window, size, level) into flat lists of primitives in screen pixels, already
+ * turns (entries, window, size, what is open) into flat lists of primitives in screen pixels, already
  * culled to what is visible, plus the hit targets. The painter only draws them.
  */
 
@@ -18,7 +18,7 @@ export const FONTS = {
   count: '600 11px "Public Sans", system-ui, sans-serif',
   play: '12px Spectral, Georgia, serif',
   arc: 'italic 600 12px "Public Sans", system-ui, sans-serif',
-  // Level 0: era and region names in spaced small caps, dates and the axis in old-style numerals.
+  // The overview: era and region names in spaced small caps, dates and the axis in old-style numerals.
   era: '600 15px "Spectral SC", Spectral, Georgia, serif',
   region: '600 14px "Spectral SC", Spectral, Georgia, serif',
   eraDates: '12.5px Spectral, Georgia, serif',
@@ -37,7 +37,7 @@ export const FONTS = {
   chipN: '10.5px "Public Sans", system-ui, sans-serif',
   // A lens's lane name in the gutter beside its strip.
   lensName: '600 10px "Public Sans", system-ui, sans-serif',
-  // Level 1: lane names in spaced capitals with their counts, an empty lane's note, the phone's list.
+  // Open lanes: lane names in spaced capitals with their counts, an empty lane's note, the phone's list.
   dim: '600 11.5px "Public Sans", system-ui, sans-serif',
   dimCount: '11px "Public Sans", system-ui, sans-serif',
   note: 'italic 14px Spectral, Georgia, serif',
@@ -73,9 +73,9 @@ export interface Ln extends Base { t: 3; x1: number; y1: number; x2: number; y2:
 export interface Img extends Base { t: 4; x: number; y: number; w: number; h: number; href: string }
 /** An arrow between two entries: its ends' ids, and the arrowhead (a marker per role). */
 export interface Arc extends Base { t: 5; d: string; stroke: string; sw?: number; dash?: boolean; head?: ArcRole; from?: string; to?: string }
-/** A kind's glyph (its representation's), or level 1's diamond for a key moment, `w` px square, drawn in `color`. */
+/** A kind's glyph (its representation's), or open lanes' diamond for a key moment, `w` px square, drawn in `color`. */
 export interface Use extends Base { t: 6; x: number; y: number; w: number; g: SubjectKind | Diamond; color: string }
-/** Level 1's key moment: solid, or hollow with a dashed edge when its date is approximate. */
+/** A key moment in open lanes: solid, or hollow with a dashed edge when its date is approximate. */
 export type Diamond = 'diamond' | 'diamond-approx';
 /** A filled path, such as a migration's bar ending in an arrow point or a polity's strip. `fill: 'gilt'` is a world event's gold leaf. */
 export interface Shape extends Base { t: 7; d: string; fill: string; stroke?: string; sw?: number; dash?: boolean }
@@ -90,28 +90,14 @@ export interface Link { fromId: string; toId: string; role: ArcRole; label?: str
 
 export type MarkKind = 'event' | 'span' | 'person';
 
-/** Marks of one kind that would overlap in one row, drawn as one badge led by the most prominent. */
-export interface Cluster {
-  kind: MarkKind;
-  count: number;
-  /** Entry ids, earliest first. */
-  members: string[];
-  lead: string;
-  lane: string;
-  /** Decimal years the members cover. */
-  s: number;
-  e: number;
-}
-
 export interface Target {
-  /** An entry id, or "cluster" for a cluster, "playhead", or an open entry's handle. */
+  /** An entry id, "playhead", or a control's id (a lane's toggle, "Fold", a ribbon, an arrow). */
   id: string;
   /** On the open entry: which part a drag moves. */
   grip?: 'body' | 'start' | 'end';
   x: number; y: number; w: number; h: number;
   lane?: string;
-  cluster?: Cluster;
-  /** It sits in the gutter (level 1's "All eras"), where nothing else answers. */
+  /** It sits in the gutter (open lanes' "Fold" and lane names), where nothing else answers. */
   gutter?: boolean;
 }
 
@@ -125,22 +111,21 @@ export interface Scene {
   /** Axis, "now" and the playhead: clipped to the right of the gutter, full height. */
   axis: Prim[];
   targets: Target[];
-  clusters: Cluster[];
-  /** Where each entry in view is drawn (a cluster's members share its box), for arrows and keyboard focus. */
+  /** Where each entry in view is drawn, for arrows and keyboard focus. */
   boxes: Map<string, Box>;
-  /** Level 1: where each entry is drawn in each of its lanes (`<lane>:<id>`), for the arrows between lanes. */
+  /** Open lanes: where each entry is drawn in each of its lanes (`<lane>:<id>`), for the arrows between lanes. */
   laneBoxes: Map<string, Box>;
   plot: Box;
   gutterBox: Box;
   /** Height of all lanes, for vertical scroll limits. */
   contentH: number;
-  /** Level 1: each lane's "Add" under its name, drawn as real buttons so the keyboard reaches them. */
+  /** Open lanes: each lane's "Add" under its name, drawn as real buttons so the keyboard reaches them. */
   adds: AddSpot[];
-  /** Level 0: each ribbon's target id, with its connections and the two rows it joins in words. */
+  /** Each ribbon's target id, with its connections and the two rows it joins in words. */
   ribbons?: Map<string, { ids: string[]; title: string }>;
 }
 
-/** Where a lane's "Add" button sits, in px from the plot's top left like everything else. */
-export interface AddSpot { lane: Lane; label: string; x: number; y: number; w: number; h: number }
+/** Where a lane's "Add" button sits, in px from the plot's top left like everything else, and the open lanes it's in. */
+export interface AddSpot { lane: Lane; label: string; x: number; y: number; w: number; h: number; block?: string }
 
 export const tint = (color: string, pct: number) => `color-mix(in srgb, ${color} ${pct}%, var(--panel))`;

@@ -61,9 +61,8 @@ An idea or work keeps a `reception` by region (known, partial, lost, revived, ta
 A connection can carry an `effect` (weakened, funded, legitimised, …) and the highlights that justify it. When its two ends sit in different lanes, level 1 draws it as an arrow between the lanes. Ends can be entries, themes, regimes, economies or institutions.
 
 ## Timeline with zoom levels
-- Level 0, **the overview**: polities and world events in the spirit of the 1931 Histomap, over a backdrop of eras (below).
-- Level 1: inside a polity or world event, its six lanes showing change.
-- Level 2: individual entries, each drawn as its `subject` (falling back to its `kind`).
+- The timeline is **the overview**: polities and world events in the spirit of the 1931 Histomap, over a backdrop of eras (below).
+- Opening a polity, world event or era unfurls its six lanes showing change right under it, in place; several can be open at once (Bob, 2026-10-25, which dropped the level of single entries).
 - A custom renderer replaces vis-timeline behind the same one-importer boundary, and lifts the ±271k-year limit. The spike settled it: a pure layout plus an SVG painter (the hybrid only if a real phone needs it), our own Pointer Events driver instead of d3-zoom, and time in decimal years.
 - Lanes live on highlights and entries, several per entry. Categories stay Bob's own topics: filter chips, not rows down the left.
 
