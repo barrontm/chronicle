@@ -2,7 +2,8 @@
 //   node tests/fixtures/greece/build.mjs
 // Writes, next to this file:
 //   classical-greece.json  a schema-9 doc the app imports today (entries, eras in a region, highlights, themes, territories, a migration, trends, notes, sources, connections)
-//   next.json              the shapes the schema does not have yet (regimes, economy, campaign routes, goods flows),
+//   next.json              the shapes the schema does not have yet (regimes, economy, campaign routes, goods flows,
+//                          an added article, uncertain dates),
 //                          taken from Bob's chosen prototypes in docs/prototypes. Each phase that adds a shape moves its part into the doc.
 // Dates are astronomical years (431 BCE = -430). In this file BCE years are written positive and '~' marks approximate.
 // Facts come from the author's knowledge and the prototypes, not from live Wikidata/Pleiades lookups; coordinates are
@@ -45,6 +46,7 @@ const EPL = grab(eco, 'PL'), ESEA = grab(eco, 'SEA'), EATT = grab(eco, 'ATT_SEA'
 const SECTORS = grab(eco, 'SECTORS'), SNAPS = grab(eco, 'SNAPS'), MOMENTS = grab(eco, 'MOMENTS'), SITES = grab(eco, 'SITES');
 const GOODS = grab(eco, 'FLOWS', { SEA: ESEA, ATT_SEA: EATT, PL: EPL });
 const OITEMS = grab(ovw, 'ITEMS'), OTHEMES = grab(ovw, 'CLASSICAL_THEMES');
+const ARTICLE = grab(proto('article'), 'ARTICLE'), FUZZY = grab(proto('fuzzy-time'), 'FUZZY');
 
 // ---------- ids, sources, small helpers ----------
 const slug = (s) => s.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
@@ -504,6 +506,14 @@ const next = {
   },
   // Phase 4: the overview. Lanes, marks, strength, regions, groups and participants are in the doc (v9); what's left is ticket 8's.
   overview: { alliances: ov.alliances },
+  // Phase 4c: what Add to Chronicle adds from one article (prototype h), and uncertain dates, ramps, competing dates
+  // and a polity that became another (prototype i). Years are astronomical; the article's text is plain sentences.
+  article: {
+    title: ARTICLE.title,
+    sentences: ARTICLE.sections.flatMap(([section, ss]) => ss.map(([id, html]) => ({ id, section, text: html.replace(/<\/?a>/g, '') }))),
+    have: ARTICLE.have, entries: ARTICLE.entries, connections: ARTICLE.connections,
+  },
+  fuzzy: FUZZY,
 };
 
 // Connections across Athens' lanes, with an effect and the highlights that are their evidence, plus two economy entries and the

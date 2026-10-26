@@ -2,6 +2,15 @@
 
 A log of choices that shouldn't be re-litigated every session. Newest first. To change a decision, add a new entry that supersedes the old one.
 
+## 2026-10-26 — Add to Chronicle and fuzzy time: Bob's picks
+Phase 4c's prototypes (`docs/prototypes/article.html`, `docs/prototypes/fuzzy-time.html`) ran on the Greece fixture plus `next.json` → `article` and `fuzzy`. Bob chose A for all six:
+- **Unchecked records are umber dashes**, the lane's colour held back until checked, and the **Check list sits in the tray**. Not chosen: the lane's colour dashed (too close to checked), the drawer (it covered the dashes on the map and timeline).
+- **Unsure ends fade**; whiskers were not chosen. A **ramp** is kept apart from a fade: it means a change surely took years, not that the date is unknown.
+- **Competing dates are ticks**, the one in use solid; not a count that opens on picking.
+- **One thing becoming another is a seam** on one strip and one record; not a hand-over between two strips.
+- **Borders that took years cross-fade** over those years, as a function of the year even when paused. This narrows "Border morph: a second of play" (2026-10-25) without reversing it: a change with no years of its own still morphs over a second of play.
+The rules are in `docs/design.md` (Add to Chronicle, Fuzzy time).
+
 ## 2026-10-25 — Border morph: a second of play, only while playing
 The spike's rule was a morph 0.7 years long, a pure function of the year. That is a second at a war's pace (0.7 years a second), but the map plays at 1–100 years a second (25 by default), where 0.7 years lasts about 1/36 of a second and reads as a jump. Bob chose: **while Play runs, a change of borders morphs over about a second of play at the chosen speed** (`MORPH_SECONDS × speed` years), centred on the new set's first year and never more than halfway to the changes either side; **paused or dragging, each set shows exactly as drawn**. Not chosen: the same length while paused too (a paused map near a change would show a border he never drew), and 0.7 years always (a jump at normal speeds). This supersedes "a pure function of the year, about 0.7 years long" in the spike entry below; reduced motion still cuts, and only sets that meet morph (one that ends before the next begins just goes).
 - The morph is `src/ui/morph.ts` (pure, cached per pair of borders), with `bordersAt` in `mapData.ts` deciding when; the follow layer uses the same borders, so the picked polity's outline morphs with its fill. It differs from the spike's in two ways: resampling keeps every corner, so a morph starts and ends on the borders exactly as drawn, and a piece or hole with no partner shrinks to (or grows from) its own middle instead of flying to the nearest piece across the sea.
